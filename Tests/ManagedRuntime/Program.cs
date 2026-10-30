@@ -76,6 +76,7 @@ try
     GamepadDirectionSelectionTests.Run(Check);
     GamepadNavigationListTests.Run(Check);
     GuideSkipKeyConfigurationTests.Run(root, Check);
+    GapFillConfigurationTests.Run(root, Check);
     GamepadDiagnosticTests.Run(root, Check);
     GuidePlacementTests.Run(Check);
     await KuroAutoSyncTests.RunAsync(root, Check);
@@ -265,7 +266,12 @@ try
             "stale toolbar toggle cannot overwrite a newer real-time planning setting");
         Check(!await core.ConfigureAsync(autoReplanEnabled: false, expectedAutoReplanProfile: "another-profile") && core.Configuration.AutoReplanEnabled,
             "toolbar request from a previous profile cannot change the active preference");
+        Check(await core.ConfigureAsync(gapFillModeEnabled:true), "gap-fill configuration acknowledged by native host");
+        Check((await core.ExecuteRoutePlanningAsync("state")).GapFillModeEnabled, "gap-fill native snapshot agrees with persisted preference");
+        Check(!await core.ConfigureAsync(gapFillModeEnabled:false,expectedGapFillModeEnabled:false), "stale gap-fill click rejected");
         await core.StopRuntimeAsync();
+        Check((await core.ExecuteRoutePlanningAsync("state")).GapFillModeEnabled, "stopping navigation/runtime does not clear gap-fill preference");
+        await core.ConfigureAsync(gapFillModeEnabled:false);
         Check(core.IsConnected, "stop while idle retains the connection");
         // The hand-drawn route surface used to be three one-way commands of its own; it is now a
         // kind of route inside the shared store, so a hostile identifier goes through the same

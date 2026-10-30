@@ -30,14 +30,22 @@
                           SelectionChanged="CategoryPicker_SelectionChanged" />
                 <ComboBox x:Name="PresetPicker" Width="240" DisplayMemberPath="Name"
                           Visibility="Collapsed" SelectionChanged="PresetPicker_SelectionChanged" />
-                <ToggleButton x:Name="SelectedOnly" Click="SelectedOnly_Click" /><Button x:Name="CatalogNotice" Content="筛选提示" Visibility="Collapsed"><Button.Flyout><Flyout><TextBlock x:Name="CatalogNoticeText" MaxWidth="340" TextWrapping="Wrap" /></Flyout></Button.Flyout></Button>
+                <ToggleButton x:Name="SelectedOnly" Click="SelectedOnly_Click" />
+                <ContentControl x:Name="AdditionalToolHost" Visibility="Collapsed" VerticalContentAlignment="Center" />
+                <Button x:Name="CatalogNotice" Content="筛选提示" Visibility="Collapsed"><Button.Flyout><Flyout><TextBlock x:Name="CatalogNoticeText" MaxWidth="340" TextWrapping="Wrap" /></Flyout></Button.Flyout></Button>
             </controls:WrapPanel>
             <controls:WrapPanel Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="8">
                 <Button x:Name="SelectResults" Click="SelectResults_Click" />
                 <Button x:Name="ClearResults" Click="ClearResults_Click" />
                 <TextBlock x:Name="SelectionSummary" VerticalAlignment="Center" Margin="4,0" TextWrapping="Wrap" />
             </controls:WrapPanel>
-            <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock x:Name="SyncStatus" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center" /><Button x:Name="RetrySync" Grid.Column="1" Content="重试同步" Click="RetrySync_Click" Visibility="Collapsed" /></Grid><TextBlock x:Name="GamepadHint" Visibility="Collapsed" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+            <controls:WrapPanel Orientation="Horizontal" HorizontalSpacing="12" VerticalSpacing="4">
+                <TextBlock x:Name="SyncStatus" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button x:Name="RetrySync" Content="重试同步" Click="RetrySync_Click" Visibility="Collapsed" />
+                <TextBlock x:Name="AttributionText" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center" Margin="8,0,0,0" Foreground="{StaticResource IMaoSecondaryTextBrush}" Visibility="Collapsed" />
+            </controls:WrapPanel>
+            <TextBlock x:Name="AdditionalFilterStatus" FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource IMaoWarningBrush}" Visibility="Collapsed" />
+            <TextBlock x:Name="GamepadHint" Visibility="Collapsed" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
         </StackPanel>
         </ScrollViewer>
         <Grid Grid.Row="1">

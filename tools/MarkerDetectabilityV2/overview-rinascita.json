@@ -1,0 +1,699 @@
+{
+  "schemaVersion": 2,
+  "status": "reviewed",
+  "scope": "overview-supplement-only-after-frozen-first-pass",
+  "method": "manual-source-frame-review; local-ASR/first-pass context; no-v1-conclusions",
+  "parts": [
+    {
+      "bvid": "BV1JB3Fz2EqG",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "实际检查0/1/2/3秒双栏地图总览以及5–30秒准备过程、541.67–550.67秒片尾。总览使用箱等级文字及连线，无独立可读数字编号。五个任务地点并非五个奖励：左上明确3宝箱，其余精密/基准地点分别在巨石原及荣耀之巅两侧。购买材料为问号准备标记，不计奖励。片尾是雕像下开箱，无第二总览或额外领取线索。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1JB3Fz2EqG-p1-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1JB3Fz2EqG-p1-00003.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1JB3Fz2EqG-p1-00005.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1JB3Fz2EqG-p1-00541.67.jpg",
+        "out/detectability-v2/overview-rinascita/BV1JB3Fz2EqG-p1-00550.67.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "3宝箱",
+          "eventIds": [
+            "BV1JB3Fz2EqG:p1:e001"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1JB3Fz2EqG:p1:e001",
+              "members": [
+                1,
+                2,
+                3
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "门前魔术挑战只是一事件，回门口连续领取三箱，与3宝箱组标对应，不拆成三次路线。",
+          "evidence": [
+            "out/detectability-v2/BV1JB3Fz2EqG/p01/visual/frame-00184.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "精密/基准四处地点",
+          "eventIds": [
+            "BV1JB3Fz2EqG:p1:e002",
+            "BV1JB3Fz2EqG:p1:e003",
+            "BV1JB3Fz2EqG:p1:e004",
+            "BV1JB3Fz2EqG:p1:e005"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1JB3Fz2EqG:p1:e002",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1JB3Fz2EqG:p1:e003",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1JB3Fz2EqG:p1:e004",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1JB3Fz2EqG:p1:e005",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "两栏地图分别展示狮像藏宝地、营地、荣耀之巅雕像两侧；与四段实际路线和末段投喂开暗室相容。只核总览覆盖，不据图钉升级e3/e5身份。",
+          "evidence": [
+            "out/detectability-v2/BV1JB3Fz2EqG/p01/visual/frame-00283.00.jpg",
+            "out/detectability-v2/BV1JB3Fz2EqG/p01/visual/frame-00383.00.jpg",
+            "out/detectability-v2/BV1JB3Fz2EqG/p01/visual/frame-00494.00.jpg",
+            "out/detectability-v2/BV1JB3Fz2EqG/p01/visual/frame-00548.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "identity-remains-unresolved",
+          "eventIds": [
+            "BV1JB3Fz2EqG:p1:e003",
+            "BV1JB3Fz2EqG:p1:e005"
+          ],
+          "analysis": "总览仅给大致地点和等级；营地三剑与投喂暗室仍需独立攻略/定位证据，不能由总览图钉直接确认数据库ID。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1dVuGzeEKk",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "0–2秒为现场站立；3–9秒为普通可拖动游戏地图和黄色玩家箭头，未见作者多点标注/路线总览。15/30秒进入操作，119.20–128.20秒为第二项拟态怪后的真实开箱。底部只有两个无编号箱形进度图钉，符合两段事件；假辉光箱变怪不增加第三奖励。检查的首尾未发现独立总览。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00003.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00007.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00015.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00119.20.jpg",
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00124.20.jpg",
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00128.20.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "底部两个无编号进度图钉",
+          "eventIds": [
+            "BV1dVuGzeEKk:p1:e001",
+            "BV1dVuGzeEKk:p1:e002"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1dVuGzeEKk:p1:e001",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1dVuGzeEKk:p1:e002",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "柱共鸣精密箱和拟态怪后的基准箱为两个事件；起始普通地图不作为全片总览。",
+          "evidence": [
+            "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00087.00.jpg",
+            "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00129.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "identity-remains-unresolved",
+          "eventIds": [
+            "BV1dVuGzeEKk:p1:e002"
+          ],
+          "analysis": "普通定位地图没有增加独立攻略证据；第二奖励身份仍按首轮未决保留。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–3秒为大地图加右下插图的路线总览，标注箱等级而无顺序数字；5秒后现场前言，15/30秒为范围说明使用的普通地图。右下插图与底部进度条发生裁切，不能按可见图钉数强制核成九个事件。东侧蟹形岛明确写3精密、1基准、1朴素，与末段五箱逐个领取一致；其他祭坛、两处辉光拟态箱仍须依视频分段。末尾465.07–474.07秒是交付后的五箱及普通结束地图，未见额外总览奖励。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p1-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p1-00003.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p1-00005.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p1-00465.07.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p1-00470.07.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p1-00474.07.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "3精密1基准1朴素",
+          "eventIds": [
+            "BV1Aeh2zvEko:p1:e009"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e009",
+              "members": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "一组总览图钉对应同一祭坛多轮交付后的五个奖励成员；不拆成五个虚构事件，不凭箱等级分配五个数据库ID。",
+          "evidence": [
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00472.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "两处辉光",
+          "eventIds": [
+            "BV1Aeh2zvEko:p1:e001",
+            "BV1Aeh2zvEko:p1:e005"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e001",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e005",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "总览有两处辉光标注，视频中两段假箱变拟态怪后最终真辉光箱；假箱动画与怪物波次不重复记奖励。",
+          "evidence": [
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00144.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00264.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "朴素祭坛路线",
+          "eventIds": [
+            "BV1Aeh2zvEko:p1:e002",
+            "BV1Aeh2zvEko:p1:e003",
+            "BV1Aeh2zvEko:p1:e004",
+            "BV1Aeh2zvEko:p1:e006",
+            "BV1Aeh2zvEko:p1:e007",
+            "BV1Aeh2zvEko:p1:e008"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e002",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e003",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e004",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e006",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e007",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e008",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "六段祭坛过程仍以实际触发顺序为准；插图与大图可见朴素图钉不能无歧义逐一分配，不强行一一配对。",
+          "evidence": [
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00177.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00202.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00223.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00296.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00350.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00393.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "overview-association-unclear",
+          "analysis": "右下插图裁切且无独立数字编号；可见单箱图钉与六段朴素祭坛尚不能全部逐一关联。保留为总览关联未决，不假定缺失视频事件，也不据数量调整时间线。"
+        },
+        {
+          "kind": "identity-remains-unresolved",
+          "eventIds": [
+            "BV1Aeh2zvEko:p1:e009"
+          ],
+          "analysis": "总览确认多箱组合，仅此不足以区分同场五个奖励各自数据库点ID。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–3秒展示桑古伊斯南部一屏多处白色自定义标记；5秒打开自定义标记菜单，7秒选信标进入实际路线。它是位置总览，但没有可读顺序数字，白色图案也不能直接等同箱子。底部十二个箱进度图钉与十二次石碑交互奖励作覆盖检查；需保留五个基准和七个朴素各自时间顺序，不把地图自定义标记直接当数据库ID。298.90–307.90秒返回初始NPC并出现成就，不是第十三个箱子。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00003.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00005.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00007.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00298.90.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00303.90.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00307.90.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "十二个箱形进度图钉/无数字自定义地图标记",
+          "eventIds": [
+            "BV1Aeh2zvEko:p2:e001",
+            "BV1Aeh2zvEko:p2:e002",
+            "BV1Aeh2zvEko:p2:e003",
+            "BV1Aeh2zvEko:p2:e004",
+            "BV1Aeh2zvEko:p2:e005",
+            "BV1Aeh2zvEko:p2:e006",
+            "BV1Aeh2zvEko:p2:e007",
+            "BV1Aeh2zvEko:p2:e008",
+            "BV1Aeh2zvEko:p2:e009",
+            "BV1Aeh2zvEko:p2:e010",
+            "BV1Aeh2zvEko:p2:e011",
+            "BV1Aeh2zvEko:p2:e012"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e001",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e002",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e003",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e004",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e005",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e006",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e007",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e008",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e009",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e010",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e011",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e012",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "十二个石碑奖励在视频各自出现，地图标记只能给地点提示；末尾返交NPC成就不增加箱成员。",
+          "evidence": [
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00063.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00077.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00094.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00107.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00129.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00151.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00171.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00191.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00208.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00236.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00255.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00272.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "overview-association-unclear",
+          "analysis": "地图中自定义标记没有顺序标签且部分位于边缘，不能据单帧逐一匹配十二块石碑或升级未决身份。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 3,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "0–9秒为现场站立及隐藏任务说明，没有静态位置总览。底部条带是第一处、第二处等前置/成就步骤，其中并非每处给宝箱。15秒是一次普通任务定位地图，30秒为途中；312.03–321.03秒为最终战斗、转场及两箱。仍是一条隐藏任务的一个奖励事件、两个成员；不按前置问号或成就数拆事件。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00007.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00009.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00015.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00030.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00312.03.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00317.03.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00321.03.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "第一处等任务步骤与末尾两箱",
+          "eventIds": [
+            "BV1Aeh2zvEko:p3:e001"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1Aeh2zvEko:p3:e001",
+              "members": [
+                1,
+                2
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "六处前置线索、途中问号NPC、战斗与最终两箱属于同一任务链，步骤条带不是宝箱编号总览。",
+          "evidence": [
+            "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00322.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "identity-remains-unresolved",
+          "eventIds": [
+            "BV1Aeh2zvEko:p3:e001"
+          ],
+          "analysis": "首尾无独立地图总览补足两箱身份；不能从两箱外观或步骤标题直接确认ID。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–3秒是岛屿地表路线总览，5–9秒切到金库/列车区域的双栏地下路线总览；图钉标朴素/基准，无可读数字编号。表面明确需买44个锵锵蟹，是材料需求而非44个奖励。地表多个祭坛、橄榄与初始沉船秘匣不能只按朴素标注倒推出类型。地下总览可见八个朴素和一个基准提示，视频实际为三次乘车射击2+4+2成员及一次四NPC答题奖励。704.37–713.37秒是最后射击自动领取，无新事件。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00003.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00005.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00007.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00009.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00704.37.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00709.37.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00713.37.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "地下八个朴素图钉",
+          "eventIds": [
+            "BV1hHuGzFEZG:p1:e013",
+            "BV1hHuGzFEZG:p1:e015",
+            "BV1hHuGzFEZG:p1:e016"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1hHuGzFEZG:p1:e013",
+              "members": [
+                1,
+                2
+              ]
+            },
+            {
+              "eventId": "BV1hHuGzFEZG:p1:e015",
+              "members": [
+                1,
+                2,
+                3,
+                4
+              ]
+            },
+            {
+              "eventId": "BV1hHuGzFEZG:p1:e016",
+              "members": [
+                1,
+                2
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "三段乘车的奖励成员数为2、4、2，总览八处是空间点组，不是八次上车；仍保留每次实际射击出现的成员顺序。",
+          "evidence": [
+            "out/detectability-v2/BV1hHuGzFEZG/p01/visual/scenes-1s-00470.00.jpg",
+            "out/detectability-v2/BV1hHuGzFEZG/p01/visual/scenes-1s-00631.00.jpg",
+            "out/detectability-v2/BV1hHuGzFEZG/p01/visual/scenes-1s-00708.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "地下基准图钉",
+          "eventIds": [
+            "BV1hHuGzFEZG:p1:e014"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1hHuGzFEZG:p1:e014",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "四位逆究声骸答题属于一个事件最终一箱，不能把四个NPC当四个奖励。",
+          "evidence": [
+            "out/detectability-v2/BV1hHuGzFEZG/p01/visual/scenes-1s-00568.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "地表祭坛线路",
+          "eventIds": [
+            "BV1hHuGzFEZG:p1:e010"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1hHuGzFEZG:p1:e010",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "视频上层祭坛产出大型特殊箱，首轮明确名称未核；总览总体朴素字样不能替换实际箱体/领取证据。",
+          "evidence": [
+            "out/detectability-v2/BV1hHuGzFEZG/p01/visual/scenes-1s-00320.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "overview-type-ambiguity",
+          "eventIds": [
+            "BV1hHuGzFEZG:p1:e010"
+          ],
+          "analysis": "总览地表多标朴素，但上层祭坛实拍为大型特殊箱；需独立核对具体图钉与奖励类别，不能依总览纠正或确认。"
+        },
+        {
+          "kind": "identity-remains-unresolved",
+          "eventIds": [
+            "BV1hHuGzFEZG:p1:e013",
+            "BV1hHuGzFEZG:p1:e015",
+            "BV1hHuGzFEZG:p1:e016"
+          ],
+          "analysis": "地下总览给大致射击位置，不给数据库ID；两箱/四箱/两箱必须逐成员回到射击帧与攻略验证，保持首轮未决。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "实际查看0–2秒北侧叹息长阶/微河谷总览、3–5秒船葬祭地总览、7秒白翎堤/埃格拉镇及插图、9秒双子塔附近总览，均为箱等级文字+路线箭头，无独立顺序数字。四个画面有插图与边缘裁切，不以每帧图钉总和强制等于22。时间线二十二段各一奖励；变布偶破石、移柱变兔、假箱变怪等多步骤不增加奖励数。1083.37–1092.37秒为断桥终点清怪开精密箱与普通结束地图，无独立片尾总览。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-00003.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-00005.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-00007.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-00009.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-01083.37.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-01088.37.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-01092.37.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "北侧辉光图钉",
+          "eventIds": [
+            "BV1k438ziEoG:p1:e007"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1k438ziEoG:p1:e007",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "北侧总览一处辉光只作路线覆盖提示；视频两轮拟态怪后第三次调查才生成真箱，仍计单奖励。",
+          "evidence": [
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-00214.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "移柱/变兔地点等级图钉",
+          "eventIds": [
+            "BV1k438ziEoG:p1:e014",
+            "BV1k438ziEoG:p1:e017",
+            "BV1k438ziEoG:p1:e018",
+            "BV1k438ziEoG:p1:e019",
+            "BV1k438ziEoG:p1:e020"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1k438ziEoG:p1:e014",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1k438ziEoG:p1:e017",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1k438ziEoG:p1:e018",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1k438ziEoG:p1:e019",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1k438ziEoG:p1:e020",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "地图图钉不能代表机关步骤数；每处多个柱/石块/球的前置动作仍归同一奖励事件。",
+          "evidence": [
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-00585.00.jpg",
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-00764.00.jpg",
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-00853.00.jpg",
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-00935.00.jpg",
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-00985.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "南侧精密图钉",
+          "eventIds": [
+            "BV1k438ziEoG:p1:e022"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1k438ziEoG:p1:e022",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "片尾断桥终点精密箱与总览南侧精密提示相容，但不能只凭该图钉升级身份。",
+          "evidence": [
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-01082.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "overview-association-unclear",
+          "analysis": "无数字编号、区域轮换及插图裁切，未逐点恢复总览与二十二事件的全映射；不依据图钉接近度确认ID或补造顺序。"
+        }
+      ]
+    }
+  ]
+}

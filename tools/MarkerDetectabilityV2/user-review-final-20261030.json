@@ -1,0 +1,47 @@
+{
+  "reviewedBy": "user",
+  "changes": [
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e028",
+      "stateId": "8",
+      "pointId": "1477783180906614784",
+      "analysis": "用户直接提供库街区链接，确认末次营地任务的洞内宝箱。",
+      "guideImagesAvailable": true
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e004",
+      "stateId": "909",
+      "pointId": "1500305893891219456",
+      "analysis": "用户确认页面候选正确，两日灵/两球平台对应此宝箱。",
+      "guideImagesAvailable": true
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e007",
+      "stateId": "909",
+      "pointId": "1499243508455006208",
+      "analysis": "用户确认真箱攻略正确；绑定传送后的奖励点，不是陷阱入口。",
+      "guideImagesAvailable": true
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e008",
+      "stateId": "909",
+      "pointId": "1500363088875986944",
+      "analysis": "用户对照周边点位后确认此候选。库街区没有攻略图片，按用户判断确认；不声称已做攻略图片核对。",
+      "guideImagesAvailable": false
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e009",
+      "stateId": "909",
+      "pointId": "1501513441654841344",
+      "analysis": "用户确认插入领取片段对应页面候选。",
+      "guideImagesAvailable": true
+    },
+    {
+      "eventId": "BV19kNu6AEVR:p1:e006",
+      "stateId": "8",
+      "pointId": "1524481633250820096",
+      "analysis": "用户确认视频与库街区图中的红名怪可以对应，撤销原地貌差异造成的疑虑。",
+      "guideImagesAvailable": true
+    }
+  ]
+}

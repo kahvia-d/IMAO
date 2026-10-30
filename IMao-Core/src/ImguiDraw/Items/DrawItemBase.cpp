@@ -123,6 +123,7 @@ void DrawItemBase::Initi() {
     Diagnostics::RecordMemory("marker-ledgers-ready");
     markerIdentities.Clear();
     refreshablePointIds.clear();
+    std::set<GapFillCatalog::Key> gapFillKnown;
     size_t categoryCount = 0, locationCount = 0;
     for (const auto sceneId : Scene::sceneIds) {
         json* source = nullptr;
@@ -139,12 +140,15 @@ void DrawItemBase::Initi() {
                 const auto id = location.at("id").get<std::string>();
                 const int state = location.value("stateId", MarkerCompletionStore::SceneState(scene));
                 markerIdentities.Insert(identityGroup, state, id);
+                gapFillKnown.emplace(std::to_string(state), id);
                 // Point ids are unique across all scenes and categories, so one flat set can
                 // answer for a cloud identity that arrives with no category attached.
                 if (refreshable) refreshablePointIds.insert(id);
             }
         }
     }
+    GapFillFilter::Load(ResourceSnapshotContext::MapDataRoot(), gapFillKnown);
+    if (!GapFillFilter::Available()) StructuredLogger::Record("error", "markers", "detectability-catalog-unavailable", GapFillFilter::Error());
     Diagnostics::RecordMemory("marker-identities-ready");
     StructuredLogger::Record("info", "core", "marker-index-storage",
         "mode=compact groups=" + std::to_string(markerIdentities.GroupCount()) +
@@ -431,7 +435,11 @@ bool DrawItemBase::IsPointCompleted(const string& scene, const ItemDatas& item) 
 }
 
 std::string DrawItemBase::MarkerProfile() { return markerStore ? markerStore->Profile() : "local"; }
-std::uint64_t DrawItemBase::MarkerFilterRevision() { return markerFilterRevision.load(); }
+std::uint64_t DrawItemBase::MarkerFilterRevision() { return markerFilterRevision.load() + GapFillFilter::Revision(); }
+bool DrawItemBase::AllowsGapFill(const std::string& scene, const ItemDatas& item) {
+    return GapFillFilter::Allows(item.layer.stateId > 0 ? item.layer.stateId : MarkerCompletionStore::SceneState(scene),
+        item.itemId, AutoRoute::IsFreeStop(item));
+}
 
 // One nearby point a key press may act on, re-resolved under the operation lock.
 struct NearbyTarget {

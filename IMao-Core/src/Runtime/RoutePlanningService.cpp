@@ -5,6 +5,7 @@
 #include "LegacyHandRouteImportFile.h"
 #include "HandDrawnRoute.h"
 #include "FarmMode.h"
+#include "GapFillFilter.h"
 #ifdef IMAO_ROUTE_SERVICE_TEST
 #include "../../tests/RoutePlanningServiceTestHost.h"
 #else
@@ -68,6 +69,7 @@ struct Runtime {
     std::unordered_map<std::string,std::string> names;
     std::vector<ItemDatas> visible;
     std::unordered_set<std::string> visibleKeys,completed;
+    int gapFillVisibleCount=0;
     AutoRoute::Start mapStart,player;
     std::optional<AutoRoute::Plan> active;
     std::vector<std::string> skipHistory;
@@ -149,6 +151,10 @@ std::optional<ItemDatas> ResolveLocked(int scene,const std::string& key){
     const auto it=sceneIt->second.find(key);return it==sceneIt->second.end()?std::optional<ItemDatas>{}:it->second;
 }
 bool CompletedNow(int scene,const ItemDatas& item){return DrawItemBase::IsPointCompleted(Scene::SceneIdToName(scene),item);}
+bool GapFillAllows(int scene,const ItemDatas& item){
+    const auto descriptor=Scene::Find(scene);
+    return GapFillFilter::Allows(item.layer.stateId>0?item.layer.stateId:(descriptor?descriptor->kuroStateId:0),item.itemId,AutoRoute::IsFreeStop(item));
+}
 // A point type as the interface needs to show it: the name the game uses and the icon the map
 // draws. The icon manifest knows far more types than the filter catalogue does, so resolving both
 // here is what lets a route row show "叮咚咚 + its icon" for a type that has no filter row at all.
@@ -626,6 +632,7 @@ Json SnapshotLocked(){
         {"active",r.active?PlanJsonLocked(*r.active):Json(nullptr)},{"navigationStatus",NavigationLocked()},
         {"currentTarget",target>=0?StopJsonLocked(r.active->stops[target],target+1):Json(nullptr)},
         {"autoReplanEnabled",r.autoEnabled},{"autoReplanComputing",r.autoComputing},{"autoReplanStatus",r.autoStatus},
+        {"gapFillModeEnabled",GapFillFilter::Enabled()},{"gapFillCatalogAvailable",GapFillFilter::Available()},{"gapFillCatalogError",GapFillFilter::Error()},{"gapFillVisibleCount",r.gapFillVisibleCount},
         {"farmMode",r.farmMode},{"farmNotice",r.farmNotice},{"farmNoticeSerial",r.farmNoticeSerial},
         {"orderRevision",r.orderRevision},{"previousTarget",r.previousTarget?StopJsonLocked(*r.previousTarget):Json(nullptr)},
         {"currentRoute",CurrentRouteLocked(HandDraftId)},
@@ -688,6 +695,7 @@ void AddLocked(const std::vector<std::string>& keys){
     for(const auto& p:draft.selected)present.insert(AutoRoute::Key(p));
     for(const auto& key:keys){
         const auto item=ResolveLocked(r.scene,key);if(!item)throw std::invalid_argument("点位不属于当前地图："+key);
+        if(!GapFillAllows(r.scene,*item))throw std::invalid_argument("该点位不在查漏补缺筛选中");
         if(!CompletedNow(r.scene,*item)&&present.insert(key).second)added.push_back(*item);
     }
     if(draft.selected.size()+added.size()>AutoRoute::MaxTargets)throw std::invalid_argument("单条路线最多 500 点，本次追加未生效");
@@ -1029,6 +1037,7 @@ RoutePlanningView RoutePlanningService::View(){
     v.revision=r.revision;v.generation=r.epoch.load();v.hiddenCount=HiddenLocked();v.active=r.active;v.completed=r.completed;
     v.mapStart=r.mapStart;
     v.autoReplanEnabled=r.autoEnabled;v.autoReplanComputing=r.autoComputing;v.autoReplanStatus=r.autoStatus;
+    v.gapFillModeEnabled=GapFillFilter::Enabled();v.gapFillCatalogAvailable=GapFillFilter::Available();v.gapFillCatalogError=GapFillFilter::Error();v.gapFillVisibleCount=r.gapFillVisibleCount;
     v.farmMode=r.farmMode;v.farmNotice=r.farmNotice;v.farmNoticeSerial=r.farmNoticeSerial;
     v.orderRevision=r.orderRevision;v.previousTarget=r.previousTarget;
     v.currentTargetIndex=TargetIndexLocked();v.navigationStatus=NavigationLocked();v.navigating=v.navigationStatus=="navigating";
@@ -1063,7 +1072,7 @@ AutoRoute::DrawVisibility RoutePlanningService::DrawingVisibility(){
     result.navigating=NavigationLocked()=="navigating";return result;
 }
 bool RoutePlanningService::PlanningMode(){std::scoped_lock lock(R().mutex);return R().enabled||R().handDraft.Active();}
-void RoutePlanningService::ObserveMap(int scene,const std::vector<ItemDatas>& visible){
+void RoutePlanningService::ObserveMap(int scene,const std::vector<ItemDatas>& visible,const std::vector<ItemDatas>* displayed){
     auto& r=R();bool changed=false;
     {std::scoped_lock lock(r.mutex);if(!r.ready||!Scene::IsKnown(scene))return;
         const auto before=HiddenLocked();
@@ -1075,9 +1084,13 @@ void RoutePlanningService::ObserveMap(int scene,const std::vector<ItemDatas>& vi
                     " points="+std::to_string(r.handDraft.Size()));
             }
             if(r.scene!=scene){InvalidateLocked();r.scene=scene;r.tool="pan";changed=true;}}
-        std::unordered_set<std::string> keys;for(const auto& p:visible)keys.insert(AutoRoute::Key(p));
-        if(keys!=r.visibleKeys){++r.revision;r.visibilityEventPending=true;}
-        r.visible=visible;r.visibleKeys=std::move(keys);
+        std::vector<ItemDatas> filtered;std::unordered_set<std::string> keys;
+        for(const auto& p:visible)if(GapFillAllows(scene,p)){filtered.push_back(p);keys.insert(AutoRoute::Key(p));}
+        const auto& displayCandidates=displayed?*displayed:visible;
+        const int displayCount=static_cast<int>(std::count_if(displayCandidates.begin(),displayCandidates.end(),[&](const auto& p){return GapFillAllows(scene,p);}));
+        if(keys!=r.visibleKeys||displayCount!=r.gapFillVisibleCount){++r.revision;r.visibilityEventPending=true;}
+        r.gapFillVisibleCount=displayCount;
+        r.visible=std::move(filtered);r.visibleKeys=std::move(keys);
         if(r.enabled){auto& draft=r.drafts[scene];if(r.pendingNew){draft={};r.pendingNew=false;++r.revision;changed=true;}
             if(!draft.start.valid&&r.mapStart.valid&&r.mapStart.sceneId==scene){draft.start=r.mapStart;++r.revision;changed=true;}}
         if(HiddenLocked()!=before)r.visibilityEventPending=true;
@@ -1143,6 +1156,12 @@ void RoutePlanningService::UpdatePlayer(const AutoRoute::Start& position){
 void RoutePlanningService::SetPlayerAvailable(bool available){
     auto& r=R();bool changed;{std::scoped_lock lock(r.mutex);const auto before=NavigationLocked();r.playerAvailable=available&&r.player.valid;if(!r.playerAvailable)r.farmConfirmation.Reset();
         changed=before!=NavigationLocked();if(changed)++r.revision;}if(changed)Emit();
+}
+void RoutePlanningService::SetGapFillModeEnabled(bool enabled){
+    if (GapFillFilter::Enabled()==enabled) return;
+    auto& r=R();{std::scoped_lock lock(r.mutex);
+        GapFillFilter::SetEnabled(enabled);r.visible.clear();r.visibleKeys.clear();r.gapFillVisibleCount=0;++r.revision;}
+    Emit();
 }
 void RoutePlanningService::SetAutoReplanEnabled(bool enabled){
     auto& r=R();bool changed=false;{std::scoped_lock lock(r.mutex);

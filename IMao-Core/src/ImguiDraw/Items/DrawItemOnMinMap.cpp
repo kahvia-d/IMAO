@@ -140,6 +140,7 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame
     std::vector<MarkerLayoutPoint> points;
     for (std::size_t index = 0; index < frame.markers.size(); ++index) {
         const auto& item = frame.markers[index];
+        if (!DrawItemBase::AllowsGapFill(frame.sceneName, item)) continue;
         // The nearby update reads this from the completion store - local record and cloud set alike -
         // in the same capture iteration that publishes this frame, so the frozen value is the current
         // one. Querying the store here instead took its mutex once per marker per rendered frame, and

@@ -54,6 +54,7 @@
 | 文档 | 内容 |
 |---|---|
 | [`KuroMapDataSource.md`](KuroMapDataSource.md) | 库街区地图数据同步 |
+| [`MarkerDetectabilitySpike_20261029.md`](MarkerDetectabilitySpike_20261029.md) | 不可探测点位半自动小样本：黑海岸视频三目标、地图配准与库街区攻略图文核验 |
 | [`KuroSceneCalibrationSamples.md`](KuroSceneCalibrationSamples.md) | 新地区四点校准样本 |
 | [`KuroTileFeaturePacks.md`](KuroTileFeaturePacks.md) | 库街区瓦片特征包 |
 | [`VisualLocalization_zh-Hans.md`](VisualLocalization_zh-Hans.md) | 小地图视觉定位 |
@@ -219,3 +220,9 @@
 - [OCR 接管调度稳定性（2026-10-18）](ReadoutScheduling_20261018_zh-Hans.md)
 
 - [运行时内存归因与匹配副本优化计划](RuntimeMemoryPlan_20261020.md)
+
+- [探测仪遗漏点位：合集离线整理（2026-10-29）](MarkerDetectabilityCollection_20261029.md)
+
+- [可探测性补充 v2：视频时间轴优先（2026-10-29）](MarkerDetectabilityV2_20261029.md)
+
+- [查漏补缺模式与名录维护](MarkerDetectabilityMaintenance.md)：正例名录、生成校验、资源分发和运行规则。

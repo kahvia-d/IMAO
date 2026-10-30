@@ -1,0 +1,19 @@
+[
+  {
+    "eventId": "BV1iMTXzVE8J:p11:e011",
+    "action": "exclude-quest-item",
+    "count": 1
+  },
+  {
+    "eventId": "BV1iMTXzVE8J:p12:e007",
+    "action": "exclude-quest-item",
+    "count": 1
+  },
+  {
+    "eventId": "BV1k438ziEoG:p1:e009",
+    "action": "confirm",
+    "stateId": "8",
+    "pointId": "1325907648958193664",
+    "reason": "用户已核实：龙骨下宝箱对应此点位。库街区图片与视频只是拍摄视角不同，撤销原视觉排除。"
+  }
+]

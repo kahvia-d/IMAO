@@ -1,0 +1,1558 @@
+{
+  "schemaVersion": 1,
+  "scope": "five clamped-arrow corrections and three additional identity proposals",
+  "noMainTimelineEdits": true,
+  "anchorAudit": [
+    {
+      "bvid": "BV1k438ziEoG",
+      "time": 386,
+      "oldSource": "out/detectability-v2/route-rinascita/anchor-source-BV1k438ziEoG-386.jpg",
+      "oldGamePosition": [
+        8852.437561020897,
+        4733.562916742821
+      ],
+      "oldArrow": [
+        424.62179487179486,
+        71.0448717948718
+      ],
+      "status": "invalid-player-anchor",
+      "reason": "map pan clamps ringed offscreen-player indicator at y≈70/408; geometry fit valid but pixel does not represent player position",
+      "replacementTime": 385.3,
+      "replacementSource": "out/detectability-v2/route-rinascita/earlier-map-385.3.jpg"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "time": 688,
+      "oldSource": "out/detectability-v2/route-rinascita/anchor-source-BV1k438ziEoG-688.jpg",
+      "oldGamePosition": [
+        7644.313504254578,
+        6368.2677970446175
+      ],
+      "oldArrow": [
+        230.23809523809524,
+        69.98639455782313
+      ],
+      "status": "invalid-player-anchor",
+      "reason": "map pan clamps ringed offscreen-player indicator at y≈70/408; geometry fit valid but pixel does not represent player position",
+      "replacementTime": 687.3,
+      "replacementSource": "out/detectability-v2/route-rinascita/earlier-map-687.3.jpg"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "time": 275,
+      "oldSource": "out/detectability-v2/route-rinascita/anchor-source-BV1k438ziEoG-275.jpg",
+      "oldGamePosition": [
+        8172.652001622722,
+        5110.89102276445
+      ],
+      "oldArrow": [
+        458.3121387283237,
+        407.84393063583815
+      ],
+      "status": "invalid-player-anchor",
+      "reason": "map pan clamps ringed offscreen-player indicator at y≈70/408; geometry fit valid but pixel does not represent player position",
+      "replacementTime": 274.2,
+      "replacementSource": "out/detectability-v2/route-rinascita/clamp-BV1k438ziEoG-274.2.jpg"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "time": 112,
+      "oldSource": "out/detectability-v2/route-rinascita/anchor-source-BV1hHuGzFEZG-112.jpg",
+      "oldGamePosition": [
+        7318.178115284474,
+        3985.439747100724
+      ],
+      "oldArrow": [
+        407.66442953020135,
+        408.61744966442956
+      ],
+      "status": "invalid-player-anchor",
+      "reason": "map pan clamps ringed offscreen-player indicator at y≈70/408; geometry fit valid but pixel does not represent player position",
+      "replacementTime": 111.5,
+      "replacementSource": "out/detectability-v2/route-rinascita/clamp-BV1hHuGzFEZG-111.5.jpg"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "time": 228,
+      "oldSource": "out/detectability-v2/route-rinascita/anchor-source-BV1hHuGzFEZG-228.jpg",
+      "oldGamePosition": [
+        6773.600591634324,
+        3236.1670903189092
+      ],
+      "oldArrow": [
+        307.3469387755102,
+        408.7687074829932
+      ],
+      "status": "invalid-player-anchor",
+      "reason": "map pan clamps ringed offscreen-player indicator at y≈70/408; geometry fit valid but pixel does not represent player position",
+      "replacementTime": 227.2,
+      "replacementSource": "out/detectability-v2/route-rinascita/clamp-BV1hHuGzFEZG-227.2.jpg"
+    }
+  ],
+  "members": [
+    {
+      "eventId": "BV1k438ziEoG:p1:e008",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "route-and-guide-visually-reviewed",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "224–232秒地图选择/加载，238–250秒西南沿台阶和圆纹铺地，256秒穿带蓝藤圆洞，262–268秒左转上灰草坡，271–273秒布偶群棕箱。蓝藤石洞是比普通布偶更强的中途地标。",
+      "support": [
+        "224–232秒地图选择/加载，238–250秒西南沿台阶和圆纹铺地，256秒穿带蓝藤圆洞，262–268秒左转上灰草坡，271–273秒布偶群棕箱。蓝藤石洞是比普通布偶更强的中途地标。",
+        "已目视核对官方攻略图：蓝藤圆洞后灰草坡、布偶调查，与连续接近地标和奖励位置一致。",
+        "更正：274.2秒未被视窗边缘钳位的玩家箭头为game[8173.3796254191275, 5114.930667735864]，几何内点417；动态前后帧证实旧275秒带白圈箭头是离屏方向指示，不是位置。",
+        "更正后与已提出候选1325908242352738304相距3.1游戏单位，原蓝藤圆洞后布偶调查路线与攻略对应保持。"
+      ],
+      "counterEvidence": [
+        "地图黄线仅连接已证明的起讫方向，不是精确步行/飞行轨迹；所有地图选择、加载及跳剪均断链。",
+        "保留旧候选及其新距离反证；位置近仅为支持，不能单独据最近点确认身份。",
+        "已撤销旧边缘钳位箭头的坐标/距离反证；新版定位依据更早、无白圈且随地图移动的真实玩家箭头。"
+      ],
+      "missingEvidence": [
+        "仍为父任务复核提议，未直接改主时间轴；6秒抽样不能排除帧间细节。"
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-rinascita/route-BV1k438ziEoG-p01-e008-0.jpg",
+        "out/detectability-v2/route-rinascita/remaining-manual-observations.json",
+        "out/detectability-v2/route-rinascita/laguna-new-route-atlas.png",
+        "out/detectability-v2/route-rinascita/remaining-map-anchors.json",
+        "out/detectability-v2/route-rinascita/new-guides/guide-8-1325908242352738304.json",
+        "out/detectability-v2/route-rinascita/new-guides/guide-8-1325908242352738304-1.png",
+        "out/detectability-v2/route-rinascita/clamp-BV1k438ziEoG-274.2.jpg",
+        "out/detectability-v2/route-rinascita/corrected-map-anchors.json",
+        "out/detectability-v2/route-rinascita/clamped-anchor-audit.json",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-0.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-1.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-2.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-3.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-4.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1325907648958193664",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 341.08,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1322593540720869376",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 325.82,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1325764785251311616",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 456.5,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1325939864963014656",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 900.52,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1325723376857276416",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 503.29,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1325908242352738304",
+          "priorStatus": "new-from-route-anchor",
+          "distanceFromNewEndpointGameUnits": 3.09
+        }
+      ],
+      "detectability": false,
+      "reviewMethod": "人工逐张审阅6秒步长连续路线接触表及奖励出现帧；地图箭头独立人工选取，不等同逐帧播放。",
+      "reviewedSampleTimes": [
+        224,
+        226.0,
+        232.0,
+        238.0,
+        244.0,
+        250.0,
+        256.0,
+        262.0,
+        268.0,
+        271,
+        273
+      ],
+      "absoluteEndpointEvidence": {
+        "time": 274.2,
+        "gamePosition": [
+          8173.3796254191275,
+          5114.930667735864
+        ],
+        "rawPosition": [
+          817337.9625419128,
+          511493.0667735864
+        ],
+        "source": "out/detectability-v2/route-rinascita/clamp-BV1k438ziEoG-274.2.jpg",
+        "actualPlayerArrow": [
+          452.48471615720524,
+          375.50655021834064
+        ],
+        "inliers": 417,
+        "inlierRatio": 0.9788732394366197,
+        "acceptedGeometry": true
+      },
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1325908242352738304"
+      },
+      "invalidatedAnchor": {
+        "bvid": "BV1k438ziEoG",
+        "time": 275,
+        "oldSource": "out/detectability-v2/route-rinascita/anchor-source-BV1k438ziEoG-275.jpg",
+        "oldGamePosition": [
+          8172.652001622722,
+          5110.89102276445
+        ],
+        "oldArrow": [
+          458.3121387283237,
+          407.84393063583815
+        ],
+        "status": "invalid-player-anchor",
+        "reason": "map pan clamps ringed offscreen-player indicator at y≈70/408; geometry fit valid but pixel does not represent player position",
+        "replacementTime": 274.2,
+        "replacementSource": "out/detectability-v2/route-rinascita/clamp-BV1k438ziEoG-274.2.jpg"
+      }
+    },
+    {
+      "eventId": "BV1k438ziEoG:p1:e011",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "route-and-guide-visually-reviewed",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "348–356秒地图/新信标；362秒先登西北海边黑石，368秒转东北飞远塔，374秒从蓝色发光树旁落下，380–384秒木架斜撑下破箱调查得棕箱。塔和蓝树是中途双重地标。",
+      "support": [
+        "348–356秒地图/新信标；362秒先登西北海边黑石，368秒转东北飞远塔，374秒从蓝色发光树旁落下，380–384秒木架斜撑下破箱调查得棕箱。塔和蓝树是中途双重地标。",
+        "更正：385.3秒未被视窗边缘钳位的玩家箭头为game[8851.980600904843, 4517.7262402566885]，几何内点126；动态前后帧证实旧386秒带白圈箭头是离屏方向指示，不是位置。",
+        "完整点库周边检索后，已更正385.3秒箭头距该调查箱3.5游戏单位。攻略同下层斜木梁、横木架、右侧三块灰石和箱前石地；视频380–384秒打木箱后调查在相同梁下。三兄弟/散佚之书奖励虽然靠旧假锚较近，但机制与新坐标均不符。"
+      ],
+      "counterEvidence": [
+        "地图黄线仅连接已证明的起讫方向，不是精确步行/飞行轨迹；所有地图选择、加载及跳剪均断链。",
+        "保留旧候选及其新距离反证；位置近仅为支持，不能单独据最近点确认身份。",
+        "已撤销旧边缘钳位箭头的坐标/距离反证；新版定位依据更早、无白圈且随地图移动的真实玩家箭头。"
+      ],
+      "missingEvidence": [
+        "父任务复核提议，未修改主时间轴；地图线路仅阶段关系，不冒充逐帧坐标。"
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-rinascita/route-BV1k438ziEoG-p01-e011-0.jpg",
+        "out/detectability-v2/route-rinascita/remaining-manual-observations.json",
+        "out/detectability-v2/route-rinascita/laguna-new-route-atlas.png",
+        "out/detectability-v2/route-rinascita/remaining-map-anchors.json",
+        "out/detectability-v2/route-rinascita/earlier-map-385.3.jpg",
+        "out/detectability-v2/route-rinascita/corrected-map-anchors.json",
+        "out/detectability-v2/route-rinascita/clamped-anchor-audit.json",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1325939864963014656-1.png",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-0.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-1.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-2.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-3.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-4.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1325939864963014656",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 3.49
+        },
+        {
+          "stateId": "8",
+          "pointId": "1325907648958193664",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 907.85,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1322593540720869376",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 1059.69,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1325764785251311616",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 1113.17,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1325723376857276416",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 1357.06,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        }
+      ],
+      "detectability": false,
+      "reviewMethod": "人工逐张审阅6秒步长连续路线接触表及奖励出现帧；地图箭头独立人工选取，不等同逐帧播放。",
+      "reviewedSampleTimes": [
+        348,
+        350.0,
+        356.0,
+        362.0,
+        368.0,
+        374.0,
+        380.0,
+        382,
+        384
+      ],
+      "absoluteEndpointEvidence": {
+        "time": 385.3,
+        "gamePosition": [
+          8851.980600904843,
+          4517.7262402566885
+        ],
+        "rawPosition": [
+          885198.0600904842,
+          451772.62402566883
+        ],
+        "source": "out/detectability-v2/route-rinascita/earlier-map-385.3.jpg",
+        "actualPlayerArrow": [
+          425.26881720430106,
+          240.1451612903226
+        ],
+        "inliers": 126,
+        "inlierRatio": 0.9333333333333333,
+        "acceptedGeometry": true
+      },
+      "invalidatedAnchor": {
+        "bvid": "BV1k438ziEoG",
+        "time": 386,
+        "oldSource": "out/detectability-v2/route-rinascita/anchor-source-BV1k438ziEoG-386.jpg",
+        "oldGamePosition": [
+          8852.437561020897,
+          4733.562916742821
+        ],
+        "oldArrow": [
+          424.62179487179486,
+          71.0448717948718
+        ],
+        "status": "invalid-player-anchor",
+        "reason": "map pan clamps ringed offscreen-player indicator at y≈70/408; geometry fit valid but pixel does not represent player position",
+        "replacementTime": 385.3,
+        "replacementSource": "out/detectability-v2/route-rinascita/earlier-map-385.3.jpg"
+      },
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1325939864963014656"
+      }
+    },
+    {
+      "eventId": "BV1k438ziEoG:p1:e016",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "route-and-guide-visually-reviewed",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "644–652秒埃格拉南侧重新传送，658–664秒西北飞至蓝树旁另一残亭，670–682秒攀内部墙角，683–686秒圆铁栏草坪顶青箱；不能沿E15前位置续接。",
+      "support": [
+        "644–652秒埃格拉南侧重新传送，658–664秒西北飞至蓝树旁另一残亭，670–682秒攀内部墙角，683–686秒圆铁栏草坪顶青箱；不能沿E15前位置续接。",
+        "更正：687.3秒未被视窗边缘钳位的玩家箭头为game[7579.100025857814, 6311.618748853095]，几何内点266；动态前后帧证实旧688秒带白圈箭头是离屏方向指示，不是位置。",
+        "完整点库周边检索后，已更正687.3秒箭头距新候选2.6游戏单位。补下载并实看攻略：圆形铁栏中央大圆/两侧方窗、长方格栅地板/绿藤、外侧浅黄石路和水岸、亭顶青箱与683–686秒逐一对应。排除附近最高黄色帐篷内箱及地面玩偶群棕箱；不是E15另一座亭顶。"
+      ],
+      "counterEvidence": [
+        "地图黄线仅连接已证明的起讫方向，不是精确步行/飞行轨迹；所有地图选择、加载及跳剪均断链。",
+        "保留旧候选及其新距离反证；位置近仅为支持，不能单独据最近点确认身份。",
+        "已撤销旧边缘钳位箭头的坐标/距离反证；新版定位依据更早、无白圈且随地图移动的真实玩家箭头。"
+      ],
+      "missingEvidence": [
+        "父任务复核提议，未修改主时间轴；地图线路仅阶段关系，不冒充逐帧坐标。"
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-rinascita/route-BV1k438ziEoG-p01-e016-0.jpg",
+        "out/detectability-v2/route-rinascita/remaining-manual-observations.json",
+        "out/detectability-v2/route-rinascita/laguna-new-route-atlas.png",
+        "out/detectability-v2/route-rinascita/remaining-map-anchors.json",
+        "out/detectability-v2/route-rinascita/earlier-map-687.3.jpg",
+        "out/detectability-v2/route-rinascita/corrected-map-anchors.json",
+        "out/detectability-v2/route-rinascita/clamped-anchor-audit.json",
+        "out/detectability-v2/route-rinascita/extra-guides/guide-8-1326893325502275584-1.png",
+        "out/detectability-v2/route-rinascita/extra-guides/guide-8-1326893325502275584.json",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-0.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-1.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-2.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-3.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-4.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1321122666112339968",
+          "priorStatus": "excluded",
+          "distanceFromNewEndpointGameUnits": 601.26,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1321120972553895936",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 727.6,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1326893325502275584",
+          "priorStatus": "new-from-corrected-anchor-and-complete-point-index"
+        }
+      ],
+      "detectability": false,
+      "reviewMethod": "人工逐张审阅6秒步长连续路线接触表及奖励出现帧；地图箭头独立人工选取，不等同逐帧播放。",
+      "reviewedSampleTimes": [
+        644,
+        646.0,
+        652.0,
+        658.0,
+        664.0,
+        670.0,
+        676.0,
+        682.0,
+        683,
+        686
+      ],
+      "absoluteEndpointEvidence": {
+        "time": 687.3,
+        "gamePosition": [
+          7579.100025857814,
+          6311.618748853095
+        ],
+        "rawPosition": [
+          757910.0025857814,
+          631161.8748853095
+        ],
+        "source": "out/detectability-v2/route-rinascita/earlier-map-687.3.jpg",
+        "actualPlayerArrow": [
+          425.59016393442624,
+          238.76502732240436
+        ],
+        "inliers": 266,
+        "inlierRatio": 0.9602888086642599,
+        "acceptedGeometry": true
+      },
+      "invalidatedAnchor": {
+        "bvid": "BV1k438ziEoG",
+        "time": 688,
+        "oldSource": "out/detectability-v2/route-rinascita/anchor-source-BV1k438ziEoG-688.jpg",
+        "oldGamePosition": [
+          7644.313504254578,
+          6368.2677970446175
+        ],
+        "oldArrow": [
+          230.23809523809524,
+          69.98639455782313
+        ],
+        "status": "invalid-player-anchor",
+        "reason": "map pan clamps ringed offscreen-player indicator at y≈70/408; geometry fit valid but pixel does not represent player position",
+        "replacementTime": 687.3,
+        "replacementSource": "out/detectability-v2/route-rinascita/earlier-map-687.3.jpg"
+      },
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1326893325502275584"
+      }
+    },
+    {
+      "eventId": "BV1k438ziEoG:p1:e022",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "route-and-guide-visually-reviewed",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "1022–1036秒接已确认E21墙口到西侧断桥入口，经高拱落桥面；1042–1078秒一直向西沿长桥躲两侧蓝色射箭幻影，1084–1091秒尽头紫箱。无传送续接E21，桥端不是沿途幻影位置，不能只按地图邻近楼台给身份。",
+      "support": [
+        "1022–1036秒接已确认E21墙口到西侧断桥入口，经高拱落桥面；1042–1078秒一直向西沿长桥躲两侧蓝色射箭幻影，1084–1091秒尽头紫箱。无传送续接E21，桥端不是沿途幻影位置，不能只按地图邻近楼台给身份。",
+        "完整点库按幻影/幻象/长桥/躲避检索后，本候选唯一描述东端步行三波弓箭手再击败终怪。实看攻略图1同宽阔旋纹石桥、两侧三级阶梯尖顶栏杆、尽头断边及紫箱；图2红线从东端绕北入口向西走南侧弧桥，与1024–1091秒经高拱、三波蓝影、终点战斗并开紫箱逐段一致。另一候选1325766361303375872图为桥下木板营地帐篷锁箱，明确排除，不需要用精确路径长度补强。"
+      ],
+      "counterEvidence": [
+        "地图黄线仅连接已证明的起讫方向，不是精确步行/飞行轨迹；所有地图选择、加载及跳剪均断链。"
+      ],
+      "missingEvidence": [
+        "父任务复核提议，未修改主时间轴；地图线路仅阶段关系，不冒充逐帧坐标。"
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-rinascita/route-BV1k438ziEoG-p01-e022-0.jpg",
+        "out/detectability-v2/route-rinascita/remaining-manual-observations.json",
+        "out/detectability-v2/route-rinascita/laguna-new-route-atlas.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1325908863088758784-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1325908863088758784-2.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1325766361303375872-1.png"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1325908863088758784",
+          "priorStatus": "candidate-not-confirmed"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1325766361303375872",
+          "priorStatus": "candidate-not-confirmed"
+        }
+      ],
+      "detectability": false,
+      "reviewMethod": "人工逐张审阅6秒步长连续路线接触表及奖励出现帧；地图箭头独立人工选取，不等同逐帧播放。",
+      "reviewedSampleTimes": [
+        1022,
+        1024.0,
+        1030.0,
+        1036.0,
+        1042.0,
+        1048.0,
+        1054.0,
+        1060.0,
+        1066.0,
+        1072.0,
+        1078.0,
+        1084.0,
+        1086,
+        1090.0,
+        1091
+      ],
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1325908863088758784"
+      },
+      "rejectedPointIds": [
+        "1325766361303375872"
+      ]
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e002",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "route-visually-reviewed-unresolved",
+      "proposal": "retain-pending",
+      "route": "80–92秒传到黎乔利港，98秒东南飞离主岛到独立平顶小岛，104秒落右侧顶面，109–110秒面海单蟹祭坛棕箱。独立小岛与船村木甲板可区分。",
+      "support": [
+        "80–92秒传到黎乔利港，98秒东南飞离主岛到独立平顶小岛，104秒落右侧顶面，109–110秒面海单蟹祭坛棕箱。独立小岛与船村木甲板可区分。",
+        "更正：111.5秒未被视窗边缘钳位的玩家箭头为game[7311.456369120782, 4035.6992139245285]，几何内点31；动态前后帧证实旧112秒带白圈箭头是离屏方向指示，不是位置。"
+      ],
+      "counterEvidence": [
+        "地图黄线仅连接已证明的起讫方向，不是精确步行/飞行轨迹；所有地图选择、加载及跳剪均断链。",
+        "保留旧候选及其新距离反证；位置近仅为支持，不能单独据最近点确认身份。",
+        "已撤销旧边缘钳位箭头的坐标/距离反证；新版定位依据更早、无白圈且随地图移动的真实玩家箭头。"
+      ],
+      "missingEvidence": [
+        "更正后箭头与1343632032590700544仅1.4游戏单位；本报告尚未新增该项攻略复核，交父任务独立对照结论。"
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e002-0.jpg",
+        "out/detectability-v2/route-rinascita/remaining-manual-observations.json",
+        "out/detectability-v2/route-rinascita/liqiaoli-route-atlas.png",
+        "out/detectability-v2/route-rinascita/remaining-map-anchors.json",
+        "out/detectability-v2/route-rinascita/clamp-BV1hHuGzFEZG-111.5.jpg",
+        "out/detectability-v2/route-rinascita/corrected-map-anchors.json",
+        "out/detectability-v2/route-rinascita/clamped-anchor-audit.json",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-0.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-1.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-2.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-3.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-4.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1343632032590700544",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 1.41
+        },
+        {
+          "stateId": "8",
+          "pointId": "1344663479527120896",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 512.43,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1344664011070038016",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 492.72,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1344664494687100928",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 563.2,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1343634231349714944",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 900.57,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        }
+      ],
+      "detectability": false,
+      "reviewMethod": "人工逐张审阅6秒步长连续路线接触表及奖励出现帧；地图箭头独立人工选取，不等同逐帧播放。",
+      "reviewedSampleTimes": [
+        78,
+        80.0,
+        86.0,
+        92.0,
+        98.0,
+        104.0,
+        109,
+        110
+      ],
+      "absoluteEndpointEvidence": {
+        "time": 111.5,
+        "gamePosition": [
+          7311.456369120782,
+          4035.6992139245285
+        ],
+        "rawPosition": [
+          731145.6369120782,
+          403569.92139245284
+        ],
+        "source": "out/detectability-v2/route-rinascita/clamp-BV1hHuGzFEZG-111.5.jpg",
+        "actualPlayerArrow": [
+          425.2307692307692,
+          239.15934065934067
+        ],
+        "inliers": 31,
+        "inlierRatio": 0.9393939393939394,
+        "acceptedGeometry": true
+      },
+      "invalidatedAnchor": {
+        "bvid": "BV1hHuGzFEZG",
+        "time": 112,
+        "oldSource": "out/detectability-v2/route-rinascita/anchor-source-BV1hHuGzFEZG-112.jpg",
+        "oldGamePosition": [
+          7318.178115284474,
+          3985.439747100724
+        ],
+        "oldArrow": [
+          407.66442953020135,
+          408.61744966442956
+        ],
+        "status": "invalid-player-anchor",
+        "reason": "map pan clamps ringed offscreen-player indicator at y≈70/408; geometry fit valid but pixel does not represent player position",
+        "replacementTime": 111.5,
+        "replacementSource": "out/detectability-v2/route-rinascita/clamp-BV1hHuGzFEZG-111.5.jpg"
+      }
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e007",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "route-and-guide-visually-reviewed",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "209秒仍E6墙旁，211秒攀西北残墙，217秒翻到背面下落，223–226秒半山腰独立圆石/灌木祭坛棕箱；可区分墙正面和背面两坛，不能复用同一ID。",
+      "support": [
+        "209秒仍E6墙旁，211秒攀西北残墙，217秒翻到背面下落，223–226秒半山腰独立圆石/灌木祭坛棕箱；可区分墙正面和背面两坛，不能复用同一ID。",
+        "已目视核对官方攻略图：残墙背面半山圆石蟹坛，与连续接近地标和奖励位置一致。",
+        "更正：227.2秒未被视窗边缘钳位的玩家箭头为game[6766.375513671743, 3246.228419672194]，几何内点158；动态前后帧证实旧228秒带白圈箭头是离屏方向指示，不是位置。",
+        "更正后与已提出候选1344431893422514176相距1.6游戏单位，原独特圆石蟹坛攻略对应保持。"
+      ],
+      "counterEvidence": [
+        "地图黄线仅连接已证明的起讫方向，不是精确步行/飞行轨迹；所有地图选择、加载及跳剪均断链。",
+        "保留旧候选及其新距离反证；位置近仅为支持，不能单独据最近点确认身份。",
+        "已撤销旧边缘钳位箭头的坐标/距离反证；新版定位依据更早、无白圈且随地图移动的真实玩家箭头。"
+      ],
+      "missingEvidence": [
+        "仍为父任务复核提议，未直接改主时间轴；6秒抽样不能排除帧间细节。"
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e007-0.jpg",
+        "out/detectability-v2/route-rinascita/remaining-manual-observations.json",
+        "out/detectability-v2/route-rinascita/liqiaoli-route-atlas.png",
+        "out/detectability-v2/route-rinascita/remaining-map-anchors.json",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1344431893422514176-1.png",
+        "out/detectability-v2/route-rinascita/clamp-BV1hHuGzFEZG-227.2.jpg",
+        "out/detectability-v2/route-rinascita/corrected-map-anchors.json",
+        "out/detectability-v2/route-rinascita/clamped-anchor-audit.json",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-0.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-1.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-2.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-3.jpg",
+        "out/detectability-v2/route-rinascita/all-anchor-audit-4.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1343634231349714944",
+          "priorStatus": "excluded",
+          "distanceFromNewEndpointGameUnits": 70.34
+        },
+        {
+          "stateId": "8",
+          "pointId": "1344431893422514176",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 1.64
+        },
+        {
+          "stateId": "8",
+          "pointId": "1344663479527120896",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 552.82,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1344432685607870464",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 357.02,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1344664494687100928",
+          "priorStatus": "candidate-not-confirmed",
+          "distanceFromNewEndpointGameUnits": 665.3,
+          "newCounterEvidence": "与已更正真实玩家箭头相距超过150游戏单位；不再作为终点近邻支持。"
+        }
+      ],
+      "detectability": false,
+      "reviewMethod": "人工逐张审阅6秒步长连续路线接触表及奖励出现帧；地图箭头独立人工选取，不等同逐帧播放。",
+      "reviewedSampleTimes": [
+        209,
+        211.0,
+        217.0,
+        223.0,
+        224,
+        226
+      ],
+      "absoluteEndpointEvidence": {
+        "time": 227.2,
+        "gamePosition": [
+          6766.375513671743,
+          3246.228419672194
+        ],
+        "rawPosition": [
+          676637.5513671743,
+          324622.84196721937
+        ],
+        "source": "out/detectability-v2/route-rinascita/clamp-BV1hHuGzFEZG-227.2.jpg",
+        "actualPlayerArrow": [
+          418.3085106382979,
+          244.13297872340425
+        ],
+        "inliers": 158,
+        "inlierRatio": 0.9813664596273292,
+        "acceptedGeometry": true
+      },
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1344431893422514176"
+      },
+      "invalidatedAnchor": {
+        "bvid": "BV1hHuGzFEZG",
+        "time": 228,
+        "oldSource": "out/detectability-v2/route-rinascita/anchor-source-BV1hHuGzFEZG-228.jpg",
+        "oldGamePosition": [
+          6773.600591634324,
+          3236.1670903189092
+        ],
+        "oldArrow": [
+          307.3469387755102,
+          408.7687074829932
+        ],
+        "status": "invalid-player-anchor",
+        "reason": "map pan clamps ringed offscreen-player indicator at y≈70/408; geometry fit valid but pixel does not represent player position",
+        "replacementTime": 227.2,
+        "replacementSource": "out/detectability-v2/route-rinascita/clamp-BV1hHuGzFEZG-227.2.jpg"
+      }
+    }
+  ],
+  "maps": [
+    {
+      "path": "out/detectability-v2/route-rinascita/laguna-new-route-atlas.png",
+      "region": "laguna",
+      "nodes": {
+        "E1": {
+          "game": [
+            8030.886220897598,
+            5599.972492912728
+          ],
+          "basis": "39s actual player arrow"
+        },
+        "E3": {
+          "game": [
+            8271.83604199617,
+            5347.51310497516
+          ],
+          "basis": "97s actual player arrow"
+        },
+        "E7": {
+          "game": [
+            8604.33704360736,
+            5439.103191057494
+          ],
+          "basis": "224s actual player arrow"
+        },
+        "E8": {
+          "game": [
+            8173.3796254191275,
+            5114.930667735864
+          ],
+          "basis": "274.2s actual player arrow"
+        },
+        "E10": {
+          "game": [
+            8027.436046007697,
+            4651.875628912616
+          ],
+          "basis": "348s actual player arrow"
+        },
+        "E11": {
+          "game": [
+            8851.980600904843,
+            4517.7262402566885
+          ],
+          "basis": "385.3s actual player arrow"
+        },
+        "E12": {
+          "game": [
+            9127.91081369455,
+            6478.274186245503
+          ],
+          "basis": "455s actual player arrow"
+        },
+        "E13": {
+          "game": [
+            8325.30695962665,
+            5888.92305105453
+          ],
+          "basis": "494s actual player arrow"
+        },
+        "E14": {
+          "game": [
+            7991.901783290165,
+            6007.808411929704
+          ],
+          "basis": "595s actual player arrow"
+        },
+        "E15": {
+          "game": [
+            7792.810277324363,
+            6073.661111096369
+          ],
+          "basis": "644s actual player arrow"
+        },
+        "E16": {
+          "game": [
+            7579.100025857814,
+            6311.618748853095
+          ],
+          "basis": "687.3s actual player arrow"
+        },
+        "E18": {
+          "game": [
+            8401.46000826198,
+            6587.827103563266
+          ],
+          "basis": "866s actual player arrow"
+        },
+        "E19": {
+          "game": [
+            8200.497449517346,
+            6733.713175012454
+          ],
+          "basis": "948s actual player arrow"
+        },
+        "T41": {
+          "game": [
+            8211.800835730415,
+            5492.66596597678
+          ],
+          "basis": "41s selected facility"
+        },
+        "T350": {
+          "game": [
+            8624.96920876715,
+            4681.83620899953
+          ],
+          "basis": "350s selected facility"
+        },
+        "T597": {
+          "game": [
+            7964.967040915933,
+            6169.656293881555
+          ],
+          "basis": "597s selected facility"
+        },
+        "T868": {
+          "game": [
+            8254.74491593081,
+            6785.402782549519
+          ],
+          "basis": "868s selected facility"
+        },
+        "E21已确认": {
+          "game": [
+            8321.82,
+            6897.41
+          ],
+          "basis": "previous confirmed E21, route continues without teleport"
+        },
+        "E22桥末端": {
+          "game": [
+            7930,
+            6960
+          ],
+          "basis": "unique bridge route and reviewed guide"
+        },
+        "起点12s": {
+          "game": [
+            7975.535763790432,
+            5722.6890951198875
+          ],
+          "basis": "12s actual player before first route"
+        }
+      },
+      "edges": [
+        [
+          "起点12s",
+          "E1"
+        ],
+        [
+          "T41",
+          "E3"
+        ],
+        [
+          "T350",
+          "E11"
+        ],
+        [
+          "T597",
+          "E15"
+        ],
+        [
+          "T868",
+          "E19"
+        ],
+        [
+          "E21已确认",
+          "E22桥末端"
+        ]
+      ],
+      "facilities": [
+        {
+          "stateId": "8",
+          "pointId": "1319817406367186944",
+          "type": "浸礼海渊",
+          "description": "",
+          "game": [
+            7452.0,
+            5920.0
+          ],
+          "label": "浸礼海渊1",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1319819190227849216",
+          "type": "祝祭海渊",
+          "description": "",
+          "game": [
+            8254.0,
+            6786.0
+          ],
+          "label": "祝祭海渊2",
+          "actuallyUsed": true
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320129224025358336",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8073.0,
+            4717.0
+          ],
+          "label": "小型信标3",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320130230031372288",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8117.0,
+            4893.0
+          ],
+          "label": "小型信标4",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320131491175845888",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8248.0,
+            4936.0
+          ],
+          "label": "小型信标5",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320134414535278592",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8368.0,
+            5034.0
+          ],
+          "label": "小型信标6",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320135590734917632",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8625.0,
+            4682.0
+          ],
+          "label": "小型信标7",
+          "actuallyUsed": true
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320140416458473472",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8465.0,
+            5438.0
+          ],
+          "label": "小型信标8",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320172012945428480",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            9298.0,
+            4967.0
+          ],
+          "label": "小型信标9",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320189558297874432",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            9160.0,
+            5194.0
+          ],
+          "label": "小型信标10",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320190849937985536",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            9024.0,
+            5470.0
+          ],
+          "label": "小型信标11",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320191748271816704",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8212.0,
+            5492.0
+          ],
+          "label": "小型信标12",
+          "actuallyUsed": true
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320192327890227200",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            7701.0,
+            5557.0
+          ],
+          "label": "小型信标13",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320192974148792320",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            7715.0,
+            5748.0
+          ],
+          "label": "小型信标14",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320193743056785408",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            7544.0,
+            6101.0
+          ],
+          "label": "小型信标15",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320324065516736512",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            7785.0,
+            6283.0
+          ],
+          "label": "小型信标16",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320324640243236864",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            7964.0,
+            6170.0
+          ],
+          "label": "小型信标17",
+          "actuallyUsed": true
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320325821594124288",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8303.0,
+            5673.0
+          ],
+          "label": "小型信标18",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320326608138727424",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8472.0,
+            5735.0
+          ],
+          "label": "小型信标19",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320327966447943680",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8795.0,
+            5744.0
+          ],
+          "label": "小型信标20",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320329323707297792",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8889.0,
+            6117.0
+          ],
+          "label": "小型信标21",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320329771150102528",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            9049.0,
+            6616.0
+          ],
+          "label": "小型信标22",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320330523403866112",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8594.0,
+            6476.0
+          ],
+          "label": "小型信标23",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320505605669507072",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8428.0,
+            6601.0
+          ],
+          "label": "小型信标24",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320506441095376896",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8021.0,
+            6490.0
+          ],
+          "label": "小型信标25",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320511057836888064",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8329.0,
+            6876.0
+          ],
+          "label": "小型信标26",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1320511579877588992",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            8578.0,
+            6958.0
+          ],
+          "label": "小型信标27",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1358856478931640320",
+          "type": "小型信标",
+          "description": "波蒂维诺堡的地下信标，跟着主线走，无需手动解锁，主线会自动解锁",
+          "game": [
+            8690.0,
+            7048.0
+          ],
+          "label": "小型信标28",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1319702135054946304",
+          "type": "中枢信标",
+          "description": "",
+          "game": [
+            7404.0,
+            5838.0
+          ],
+          "label": "中枢信标29",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1319705661319565312",
+          "type": "中枢信标",
+          "description": "",
+          "game": [
+            7543.0,
+            5123.0
+          ],
+          "label": "中枢信标30",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1319705661420228608",
+          "type": "中枢信标",
+          "description": "",
+          "game": [
+            7975.0,
+            5721.0
+          ],
+          "label": "中枢信标31",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1319705661516697600",
+          "type": "中枢信标",
+          "description": "",
+          "game": [
+            8182.0,
+            6011.0
+          ],
+          "label": "中枢信标32",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1319705661617360896",
+          "type": "中枢信标",
+          "description": "",
+          "game": [
+            8185.0,
+            6478.0
+          ],
+          "label": "中枢信标33",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1319705661718024192",
+          "type": "中枢信标",
+          "description": "",
+          "game": [
+            8365.0,
+            4859.0
+          ],
+          "label": "中枢信标34",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1319705661814493184",
+          "type": "中枢信标",
+          "description": "",
+          "game": [
+            8706.0,
+            5467.0
+          ],
+          "label": "中枢信标35",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1319705661910962176",
+          "type": "中枢信标",
+          "description": "",
+          "game": [
+            8883.0,
+            6007.0
+          ],
+          "label": "中枢信标36",
+          "actuallyUsed": false
+        }
+      ],
+      "pixelToGame": [
+        [
+          1.66015625,
+          0.0,
+          6800.0
+        ],
+        [
+          0.0,
+          1.66015625,
+          4250.0
+        ]
+      ],
+      "bounds": [
+        9,
+        11,
+        -9,
+        -5
+      ],
+      "area": [
+        7400,
+        4450,
+        9400,
+        7300
+      ]
+    },
+    {
+      "path": "out/detectability-v2/route-rinascita/liqiaoli-route-atlas.png",
+      "region": "laguna",
+      "nodes": {
+        "E2": {
+          "game": [
+            7311.456369120782,
+            4035.6992139245285
+          ],
+          "basis": "111.5s actual player arrow"
+        },
+        "E5": {
+          "game": [
+            7390.627595401147,
+            3478.454329802657
+          ],
+          "basis": "185s actual player arrow"
+        },
+        "E7": {
+          "game": [
+            6766.375513671743,
+            3246.228419672194
+          ],
+          "basis": "227.2s actual player arrow"
+        },
+        "E9": {
+          "game": [
+            7096.976400044654,
+            2762.493776851449
+          ],
+          "basis": "286s actual player arrow"
+        },
+        "舵盘码头": {
+          "game": [
+            7304,
+            3551
+          ],
+          "basis": "114s selected named dock"
+        },
+        "沉静湾码头": {
+          "game": [
+            6779,
+            3334
+          ],
+          "basis": "187s selected named dock"
+        },
+        "莱耶斯码头": {
+          "game": [
+            7096,
+            3087
+          ],
+          "basis": "228–242s map and dock departure"
+        }
+      },
+      "edges": [
+        [
+          "舵盘码头",
+          "E5"
+        ],
+        [
+          "沉静湾码头",
+          "E7"
+        ],
+        [
+          "莱耶斯码头",
+          "E9"
+        ]
+      ],
+      "facilities": [
+        {
+          "stateId": "8",
+          "pointId": "1338922859862429696",
+          "type": "码头",
+          "description": "黎乔利港码头",
+          "game": [
+            7231.97,
+            3849.19
+          ],
+          "label": "码头1",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1339715385968037888",
+          "type": "码头",
+          "description": "舵盘村码头",
+          "game": [
+            7304.0,
+            3551.0
+          ],
+          "label": "码头2",
+          "actuallyUsed": true
+        },
+        {
+          "stateId": "8",
+          "pointId": "1339715790886146048",
+          "type": "码头",
+          "description": "沉静湾码头",
+          "game": [
+            6779.0,
+            3334.0
+          ],
+          "label": "码头3",
+          "actuallyUsed": true
+        },
+        {
+          "stateId": "8",
+          "pointId": "1339970158976737280",
+          "type": "码头",
+          "description": "",
+          "game": [
+            7096.0,
+            3087.0
+          ],
+          "label": "码头4",
+          "actuallyUsed": true
+        },
+        {
+          "stateId": "8",
+          "pointId": "1339271355874414592",
+          "type": "小型信标",
+          "description": "",
+          "game": [
+            7285.93,
+            3882.57
+          ],
+          "label": "小型信标5",
+          "actuallyUsed": false
+        }
+      ],
+      "pixelToGame": [
+        [
+          1.66015625,
+          0.0,
+          5950.0
+        ],
+        [
+          0.0,
+          1.66015625,
+          2550.0
+        ]
+      ],
+      "bounds": [
+        8,
+        10,
+        -5,
+        -3
+      ],
+      "area": [
+        6500,
+        2550,
+        7850,
+        4200
+      ]
+    }
+  ]
+}

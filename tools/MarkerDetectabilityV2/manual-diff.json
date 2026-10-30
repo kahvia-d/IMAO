@@ -1,0 +1,60 @@
+{
+  "changes": [
+    {
+      "change": "separate-reward-from-prerequisite",
+      "oldTargets": [
+        "BV1iMTXzVE8J:p11:room-1251555702716850176",
+        "BV1iMTXzVE8J:p11:overview-10"
+      ],
+      "newEvents": [
+        "BV1iMTXzVE8J:p11:e011",
+        "BV1iMTXzVE8J:p11:e012"
+      ],
+      "reason": "房内明确领取的是引导晶核，紫色箱在画面中但未按本目标收取；晶核为独立成员且不绑定1251555702716850176。随后室外压板辉光箱独立对应1288287493370998784。撤销沿途箱作为实际视频奖励的归属。"
+    },
+    {
+      "change": "merge-into-event-keep-two-members",
+      "oldTargets": [
+        "BV1iMTXzVE8J:p11:overview-21",
+        "BV1iMTXzVE8J:p11:overview-19"
+      ],
+      "newEvents": [
+        "BV1iMTXzVE8J:p11:e021"
+      ],
+      "reason": "连续事件中806秒岛上基准箱、819秒中心阶梯辉光箱分别为成员1/2；两ID保留，不按总览数组位置分配。"
+    },
+    {
+      "change": "reorder-group-members-by-collection",
+      "oldTargets": [
+        "BV1p9K1zvE5E:p1:overview-2:member-1",
+        "BV1p9K1zvE5E:p1:overview-2:member-2",
+        "BV1p9K1zvE5E:p1:overview-2:member-3"
+      ],
+      "newEvents": [
+        "BV1p9K1zvE5E:p1:e011"
+      ],
+      "reason": "旧组三成员按金/紫/青排列，新版按视频实际青/金/紫领取顺序编号；同一滑雪事件3奖励，ID按各自类型和画面对应，成员顺序不是身份。"
+    },
+    {
+      "change": "recover-previously-unresolved",
+      "oldTargets": [
+        "BV1p9K1zvE5E:p1:overview-15"
+      ],
+      "newEvents": [
+        "BV1p9K1zvE5E:p1:e007"
+      ],
+      "reason": "旧内部总览16无可靠时间绑定；新版从177–215秒西南海岛战斗挑战、215秒开图与红岩圆环紫箱攻略独立确认1260175017361457152。该时间段不是片尾639秒辉光箱。"
+    },
+    {
+      "change": "retain-ending-gold-separate-from-purple",
+      "oldTargets": [
+        "BV1p9K1zvE5E:p1:overview-13"
+      ],
+      "newEvents": [
+        "BV1p9K1zvE5E:p1:e017"
+      ],
+      "reason": "片尾三机关/踏光兽后639秒辉光箱独立对应1253810339575873536；不与事件7海岛精密箱或事件10跑酷辉光箱混用。旧图钉编号不作为新时间轴编号。"
+    }
+  ],
+  "method": "Explicit source/guide comparisons after all first-pass reviews; not inferred from temporal overlap."
+}

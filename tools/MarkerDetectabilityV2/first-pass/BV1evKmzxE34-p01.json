@@ -1,0 +1,644 @@
+{
+  "bvid": "BV1evKmzxE34",
+  "part": 1,
+  "duration": 118.033,
+  "reviewStatus": "reviewed",
+  "audioReviewStatus": "reviewed",
+  "audioReviewMethod": "local-ASR-text-and-visual; no-direct-listening",
+  "progressBarReviewStatus": "reviewed",
+  "events": [
+    {
+      "eventId": "BV1evKmzxE34:p1:e001",
+      "ordinal": 1,
+      "start": 5.44,
+      "end": 27,
+      "progressBarMark": {
+        "kind": "chest-icon-no-text",
+        "ordinalLeftToRight": 1,
+        "approxXFraction": 0.20657276995305165,
+        "source": "out/detectability-v2/BV1evKmzxE34/p01/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "采集柱下三株香苏后出现基准奇藏",
+      "route": "泰缇斯枢纽西南小型信标，向小地图东侧走，跳下平台至柱下",
+      "transcriptRefs": [
+        {
+          "start": 5.84,
+          "end": 7.94,
+          "text": "首先我们打开地图传送到泰迪斯珠纽"
+        },
+        {
+          "start": 7.94,
+          "end": 9.06,
+          "text": "左下方这个小银星标"
+        },
+        {
+          "start": 9.54,
+          "end": 11.3,
+          "text": "传送过来之后我们转向小地图"
+        },
+        {
+          "start": 11.3,
+          "end": 13.2,
+          "text": "右边东方向来朝前方走"
+        },
+        {
+          "start": 14.4,
+          "end": 15.8,
+          "text": "我们从这里直接往下跳"
+        },
+        {
+          "start": 16.42,
+          "end": 17.56,
+          "text": "看到这一根柱子"
+        },
+        {
+          "start": 17.56,
+          "end": 19.16,
+          "text": "柱子下方有三个香苏"
+        },
+        {
+          "start": 19.16,
+          "end": 20.76,
+          "text": "来我们给它全部踩了"
+        },
+        {
+          "start": 21.92,
+          "end": 23.64,
+          "text": "好,就是出来一个宝箱来开启一下"
+        },
+        {
+          "start": 24.36,
+          "end": 26.28,
+          "text": "开完这个宝箱之后我们打开地图"
+        },
+        {
+          "start": 26.28,
+          "end": 27.98,
+          "text": "然后右下角切换地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00008.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00019.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00020.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00021.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00022.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00023.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00024.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00025.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00026.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "基准",
+          "triggerSeconds": 20,
+          "appearanceSeconds": 23,
+          "collectionSeconds": 24,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "8",
+          "pointId": "1290445725890076672",
+          "matchingReview": {
+            "analysis": "8秒视频大地图配准211内点，中位误差0.415参考像素，玩家约(3078,1353)；9–20秒从此点向东下平台到柱脚，目标候选约(3096,1350)。不是最近点：更近精密箱在上层山洞，视频为柱下三香苏生成基准箱。 建筑柱脚、三香苏、白色斜门与地面高度均一致；攻略文字为采集柱子周围三株香苏，视频20秒采完23秒出箱24秒开。",
+            "positionEvidence": [
+              {
+                "source": "v2-sift-and-route",
+                "locator": "out/detectability-v2/calibration-blackshores/full-map.json",
+                "reason": "8秒视频大地图配准211内点，中位误差0.415参考像素，玩家约(3078,1353)；9–20秒从此点向东下平台到柱脚，目标候选约(3096,1350)。不是最近点：更近精密箱在上层山洞，视频为柱下三香苏生成基准箱。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV1evKmzxE34:p1",
+                "locator": "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00024.00.jpg",
+                "reason": "采集柱下三株香苏后出现基准奇藏",
+                "role": "support",
+                "start": 17,
+                "end": 24
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-spike-blackshores/guide-1290445725890076672.json",
+                "reason": "建筑柱脚、三香苏、白色斜门与地面高度均一致；攻略文字为采集柱子周围三株香苏，视频20秒采完23秒出箱24秒开。",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-spike-blackshores/guide-1290445725890076672-1.png",
+                "reason": "已查看并对照上述建筑/岩壁/岩石特征；原始攻略图非旧结论",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1290445725890076672",
+                "status": "confirmed",
+                "analysis": "建筑柱脚、三香苏、白色斜门与地面高度均一致；攻略文字为采集柱子周围三株香苏，视频20秒采完23秒出箱24秒开。"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "作者音频3.28–5.44明确把本片三项界定为奇藏探测仪探测不到；逐项视频又显示采集/破石前无可见奖励、触发后出现箱，与攻略机制一致。按用户正常探测查漏会漏的口径列遗漏正例。此为作者说明+过程取证，未自行游戏内重复测试探测仪。",
+              "evidence": [
+                {
+                  "source": "BV1evKmzxE34:p1",
+                  "locator": "out/detectability-v2/BV1evKmzxE34/p01/transcript.raw.json",
+                  "reason": "3.28–5.44秒明确限定本片三收集事件的遗漏属性，非仅视频标题",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1evKmzxE34:p1",
+                  "locator": "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00020.00.jpg",
+                  "reason": "触发过程及奖励生成前状态，结合音频限定范围",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-scoped-audio-and-visible-trigger-not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV1evKmzxE34:p1:e002",
+      "ordinal": 2,
+      "start": 27,
+      "end": 69,
+      "progressBarMark": {
+        "kind": "chest-icon-no-text",
+        "ordinalLeftToRight": 2,
+        "approxXFraction": 0.5762910798122066,
+        "source": "out/detectability-v2/BV1evKmzxE34/p01/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "打破瀑布右侧岩石，露出朴素奇藏",
+      "route": "切换泰缇斯之底，传送艾多斯之镜旁信标；向西南跳到地面，过河至瀑布，向画面右侧转",
+      "transcriptRefs": [
+        {
+          "start": 26.28,
+          "end": 27.98,
+          "text": "然后右下角切换地图"
+        },
+        {
+          "start": 27.98,
+          "end": 29.3,
+          "text": "切换到泰迪斯之底"
+        },
+        {
+          "start": 30.1,
+          "end": 32.24,
+          "text": "这里我们传送到爱多斯之境"
+        },
+        {
+          "start": 32.24,
+          "end": 33.54,
+          "text": "旁边这个小银杏苗"
+        },
+        {
+          "start": 43.77,
+          "end": 45.05,
+          "text": "我们传送过来之后"
+        },
+        {
+          "start": 45.05,
+          "end": 46.11,
+          "text": "转向小地图"
+        },
+        {
+          "start": 46.11,
+          "end": 47.63,
+          "text": "左下方西南方向"
+        },
+        {
+          "start": 47.63,
+          "end": 49.53,
+          "text": "我们就从这里直接往下跳就行"
+        },
+        {
+          "start": 51.07,
+          "end": 52.59,
+          "text": "我们先落到地面上"
+        },
+        {
+          "start": 52.59,
+          "end": 53.71,
+          "text": "看到这里是一条河"
+        },
+        {
+          "start": 53.71,
+          "end": 55.39,
+          "text": "然后我们过河过到对岸"
+        },
+        {
+          "start": 55.87,
+          "end": 57.17,
+          "text": "才能看到这个瀑布"
+        },
+        {
+          "start": 58.33,
+          "end": 59.35,
+          "text": "我们来到瀑布这里"
+        },
+        {
+          "start": 59.35,
+          "end": 61.41,
+          "text": "然后右转看到个大石头"
+        },
+        {
+          "start": 61.41,
+          "end": 62.81,
+          "text": "来我们把这个石头给打破"
+        },
+        {
+          "start": 66.04,
+          "end": 67.58,
+          "text": "里面一个宝箱来开启一下"
+        },
+        {
+          "start": 67.58,
+          "end": 68.54,
+          "text": "开完宝箱之后"
+        },
+        {
+          "start": 68.54,
+          "end": 69.46,
+          "text": "我们继续打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00030.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00060.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00061.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00062.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00063.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00064.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00065.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00066.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00067.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00068.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 63,
+          "appearanceSeconds": 66,
+          "collectionSeconds": 68,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "900",
+          "pointId": "1290808586256605184",
+          "matchingReview": {
+            "analysis": "63/66/68秒小地图各58/45/52内点，定位约(-399至-403,813至817)，与河边岩石候选(-406.2,815.25)相距约4–7游戏单位。多帧连续且未跨传送；附近精密箱为上层爬顶，不符视频河底朴素箱。 攻略图大岩壁、符文碎石、左侧河流与小石堆均与视频接近及击石段一致，文字明确河边石内；66秒岩石破后朴素箱。",
+            "positionEvidence": [
+              {
+                "source": "v2-sift-and-route",
+                "locator": "out/detectability-v2/calibration-blackshores-full/localization.json#results/3",
+                "reason": "63/66/68秒小地图各58/45/52内点，定位约(-399至-403,813至817)，与河边岩石候选(-406.2,815.25)相距约4–7游戏单位。多帧连续且未跨传送；附近精密箱为上层爬顶，不符视频河底朴素箱。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV1evKmzxE34:p1",
+                "locator": "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00068.00.jpg",
+                "reason": "打破瀑布右侧岩石，露出朴素奇藏",
+                "role": "support",
+                "start": 59,
+                "end": 68
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-spike-blackshores/guide-1290808586256605184.json",
+                "reason": "攻略图大岩壁、符文碎石、左侧河流与小石堆均与视频接近及击石段一致，文字明确河边石内；66秒岩石破后朴素箱。",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-spike-blackshores/guide-1290808586256605184-1.png",
+                "reason": "已查看并对照上述建筑/岩壁/岩石特征；原始攻略图非旧结论",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [],
+            "candidates": [
+              {
+                "stateId": "900",
+                "pointId": "1290808586256605184",
+                "status": "confirmed",
+                "analysis": "攻略图大岩壁、符文碎石、左侧河流与小石堆均与视频接近及击石段一致，文字明确河边石内；66秒岩石破后朴素箱。"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "作者音频3.28–5.44明确把本片三项界定为奇藏探测仪探测不到；逐项视频又显示采集/破石前无可见奖励、触发后出现箱，与攻略机制一致。按用户正常探测查漏会漏的口径列遗漏正例。此为作者说明+过程取证，未自行游戏内重复测试探测仪。",
+              "evidence": [
+                {
+                  "source": "BV1evKmzxE34:p1",
+                  "locator": "out/detectability-v2/BV1evKmzxE34/p01/transcript.raw.json",
+                  "reason": "3.28–5.44秒明确限定本片三收集事件的遗漏属性，非仅视频标题",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1evKmzxE34:p1",
+                  "locator": "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00059.00.jpg",
+                  "reason": "触发过程及奖励生成前状态，结合音频限定范围",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-scoped-audio-and-visible-trigger-not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "24.36秒开始介绍下一处，画面27秒才进入地图；讲解与事件边界分开。"
+      ]
+    },
+    {
+      "eventId": "BV1evKmzxE34:p1:e003",
+      "ordinal": 3,
+      "start": 69,
+      "end": 118.033,
+      "progressBarMark": {
+        "kind": "chest-icon-no-text",
+        "ordinalLeftToRight": 3,
+        "approxXFraction": 0.9636150234741784,
+        "source": "out/detectability-v2/BV1evKmzxE34/p01/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "沿山壁经建筑和钩索平台，打破岩石露出朴素奇藏",
+      "route": "回刚才小型信标，向前数步右转，贴右边山壁飞；绕房子，下降到路径，再下到钩索平台",
+      "transcriptRefs": [
+        {
+          "start": 68.54,
+          "end": 69.46,
+          "text": "我们继续打开地图"
+        },
+        {
+          "start": 69.46,
+          "end": 70.9,
+          "text": "传送回刚刚的小银杏苗"
+        },
+        {
+          "start": 74.67,
+          "end": 76.83,
+          "text": "好穿过来之后我们先往前走两步"
+        },
+        {
+          "start": 76.83,
+          "end": 77.73,
+          "text": "然后右转"
+        },
+        {
+          "start": 78.31,
+          "end": 79.97,
+          "text": "来到右边的这个山壁上"
+        },
+        {
+          "start": 79.97,
+          "end": 81.89,
+          "text": "我们站在这里"
+        },
+        {
+          "start": 81.89,
+          "end": 83.19,
+          "text": "然后一直朝前方飞"
+        },
+        {
+          "start": 84.27,
+          "end": 85.75,
+          "text": "就贴着右边这个山壁飞"
+        },
+        {
+          "start": 90.44,
+          "end": 91.86,
+          "text": "好这里看到一个房子"
+        },
+        {
+          "start": 92.58,
+          "end": 94.82,
+          "text": "然后我们绕过这个房子继续往前走"
+        },
+        {
+          "start": 97.76,
+          "end": 98.56,
+          "text": "我们来到这里"
+        },
+        {
+          "start": 98.56,
+          "end": 99.48,
+          "text": "然后继续往前跳"
+        },
+        {
+          "start": 100.36,
+          "end": 102.0,
+          "text": "来到这一个这个路上"
+        },
+        {
+          "start": 102.0,
+          "end": 103.48,
+          "text": "接着我们再往下跳一层"
+        },
+        {
+          "start": 103.86,
+          "end": 105.16,
+          "text": "前方能看到一个勾锁点"
+        },
+        {
+          "start": 105.16,
+          "end": 107.16,
+          "text": "在勾锁点这个平台上面也有一个石头"
+        },
+        {
+          "start": 107.16,
+          "end": 107.82,
+          "text": "来我们打一下"
+        },
+        {
+          "start": 110.52,
+          "end": 113.22,
+          "text": "打完来开启到我们里面的这个宝箱"
+        },
+        {
+          "start": 113.6,
+          "end": 113.96,
+          "text": "好"
+        },
+        {
+          "start": 113.96,
+          "end": 114.98,
+          "text": "那我们拿完这个宝箱"
+        },
+        {
+          "start": 114.98,
+          "end": 115.78,
+          "text": "黑海岸这边"
+        },
+        {
+          "start": 116.22,
+          "end": 117.86,
+          "text": "这个宝箱就已经收集齐了"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00070.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00105.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00106.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00107.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00108.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00109.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00110.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00111.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00112.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00113.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00114.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00115.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00116.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00117.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 108,
+          "appearanceSeconds": 111,
+          "collectionSeconds": 113,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "900",
+          "pointId": "1290808067052609536",
+          "matchingReview": {
+            "analysis": "108/111/113秒小地图18/26/28内点，定位约(-308,682)，候选(-310.67,683.70)距玩家约3–4游戏单位。路线从同信标贴壁飞、绕房屋再下层至钩锁平台，与攻略高度相符；旁侧大叶子箱不符平台岩石。 攻略图符文石靠内弯岩壁、窄斜台、蓝白植物与视频108秒石头、飞行路线吻合；文字为山崖间石内，视频破石出现朴素箱。",
+            "positionEvidence": [
+              {
+                "source": "v2-sift-and-route",
+                "locator": "out/detectability-v2/calibration-blackshores-full/localization.json#results/6",
+                "reason": "108/111/113秒小地图18/26/28内点，定位约(-308,682)，候选(-310.67,683.70)距玩家约3–4游戏单位。路线从同信标贴壁飞、绕房屋再下层至钩锁平台，与攻略高度相符；旁侧大叶子箱不符平台岩石。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV1evKmzxE34:p1",
+                "locator": "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00113.00.jpg",
+                "reason": "沿山壁经建筑和钩索平台，打破岩石露出朴素奇藏",
+                "role": "support",
+                "start": 103,
+                "end": 113
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-spike-blackshores/guide-1290808067052609536.json",
+                "reason": "攻略图符文石靠内弯岩壁、窄斜台、蓝白植物与视频108秒石头、飞行路线吻合；文字为山崖间石内，视频破石出现朴素箱。",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-spike-blackshores/guide-1290808067052609536-1.png",
+                "reason": "已查看并对照上述建筑/岩壁/岩石特征；原始攻略图非旧结论",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [],
+            "candidates": [
+              {
+                "stateId": "900",
+                "pointId": "1290808067052609536",
+                "status": "confirmed",
+                "analysis": "攻略图符文石靠内弯岩壁、窄斜台、蓝白植物与视频108秒石头、飞行路线吻合；文字为山崖间石内，视频破石出现朴素箱。"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "作者音频3.28–5.44明确把本片三项界定为奇藏探测仪探测不到；逐项视频又显示采集/破石前无可见奖励、触发后出现箱，与攻略机制一致。按用户正常探测查漏会漏的口径列遗漏正例。此为作者说明+过程取证，未自行游戏内重复测试探测仪。",
+              "evidence": [
+                {
+                  "source": "BV1evKmzxE34:p1",
+                  "locator": "out/detectability-v2/BV1evKmzxE34/p01/transcript.raw.json",
+                  "reason": "3.28–5.44秒明确限定本片三收集事件的遗漏属性，非仅视频标题",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1evKmzxE34:p1",
+                  "locator": "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00103.00.jpg",
+                  "reason": "触发过程及奖励生成前状态，结合音频限定范围",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-scoped-audio-and-visible-trigger-not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    }
+  ],
+  "nonEventIntervals": [
+    [
+      0,
+      5.44,
+      "作者介绍与主题；非收集事件"
+    ]
+  ],
+  "reviewedEvidence": [
+    "out/detectability-v2/BV1evKmzxE34/p01/visual/scenes-5s-00000.00.jpg",
+    "out/detectability-v2/BV1evKmzxE34/p01/visual/scenes-5s-00060.00.jpg",
+    "out/detectability-v2/BV1evKmzxE34/p01/visual/scenes-1s-00000.00.jpg",
+    "out/detectability-v2/BV1evKmzxE34/p01/visual/scenes-1s-00012.00.jpg",
+    "out/detectability-v2/BV1evKmzxE34/p01/visual/scenes-1s-00024.00.jpg",
+    "out/detectability-v2/BV1evKmzxE34/p01/visual/scenes-1s-00058.00.jpg",
+    "out/detectability-v2/BV1evKmzxE34/p01/visual/scenes-1s-00105.00.jpg",
+    "out/detectability-v2/BV1evKmzxE34/p01/visual/scenes-1s-00117.00.jpg",
+    "out/detectability-v2/BV1evKmzxE34/p01/visual/progress-5s-00000.00.jpg"
+  ],
+  "transcriptCorrections": [
+    {
+      "start": 5.84,
+      "end": 9.06,
+      "raw": "泰迪斯珠纽 / 小银星标",
+      "corrected": "泰缇斯枢纽 / 小型信标",
+      "basis": "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00008.00.jpg"
+    },
+    {
+      "start": 27.98,
+      "end": 33.54,
+      "raw": "泰迪斯之底 / 爱多斯之境 / 小银杏苗",
+      "corrected": "泰缇斯之底 / 艾多斯之镜 / 小型信标",
+      "basis": [
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00030.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00070.00.jpg"
+      ]
+    },
+    {
+      "start": 19.16,
+      "end": 20.76,
+      "raw": "全部踩了",
+      "corrected": "全部采了（语境校正）",
+      "basis": "20–22秒画面逐项出现香苏拾取信息"
+    }
+  ],
+  "coverageNotes": [
+    "进度条3个图标对应3次奖励。植物是触发物，不拆成3个宝箱奖励。",
+    "ASR与画面触发顺序一致，非直接回听；音视频容器起点均0，长度差约0.017秒。",
+    "主题口述不是单个目标属性的充分证据；本阶段所有属性unknown。"
+  ]
+}

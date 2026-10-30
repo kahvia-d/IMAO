@@ -1,0 +1,4176 @@
+{
+  "bvid": "BV13ZvrBtEde",
+  "part": 1,
+  "duration": 891.633,
+  "reviewStatus": "reviewed",
+  "audioReviewStatus": "reviewed",
+  "audioReviewMethod": "local-ASR-text-and-visual; no-direct-listening",
+  "progressBarReviewStatus": "reviewed",
+  "events": [
+    {
+      "eventId": "BV13ZvrBtEde:p1:e001",
+      "ordinal": 1,
+      "start": 75,
+      "end": 116,
+      "progressBarMark": {
+        "rawLabel": "箱1",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像装置生成箱",
+      "route": "浮光林中枢向东北沿路贴左边，黄花下金色网格",
+      "transcriptRefs": [
+        {
+          "start": 75.27,
+          "end": 77.03,
+          "text": "接着我们再打开地图"
+        },
+        {
+          "start": 78.07,
+          "end": 80.41,
+          "text": "这里我们就开始去找这些宝箱"
+        },
+        {
+          "start": 80.41,
+          "end": 82.87,
+          "text": "那首先我们来先找福光林的吧"
+        },
+        {
+          "start": 82.87,
+          "end": 84.33,
+          "text": "福光林这边是最多的"
+        },
+        {
+          "start": 84.79,
+          "end": 85.63,
+          "text": "我们首先打开地图"
+        },
+        {
+          "start": 85.63,
+          "end": 86.95,
+          "text": "传上到福光林这个中心庙"
+        },
+        {
+          "start": 92.81,
+          "end": 93.53,
+          "text": "传过来之后"
+        },
+        {
+          "start": 93.53,
+          "end": 94.35,
+          "text": "转向小地图"
+        },
+        {
+          "start": 94.35,
+          "end": 95.81,
+          "text": "右上方东北方向往前走"
+        },
+        {
+          "start": 97.07,
+          "end": 98.69,
+          "text": "这里面沿下方这条路往前"
+        },
+        {
+          "start": 99.09,
+          "end": 100.41,
+          "text": "贴着左边这个边边走"
+        },
+        {
+          "start": 102.66,
+          "end": 104.34,
+          "text": "走到黄色的花下方"
+        },
+        {
+          "start": 104.34,
+          "end": 105.34,
+          "text": "这里就有一个"
+        },
+        {
+          "start": 105.34,
+          "end": 108.72,
+          "text": "一个让我们用险象深海的我们装备上沿着S型"
+        },
+        {
+          "start": 113.03,
+          "end": 114.47,
+          "text": "这就是一个宝箱开一下"
+        },
+        {
+          "start": 115.59,
+          "end": 123.79,
+          "text": "南安宝箱这样小地图右上方都没朋友沿着个路继续往前面前能看到有半截这一个种型的石狗门"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00104.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00109.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00114.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00115.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 109,
+          "appearanceSeconds": 114,
+          "collectionSeconds": 114,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "85秒大地图成功定位浮光林道路，但此时玩家仍在原处且随即传送。113秒黄花下显像奖励与路边特征已核对；尚缺终点玩家地图坐标，不能把传送信标当箱位置。 本奖励为成员1，观测类型朴素；路线：浮光林中枢向东北沿路贴左边，黄花下金色网格。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                85.0,
+                109.0,
+                114.0
+              ],
+              "fullmapAccepted": [
+                85.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 1, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像装置生成箱；浮光林中枢向东北沿路贴左边，黄花下金色网格",
+                "role": "support",
+                "start": 75,
+                "end": 116
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 1 mechanism",
+                  "reason": "显像装置生成箱",
+                  "role": "support",
+                  "start": 75,
+                  "end": 116
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e002",
+      "ordinal": 2,
+      "start": 116,
+      "end": 142,
+      "progressBarMark": {
+        "rawLabel": "箱2",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像装置生成箱",
+      "route": "沿东北路到半截石拱门下",
+      "transcriptRefs": [
+        {
+          "start": 115.59,
+          "end": 123.79,
+          "text": "南安宝箱这样小地图右上方都没朋友沿着个路继续往前面前能看到有半截这一个种型的石狗门"
+        },
+        {
+          "start": 124.37,
+          "end": 125.61,
+          "text": "先走跟在我身后"
+        },
+        {
+          "start": 127.09,
+          "end": 128.13,
+          "text": "然后在这个下方"
+        },
+        {
+          "start": 129.79,
+          "end": 141.28,
+          "text": "也是使用这个炎柱s型啊 接着开启宝箱"
+        },
+        {
+          "start": 141.8,
+          "end": 145.32,
+          "text": "然后这个宝箱之后打开地图 让我们传送回旁边的遵循性苗"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00130.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00132.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00139.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00140.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00141.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 132,
+          "appearanceSeconds": 139,
+          "collectionSeconds": 140,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "906",
+          "pointId": "1451279944887103488",
+          "matchingReview": {
+            "analysis": "145秒紧随本箱领取打开地图，玩家黄箭头落在半截石拱门下道路；guide同样显示断拱、路边花丛和金色显像网格。 本奖励为成员1，观测类型朴素；路线：沿东北路到半截石拱门下。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                145.0,
+                132.0,
+                139.0,
+                140.0
+              ],
+              "fullmapAccepted": [
+                145.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 2, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像装置生成箱；沿东北路到半截石拱门下",
+                "role": "support",
+                "start": 116,
+                "end": 142
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+                "locator": "t=145; affineFrameToReference + pixelToGame; manual player pixel=[525.6466165413534, 219.97744360902254]",
+                "reason": "真实玩家箭头在领取后打开的地图上；固定阈值SIFT通过214内点。投影为候选范围，不把玩家像素当作箱像素；再由实景guide消歧。layer=canonical-base。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451279944887103488.json",
+                "locator": "data.id + content.description + content.coordinate",
+                "reason": "显像宝箱，显像声骸岩蛛。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451279944887103488-1.png",
+                "locator": "source guide image",
+                "reason": "145秒紧随本箱领取打开地图，玩家黄箭头落在半截石拱门下道路；guide同样显示断拱、路边花丛和金色显像网格。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451279944887103488-2.png",
+                "locator": "source guide image",
+                "reason": "145秒紧随本箱领取打开地图，玩家黄箭头落在半截石拱门下道路；guide同样显示断拱、路边花丛和金色显像网格。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "manualAnchor": {
+              "time": 145,
+              "pixel": [
+                525.6466165413534,
+                219.97744360902254
+              ],
+              "role": "player-arrow-after-reward-not-box",
+              "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00145.00.jpg"
+            },
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "作者在本P开场明确将本片收集物限定为奇藏探测仪扫/探测不到；该成员已凭位置、视频触发与guide确认属于该片的实际奖励。结合逐项显像/任务/交付过程形成离线作者证言候选，非独立实机扫描测试。",
+              "evidence": [
+                {
+                  "source": "out/detectability-v2/BV13ZvrBtEde/p01/transcript.txt",
+                  "locator": "4.12–6.38s local-ASR",
+                  "reason": "明确限定本片为探测仪无法探测的箱；与本项触发证据合用，不只依据标题",
+                  "role": "support"
+                },
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 2, member 1",
+                  "reason": "显像装置生成箱",
+                  "role": "support",
+                  "start": 116,
+                  "end": 142
+                },
+                {
+                  "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451279944887103488.json",
+                  "locator": "content.description",
+                  "reason": "显像宝箱，显像声骸岩蛛。",
+                  "role": "support"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e003",
+      "ordinal": 3,
+      "start": 142,
+      "end": 166,
+      "progressBarMark": {
+        "rawLabel": "箱3",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像装置生成箱",
+      "route": "回中枢，正前道路左边",
+      "transcriptRefs": [
+        {
+          "start": 141.8,
+          "end": 145.32,
+          "text": "然后这个宝箱之后打开地图 让我们传送回旁边的遵循性苗"
+        },
+        {
+          "start": 149.9,
+          "end": 151.76,
+          "text": "反过来之后就朝面前直走"
+        },
+        {
+          "start": 155.3,
+          "end": 157.08,
+          "text": "然后在路的左边显向"
+        },
+        {
+          "start": 157.08,
+          "end": 158.1,
+          "text": "沿着S型"
+        },
+        {
+          "start": 163.07,
+          "end": 163.99,
+          "text": "来拿到宝箱"
+        },
+        {
+          "start": 164.69,
+          "end": 165.61,
+          "text": "拿到宝箱之后"
+        },
+        {
+          "start": 165.61,
+          "end": 166.81,
+          "text": "是在这个点位"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00155.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00158.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00163.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00164.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00165.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 158,
+          "appearanceSeconds": 163,
+          "collectionSeconds": 164,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "906",
+          "pointId": "1451280566250057728",
+          "matchingReview": {
+            "analysis": "166秒紧随领取打开地图，玩家在中枢道路左侧；guide的倒伏圆筒、紫晶和路边小箱一致。 本奖励为成员1，观测类型朴素；路线：回中枢，正前道路左边。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                145.0,
+                166.0,
+                158.0,
+                163.0,
+                164.0
+              ],
+              "fullmapAccepted": [
+                145.0,
+                166.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 3, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像装置生成箱；回中枢，正前道路左边",
+                "role": "support",
+                "start": 142,
+                "end": 166
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+                "locator": "t=166; affineFrameToReference + pixelToGame; manual player pixel=[425.7089552238806, 238.42537313432837]",
+                "reason": "真实玩家箭头在领取后打开的地图上；固定阈值SIFT通过202内点。投影为候选范围，不把玩家像素当作箱像素；再由实景guide消歧。layer=canonical-base。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451280566250057728.json",
+                "locator": "data.id + content.description + content.coordinate",
+                "reason": "显像宝箱，显像声骸岩蛛。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451280566250057728-1.png",
+                "locator": "source guide image",
+                "reason": "166秒紧随领取打开地图，玩家在中枢道路左侧；guide的倒伏圆筒、紫晶和路边小箱一致。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451280566250057728-2.png",
+                "locator": "source guide image",
+                "reason": "166秒紧随领取打开地图，玩家在中枢道路左侧；guide的倒伏圆筒、紫晶和路边小箱一致。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "manualAnchor": {
+              "time": 166,
+              "pixel": [
+                425.7089552238806,
+                238.42537313432837
+              ],
+              "role": "player-arrow-after-reward-not-box",
+              "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00166.00.jpg"
+            },
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "作者在本P开场明确将本片收集物限定为奇藏探测仪扫/探测不到；该成员已凭位置、视频触发与guide确认属于该片的实际奖励。结合逐项显像/任务/交付过程形成离线作者证言候选，非独立实机扫描测试。",
+              "evidence": [
+                {
+                  "source": "out/detectability-v2/BV13ZvrBtEde/p01/transcript.txt",
+                  "locator": "4.12–6.38s local-ASR",
+                  "reason": "明确限定本片为探测仪无法探测的箱；与本项触发证据合用，不只依据标题",
+                  "role": "support"
+                },
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 3, member 1",
+                  "reason": "显像装置生成箱",
+                  "role": "support",
+                  "start": 142,
+                  "end": 166
+                },
+                {
+                  "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451280566250057728.json",
+                  "locator": "content.description",
+                  "reason": "显像宝箱，显像声骸岩蛛。",
+                  "role": "support"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e004",
+      "ordinal": 4,
+      "start": 166,
+      "end": 193,
+      "progressBarMark": {
+        "rawLabel": "箱4",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像装置生成箱",
+      "route": "向西南越断柱，转东南穿两石之间浅水",
+      "transcriptRefs": [
+        {
+          "start": 165.61,
+          "end": 166.81,
+          "text": "是在这个点位"
+        },
+        {
+          "start": 166.81,
+          "end": 167.61,
+          "text": "我们转向小地图"
+        },
+        {
+          "start": 167.61,
+          "end": 168.45,
+          "text": "左下方西南望洋"
+        },
+        {
+          "start": 168.45,
+          "end": 169.09,
+          "text": "骑车往前"
+        },
+        {
+          "start": 170.01,
+          "end": 170.79,
+          "text": "面前能看到"
+        },
+        {
+          "start": 170.79,
+          "end": 172.57,
+          "text": "也有这个断裂的柱子"
+        },
+        {
+          "start": 175.56,
+          "end": 176.5,
+          "text": "就骑过来"
+        },
+        {
+          "start": 177.76,
+          "end": 178.48,
+          "text": "骑过来之后"
+        },
+        {
+          "start": 178.48,
+          "end": 179.24,
+          "text": "转向小地图"
+        },
+        {
+          "start": 179.24,
+          "end": 180.2,
+          "text": "右下方东南望洋"
+        },
+        {
+          "start": 180.66,
+          "end": 182.8,
+          "text": "走这两个石头中间"
+        },
+        {
+          "start": 182.8,
+          "end": 183.28,
+          "text": "走过来"
+        },
+        {
+          "start": 184.1,
+          "end": 185.92,
+          "text": "这里也是使用沿着S型"
+        },
+        {
+          "start": 191.28,
+          "end": 191.98,
+          "text": "扫完之后"
+        },
+        {
+          "start": 191.98,
+          "end": 192.54,
+          "text": "一个宝箱"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00184.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00187.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00191.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00192.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 187,
+          "appearanceSeconds": 191,
+          "collectionSeconds": 192,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "906",
+          "pointId": "1454087936514781184",
+          "matchingReview": {
+            "analysis": "193秒紧随浅水领取打开地图；guide两侧倒柱、紫色植物和浅水通道与视频一致。 本奖励为成员1，观测类型朴素；路线：向西南越断柱，转东南穿两石之间浅水。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                166.0,
+                193.0,
+                187.0,
+                191.0,
+                192.0
+              ],
+              "fullmapAccepted": [
+                166.0,
+                193.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 4, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像装置生成箱；向西南越断柱，转东南穿两石之间浅水",
+                "role": "support",
+                "start": 166,
+                "end": 193
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+                "locator": "t=193; affineFrameToReference + pixelToGame; manual player pixel=[425.75694444444446, 238.48611111111111]",
+                "reason": "真实玩家箭头在领取后打开的地图上；固定阈值SIFT通过210内点。投影为候选范围，不把玩家像素当作箱像素；再由实景guide消歧。layer=canonical-base。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454087936514781184.json",
+                "locator": "data.id + content.description + content.coordinate",
+                "reason": "需要使用显像功能，显像岩蛛声骸。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454087936514781184-1.png",
+                "locator": "source guide image",
+                "reason": "193秒紧随浅水领取打开地图；guide两侧倒柱、紫色植物和浅水通道与视频一致。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454087936514781184-2.png",
+                "locator": "source guide image",
+                "reason": "193秒紧随浅水领取打开地图；guide两侧倒柱、紫色植物和浅水通道与视频一致。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "manualAnchor": {
+              "time": 193,
+              "pixel": [
+                425.75694444444446,
+                238.48611111111111
+              ],
+              "role": "player-arrow-after-reward-not-box",
+              "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00193.00.jpg"
+            },
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "作者在本P开场明确将本片收集物限定为奇藏探测仪扫/探测不到；该成员已凭位置、视频触发与guide确认属于该片的实际奖励。结合逐项显像/任务/交付过程形成离线作者证言候选，非独立实机扫描测试。",
+              "evidence": [
+                {
+                  "source": "out/detectability-v2/BV13ZvrBtEde/p01/transcript.txt",
+                  "locator": "4.12–6.38s local-ASR",
+                  "reason": "明确限定本片为探测仪无法探测的箱；与本项触发证据合用，不只依据标题",
+                  "role": "support"
+                },
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 4, member 1",
+                  "reason": "显像装置生成箱",
+                  "role": "support",
+                  "start": 166,
+                  "end": 193
+                },
+                {
+                  "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454087936514781184.json",
+                  "locator": "content.description",
+                  "reason": "需要使用显像功能，显像岩蛛声骸。",
+                  "role": "support"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e005",
+      "ordinal": 5,
+      "start": 193,
+      "end": 218,
+      "progressBarMark": {
+        "rawLabel": "箱5",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像装置生成箱",
+      "route": "传下方信标，回身西北进洞贴左",
+      "transcriptRefs": [
+        {
+          "start": 193.0,
+          "end": 194.94,
+          "text": "拿到宝箱之后我们传送到"
+        },
+        {
+          "start": 195.7,
+          "end": 197.66,
+          "text": "现在所在点位下方的小银心标"
+        },
+        {
+          "start": 200.53,
+          "end": 202.59,
+          "text": "翻过来之后我们转向身后"
+        },
+        {
+          "start": 202.59,
+          "end": 203.93,
+          "text": "小地图左上方西北方向"
+        },
+        {
+          "start": 203.93,
+          "end": 205.01,
+          "text": "这里有个洞口"
+        },
+        {
+          "start": 205.75,
+          "end": 206.33,
+          "text": "前走"
+        },
+        {
+          "start": 206.97,
+          "end": 207.77,
+          "text": "贴着左边"
+        },
+        {
+          "start": 208.71,
+          "end": 209.91,
+          "text": "来面前使用一下"
+        },
+        {
+          "start": 215.08,
+          "end": 216.0,
+          "text": "开启宝箱"
+        },
+        {
+          "start": 217.02,
+          "end": 219.2,
+          "text": "拿完转向小地图右上方东北方向"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00207.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00211.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00215.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00216.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00217.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 211,
+          "appearanceSeconds": 215,
+          "collectionSeconds": 216,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "193秒地图是上一箱位置，随后传送下方信标并进洞；218秒小地图不足，传送后路径虽可见但未获得洞内奖励坐标，不能沿用193秒玩家位置。 本奖励为成员1，观测类型朴素；路线：传下方信标，回身西北进洞贴左。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                193.0,
+                211.0,
+                215.0,
+                216.0
+              ],
+              "fullmapAccepted": [
+                193.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 5, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像装置生成箱；传下方信标，回身西北进洞贴左",
+                "role": "support",
+                "start": 193,
+                "end": 218
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 5 mechanism",
+                  "reason": "显像装置生成箱",
+                  "role": "support",
+                  "start": 193,
+                  "end": 218
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e006",
+      "ordinal": 6,
+      "start": 218,
+      "end": 243,
+      "progressBarMark": {
+        "rawLabel": "箱6",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像装置生成箱，周边怪物未清完也已开启",
+      "route": "向东北沿路贴左，黄花上平台",
+      "transcriptRefs": [
+        {
+          "start": 217.02,
+          "end": 219.2,
+          "text": "拿完转向小地图右上方东北方向"
+        },
+        {
+          "start": 219.2,
+          "end": 220.1,
+          "text": "来骑车往前走"
+        },
+        {
+          "start": 220.1,
+          "end": 222.56,
+          "text": "面前能看到有一条小路"
+        },
+        {
+          "start": 222.56,
+          "end": 223.98,
+          "text": "沿着小路往前"
+        },
+        {
+          "start": 224.32,
+          "end": 225.82,
+          "text": "这里贴着左边这个边边"
+        },
+        {
+          "start": 227.04,
+          "end": 227.96,
+          "text": "走到这个"
+        },
+        {
+          "start": 229.5,
+          "end": 232.26,
+          "text": "这个黄色的花这里图有这个紫色任务指引"
+        },
+        {
+          "start": 232.26,
+          "end": 232.84,
+          "text": "我们跳上来"
+        },
+        {
+          "start": 232.84,
+          "end": 234.64,
+          "text": "然后使用一下炎柱s型"
+        },
+        {
+          "start": 234.64,
+          "end": 240.44,
+          "text": "我开到宝箱"
+        },
+        {
+          "start": 241.36,
+          "end": 242.04,
+          "text": "拿完之后"
+        },
+        {
+          "start": 242.04,
+          "end": 242.96,
+          "text": "转小柱右下方"
+        },
+        {
+          "start": 242.96,
+          "end": 243.86,
+          "text": "动荡方向往前走"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00233.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00235.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00240.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00241.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 235,
+          "appearanceSeconds": 240,
+          "collectionSeconds": 240,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "从第五箱连续东北前进至黄花平台，环境与触发过程已见；无新的可解算终点地图，怪物未清完也能领取不能单独说明探测属性。 本奖励为成员1，观测类型朴素；路线：向东北沿路贴左，黄花上平台。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                235.0,
+                240.0
+              ],
+              "fullmapAccepted": [],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 6, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像装置生成箱，周边怪物未清完也已开启；向东北沿路贴左，黄花上平台",
+                "role": "support",
+                "start": 218,
+                "end": 243
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 6 mechanism",
+                  "reason": "显像装置生成箱，周边怪物未清完也已开启",
+                  "role": "support",
+                  "start": 218,
+                  "end": 243
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e007",
+      "ordinal": 7,
+      "start": 243,
+      "end": 261,
+      "progressBarMark": {
+        "rawLabel": "箱7",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像装置生成箱",
+      "route": "向东南跳下，倒柱旁白花地",
+      "transcriptRefs": [
+        {
+          "start": 242.96,
+          "end": 243.86,
+          "text": "动荡方向往前走"
+        },
+        {
+          "start": 245.42,
+          "end": 246.24,
+          "text": "来跳过来"
+        },
+        {
+          "start": 247.1,
+          "end": 248.02,
+          "text": "这里在下方"
+        },
+        {
+          "start": 248.02,
+          "end": 249.94,
+          "text": "这里有一个倒着的这个"
+        },
+        {
+          "start": 251.18,
+          "end": 251.86,
+          "text": "这个柱子"
+        },
+        {
+          "start": 251.86,
+          "end": 253.88,
+          "text": "然后在这里还是使用炎柱s"
+        },
+        {
+          "start": 258.53,
+          "end": 259.57,
+          "text": "来开到宝箱"
+        },
+        {
+          "start": 260.35,
+          "end": 261.81,
+          "text": "接着再打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00252.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00255.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00259.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00260.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 255,
+          "appearanceSeconds": 259,
+          "collectionSeconds": 259,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "906",
+          "pointId": "1454088428051443712",
+          "matchingReview": {
+            "analysis": "265秒开启下一路线前的大地图保留上一处倒柱白花地玩家位置；guide白花地、倒柱和显像网格相合。 本奖励为成员1，观测类型朴素；路线：向东南跳下，倒柱旁白花地。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                265.0,
+                255.0,
+                259.0
+              ],
+              "fullmapAccepted": [
+                265.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 7, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像装置生成箱；向东南跳下，倒柱旁白花地",
+                "role": "support",
+                "start": 243,
+                "end": 261
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+                "locator": "t=265; affineFrameToReference + pixelToGame; manual player pixel=[592.1374045801526, 352.9236641221374]",
+                "reason": "真实玩家箭头在领取后打开的地图上；固定阈值SIFT通过266内点。投影为候选范围，不把玩家像素当作箱像素；再由实景guide消歧。layer=canonical-base。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454088428051443712.json",
+                "locator": "data.id + content.description + content.coordinate",
+                "reason": "需要使用显像功能，显像岩蛛声骸。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454088428051443712-1.png",
+                "locator": "source guide image",
+                "reason": "265秒开启下一路线前的大地图保留上一处倒柱白花地玩家位置；guide白花地、倒柱和显像网格相合。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454088428051443712-2.png",
+                "locator": "source guide image",
+                "reason": "265秒开启下一路线前的大地图保留上一处倒柱白花地玩家位置；guide白花地、倒柱和显像网格相合。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "manualAnchor": {
+              "time": 265,
+              "pixel": [
+                592.1374045801526,
+                352.9236641221374
+              ],
+              "role": "player-arrow-after-reward-not-box",
+              "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00265.00.jpg"
+            },
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "作者在本P开场明确将本片收集物限定为奇藏探测仪扫/探测不到；该成员已凭位置、视频触发与guide确认属于该片的实际奖励。结合逐项显像/任务/交付过程形成离线作者证言候选，非独立实机扫描测试。",
+              "evidence": [
+                {
+                  "source": "out/detectability-v2/BV13ZvrBtEde/p01/transcript.txt",
+                  "locator": "4.12–6.38s local-ASR",
+                  "reason": "明确限定本片为探测仪无法探测的箱；与本项触发证据合用，不只依据标题",
+                  "role": "support"
+                },
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 7, member 1",
+                  "reason": "显像装置生成箱",
+                  "role": "support",
+                  "start": 243,
+                  "end": 261
+                },
+                {
+                  "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454088428051443712.json",
+                  "locator": "content.description",
+                  "reason": "需要使用显像功能，显像岩蛛声骸。",
+                  "role": "support"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e008",
+      "ordinal": 8,
+      "start": 261,
+      "end": 306,
+      "progressBarMark": {
+        "rawLabel": "箱8",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像装置生成箱",
+      "route": "引目阙东北信标向西南，过怪下小路右转至倒柱下",
+      "transcriptRefs": [
+        {
+          "start": 260.35,
+          "end": 261.81,
+          "text": "接着再打开地图"
+        },
+        {
+          "start": 262.51,
+          "end": 263.99,
+          "text": "来我们传送到"
+        },
+        {
+          "start": 264.83,
+          "end": 265.69,
+          "text": "隐日殿"
+        },
+        {
+          "start": 266.35,
+          "end": 267.89,
+          "text": "右上方这个小银杏苗"
+        },
+        {
+          "start": 272.2,
+          "end": 274.04,
+          "text": "翻过来之后我们转向小地图"
+        },
+        {
+          "start": 274.04,
+          "end": 275.62,
+          "text": "左下方西南方向"
+        },
+        {
+          "start": 276.06,
+          "end": 276.96,
+          "text": "骑车往前走"
+        },
+        {
+          "start": 278.62,
+          "end": 279.62,
+          "text": "好继续往前"
+        },
+        {
+          "start": 279.62,
+          "end": 281.48,
+          "text": "而面前这个boss"
+        },
+        {
+          "start": 281.48,
+          "end": 282.66,
+          "text": "不是这个怪我们不用管"
+        },
+        {
+          "start": 282.66,
+          "end": 283.58,
+          "text": "我们继续往前开"
+        },
+        {
+          "start": 283.94,
+          "end": 284.98,
+          "text": "下方有一条小路"
+        },
+        {
+          "start": 284.98,
+          "end": 285.94,
+          "text": "我们沿着小路右转"
+        },
+        {
+          "start": 287.96,
+          "end": 288.94,
+          "text": "然后一直往前走"
+        },
+        {
+          "start": 290.98,
+          "end": 292.48,
+          "text": "走到面前能看到左边"
+        },
+        {
+          "start": 292.48,
+          "end": 293.52,
+          "text": "有一个倒着的柱子"
+        },
+        {
+          "start": 293.52,
+          "end": 294.78,
+          "text": "那就来到柱子的下方"
+        },
+        {
+          "start": 295.46,
+          "end": 296.46,
+          "text": "过来使用一下"
+        },
+        {
+          "start": 301.68,
+          "end": 303.68,
+          "text": "召唤出来我们开到宝箱"
+        },
+        {
+          "start": 305.0,
+          "end": 306.26,
+          "text": "拿宝箱打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00295.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00297.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00302.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00303.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00304.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 297,
+          "appearanceSeconds": 302,
+          "collectionSeconds": 303,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "265秒地图是前处，310秒地图中的黄色为视野边缘指示，不能按地理位置投影；倒柱下显像奖励可见，但需补奖励点地图或可验证路线距离。 本奖励为成员1，观测类型朴素；路线：引目阙东北信标向西南，过怪下小路右转至倒柱下。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                265.0,
+                310.0,
+                297.0,
+                302.0,
+                303.0
+              ],
+              "fullmapAccepted": [
+                265.0,
+                310.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 8, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像装置生成箱；引目阙东北信标向西南，过怪下小路右转至倒柱下",
+                "role": "support",
+                "start": 261,
+                "end": 306
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 8 mechanism",
+                  "reason": "显像装置生成箱",
+                  "role": "support",
+                  "start": 261,
+                  "end": 306
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e009",
+      "ordinal": 9,
+      "start": 306,
+      "end": 353,
+      "progressBarMark": {
+        "rawLabel": "箱9",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像装置生成箱",
+      "route": "上方中枢向西北阶梯沿路右转，紫柱旁",
+      "transcriptRefs": [
+        {
+          "start": 305.0,
+          "end": 306.26,
+          "text": "拿宝箱打开地图"
+        },
+        {
+          "start": 307.36,
+          "end": 309.92,
+          "text": "这里我们要传送到青树园的中心苗"
+        },
+        {
+          "start": 309.92,
+          "end": 310.82,
+          "text": "在上方还有一个"
+        },
+        {
+          "start": 316.66,
+          "end": 317.4,
+          "text": "翻过来之后"
+        },
+        {
+          "start": 317.4,
+          "end": 318.62,
+          "text": "这两小时就左上方西北朋友"
+        },
+        {
+          "start": 318.62,
+          "end": 319.96,
+          "text": "来这里有这个台阶"
+        },
+        {
+          "start": 319.96,
+          "end": 321.08,
+          "text": "我们沿着这个台阶往上走"
+        },
+        {
+          "start": 322.28,
+          "end": 324.64,
+          "text": "哎就沿着这条小路一直往前"
+        },
+        {
+          "start": 328.5,
+          "end": 329.64,
+          "text": "右转继续走"
+        },
+        {
+          "start": 336.91,
+          "end": 338.39,
+          "text": "这里我们就沿着这条小路"
+        },
+        {
+          "start": 338.39,
+          "end": 339.97,
+          "text": "然后走到看到右边"
+        },
+        {
+          "start": 339.97,
+          "end": 341.35,
+          "text": "有这个紫色的这个柱子的时候"
+        },
+        {
+          "start": 341.35,
+          "end": 342.15,
+          "text": "跳过来"
+        },
+        {
+          "start": 344.18,
+          "end": 344.96,
+          "text": "来使用一下"
+        },
+        {
+          "start": 349.64,
+          "end": 351.06,
+          "text": "接着过来开到宝箱"
+        },
+        {
+          "start": 351.62,
+          "end": 353.12,
+          "text": "拿到宝箱之后打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00343.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00345.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00350.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00351.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00352.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 345,
+          "appearanceSeconds": 350,
+          "collectionSeconds": 351,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "310秒传送起点图可配准，360秒地图已移动到下一目的地且原玩家出视野；紫柱旁奖励可见，当前没有可信终点箭头，不能从地图中心当作箱点。 本奖励为成员1，观测类型朴素；路线：上方中枢向西北阶梯沿路右转，紫柱旁。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                310.0,
+                345.0,
+                350.0,
+                351.0
+              ],
+              "fullmapAccepted": [
+                310.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 9, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像装置生成箱；上方中枢向西北阶梯沿路右转，紫柱旁",
+                "role": "support",
+                "start": 306,
+                "end": 353
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 9 mechanism",
+                  "reason": "显像装置生成箱",
+                  "role": "support",
+                  "start": 306,
+                  "end": 353
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e010",
+      "ordinal": 10,
+      "start": 353,
+      "end": 384,
+      "progressBarMark": {
+        "rawLabel": "箱10",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "交付五松塔生成箱",
+      "route": "锈封丘附近中枢，楼梯前右转，石像前金色调查点",
+      "transcriptRefs": [
+        {
+          "start": 351.62,
+          "end": 353.12,
+          "text": "拿到宝箱之后打开地图"
+        },
+        {
+          "start": 353.12,
+          "end": 353.9,
+          "text": "来缩小一下"
+        },
+        {
+          "start": 353.9,
+          "end": 354.82,
+          "text": "我们来到右边"
+        },
+        {
+          "start": 355.76,
+          "end": 357.48,
+          "text": "好这里我们传送到"
+        },
+        {
+          "start": 358.72,
+          "end": 360.66,
+          "text": "这个罗蒜丘上方的中心庙"
+        },
+        {
+          "start": 361.04,
+          "end": 363.46,
+          "text": "我们去拿一个交付这个松塔的"
+        },
+        {
+          "start": 364.04,
+          "end": 365.24,
+          "text": "五个松塔的一个宝箱"
+        },
+        {
+          "start": 366.76,
+          "end": 368.36,
+          "text": "这样小就面前直走"
+        },
+        {
+          "start": 370.55,
+          "end": 372.67,
+          "text": "走到快下楼梯的时候右转"
+        },
+        {
+          "start": 373.91,
+          "end": 376.25,
+          "text": "对边地上一个黄色高亮点调查一下"
+        },
+        {
+          "start": 377.33,
+          "end": 377.91,
+          "text": "交付"
+        },
+        {
+          "start": 379.19,
+          "end": 380.17,
+          "text": "出来一个宝箱"
+        },
+        {
+          "start": 380.17,
+          "end": 381.41,
+          "text": "开完会拿到一个成就"
+        },
+        {
+          "start": 382.67,
+          "end": 383.89,
+          "text": "接着打开地图"
+        },
+        {
+          "start": 383.89,
+          "end": 385.35,
+          "text": "来我们传送到上方"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00374.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00378.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00380.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00381.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00382.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 378,
+          "appearanceSeconds": 380,
+          "collectionSeconds": 381,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "906",
+          "pointId": "1454156009120788480",
+          "matchingReview": {
+            "analysis": "385秒供奉完毕后地图保留玩家黄箭头，guide石像与五松塔描述、石阶布局均一致。 本奖励为成员1，观测类型朴素；路线：锈封丘附近中枢，楼梯前右转，石像前金色调查点。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                360.0,
+                385.0,
+                378.0,
+                380.0,
+                381.0
+              ],
+              "fullmapAccepted": [
+                360.0,
+                385.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 10, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "交付五松塔生成箱；锈封丘附近中枢，楼梯前右转，石像前金色调查点",
+                "role": "support",
+                "start": 353,
+                "end": 384
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+                "locator": "t=385; affineFrameToReference + pixelToGame; manual player pixel=[444.01526717557255, 383.0763358778626]",
+                "reason": "真实玩家箭头在领取后打开的地图上；固定阈值SIFT通过114内点。投影为候选范围，不把玩家像素当作箱像素；再由实景guide消歧。layer=canonical-base。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454156009120788480.json",
+                "locator": "data.id + content.description + content.coordinate",
+                "reason": "第二张图的位置供奉五个松塔，可以获得一个朴素。获得成就“信者有份”",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454156009120788480-1.png",
+                "locator": "source guide image",
+                "reason": "385秒供奉完毕后地图保留玩家黄箭头，guide石像与五松塔描述、石阶布局均一致。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454156009120788480-2.png",
+                "locator": "source guide image",
+                "reason": "385秒供奉完毕后地图保留玩家黄箭头，guide石像与五松塔描述、石阶布局均一致。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "manualAnchor": {
+              "time": 385,
+              "pixel": [
+                444.01526717557255,
+                383.0763358778626
+              ],
+              "role": "player-arrow-after-reward-not-box",
+              "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00385.00.jpg"
+            },
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "作者在本P开场明确将本片收集物限定为奇藏探测仪扫/探测不到；该成员已凭位置、视频触发与guide确认属于该片的实际奖励。结合逐项显像/任务/交付过程形成离线作者证言候选，非独立实机扫描测试。",
+              "evidence": [
+                {
+                  "source": "out/detectability-v2/BV13ZvrBtEde/p01/transcript.txt",
+                  "locator": "4.12–6.38s local-ASR",
+                  "reason": "明确限定本片为探测仪无法探测的箱；与本项触发证据合用，不只依据标题",
+                  "role": "support"
+                },
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 10, member 1",
+                  "reason": "交付五松塔生成箱",
+                  "role": "support",
+                  "start": 353,
+                  "end": 384
+                },
+                {
+                  "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454156009120788480.json",
+                  "locator": "content.description",
+                  "reason": "第二张图的位置供奉五个松塔，可以获得一个朴素。获得成就“信者有份”",
+                  "role": "support"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e011",
+      "ordinal": 11,
+      "start": 384,
+      "end": 441,
+      "progressBarMark": {
+        "rawLabel": "箱11-14",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像修复炮车→清怪→发炮出现四箱",
+      "route": "上方信标东北小营地，爬台阶上台",
+      "transcriptRefs": [
+        {
+          "start": 383.89,
+          "end": 385.35,
+          "text": "来我们传送到上方"
+        },
+        {
+          "start": 386.13,
+          "end": 388.43,
+          "text": "现在锁在点位上方的这个小银杏苗"
+        },
+        {
+          "start": 388.77,
+          "end": 389.69,
+          "text": "不成球员的"
+        },
+        {
+          "start": 393.64,
+          "end": 395.8,
+          "text": "刚过来之后转小银杏右上方东北方向"
+        },
+        {
+          "start": 395.8,
+          "end": 396.42,
+          "text": "骑车往前"
+        },
+        {
+          "start": 396.82,
+          "end": 398.3,
+          "text": "在我鼠标指的这个地方"
+        },
+        {
+          "start": 398.3,
+          "end": 399.54,
+          "text": "能看到是一个小营地"
+        },
+        {
+          "start": 399.54,
+          "end": 400.54,
+          "text": "那是朝这个营地走"
+        },
+        {
+          "start": 405.28,
+          "end": 406.62,
+          "text": "走这个台阶走上来"
+        },
+        {
+          "start": 408.66,
+          "end": 409.42,
+          "text": "跳上来"
+        },
+        {
+          "start": 410.9,
+          "end": 411.66,
+          "text": "一往前走"
+        },
+        {
+          "start": 411.66,
+          "end": 413.94,
+          "text": "然后这里来能看到一个紫色的这个标志"
+        },
+        {
+          "start": 414.48,
+          "end": 416.08,
+          "text": "显现我们使用这个劈啪啪"
+        },
+        {
+          "start": 420.23,
+          "end": 421.53,
+          "text": "然后这里来清下怪"
+        },
+        {
+          "start": 423.52,
+          "end": 425.0,
+          "text": "清完怪我们要稍微等一下"
+        },
+        {
+          "start": 425.0,
+          "end": 426.22,
+          "text": "等他发射这个大炮"
+        },
+        {
+          "start": 426.22,
+          "end": 428.62,
+          "text": "然后来这里能看到炸出来四个宝箱"
+        },
+        {
+          "start": 429.0,
+          "end": 430.1,
+          "text": "我们依次去开一下"
+        },
+        {
+          "start": 434.71,
+          "end": 435.43,
+          "text": "第二个"
+        },
+        {
+          "start": 436.27,
+          "end": 437.23,
+          "text": "这里第三个"
+        },
+        {
+          "start": 438.67,
+          "end": 439.63,
+          "text": "接着第四个"
+        },
+        {
+          "start": 440.33,
+          "end": 441.83,
+          "text": "开完之后打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00414.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00417.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00427.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00432.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00433.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00435.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00436.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00437.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00438.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00439.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00440.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 417,
+          "appearanceSeconds": 427,
+          "collectionSeconds": 432,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "炮车营地4箱分别432/435/437/439秒领取，不能按四个候选数组顺序分配。385秒地图玩家属于前一供奉箱，445秒图已平移到副本且无可靠领奖地点箭头；小地图427–439三种参考scale均未达16匹配。需营地坐标与3个同品质朴素成员位置区分。 本奖励为成员1，观测类型朴素；路线：上方信标东北小营地，爬台阶上台。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                385.0,
+                445.0,
+                417.0,
+                427.0,
+                432.0,
+                435.0,
+                437.0,
+                439.0
+              ],
+              "fullmapAccepted": [
+                385.0,
+                445.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 11, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像修复炮车→清怪→发炮出现四箱；上方信标东北小营地，爬台阶上台",
+                "role": "support",
+                "start": 384,
+                "end": 441
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 11 mechanism",
+                  "reason": "显像修复炮车→清怪→发炮出现四箱",
+                  "role": "support",
+                  "start": 384,
+                  "end": 441
+                }
+              ]
+            }
+          }
+        },
+        {
+          "member": 2,
+          "observedType": "朴素",
+          "triggerSeconds": 417,
+          "appearanceSeconds": 427,
+          "collectionSeconds": 435,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "炮车营地4箱分别432/435/437/439秒领取，不能按四个候选数组顺序分配。385秒地图玩家属于前一供奉箱，445秒图已平移到副本且无可靠领奖地点箭头；小地图427–439三种参考scale均未达16匹配。需营地坐标与3个同品质朴素成员位置区分。 本奖励为成员2，观测类型朴素；路线：上方信标东北小营地，爬台阶上台。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                385.0,
+                445.0,
+                417.0,
+                427.0,
+                432.0,
+                435.0,
+                437.0,
+                439.0
+              ],
+              "fullmapAccepted": [
+                385.0,
+                445.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 11, member 2; evidenceFrames + local-ASR transcript",
+                "reason": "显像修复炮车→清怪→发炮出现四箱；上方信标东北小营地，爬台阶上台",
+                "role": "support",
+                "start": 384,
+                "end": 441
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 11 mechanism",
+                  "reason": "显像修复炮车→清怪→发炮出现四箱",
+                  "role": "support",
+                  "start": 384,
+                  "end": 441
+                }
+              ]
+            }
+          }
+        },
+        {
+          "member": 3,
+          "observedType": "朴素",
+          "triggerSeconds": 417,
+          "appearanceSeconds": 427,
+          "collectionSeconds": 437,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "炮车营地4箱分别432/435/437/439秒领取，不能按四个候选数组顺序分配。385秒地图玩家属于前一供奉箱，445秒图已平移到副本且无可靠领奖地点箭头；小地图427–439三种参考scale均未达16匹配。需营地坐标与3个同品质朴素成员位置区分。 本奖励为成员3，观测类型朴素；路线：上方信标东北小营地，爬台阶上台。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                385.0,
+                445.0,
+                417.0,
+                427.0,
+                432.0,
+                435.0,
+                437.0,
+                439.0
+              ],
+              "fullmapAccepted": [
+                385.0,
+                445.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 11, member 3; evidenceFrames + local-ASR transcript",
+                "reason": "显像修复炮车→清怪→发炮出现四箱；上方信标东北小营地，爬台阶上台",
+                "role": "support",
+                "start": 384,
+                "end": 441
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 11 mechanism",
+                  "reason": "显像修复炮车→清怪→发炮出现四箱",
+                  "role": "support",
+                  "start": 384,
+                  "end": 441
+                }
+              ]
+            }
+          }
+        },
+        {
+          "member": 4,
+          "observedType": "基准",
+          "triggerSeconds": 417,
+          "appearanceSeconds": 427,
+          "collectionSeconds": 439,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "炮车营地4箱分别432/435/437/439秒领取，不能按四个候选数组顺序分配。385秒地图玩家属于前一供奉箱，445秒图已平移到副本且无可靠领奖地点箭头；小地图427–439三种参考scale均未达16匹配。需营地坐标与3个同品质朴素成员位置区分。 本奖励为成员4，观测类型基准；路线：上方信标东北小营地，爬台阶上台。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                385.0,
+                445.0,
+                417.0,
+                427.0,
+                432.0,
+                435.0,
+                437.0,
+                439.0
+              ],
+              "fullmapAccepted": [
+                385.0,
+                445.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 11, member 4; evidenceFrames + local-ASR transcript",
+                "reason": "显像修复炮车→清怪→发炮出现四箱；上方信标东北小营地，爬台阶上台",
+                "role": "support",
+                "start": 384,
+                "end": 441
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 11 mechanism",
+                  "reason": "显像修复炮车→清怪→发炮出现四箱",
+                  "role": "support",
+                  "start": 384,
+                  "end": 441
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "战斗有剪辑；成员按逐箱开启顺序，不用于分配点位ID。"
+      ]
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e012",
+      "ordinal": 12,
+      "start": 441,
+      "end": 468,
+      "progressBarMark": {
+        "rawLabel": "箱15",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像生成箱，另一侧还有日灵提示未收集",
+      "route": "副本传送后转身至岩石/紫水晶旁",
+      "transcriptRefs": [
+        {
+          "start": 440.33,
+          "end": 441.83,
+          "text": "开完之后打开地图"
+        },
+        {
+          "start": 442.65,
+          "end": 443.71,
+          "text": "我们来到右边"
+        },
+        {
+          "start": 443.71,
+          "end": 445.01,
+          "text": "这里我们传送到右边"
+        },
+        {
+          "start": 445.01,
+          "end": 447.35,
+          "text": "这一个荒期旧店"
+        },
+        {
+          "start": 447.35,
+          "end": 448.59,
+          "text": "这个副本传送过来"
+        },
+        {
+          "start": 452.76,
+          "end": 453.46,
+          "text": "传过来之后"
+        },
+        {
+          "start": 453.46,
+          "end": 454.46,
+          "text": "来直接转个身"
+        },
+        {
+          "start": 455.06,
+          "end": 456.82,
+          "text": "这里我们来使用一下"
+        },
+        {
+          "start": 456.82,
+          "end": 457.52,
+          "text": "显像生涯"
+        },
+        {
+          "start": 457.52,
+          "end": 459.14,
+          "text": "使用这个岩珠S4型"
+        },
+        {
+          "start": 459.14,
+          "end": 460.5,
+          "text": "这里有一个是日灵"
+        },
+        {
+          "start": 460.5,
+          "end": 461.08,
+          "text": "一个是宝箱"
+        },
+        {
+          "start": 463.49,
+          "end": 464.45,
+          "text": "这个就是宝箱"
+        },
+        {
+          "start": 464.45,
+          "end": 465.61,
+          "text": "我这里直接开一下"
+        },
+        {
+          "start": 466.47,
+          "end": 467.47,
+          "text": "拿完这个宝箱之后"
+        },
+        {
+          "start": 467.47,
+          "end": 468.27,
+          "text": "我们打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00456.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00459.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00464.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00466.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00467.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 459,
+          "appearanceSeconds": 464,
+          "collectionSeconds": 466,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "445秒副本大地图可配准但玩家标记未在可信地图位置，470秒黄色带圈形态可能为屏外指示，投影候选不能作位置证据。紫晶旁箱及另一侧日灵与显像过程已区分，仍缺可信箱坐标。 本奖励为成员1，观测类型朴素；路线：副本传送后转身至岩石/紫水晶旁。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                445.0,
+                470.0,
+                459.0,
+                464.0,
+                466.0
+              ],
+              "fullmapAccepted": [
+                445.0,
+                470.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 12, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像生成箱，另一侧还有日灵提示未收集；副本传送后转身至岩石/紫水晶旁",
+                "role": "support",
+                "start": 441,
+                "end": 468
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 12 mechanism",
+                  "reason": "显像生成箱，另一侧还有日灵提示未收集",
+                  "role": "support",
+                  "start": 441,
+                  "end": 468
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "日灵/显像交互在附近，未将未领取的其他交互提示自动算作奖励。"
+      ]
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e013",
+      "ordinal": 13,
+      "start": 468,
+      "end": 515,
+      "progressBarMark": {
+        "rawLabel": "箱16",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像生成箱",
+      "route": "星矩学院外信标向东，穿道路到紫叶下",
+      "transcriptRefs": [
+        {
+          "start": 467.47,
+          "end": 468.27,
+          "text": "我们打开地图"
+        },
+        {
+          "start": 469.07,
+          "end": 469.79,
+          "text": "来往下"
+        },
+        {
+          "start": 470.47,
+          "end": 471.39,
+          "text": "这里我们传上到"
+        },
+        {
+          "start": 471.39,
+          "end": 472.57,
+          "text": "星际学院外面的"
+        },
+        {
+          "start": 472.57,
+          "end": 473.29,
+          "text": "这个小银杏苗"
+        },
+        {
+          "start": 478.16,
+          "end": 478.86,
+          "text": "翻过来之后"
+        },
+        {
+          "start": 478.86,
+          "end": 479.76,
+          "text": "转向小地图右边"
+        },
+        {
+          "start": 479.76,
+          "end": 480.4,
+          "text": "东方向"
+        },
+        {
+          "start": 481.0,
+          "end": 481.94,
+          "text": "骑车往前走"
+        },
+        {
+          "start": 487.45,
+          "end": 489.25,
+          "text": "来要走过下方这个公路"
+        },
+        {
+          "start": 490.73,
+          "end": 491.61,
+          "text": "然后继续往前"
+        },
+        {
+          "start": 491.61,
+          "end": 493.33,
+          "text": "看到左边这个紫色的"
+        },
+        {
+          "start": 493.33,
+          "end": 494.23,
+          "text": "这个叶子"
+        },
+        {
+          "start": 494.23,
+          "end": 495.31,
+          "text": "然后这里往下走"
+        },
+        {
+          "start": 497.4,
+          "end": 498.3,
+          "text": "然后这里小地图上"
+        },
+        {
+          "start": 498.3,
+          "end": 499.66,
+          "text": "就有这个日灵的标志了"
+        },
+        {
+          "start": 499.66,
+          "end": 500.96,
+          "text": "我们朝这个日灵的标志走"
+        },
+        {
+          "start": 501.94,
+          "end": 502.68,
+          "text": "来下车"
+        },
+        {
+          "start": 503.9,
+          "end": 505.0,
+          "text": "然后拿出我们的"
+        },
+        {
+          "start": 505.0,
+          "end": 505.72,
+          "text": "炎柱S型"
+        },
+        {
+          "start": 506.08,
+          "end": 511.7,
+          "text": "来出来一个宝箱"
+        },
+        {
+          "start": 511.7,
+          "end": 513.2,
+          "text": "那这里拿一下宝箱"
+        },
+        {
+          "start": 513.68,
+          "end": 515.18,
+          "text": "拿下宝箱之后打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00504.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00506.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00512.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00513.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00514.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 506,
+          "appearanceSeconds": 512,
+          "collectionSeconds": 513,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "470秒选择学院外信标后跨路到紫叶，520秒图已移至北方道路；实景路线可见但缺奖励端可投影箭头，不把下一信标位置认作本箱。 本奖励为成员1，观测类型朴素；路线：星矩学院外信标向东，穿道路到紫叶下。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                470.0,
+                520.0,
+                506.0,
+                512.0,
+                513.0
+              ],
+              "fullmapAccepted": [
+                470.0,
+                520.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 13, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像生成箱；星矩学院外信标向东，穿道路到紫叶下",
+                "role": "support",
+                "start": 468,
+                "end": 515
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 13 mechanism",
+                  "reason": "显像生成箱",
+                  "role": "support",
+                  "start": 468,
+                  "end": 515
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e014",
+      "ordinal": 14,
+      "start": 515,
+      "end": 584,
+      "progressBarMark": {
+        "rawLabel": "箱17-19",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像修复装置→跟随→清怪→三箱",
+      "route": "北侧信标向北，紫花装置，护送至营地",
+      "transcriptRefs": [
+        {
+          "start": 513.68,
+          "end": 515.18,
+          "text": "拿下宝箱之后打开地图"
+        },
+        {
+          "start": 515.92,
+          "end": 516.86,
+          "text": "来到右边"
+        },
+        {
+          "start": 516.86,
+          "end": 519.7,
+          "text": "我们传送到真空侧界台"
+        },
+        {
+          "start": 519.7,
+          "end": 521.0,
+          "text": "上方的一个小银杏铢"
+        },
+        {
+          "start": 521.0,
+          "end": 521.8,
+          "text": "拘木远野的"
+        },
+        {
+          "start": 527.2,
+          "end": 527.84,
+          "text": "传过来之后"
+        },
+        {
+          "start": 527.84,
+          "end": 529.0,
+          "text": "转小地图上方北方向"
+        },
+        {
+          "start": 529.0,
+          "end": 529.7,
+          "text": "来骑车往前"
+        },
+        {
+          "start": 533.35,
+          "end": 534.09,
+          "text": "走过来之后"
+        },
+        {
+          "start": 534.09,
+          "end": 535.79,
+          "text": "右边来有一个紫色的这个"
+        },
+        {
+          "start": 539.15,
+          "end": 539.81,
+          "text": "任务指引"
+        },
+        {
+          "start": 539.81,
+          "end": 541.27,
+          "text": "我们朝这个任务指引走过来"
+        },
+        {
+          "start": 545.12,
+          "end": 546.4,
+          "text": "过来我们修一下他"
+        },
+        {
+          "start": 546.4,
+          "end": 547.36,
+          "text": "用这个劈啪啪"
+        },
+        {
+          "start": 551.76,
+          "end": 552.86,
+          "text": "这里要跟着他走"
+        },
+        {
+          "start": 573.46,
+          "end": 574.68,
+          "text": "好来我们清一下怪"
+        },
+        {
+          "start": 575.54,
+          "end": 576.34,
+          "text": "清完怪来"
+        },
+        {
+          "start": 576.34,
+          "end": 577.28,
+          "text": "这里有三个宝箱"
+        },
+        {
+          "start": 577.28,
+          "end": 577.98,
+          "text": "就是稍微等一下"
+        },
+        {
+          "start": 577.98,
+          "end": 578.94,
+          "text": "就会有三个宝箱"
+        },
+        {
+          "start": 582.19,
+          "end": 583.27,
+          "text": "拿完三个宝箱之后"
+        },
+        {
+          "start": 583.27,
+          "end": 584.25,
+          "text": "打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00545.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00548.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00576.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00578.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00579.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00580.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00582.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00583.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "基准",
+          "triggerSeconds": 548,
+          "appearanceSeconds": 576,
+          "collectionSeconds": 578,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "护送装置经过清怪后生成三箱，成员各自领取可见；590秒图黄色为屏边/指示风险，近邻未得可靠箱候选，不能依据三箱数量或排列分配ID。需护送终点的地理锚和成员间方位。 本奖励为成员1，观测类型基准；路线：北侧信标向北，紫花装置，护送至营地。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                520.0,
+                548.0,
+                576.0,
+                578.0,
+                579.0,
+                582.0
+              ],
+              "fullmapAccepted": [
+                520.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 14, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像修复装置→跟随→清怪→三箱；北侧信标向北，紫花装置，护送至营地",
+                "role": "support",
+                "start": 515,
+                "end": 584
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 14 mechanism",
+                  "reason": "显像修复装置→跟随→清怪→三箱",
+                  "role": "support",
+                  "start": 515,
+                  "end": 584
+                }
+              ]
+            }
+          }
+        },
+        {
+          "member": 2,
+          "observedType": "基准",
+          "triggerSeconds": 548,
+          "appearanceSeconds": 576,
+          "collectionSeconds": 579,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "护送装置经过清怪后生成三箱，成员各自领取可见；590秒图黄色为屏边/指示风险，近邻未得可靠箱候选，不能依据三箱数量或排列分配ID。需护送终点的地理锚和成员间方位。 本奖励为成员2，观测类型基准；路线：北侧信标向北，紫花装置，护送至营地。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                520.0,
+                548.0,
+                576.0,
+                578.0,
+                579.0,
+                582.0
+              ],
+              "fullmapAccepted": [
+                520.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 14, member 2; evidenceFrames + local-ASR transcript",
+                "reason": "显像修复装置→跟随→清怪→三箱；北侧信标向北，紫花装置，护送至营地",
+                "role": "support",
+                "start": 515,
+                "end": 584
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 14 mechanism",
+                  "reason": "显像修复装置→跟随→清怪→三箱",
+                  "role": "support",
+                  "start": 515,
+                  "end": 584
+                }
+              ]
+            }
+          }
+        },
+        {
+          "member": 3,
+          "observedType": "朴素",
+          "triggerSeconds": 548,
+          "appearanceSeconds": 576,
+          "collectionSeconds": 582,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "护送装置经过清怪后生成三箱，成员各自领取可见；590秒图黄色为屏边/指示风险，近邻未得可靠箱候选，不能依据三箱数量或排列分配ID。需护送终点的地理锚和成员间方位。 本奖励为成员3，观测类型朴素；路线：北侧信标向北，紫花装置，护送至营地。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                520.0,
+                548.0,
+                576.0,
+                578.0,
+                579.0,
+                582.0
+              ],
+              "fullmapAccepted": [
+                520.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 14, member 3; evidenceFrames + local-ASR transcript",
+                "reason": "显像修复装置→跟随→清怪→三箱；北侧信标向北，紫花装置，护送至营地",
+                "role": "support",
+                "start": 515,
+                "end": 584
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 14 mechanism",
+                  "reason": "显像修复装置→跟随→清怪→三箱",
+                  "role": "support",
+                  "start": 515,
+                  "end": 584
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "战斗有剪辑；成员按逐箱开启顺序，不用于分配点位ID。"
+      ]
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e015",
+      "ordinal": 15,
+      "start": 584,
+      "end": 638,
+      "progressBarMark": {
+        "rawLabel": "箱20",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像装置生成箱，与日灵标识共处",
+      "route": "旷蛰谷西南信标向东北，过摩托挑战，紫花旁",
+      "transcriptRefs": [
+        {
+          "start": 583.27,
+          "end": 584.25,
+          "text": "打开地图"
+        },
+        {
+          "start": 584.87,
+          "end": 585.75,
+          "text": "来到下方"
+        },
+        {
+          "start": 586.27,
+          "end": 587.07,
+          "text": "我们传送到"
+        },
+        {
+          "start": 587.07,
+          "end": 588.61,
+          "text": "匡哲谷左下方"
+        },
+        {
+          "start": 588.61,
+          "end": 589.27,
+          "text": "这个小运气喵"
+        },
+        {
+          "start": 593.84,
+          "end": 594.46,
+          "text": "传过来之后"
+        },
+        {
+          "start": 594.46,
+          "end": 595.0,
+          "text": "这张小运气喵"
+        },
+        {
+          "start": 595.0,
+          "end": 595.72,
+          "text": "右上方动物模样"
+        },
+        {
+          "start": 595.72,
+          "end": 596.5,
+          "text": "来骑车往前"
+        },
+        {
+          "start": 599.59,
+          "end": 601.67,
+          "text": "面前抱着蓝光的"
+        },
+        {
+          "start": 601.67,
+          "end": 602.93,
+          "text": "是这个摩托车的挑战"
+        },
+        {
+          "start": 602.93,
+          "end": 603.97,
+          "text": "我们走过这个挑战"
+        },
+        {
+          "start": 604.93,
+          "end": 605.65,
+          "text": "往上走"
+        },
+        {
+          "start": 605.65,
+          "end": 606.21,
+          "text": "这第二来了"
+        },
+        {
+          "start": 606.21,
+          "end": 609.13,
+          "text": "这上面一直往前"
+        },
+        {
+          "start": 609.13,
+          "end": 610.01,
+          "text": "面前能看到"
+        },
+        {
+          "start": 610.01,
+          "end": 611.67,
+          "text": "有这个紫色的花"
+        },
+        {
+          "start": 612.33,
+          "end": 613.21,
+          "text": "就在这个地方"
+        },
+        {
+          "start": 613.21,
+          "end": 613.71,
+          "text": "我们下车"
+        },
+        {
+          "start": 614.21,
+          "end": 616.19,
+          "text": "往前面前使用显像"
+        },
+        {
+          "start": 616.83,
+          "end": 617.83,
+          "text": "沿着S型"
+        },
+        {
+          "start": 625.08,
+          "end": 627.26,
+          "text": "这里是这个宝箱跟日灵在一块的"
+        },
+        {
+          "start": 633.82,
+          "end": 635.32,
+          "text": "好过来我们开到这个宝箱"
+        },
+        {
+          "start": 637.38,
+          "end": 639.1,
+          "text": "拿完这个宝箱之后打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00614.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00618.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00634.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00636.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 618,
+          "appearanceSeconds": 634,
+          "collectionSeconds": 636,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "590秒地图选择信标后经过摩托挑战，显像箱与日灵共处；645秒图已平移到下一区，黄色靠视野边缘，不能用其推导奖励坐标。需要该紫花点可靠定位，日灵标记不能替代箱。 本奖励为成员1，观测类型朴素；路线：旷蛰谷西南信标向东北，过摩托挑战，紫花旁。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                590.0,
+                618.0,
+                634.0,
+                636.0
+              ],
+              "fullmapAccepted": [
+                590.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 15, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像装置生成箱，与日灵标识共处；旷蛰谷西南信标向东北，过摩托挑战，紫花旁",
+                "role": "support",
+                "start": 584,
+                "end": 638
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 15 mechanism",
+                  "reason": "显像装置生成箱，与日灵标识共处",
+                  "role": "support",
+                  "start": 584,
+                  "end": 638
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "日灵/显像交互在附近，未将未领取的其他交互提示自动算作奖励。",
+        "箱体生成时被植被与视角遮挡，appearanceSeconds为首次清楚看到箱体，并非精确生成时间。"
+      ]
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e016",
+      "ordinal": 16,
+      "start": 638,
+      "end": 671,
+      "progressBarMark": {
+        "rawLabel": "箱21",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "白色小屋前清怪，朴素箱解锁",
+      "route": "隐喻深腹西北信标向西南，白色小屋门口",
+      "transcriptRefs": [
+        {
+          "start": 637.38,
+          "end": 639.1,
+          "text": "拿完这个宝箱之后打开地图"
+        },
+        {
+          "start": 640.46,
+          "end": 642.3,
+          "text": "然后这里我们传传到左边"
+        },
+        {
+          "start": 643.36,
+          "end": 644.58,
+          "text": "在左边能看到"
+        },
+        {
+          "start": 645.06,
+          "end": 646.18,
+          "text": "缩小给大家看一眼"
+        },
+        {
+          "start": 646.18,
+          "end": 647.42,
+          "text": "在这个隐晦深腹"
+        },
+        {
+          "start": 647.42,
+          "end": 649.44,
+          "text": "左上方有一个小银杏标传到这里"
+        },
+        {
+          "start": 654.37,
+          "end": 655.05,
+          "text": "传过来之后"
+        },
+        {
+          "start": 655.05,
+          "end": 655.73,
+          "text": "这样小地图"
+        },
+        {
+          "start": 655.73,
+          "end": 656.77,
+          "text": "左下方新的模样"
+        },
+        {
+          "start": 656.77,
+          "end": 657.33,
+          "text": "骑车往前"
+        },
+        {
+          "start": 657.89,
+          "end": 659.69,
+          "text": "这里在右边能看到一个白色的"
+        },
+        {
+          "start": 659.69,
+          "end": 660.95,
+          "text": "这个小小屋子"
+        },
+        {
+          "start": 661.29,
+          "end": 662.27,
+          "text": "在屋子的门口"
+        },
+        {
+          "start": 663.95,
+          "end": 665.23,
+          "text": "我屋子门口有一群怪"
+        },
+        {
+          "start": 666.27,
+          "end": 667.37,
+          "text": "过来我们清一压怪"
+        },
+        {
+          "start": 667.85,
+          "end": 669.79,
+          "text": "清完怪来开启朴素七档箱"
+        },
+        {
+          "start": 669.79,
+          "end": 670.77,
+          "text": "拿完之后"
+        },
+        {
+          "start": 670.77,
+          "end": 672.15,
+          "text": "转向小蜘蛛右上方动物盘仰"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00664.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00667.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00668.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00669.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00670.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 667,
+          "appearanceSeconds": 668,
+          "collectionSeconds": 669,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "645秒地图与白小屋南西路线可见，清怪开既有朴素箱；随后沿路到另一显像点而未重开地图，705秒是下一箱位置，不能反推本箱为同一点。 本奖励为成员1，观测类型朴素；路线：隐喻深腹西北信标向西南，白色小屋门口。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                645.0,
+                667.0,
+                668.0,
+                669.0
+              ],
+              "fullmapAccepted": [
+                645.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 16, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "白色小屋前清怪，朴素箱解锁；隐喻深腹西北信标向西南，白色小屋门口",
+                "role": "support",
+                "start": 638,
+                "end": 671
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 16 mechanism",
+                  "reason": "白色小屋前清怪，朴素箱解锁",
+                  "role": "support",
+                  "start": 638,
+                  "end": 671
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e017",
+      "ordinal": 17,
+      "start": 671,
+      "end": 703,
+      "progressBarMark": {
+        "rawLabel": "箱22",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像生成台阶上的箱",
+      "route": "东北爬平台，向东过大石块与紫水晶；面前显像为箱，旁边为怪",
+      "transcriptRefs": [
+        {
+          "start": 670.77,
+          "end": 672.15,
+          "text": "转向小蜘蛛右上方动物盘仰"
+        },
+        {
+          "start": 672.15,
+          "end": 672.71,
+          "text": "骑车往前"
+        },
+        {
+          "start": 673.75,
+          "end": 676.15,
+          "text": "左边能看到有一个比较平的平台"
+        },
+        {
+          "start": 676.15,
+          "end": 677.73,
+          "text": "我们就从这个平台跳上去"
+        },
+        {
+          "start": 679.89,
+          "end": 681.17,
+          "text": "来跳上来一直往前走"
+        },
+        {
+          "start": 682.25,
+          "end": 683.09,
+          "text": "这里走过来之后"
+        },
+        {
+          "start": 683.09,
+          "end": 684.55,
+          "text": "转向小蜘蛛右边东方向往前"
+        },
+        {
+          "start": 684.55,
+          "end": 686.31,
+          "text": "面前能看到有几个大石块"
+        },
+        {
+          "start": 686.31,
+          "end": 687.53,
+          "text": "还有紫色的水晶"
+        },
+        {
+          "start": 687.93,
+          "end": 689.49,
+          "text": "来这里翻过来继续往前"
+        },
+        {
+          "start": 691.23,
+          "end": 692.09,
+          "text": "这个是怪"
+        },
+        {
+          "start": 692.09,
+          "end": 693.29,
+          "text": "面前这个才是宝箱"
+        },
+        {
+          "start": 693.29,
+          "end": 700.35,
+          "text": "然后使用显像开启宝箱"
+        },
+        {
+          "start": 702.25,
+          "end": 703.67,
+          "text": "拿这个宝箱打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00693.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00695.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00700.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00702.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 695,
+          "appearanceSeconds": 700,
+          "collectionSeconds": 702,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "906",
+          "pointId": "1454165785776959488",
+          "matchingReview": {
+            "analysis": "705秒下一路线前地图显示本处玩家，紫晶旁左箱/右怪结构与guide完全对应；采用靠左的真实箭头主体，周围碎片不作为第二个玩家。 本奖励为成员1，观测类型朴素；路线：东北爬平台，向东过大石块与紫水晶；面前显像为箱，旁边为怪。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                705.0,
+                695.0,
+                700.0,
+                702.0
+              ],
+              "fullmapAccepted": [
+                705.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 17, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像生成台阶上的箱；东北爬平台，向东过大石块与紫水晶；面前显像为箱，旁边为怪",
+                "role": "support",
+                "start": 671,
+                "end": 703
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+                "locator": "t=705; affineFrameToReference + pixelToGame; manual player pixel=[676.8656716417911, 269.1940298507463]",
+                "reason": "真实玩家箭头在领取后打开的地图上；固定阈值SIFT通过175内点。投影为候选范围，不把玩家像素当作箱像素；再由实景guide消歧。layer=canonical-base。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454165785776959488.json",
+                "locator": "data.id + content.description + content.coordinate",
+                "reason": "使用显像功能，显像岩蛛声骸，左边是宝箱，右边是怪。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454165785776959488-1.png",
+                "locator": "source guide image",
+                "reason": "705秒下一路线前地图显示本处玩家，紫晶旁左箱/右怪结构与guide完全对应；采用靠左的真实箭头主体，周围碎片不作为第二个玩家。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454165785776959488-2.png",
+                "locator": "source guide image",
+                "reason": "705秒下一路线前地图显示本处玩家，紫晶旁左箱/右怪结构与guide完全对应；采用靠左的真实箭头主体，周围碎片不作为第二个玩家。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "manualAnchor": {
+              "time": 705,
+              "pixel": [
+                676.8656716417911,
+                269.1940298507463
+              ],
+              "role": "player-arrow-after-reward-not-box",
+              "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00705.00.jpg"
+            },
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "作者在本P开场明确将本片收集物限定为奇藏探测仪扫/探测不到；该成员已凭位置、视频触发与guide确认属于该片的实际奖励。结合逐项显像/任务/交付过程形成离线作者证言候选，非独立实机扫描测试。",
+              "evidence": [
+                {
+                  "source": "out/detectability-v2/BV13ZvrBtEde/p01/transcript.txt",
+                  "locator": "4.12–6.38s local-ASR",
+                  "reason": "明确限定本片为探测仪无法探测的箱；与本项触发证据合用，不只依据标题",
+                  "role": "support"
+                },
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 17, member 1",
+                  "reason": "显像生成台阶上的箱",
+                  "role": "support",
+                  "start": 671,
+                  "end": 703
+                },
+                {
+                  "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454165785776959488.json",
+                  "locator": "content.description",
+                  "reason": "使用显像功能，显像岩蛛声骸，左边是宝箱，右边是怪。",
+                  "role": "support"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e018",
+      "ordinal": 18,
+      "start": 703,
+      "end": 746,
+      "progressBarMark": {
+        "rawLabel": "箱23",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像出锁箱，随后清怪解锁",
+      "route": "阿图雅营地中枢向东南到多柱区域",
+      "transcriptRefs": [
+        {
+          "start": 702.25,
+          "end": 703.67,
+          "text": "拿这个宝箱打开地图"
+        },
+        {
+          "start": 704.29,
+          "end": 705.67,
+          "text": "这里我们还是往左边看"
+        },
+        {
+          "start": 706.29,
+          "end": 709.11,
+          "text": "我们传送到阿图亚营地的中心庙"
+        },
+        {
+          "start": 716.38,
+          "end": 717.16,
+          "text": "传送过来之后"
+        },
+        {
+          "start": 717.16,
+          "end": 718.5,
+          "text": "我们转向小地图右下方"
+        },
+        {
+          "start": 718.5,
+          "end": 718.92,
+          "text": "动荡方向"
+        },
+        {
+          "start": 718.92,
+          "end": 719.64,
+          "text": "骑车往前走"
+        },
+        {
+          "start": 720.96,
+          "end": 722.52,
+          "text": "这里面前能看到有这个"
+        },
+        {
+          "start": 722.9,
+          "end": 723.7,
+          "text": "我鼠标指的"
+        },
+        {
+          "start": 723.7,
+          "end": 724.68,
+          "text": "这里有很多个柱子"
+        },
+        {
+          "start": 724.68,
+          "end": 725.76,
+          "text": "这个柱子走"
+        },
+        {
+          "start": 731.22,
+          "end": 733.52,
+          "text": "走过来也是要使用这个岩柱S型"
+        },
+        {
+          "start": 741.04,
+          "end": 741.7,
+          "text": "跟下怪"
+        },
+        {
+          "start": 741.7,
+          "end": 743.3,
+          "text": "三怪过来开启到这个宝箱"
+        },
+        {
+          "start": 744.74,
+          "end": 746.24,
+          "text": "拿宝箱之后打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00732.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00735.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00740.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00744.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00745.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "基准",
+          "triggerSeconds": 735,
+          "appearanceSeconds": 740,
+          "collectionSeconds": 744,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "705秒地图之后传送阿图雅营地；750秒地图黄色贴下界被分割且地图已平移，投影近邻是采集物群，不能据该边缘图标确认箱。视频锁箱出现后清怪解锁已区分。 本奖励为成员1，观测类型基准；路线：阿图雅营地中枢向东南到多柱区域。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                705.0,
+                750.0,
+                735.0,
+                740.0,
+                744.0
+              ],
+              "fullmapAccepted": [
+                705.0,
+                750.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 18, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像出锁箱，随后清怪解锁；阿图雅营地中枢向东南到多柱区域",
+                "role": "support",
+                "start": 703,
+                "end": 746
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 18 mechanism",
+                  "reason": "显像出锁箱，随后清怪解锁",
+                  "role": "support",
+                  "start": 703,
+                  "end": 746
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e019",
+      "ordinal": 19,
+      "start": 746,
+      "end": 790,
+      "progressBarMark": {
+        "rawLabel": "箱24-25",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像后同处出现两箱",
+      "route": "北部信标东北沿路，紫色断柱间",
+      "transcriptRefs": [
+        {
+          "start": 744.74,
+          "end": 746.24,
+          "text": "拿宝箱之后打开地图"
+        },
+        {
+          "start": 746.82,
+          "end": 747.9,
+          "text": "这里我们来到上方"
+        },
+        {
+          "start": 749.2,
+          "end": 751.28,
+          "text": "我们传送到这个蓝岩类"
+        },
+        {
+          "start": 751.28,
+          "end": 752.64,
+          "text": "左上方这个小银杏苗"
+        },
+        {
+          "start": 757.22,
+          "end": 757.94,
+          "text": "传过来之后"
+        },
+        {
+          "start": 757.94,
+          "end": 758.52,
+          "text": "就这样小组"
+        },
+        {
+          "start": 758.52,
+          "end": 759.38,
+          "text": "右上方东边方向"
+        },
+        {
+          "start": 759.38,
+          "end": 760.12,
+          "text": "来骑车往前"
+        },
+        {
+          "start": 761.98,
+          "end": 763.08,
+          "text": "下方有一条路"
+        },
+        {
+          "start": 763.08,
+          "end": 764.44,
+          "text": "我们沿着这个路往前走"
+        },
+        {
+          "start": 770.64,
+          "end": 771.78,
+          "text": "这里左边能看到"
+        },
+        {
+          "start": 771.78,
+          "end": 772.64,
+          "text": "有这个紫色的"
+        },
+        {
+          "start": 772.64,
+          "end": 774.0,
+          "text": "这个锻炼的柱子"
+        },
+        {
+          "start": 774.42,
+          "end": 774.96,
+          "text": "往前"
+        },
+        {
+          "start": 774.96,
+          "end": 776.02,
+          "text": "在这两个柱子中间"
+        },
+        {
+          "start": 776.02,
+          "end": 776.56,
+          "text": "我们跳过来"
+        },
+        {
+          "start": 777.44,
+          "end": 778.24,
+          "text": "来使用一下"
+        },
+        {
+          "start": 780.62,
+          "end": 782.18,
+          "text": "这里也是一个日灵的点位"
+        },
+        {
+          "start": 782.18,
+          "end": 783.48,
+          "text": "然后会给宝箱的"
+        },
+        {
+          "start": 784.78,
+          "end": 786.0,
+          "text": "两个宝箱都开一下"
+        },
+        {
+          "start": 788.4,
+          "end": 789.7,
+          "text": "拿个宝箱打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00777.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00779.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00785.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00787.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00788.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00789.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 779,
+          "appearanceSeconds": 785,
+          "collectionSeconds": 787,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "790秒图保留领奖位置，近邻形成两个同品质朴素箱1454557442936729600、1454557443037392896及日灵1454558136125157376。它们间距过近，需各箱相对位置/开启顺序与guide逐个比对，不能将两成员按列表顺序配给ID。 本奖励为成员1，观测类型朴素；路线：北部信标东北沿路，紫色断柱间。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                750.0,
+                790.0,
+                795.0,
+                779.0,
+                785.0,
+                787.0,
+                788.0
+              ],
+              "fullmapAccepted": [
+                750.0,
+                790.0,
+                795.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 19, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像后同处出现两箱；北部信标东北沿路，紫色断柱间",
+                "role": "support",
+                "start": 746,
+                "end": 790
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 19 mechanism",
+                  "reason": "显像后同处出现两箱",
+                  "role": "support",
+                  "start": 746,
+                  "end": 790
+                }
+              ]
+            }
+          }
+        },
+        {
+          "member": 2,
+          "observedType": "朴素",
+          "triggerSeconds": 779,
+          "appearanceSeconds": 785,
+          "collectionSeconds": 788,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "790秒图保留领奖位置，近邻形成两个同品质朴素箱1454557442936729600、1454557443037392896及日灵1454558136125157376。它们间距过近，需各箱相对位置/开启顺序与guide逐个比对，不能将两成员按列表顺序配给ID。 本奖励为成员2，观测类型朴素；路线：北部信标东北沿路，紫色断柱间。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                750.0,
+                790.0,
+                795.0,
+                779.0,
+                785.0,
+                787.0,
+                788.0
+              ],
+              "fullmapAccepted": [
+                750.0,
+                790.0,
+                795.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 19, member 2; evidenceFrames + local-ASR transcript",
+                "reason": "显像后同处出现两箱；北部信标东北沿路，紫色断柱间",
+                "role": "support",
+                "start": 746,
+                "end": 790
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 19 mechanism",
+                  "reason": "显像后同处出现两箱",
+                  "role": "support",
+                  "start": 746,
+                  "end": 790
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "日灵/显像交互在附近，未将未领取的其他交互提示自动算作奖励。"
+      ]
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e020",
+      "ordinal": 20,
+      "start": 790,
+      "end": 853,
+      "progressBarMark": {
+        "rawLabel": "箱26",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像出柱下箱",
+      "route": "牙列石窟中枢西北，跨环保地与小水潭，隐形怪附近",
+      "transcriptRefs": [
+        {
+          "start": 790.08,
+          "end": 791.04,
+          "text": "好来到右边"
+        },
+        {
+          "start": 791.44,
+          "end": 792.96,
+          "text": "这里我们传送到"
+        },
+        {
+          "start": 794.24,
+          "end": 796.26,
+          "text": "传送到这个中心锚吧"
+        },
+        {
+          "start": 797.26,
+          "end": 798.08,
+          "text": "这个的牙石"
+        },
+        {
+          "start": 798.08,
+          "end": 799.74,
+          "text": "牙列石鹤的中心锚"
+        },
+        {
+          "start": 804.37,
+          "end": 805.05,
+          "text": "传过来之后"
+        },
+        {
+          "start": 805.05,
+          "end": 806.49,
+          "text": "转小绿的左上方西北方向来"
+        },
+        {
+          "start": 806.49,
+          "end": 807.07,
+          "text": "骑车往前"
+        },
+        {
+          "start": 810.49,
+          "end": 812.45,
+          "text": "这里这里不要掉到下方的水中了"
+        },
+        {
+          "start": 812.45,
+          "end": 813.33,
+          "text": "我们就朝前方走"
+        },
+        {
+          "start": 817.11,
+          "end": 819.27,
+          "text": "翻过这个环保地"
+        },
+        {
+          "start": 819.27,
+          "end": 819.99,
+          "text": "然后继续往前"
+        },
+        {
+          "start": 824.65,
+          "end": 826.25,
+          "text": "这里能看到一个小水潭"
+        },
+        {
+          "start": 826.25,
+          "end": 827.89,
+          "text": "我们走过一个小水潭"
+        },
+        {
+          "start": 828.47,
+          "end": 829.79,
+          "text": "沿着小水潭继续往前"
+        },
+        {
+          "start": 832.19,
+          "end": 833.43,
+          "text": "然后走过面前"
+        },
+        {
+          "start": 834.13,
+          "end": 835.33,
+          "text": "有这个隐形的怪"
+        },
+        {
+          "start": 835.33,
+          "end": 839.27,
+          "text": "往前这里就看到了这里也是要使用这个炎柱S型的"
+        },
+        {
+          "start": 849.98,
+          "end": 851.6,
+          "text": "这里这个宝箱过来看一下"
+        },
+        {
+          "start": 852.32,
+          "end": 855.12,
+          "text": "拿这个宝箱之后打开地图来到右边"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00837.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00841.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00849.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00852.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 841,
+          "appearanceSeconds": 849,
+          "collectionSeconds": 852,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "906",
+          "pointId": "1452464082801455104",
+          "matchingReview": {
+            "analysis": "855秒完成此箱后地图玩家位于柱下紫花地，guide柱形、岩蛛显像和旁侧日灵一致；与邻近隐形怪单独区分。 本奖励为成员1，观测类型朴素；路线：牙列石窟中枢西北，跨环保地与小水潭，隐形怪附近。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                790.0,
+                795.0,
+                800.0,
+                855.0,
+                841.0,
+                849.0,
+                852.0
+              ],
+              "fullmapAccepted": [
+                790.0,
+                795.0,
+                800.0,
+                855.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 20, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像出柱下箱；牙列石窟中枢西北，跨环保地与小水潭，隐形怪附近",
+                "role": "support",
+                "start": 790,
+                "end": 853
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+                "locator": "t=855; affineFrameToReference + pixelToGame; manual player pixel=[418.36559139784947, 296.2043010752688]",
+                "reason": "真实玩家箭头在领取后打开的地图上；固定阈值SIFT通过95内点。投影为候选范围，不把玩家像素当作箱像素；再由实景guide消歧。layer=canonical-base。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452464082801455104.json",
+                "locator": "data.id + content.description + content.coordinate",
+                "reason": "使用声骸显像功能，召唤岩蛛声骸（岩蛛S4型），显像后会有一个朴素奇藏箱，旁边还有一只日灵",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452464082801455104-1.png",
+                "locator": "source guide image",
+                "reason": "855秒完成此箱后地图玩家位于柱下紫花地，guide柱形、岩蛛显像和旁侧日灵一致；与邻近隐形怪单独区分。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452464082801455104-2.png",
+                "locator": "source guide image",
+                "reason": "855秒完成此箱后地图玩家位于柱下紫花地，guide柱形、岩蛛显像和旁侧日灵一致；与邻近隐形怪单独区分。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452464082801455104-3.png",
+                "locator": "source guide image",
+                "reason": "855秒完成此箱后地图玩家位于柱下紫花地，guide柱形、岩蛛显像和旁侧日灵一致；与邻近隐形怪单独区分。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "manualAnchor": {
+              "time": 855,
+              "pixel": [
+                418.36559139784947,
+                296.2043010752688
+              ],
+              "role": "player-arrow-after-reward-not-box",
+              "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00855.00.jpg"
+            },
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "作者在本P开场明确将本片收集物限定为奇藏探测仪扫/探测不到；该成员已凭位置、视频触发与guide确认属于该片的实际奖励。结合逐项显像/任务/交付过程形成离线作者证言候选，非独立实机扫描测试。",
+              "evidence": [
+                {
+                  "source": "out/detectability-v2/BV13ZvrBtEde/p01/transcript.txt",
+                  "locator": "4.12–6.38s local-ASR",
+                  "reason": "明确限定本片为探测仪无法探测的箱；与本项触发证据合用，不只依据标题",
+                  "role": "support"
+                },
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 20, member 1",
+                  "reason": "显像出柱下箱",
+                  "role": "support",
+                  "start": 790,
+                  "end": 853
+                },
+                {
+                  "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452464082801455104.json",
+                  "locator": "content.description",
+                  "reason": "使用声骸显像功能，召唤岩蛛声骸（岩蛛S4型），显像后会有一个朴素奇藏箱，旁边还有一只日灵",
+                  "role": "support"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e021",
+      "ordinal": 21,
+      "start": 853,
+      "end": 881,
+      "progressBarMark": {
+        "rawLabel": "箱27",
+        "source": "out/detectability-v2/BV13ZvrBtEde/p01/visual/progress-labels.jpg"
+      },
+      "observedMechanism": "显像生成箱",
+      "route": "灾逆相关副本传送点向南转左，发光网格",
+      "transcriptRefs": [
+        {
+          "start": 852.32,
+          "end": 855.12,
+          "text": "拿这个宝箱之后打开地图来到右边"
+        },
+        {
+          "start": 855.12,
+          "end": 858.32,
+          "text": "右边这里有一个副本叫做灾逆旧店"
+        },
+        {
+          "start": 862.78,
+          "end": 865.2,
+          "text": "翻过来之后转向小六的下方南方向往前走"
+        },
+        {
+          "start": 867.0,
+          "end": 868.2,
+          "text": "这里再朝左边看"
+        },
+        {
+          "start": 868.2,
+          "end": 871.34,
+          "text": "左边也有一个发着光的"
+        },
+        {
+          "start": 872.1,
+          "end": 873.6,
+          "text": "要使用炎柱S型"
+        },
+        {
+          "start": 877.97,
+          "end": 879.01,
+          "text": "接着开启宝箱"
+        },
+        {
+          "start": 879.45,
+          "end": 880.67,
+          "text": "拿完这个宝箱之后"
+        },
+        {
+          "start": 880.67,
+          "end": 883.29,
+          "text": "我们这一批就拿到这里来"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00871.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00873.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00878.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00879.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00880.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 873,
+          "appearanceSeconds": 878,
+          "collectionSeconds": 879,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "855秒图玩家是前一箱；传送灾逆副本后向南转左进入网格，881秒后无本箱完整地图。不能将副本传送点或前一箱映射为新箱，终点定位待补。 本奖励为成员1，观测类型朴素；路线：灾逆相关副本传送点向南转左，发光网格。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p1/geometry.json",
+              "attemptedTimes": [
+                855.0,
+                873.0,
+                878.0,
+                879.0
+              ],
+              "fullmapAccepted": [
+                855.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p1",
+                "locator": "event 21, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "显像生成箱；灾逆相关副本传送点向南转左，发光网格",
+                "role": "support",
+                "start": 853,
+                "end": 881
+              }
+            ],
+            "positionEvidence": [],
+            "guideEvidence": [],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p1",
+                  "locator": "event 21 mechanism",
+                  "reason": "显像生成箱",
+                  "role": "support",
+                  "start": 853,
+                  "end": 881
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    }
+  ],
+  "nonEventIntervals": [
+    [
+      0,
+      75,
+      "前置任务/三个显像声骸说明与购买五松塔，关联事件10，不计收集奖励"
+    ],
+    [
+      881,
+      891.633,
+      "总结并提示下一分P的修路与摩托挑战"
+    ]
+  ],
+  "reviewedEvidence": [
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00104.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00130.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00142.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00155.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00184.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00207.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00233.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00252.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00295.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00343.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00374.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00414.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00426.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00438.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00456.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00504.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00545.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00572.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00614.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00626.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00664.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00693.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00732.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00744.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00777.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00789.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00837.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00849.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-1s-00871.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00000.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00060.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00075.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00135.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00195.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00255.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00315.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00375.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00435.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00495.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00555.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00615.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00675.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00735.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00795.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p01/visual/scenes-5s-00855.00.jpg"
+  ],
+  "transcriptCorrections": [
+    {
+      "start": 80.41,
+      "end": 84.33,
+      "raw": "福光林",
+      "corrected": "浮光林",
+      "basis": "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00265.00.jpg"
+    },
+    {
+      "start": 43.2,
+      "end": 53.6,
+      "raw": "共鸣料科",
+      "corrected": "共鸣医疗科",
+      "basis": "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00040.00.jpg"
+    },
+    {
+      "start": 23.54,
+      "end": 25.46,
+      "raw": "批啪啪",
+      "corrected": "噼啪啵（游戏显像菜单）",
+      "basis": "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00416.00.jpg；408–420秒本地重复识别仍为批啪啪，416秒UI小字读法仍需核实，此专名不用于身份确认。",
+      "status": "uncertain",
+      "repeatTranscript": "out/detectability-v2/BV13ZvrBtEde/p01/transcript.repeat-408-420.json"
+    }
+  ],
+  "coverageNotes": [
+    "按进度条实际标识箱1–27核对21收集事件、27奖励成员；数量来自本视频独立复核，不引用旧结果。",
+    "大部分奖励为召唤显像后生成；开箱前附近仍有怪，不能统一说成清怪箱。",
+    "1秒证据记录为采样时刻，瞬时操作允许一秒内误差；未看到的生成瞬间另记未知。",
+    "多处地名/声骸专名转写错误未全部强行校正，位置审核以附带的游戏地图与显像菜单帧核验。"
+  ],
+  "matchingReviewMethod": "independent source frames/local-ASR + fixed SIFT + source guide images; no overview/v1 candidate inheritance"
+}

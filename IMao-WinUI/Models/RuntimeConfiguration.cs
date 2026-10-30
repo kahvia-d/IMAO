@@ -36,6 +36,7 @@ public sealed record RuntimeConfiguration
     // visible in game.
     public bool StatusBallEnabled { get; init; }
     public bool AutoReplanEnabled { get; init; }
+    public bool GapFillModeEnabled { get; init; }
     public int NearestCompletionKey { get; init; } = 90;
     public int ManualRouteKey { get; init; } = 81;
     public int CurrentTargetGuideKey { get; init; } = 119;
@@ -119,6 +120,7 @@ public sealed record RuntimeConfiguration
         ["statusBarEnabled"] = StatusBarEnabled, ["mapStatusBarEnabled"] = MapStatusBarEnabled,
         ["statusBallEnabled"] = StatusBallEnabled,
         ["autoReplanEnabled"] = AutoReplanEnabled,
+        ["gapFillModeEnabled"] = GapFillModeEnabled,
         ["nearestCompletionKey"] = NearestCompletionKey,
         ["manualRouteKey"] = ManualRouteKey, ["currentTargetGuideKey"] = CurrentTargetGuideKey,
         ["guideSkipKey"] = GuideSkipKey,

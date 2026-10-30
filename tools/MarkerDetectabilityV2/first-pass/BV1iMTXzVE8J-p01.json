@@ -1,0 +1,24 @@
+{
+  "reviewedEvidence": [
+    "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.txt",
+    "out/detectability-v2/BV1iMTXzVE8J/p01/visual/scenes-1s-00000.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p01/visual/scenes-1s-00012.00.jpg"
+  ],
+  "transcriptCorrections": [],
+  "nonEventIntervals": [
+    [
+      0,
+      17.1,
+      "前言；说明大世界与任务宝箱范围。全段无触发、出现或领取事件。17秒地图过渡不用于定位。"
+    ]
+  ],
+  "audioReviewStatus": "reviewed",
+  "progressBarReviewStatus": "reviewed",
+  "duration": 17.1,
+  "audioReviewMethod": "local-ASR-text-and-visual; no-direct-listening",
+  "part": 1,
+  "reviewStatus": "reviewed",
+  "coverageNotes": "0–17秒每秒画面对照全部转写；进度条无事件标记。作者名和末尾荒龙转写保留未校正，不影响前言判定。未直接听音频。末尾地图隔离，未用于事件、点位或数量推导。",
+  "events": [],
+  "bvid": "BV1iMTXzVE8J"
+}

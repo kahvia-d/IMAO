@@ -1,0 +1,2577 @@
+{
+  "schemaVersion": 1,
+  "experimentOnly": true,
+  "runtimeIntegration": false,
+  "unlistedPointDefault": "unknown",
+  "source": "collection-results.json",
+  "points": [
+    {
+      "stateId": 8,
+      "pointId": "1251346038554099712",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-01"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1251529987882491904",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P02-06"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1251531471991955456",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P02-04"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1251624058141462528",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-2"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1251993122415403008",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-6"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1252725747315646464",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-09"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1252726651495473152",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-4"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1252744472915922944",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-22"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1252778607176896512",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-20"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1252778607336280064",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-23"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1253810339575873536",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-13"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1254099816399163392",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-0"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1255666411545595904",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-14"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1255666411629481984",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-11"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1255666411797254144",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-3"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1255666985136345088",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-16:member-1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1255667700036911104",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-16:member-2"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1255667700108214272",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-4"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1255668147912626176",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-16:member-3"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1255668147962957824",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-12"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1255668148013289472",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1260174647686369280",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-5"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1260174691289067520",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-6"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1260174736903409664",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-8"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1260174800394813440",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-10"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1260174895411109888",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-9"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1261263399562522624",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-2:member-3"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1261263531255709696",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-2:member-2"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1261263627113525248",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1p9K1zvE5E:p1:overview-2:member-1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1267550834168176640",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-9"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1267884958328082432",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-09"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1267885301815492608",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-09"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1268598761294036992",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-04"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1270794393618784256",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-16"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1270795445518282752",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-07"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1270795796793827328",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-01"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1272671263978721280",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-11"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1272673878376849408",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-02"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1272675138737774592",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-05"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273024217174368256",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-7"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273028065116938240",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-15"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273029725247627264",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-18"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273032064897507328",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-18"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273034089411657728",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-17"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273036809942982656",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-21"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273039381390069760",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-22"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273040761853960192",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-06"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273389507195453440",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-04"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273392515829612544",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-13"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273393217427619840",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-16"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273393774387957760",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-13"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273394782959689728",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-14"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273395457423740928",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-05"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273396936835743744",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-07"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273402033967587328",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-5"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273403497468301312",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-4"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1273404229777113088",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-17"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1274862014918311936",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P02-05"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1275206043661885440",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-02"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1275206899442794496",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-03"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1275207506543132672",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-06"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1275209287842783232",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-15"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1275210928456482816",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-14"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1275211911996497920",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-10"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1275214558501945344",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-01"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1275216117105025024",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-05"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1275217189881155584",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-16"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1275219716522786816",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-12"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1276662462130065408",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-14"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1276663196972236800",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-02"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1276664442291347456",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-07"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1276664886366584832",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-11"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1276665954420822016",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-10"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1276667480296144896",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-13"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1276680409515048960",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-11"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1276681052719955968",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-12"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1276922034972672000",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-08"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1276922898202378240",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-04"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1277733330260598784",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1277747045768417280",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-08"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1277747809087959040",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-03"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1277749076604276736",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-14"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1278056037921595392",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-03"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1278105121682141184",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-07"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1278105638451597312",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-01"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1278106371121487872",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-08"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1278106880781627392",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-06"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1278112971451424768",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-04"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1278114443575435264",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-10"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1278115230679719936",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-17"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1278117257468751872",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-20"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1279212876960899072",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-6"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1279902537512964096",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-15"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1279904121522905088",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P02-09"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1279905459390959616",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P02-10"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1279910242657284096",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P02-08"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1279911481133916160",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P02-03"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1279913458093940736",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P02-07"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1279916294962458624",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P02-02"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1279921135845429248",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P02-01"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1279922414305193984",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280647352137179136",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-8"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280647760398823424",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-13"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280653990351872000",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-16"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280658618548232192",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-19"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280660552790466560",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-7"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280662800573181952",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-3"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280666861558878208",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-18"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280898927634468864",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-10"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280906831672684544",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-8"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280909251335430144",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-7"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280910632148316160",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-4"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280911464501399552",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-15"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1280999510571798528",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1281001816703152128",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-0"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1281002291128590336",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-11"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1281002762420363264",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-12"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1281003221087997952",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-10"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282070201712066560",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-14"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282070799312306176",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-06"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282071617490993152",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-09"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282074537826607104",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-10"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282074825211928576",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-13"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282075343061671936",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-14"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282076325581578240",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-8"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282088003767939072",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-5"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282456677512798208",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p12:overview-5"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282457638774849536",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-7"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282458053562155008",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-8"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282805566957203456",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-0"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282806504977227776",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-6"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282806804558565376",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-2"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282807805496680448",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-03"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1282807991457853440",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-11"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1283912847875268608",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p12:overview-6"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1285624536032034816",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-3"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1286363634535297024",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-02"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1286365110341603328",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-5"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1286366346314530816",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-12"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287092658610061312",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P05-12"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287101966419103744",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-13"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287107914627497984",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-03"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287379692742459392",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p12:overview-7"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287380389842522112",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p12:overview-4"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287381442547216384",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-9"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287382629642801152",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-13"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287383082180341760",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-07"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287457153433792512",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-14"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287458705422741504",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P04-15"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287465434210582528",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P03-12"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287496258842587136",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-0"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287499787732840448",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-2"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287514641007132672",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-04"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287523024343273472",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-06"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287524576614739968",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-05"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287527472542728192",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-17"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287856922316566528",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-05"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287859583950581760",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-2"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287868509784510464",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-08"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287869426925105152",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-09"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287871312784846848",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-10"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287873379048493056",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-11"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287875252396244992",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-12"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287878966521577472",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P06-13"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287880062581293056",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J-P07-01"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287899171947606016",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-0"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287900228575170560",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-5"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287908999877160960",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-11"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287909721897234432",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-13"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287910748334198784",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-12"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287914041372000256",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p8:overview-9"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287922301495734272",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-16"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1287924142610792448",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p9:overview-10"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288092815145254912",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-22"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288094056361291776",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-25"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288111292159639552",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-23"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288113175718739968",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-16"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288228421542363136",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-9"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288235081514106880",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-15"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288239563998183424",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-20"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288243717611589632",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-11"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288245572837634048",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p10:overview-19"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288271918263648256",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288273919918084096",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-21"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288276576699289600",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-14"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288277563958759424",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-19"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288279281221713920",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-18"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288280167140954112",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-17"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288281130578427904",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-15"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288283699782414336",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-24"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288287493370998784",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-10"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288578802371588096",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p12:overview-2"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288582349052198912",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p12:overview-0"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288583124337618944",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p12:overview-1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288593346525675520",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p11:overview-4"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1288594077072769024",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1iMTXzVE8J:p12:overview-3"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1290445725890076672",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1evKmzxE34:p1:pilot-1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1325764785251311616",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1k438ziEoG:p1:record-62"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1325767571611738112",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1k438ziEoG:p1:record-63"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1325779725971525632",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1k438ziEoG:p1:record-75"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1325785775599542272",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1k438ziEoG:p1:record-76"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1325876464312541184",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1k438ziEoG:p1:record-77"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1325906036316606464",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1k438ziEoG:p1:record-60"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1325907648958193664",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1k438ziEoG:p1:record-66"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1325908242352738304",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1k438ziEoG:p1:record-65"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1325939864963014656",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1k438ziEoG:p1:record-68"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1326279660240277504",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1k438ziEoG:p1:record-71"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1326948391330144256",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1k438ziEoG:p1:record-74"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1327366162893266944",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1k438ziEoG:p1:record-69"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1342170544779616256",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-46"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1343630847515271168",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-45"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1343632032590700544",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-38"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1343634231349714944",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-42"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1344430297941598208",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-48"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1344430949975515136",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-47"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1344431893422514176",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-43"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1344432685607870464",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-44"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1344663479527120896",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-39"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1344664011070038016",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-40"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1344664494687100928",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-41"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1357337517870112768",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1dVuGzeEKk:p1:record-35"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1357738947969900544",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1dVuGzeEKk:p1:record-36"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1383035993976111104",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1JB3Fz2EqG:p1:record-34"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1383037326744829952",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1JB3Fz2EqG:p1:record-33"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1383038295105503232",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1JB3Fz2EqG:p1:record-28"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1383038916441309184",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1JB3Fz2EqG:p1:record-29"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1383039082518970368",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1JB3Fz2EqG:p1:record-30"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1383086793950969856",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1JB3Fz2EqG:p1:record-31"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410289000427638784",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-3"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410289491433623552",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-2"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410290739738185728",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-4"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410291497426620416",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-6"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410293339757875200",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-7"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410294394671468544",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-8"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410299785455210496",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-9"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410300279124791296",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-10"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410300673196429312",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-11"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410300673292898304",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-12"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410300673389367296",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-13"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410647080185405440",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1410647833725710336",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p1:record-5"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1411077656260456448",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p2:record-20"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1411078276967116800",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p2:record-19"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1411078277055197184",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p2:record-21"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1411079360989143040",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p2:record-23"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1411088154771103744",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p2:record-14"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1411099204107186176",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p3:record-26"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1411099204195266560",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1Aeh2zvEko:p3:record-27"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1466846018397847552",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱24"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1469081439357751296",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱25"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1469095360944979968",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱11"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1469146086203244544",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱2"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1469147104529924096",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱3"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1469149723331514368",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱4–6:member-1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1469150333640495104",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱4–6:member-2"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1469151068226895872",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱4–6:member-3"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1469343029747372032",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱18"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1469346873109762048",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱13"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1469353477272096768",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱26"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1469424804503011328",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱30"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1469743197810446336",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1477787090589339648",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱28"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1523293737827287040",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV19kNu6AEVR:p1:箱1"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1524138997821722624",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV19kNu6AEVR:p1:潮4"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1524467251682852864",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV19kNu6AEVR:p1:潮2"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1524472584441942016",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV19kNu6AEVR:p1:潮6"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1524473781098496000",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV19kNu6AEVR:p1:潮3"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1526394917809278976",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1F3A3zxEDQ:p1:箱9"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1526600365212684288",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV19kNu6AEVR:p1:潮7"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1526608470311550976",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV19kNu6AEVR:p1:箱2"
+      ]
+    },
+    {
+      "stateId": 8,
+      "pointId": "1526609257964093440",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV19kNu6AEVR:p1:箱3"
+      ]
+    },
+    {
+      "stateId": 900,
+      "pointId": "1290808067052609536",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1evKmzxE34:p1:pilot-3"
+      ]
+    },
+    {
+      "stateId": 900,
+      "pointId": "1290808586256605184",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1evKmzxE34:p1:pilot-2"
+      ]
+    },
+    {
+      "stateId": 902,
+      "pointId": "1342158556839256064",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-51"
+      ]
+    },
+    {
+      "stateId": 902,
+      "pointId": "1348742913708236800",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-49"
+      ]
+    },
+    {
+      "stateId": 902,
+      "pointId": "1348743501854515200",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-50"
+      ]
+    },
+    {
+      "stateId": 902,
+      "pointId": "1348744011855486976",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-52"
+      ]
+    },
+    {
+      "stateId": 902,
+      "pointId": "1348744237174726656",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-53"
+      ]
+    },
+    {
+      "stateId": 902,
+      "pointId": "1348744470741704704",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-54"
+      ]
+    },
+    {
+      "stateId": 902,
+      "pointId": "1348744738540855296",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-55"
+      ]
+    },
+    {
+      "stateId": 902,
+      "pointId": "1348744932149927936",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-56"
+      ]
+    },
+    {
+      "stateId": 902,
+      "pointId": "1348745360908460032",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1hHuGzFEZG:p1:record-57"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1451227352486064128",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱8"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1451234423356993536",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱9"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1451279944887103488",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱2"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1451280566250057728",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱3"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1451682859980222464",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱15"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1452382463621132288",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱11–14:member-1"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1452382463721795584",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱11–14:member-2"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1452382463822458880",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱11–14:member-3"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1452383307930333184",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱11–14:member-4"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1452464082801455104",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱26"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1453504922365784064",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱20"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1453867668039069696",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱27"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1453878917491535872",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱16"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1454087936514781184",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱4"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1454088428051443712",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱7"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1454156009120788480",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱10"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1454159713108439040",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱17–19:member-1"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1454159815621423104",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱17–19:member-2"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1454160397155495936",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱17–19:member-3"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1454165785776959488",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱22"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1454171047204171776",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱23"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1454172613768327168",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱1"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1454557442936729600",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱24–25:member-1"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1454557443037392896",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p1:箱24–25:member-2"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1457043289922301952",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p2:箱34–36:member-1"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1457043417928265728",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p2:箱34–36:member-2"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1457043525350125568",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p2:箱34–36:member-3"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1457058935520817152",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p2:箱31–33:member-1"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1457059030387585024",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p2:箱31–33:member-2"
+      ]
+    },
+    {
+      "stateId": 906,
+      "pointId": "1457059161283424256",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV13ZvrBtEde:p2:箱31–33:member-3"
+      ]
+    },
+    {
+      "stateId": 909,
+      "pointId": "1499243508455006208",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1pa9RBtEPA:p1:箱7"
+      ]
+    },
+    {
+      "stateId": 909,
+      "pointId": "1500192871343808512",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1pa9RBtEPA:p1:箱10"
+      ]
+    },
+    {
+      "stateId": 909,
+      "pointId": "1500200422475800576",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1pa9RBtEPA:p1:箱5–6:member-1"
+      ]
+    },
+    {
+      "stateId": 909,
+      "pointId": "1500200454327345152",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1pa9RBtEPA:p1:箱5–6:member-2"
+      ]
+    },
+    {
+      "stateId": 909,
+      "pointId": "1500305893891219456",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1pa9RBtEPA:p1:箱3"
+      ]
+    },
+    {
+      "stateId": 909,
+      "pointId": "1500314688993714176",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1pa9RBtEPA:p1:箱4"
+      ]
+    },
+    {
+      "stateId": 909,
+      "pointId": "1501515016669847552",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1pa9RBtEPA:p1:箱1"
+      ]
+    },
+    {
+      "stateId": 909,
+      "pointId": "1501515398184411136",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1pa9RBtEPA:p1:箱2"
+      ]
+    },
+    {
+      "stateId": 909,
+      "pointId": "1501515759980208128",
+      "detectability": "not-detectable-for-normal-sweep",
+      "sourceTargetKeys": [
+        "BV1pa9RBtEPA:p1:箱9"
+      ]
+    }
+  ]
+}

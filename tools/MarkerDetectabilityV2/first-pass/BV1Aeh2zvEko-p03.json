@@ -1,0 +1,1048 @@
+{
+  "bvid": "BV1Aeh2zvEko",
+  "part": 3,
+  "duration": 322.033,
+  "reviewStatus": "reviewed",
+  "audioReviewStatus": "reviewed",
+  "audioReviewMethod": "local-ASR-text-and-visual; no-direct-listening",
+  "progressBarReviewStatus": "reviewed",
+  "events": [
+    {
+      "eventId": "BV1Aeh2zvEko:p3:e001",
+      "ordinal": 1,
+      "start": 8.76,
+      "end": 322.033,
+      "progressBarMark": {
+        "label": "第一处→英魂不朽 第二处→向永不凋谢的明天 第三处→第四处→当我们谈论帕塔时 第五处→第六处→断绝不死",
+        "authorNumber": null,
+        "basis": "内嵌进度条逐段标签",
+        "evidenceFrame": "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00320.00.jpg"
+      },
+      "observedMechanism": "六处遗物/问号NPC为同一隐藏任务的前置线索，部分同时给成就；集齐后与路上问号角斗士对话，战斗等待抗性变化后击败，随后调查地上光点，领取两个箱子。",
+      "route": "第一处：安息地东侧中枢信标向东穿过楼与高塔中间，清三怪调查；第二处：返回该信标东北高处进入深坑边，给问号NPC辉光金盏后查遗物；第三处：北侧高地右侧枯树旁问号NPC；第四处：往事花野北侧中枢信标东北崖底紫色任务点；第五处：赤林猎场东侧信标西南绕上高地落坑，左侧大树下调查；第六处：同信标南行绕右柱，下到有飞行声骸的中层平台，清怪查遗物；终战：安息地东南声骸挑战传送点，沿西南道路到问号NPC。",
+      "transcriptRefs": [
+        {
+          "start": 8.76,
+          "end": 11.04,
+          "text": "需要我们去到六处地点"
+        },
+        {
+          "start": 11.04,
+          "end": 12.32,
+          "text": "调查这个遗物"
+        },
+        {
+          "start": 12.32,
+          "end": 15.14,
+          "text": "那我们先来到寿司地右边的这个珠珠信标"
+        },
+        {
+          "start": 15.14,
+          "end": 17.82,
+          "text": "翻过来之后我们转向小地图右边东方向"
+        },
+        {
+          "start": 17.82,
+          "end": 19.64,
+          "text": "来就开头看"
+        },
+        {
+          "start": 19.64,
+          "end": 21.34,
+          "text": "上方右边一个楼"
+        },
+        {
+          "start": 21.34,
+          "end": 22.98,
+          "text": "然后左边是这个高塔"
+        },
+        {
+          "start": 22.98,
+          "end": 24.14,
+          "text": "我们从中间飞过来"
+        },
+        {
+          "start": 24.56,
+          "end": 25.44,
+          "text": "朝前方飞"
+        },
+        {
+          "start": 25.86,
+          "end": 27.62,
+          "text": "然后面前能看到有三只怪"
+        },
+        {
+          "start": 27.62,
+          "end": 29.22,
+          "text": "这里三只怪我们给它给清了"
+        },
+        {
+          "start": 32.7,
+          "end": 35.34,
+          "text": "青丸怪地上来有一个这个高亮点"
+        },
+        {
+          "start": 35.34,
+          "end": 35.96,
+          "text": "我们调查一下"
+        },
+        {
+          "start": 45.15,
+          "end": 46.15,
+          "text": "调查完之后呢"
+        },
+        {
+          "start": 46.15,
+          "end": 50.07,
+          "text": "我们再传送到这一个中路信标"
+        },
+        {
+          "start": 54.67,
+          "end": 55.53,
+          "text": "传送过来之后呢"
+        },
+        {
+          "start": 55.53,
+          "end": 57.09,
+          "text": "我们转向小蜜蜂右上方东北方向"
+        },
+        {
+          "start": 58.17,
+          "end": 59.19,
+          "text": "这里别起飞"
+        },
+        {
+          "start": 61.55,
+          "end": 63.29,
+          "text": "走上方来我们朝前方走"
+        },
+        {
+          "start": 64.63,
+          "end": 66.17,
+          "text": "这里下方是一个深坑"
+        },
+        {
+          "start": 66.17,
+          "end": 68.43,
+          "text": "左边能看到有一个黑色的这个"
+        },
+        {
+          "start": 68.81,
+          "end": 69.81,
+          "text": "角度式的雕像"
+        },
+        {
+          "start": 69.81,
+          "end": 71.23,
+          "text": "然后头上三个问号"
+        },
+        {
+          "start": 71.23,
+          "end": 72.39,
+          "text": "这个NPC我们跟他对话"
+        },
+        {
+          "start": 72.93,
+          "end": 74.51,
+          "text": "然后这里我们跟大家对话两次"
+        },
+        {
+          "start": 76.68,
+          "end": 77.84,
+          "text": "接着我们再对话一次"
+        },
+        {
+          "start": 77.84,
+          "end": 80.54,
+          "text": "交给他一个这个辉光金盏"
+        },
+        {
+          "start": 81.5,
+          "end": 82.38,
+          "text": "直接交付"
+        },
+        {
+          "start": 88.0,
+          "end": 89.7,
+          "text": "对完话会拿到一个成就"
+        },
+        {
+          "start": 89.7,
+          "end": 92.76,
+          "text": "接着我们调查一下这个高亮点"
+        },
+        {
+          "start": 99.69,
+          "end": 101.07,
+          "text": "接着我们打开地图"
+        },
+        {
+          "start": 101.07,
+          "end": 103.37,
+          "text": "然后这里要来到这个上方一语阵"
+        },
+        {
+          "start": 104.23,
+          "end": 105.85,
+          "text": "这个字体下方这个地方"
+        },
+        {
+          "start": 105.85,
+          "end": 108.35,
+          "text": "我们转向小地图上往北方向来走过来"
+        },
+        {
+          "start": 108.95,
+          "end": 109.97,
+          "text": "这里我们直接起飞"
+        },
+        {
+          "start": 114.3,
+          "end": 117.04,
+          "text": "飞到能看到这个上面三只怪的时候"
+        },
+        {
+          "start": 117.04,
+          "end": 118.7,
+          "text": "然后我们走右边跳下来"
+        },
+        {
+          "start": 120.14,
+          "end": 121.9,
+          "text": "右边能看到一个枯树"
+        },
+        {
+          "start": 122.48,
+          "end": 125.2,
+          "text": "枯树旁边也有一个问号问号问号"
+        },
+        {
+          "start": 126.4,
+          "end": 128.5,
+          "text": "对岸化我们再打开地图"
+        },
+        {
+          "start": 128.5,
+          "end": 130.48,
+          "text": "这里我们来到这个"
+        },
+        {
+          "start": 131.5,
+          "end": 134.6,
+          "text": "往事花瓶野上方这个中心标"
+        },
+        {
+          "start": 139.83,
+          "end": 142.65,
+          "text": "然后过来之后我们转小溜度右上方东北方向往前飞"
+        },
+        {
+          "start": 143.57,
+          "end": 145.37,
+          "text": "飞到悬崖边我们就往底下飞"
+        },
+        {
+          "start": 147.49,
+          "end": 150.67,
+          "text": "就在最底下能看到有一个紫色的任务标志"
+        },
+        {
+          "start": 150.67,
+          "end": 151.41,
+          "text": "走过来"
+        },
+        {
+          "start": 161.05,
+          "end": 163.35,
+          "text": "对岸化之后我们再打开地图"
+        },
+        {
+          "start": 163.35,
+          "end": 166.35,
+          "text": "这里我们来到赤林猎场"
+        },
+        {
+          "start": 166.35,
+          "end": 167.65,
+          "text": "右边的一个小阴仙庙"
+        },
+        {
+          "start": 167.65,
+          "end": 168.81,
+          "text": "我们要去到这个点位了"
+        },
+        {
+          "start": 174.16,
+          "end": 174.94,
+          "text": "翻过来之后"
+        },
+        {
+          "start": 174.94,
+          "end": 176.0,
+          "text": "我们转向小地图"
+        },
+        {
+          "start": 176.0,
+          "end": 177.04,
+          "text": "左下方西南方向"
+        },
+        {
+          "start": 178.02,
+          "end": 178.92,
+          "text": "走这里绕一下"
+        },
+        {
+          "start": 180.66,
+          "end": 181.52,
+          "text": "朝着上方走"
+        },
+        {
+          "start": 183.76,
+          "end": 184.76,
+          "text": "然后翻过来"
+        },
+        {
+          "start": 185.18,
+          "end": 186.36,
+          "text": "中间有一个深坑"
+        },
+        {
+          "start": 186.36,
+          "end": 187.08,
+          "text": "我们就落下来"
+        },
+        {
+          "start": 187.08,
+          "end": 187.88,
+          "text": "然后朝左边看"
+        },
+        {
+          "start": 187.88,
+          "end": 188.9,
+          "text": "左边大树下方"
+        },
+        {
+          "start": 189.54,
+          "end": 191.34,
+          "text": "有一个高亮点"
+        },
+        {
+          "start": 191.34,
+          "end": 192.18,
+          "text": "我们再调查一下"
+        },
+        {
+          "start": 194.76,
+          "end": 196.2,
+          "text": "调查完我们打开地图"
+        },
+        {
+          "start": 196.68,
+          "end": 198.94,
+          "text": "然后传送回赤林猎场"
+        },
+        {
+          "start": 198.94,
+          "end": 199.98,
+          "text": "右边这个小阴仙庙"
+        },
+        {
+          "start": 204.08,
+          "end": 204.82,
+          "text": "翻过来之后"
+        },
+        {
+          "start": 204.82,
+          "end": 206.66,
+          "text": "我们就转向小地图下方南方向"
+        },
+        {
+          "start": 206.66,
+          "end": 207.64,
+          "text": "这里直走"
+        },
+        {
+          "start": 208.4,
+          "end": 209.02,
+          "text": "先飞"
+        },
+        {
+          "start": 210.12,
+          "end": 212.2,
+          "text": "走右边这个柱子这里绕过来"
+        },
+        {
+          "start": 213.92,
+          "end": 215.12,
+          "text": "好低头往下看"
+        },
+        {
+          "start": 215.12,
+          "end": 216.56,
+          "text": "在下方中间这一层"
+        },
+        {
+          "start": 216.56,
+          "end": 218.16,
+          "text": "有个高天驯使的这一层"
+        },
+        {
+          "start": 218.8,
+          "end": 219.64,
+          "text": "来到中间"
+        },
+        {
+          "start": 220.08,
+          "end": 221.68,
+          "text": "然后这里我们要清一波怪"
+        },
+        {
+          "start": 223.42,
+          "end": 224.08,
+          "text": "调查一下"
+        },
+        {
+          "start": 224.08,
+          "end": 224.84,
+          "text": "然后清一下怪"
+        },
+        {
+          "start": 226.06,
+          "end": 226.66,
+          "text": "清完怪"
+        },
+        {
+          "start": 226.66,
+          "end": 227.84,
+          "text": "我们调查一下这个"
+        },
+        {
+          "start": 228.6,
+          "end": 229.14,
+          "text": "植物"
+        },
+        {
+          "start": 239.01,
+          "end": 240.41,
+          "text": "接着我们打开地图"
+        },
+        {
+          "start": 240.41,
+          "end": 242.37,
+          "text": "然后传送到寿司地"
+        },
+        {
+          "start": 242.79,
+          "end": 244.97,
+          "text": "右下方这一个深海挑战"
+        },
+        {
+          "start": 244.97,
+          "end": 246.31,
+          "text": "翱翔骑三传过来"
+        },
+        {
+          "start": 250.58,
+          "end": 251.34,
+          "text": "传过来之后"
+        },
+        {
+          "start": 251.34,
+          "end": 251.96,
+          "text": "我们转向小六"
+        },
+        {
+          "start": 251.96,
+          "end": 252.98,
+          "text": "左下方西南方向"
+        },
+        {
+          "start": 252.98,
+          "end": 253.7,
+          "text": "前走"
+        },
+        {
+          "start": 253.7,
+          "end": 254.68,
+          "text": "前这个路走"
+        },
+        {
+          "start": 258.54,
+          "end": 259.38,
+          "text": "走到中间"
+        },
+        {
+          "start": 259.38,
+          "end": 260.64,
+          "text": "能看到有一个问号"
+        },
+        {
+          "start": 260.64,
+          "end": 261.12,
+          "text": "问号问号"
+        },
+        {
+          "start": 261.12,
+          "end": 262.66,
+          "text": "这里我们线索就够了"
+        },
+        {
+          "start": 263.08,
+          "end": 263.82,
+          "text": "跟他对话"
+        },
+        {
+          "start": 272.05,
+          "end": 273.53,
+          "text": "这里我们清一下怪就行了"
+        },
+        {
+          "start": 273.53,
+          "end": 275.13,
+          "text": "这里我们时间等久一点"
+        },
+        {
+          "start": 275.67,
+          "end": 278.07,
+          "text": "他这个伤害就会变高"
+        },
+        {
+          "start": 278.59,
+          "end": 279.69,
+          "text": "现在有这个抗性"
+        },
+        {
+          "start": 308.61,
+          "end": 309.85,
+          "text": "等他抗性没了"
+        },
+        {
+          "start": 309.85,
+          "end": 310.53,
+          "text": "我们就直接"
+        },
+        {
+          "start": 311.43,
+          "end": 312.33,
+          "text": "干死他就行了"
+        },
+        {
+          "start": 312.95,
+          "end": 313.59,
+          "text": "听完怪"
+        },
+        {
+          "start": 313.59,
+          "end": 314.67,
+          "text": "我们地上调查一下"
+        },
+        {
+          "start": 317.84,
+          "end": 319.0,
+          "text": "给了我们两个宝箱"
+        },
+        {
+          "start": 319.0,
+          "end": 319.62,
+          "text": "我们跑过来"
+        },
+        {
+          "start": 319.62,
+          "end": 320.3,
+          "text": "然后开启一下"
+        },
+        {
+          "start": 320.3,
+          "end": 321.46,
+          "text": "还会拿到一个成就"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00020.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00030.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00035.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00040.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00045.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00065.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00070.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00075.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00080.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00090.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00095.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00100.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00120.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00125.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00150.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00155.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00160.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00190.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00195.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00220.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00225.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00230.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00235.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00260.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00263.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00269.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00270.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00310.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00312.50.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00313.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00314.50.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00316.50.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00319.50.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00320.00.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00320.50.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00321.50.jpg",
+        "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00322.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "蓝色方形奇藏箱（名称小字待核）",
+          "triggerSeconds": 312.5,
+          "appearanceSeconds": 314.5,
+          "collectionSeconds": 320.5,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "成员1（蓝色方形奇藏箱（名称小字待核），领取320.5秒）首轮核对：两箱位于终战调查点后的紫草岩台，guide同样展示并排两箱。官方两记录都标辉光，视频成员一蓝色方箱、成员二紫金圆盖；名称/类型与左右标记对应尚不充分，不能按ID顺序分派。 已做半幅地图参考、scale1局部参考和邻帧补查；本事件合格小地图结果0条，大地图配准2条；人工机制关键词与state描述交叉检索；候选而非身份结论。本轮已实际检索候选并核对来源/攻略，以上歧义未消除，保留reviewed-unresolved，不把算法失败当作点位不存在。",
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1411099204107186176",
+                "status": "candidate-not-confirmed",
+                "name": "辉光奇藏箱",
+                "analysis": "完成隐藏任务不死的角斗士后可获得（P2为任务一图流，由攻略作者Lee小坏制作）",
+                "evidence": [],
+                "distanceFromViewportCenterGameUnits": 175.4,
+                "distanceBasis": "仅粗检索视窗中心，不能作箱位置证明",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176.json",
+                "guideImages": [
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176-1.png",
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176-2.png"
+                ],
+                "imageReview": "已核对本成员指定图像"
+              },
+              {
+                "stateId": "8",
+                "pointId": "1411099204195266560",
+                "status": "candidate-not-confirmed",
+                "name": "辉光奇藏箱",
+                "analysis": "完成隐藏任务不死的角斗士后可获得（P2为任务一图流，由攻略作者Lee小坏制作）",
+                "evidence": [],
+                "distanceFromViewportCenterGameUnits": 180.17,
+                "distanceBasis": "仅粗检索视窗中心，不能作箱位置证明",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204195266560.json",
+                "guideImages": [
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204195266560-1.png",
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204195266560-2.png"
+                ],
+                "imageReview": "尚未逐图消歧，保留文本与位置候选"
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "localize:full-map-registration",
+                "locator": "out/detectability-v2/matching-rinascita/BV1Aeh2zvEko-localization.json#80",
+                "reason": "本事件大地图10.0秒配准252内点，只确认地图区域/视窗，配置中心不是玩家或奖励位置，不足以确认身份。",
+                "role": "support"
+              },
+              {
+                "source": "localize:full-map-registration",
+                "locator": "out/detectability-v2/matching-rinascita/BV1Aeh2zvEko-localization.json#81",
+                "reason": "本事件大地图15.0秒配准264内点，只确认地图区域/视窗，配置中心不是玩家或奖励位置，不足以确认身份。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV1Aeh2zvEko:p3",
+                "locator": "8.76–322.03s",
+                "reason": "成员1：蓝色方形奇藏箱（名称小字待核）；触发312.5，出现314.5，领取320.5。六处遗物/问号NPC为同一隐藏任务的前置线索，部分同时给成就；集齐后与路上问号角斗士对话，战斗等待抗性变化后击败，随后调查地上光点，领取两个箱子。 路线：第一处：安息地东侧中枢信标向东穿过楼与高塔中间，清三怪调查；第二处：返回该信标东北高处进入深坑边，给问号NPC辉光金盏后查遗物；第三处：北侧高地右侧枯树旁问号NPC；第四处：往事花野北侧中枢信标东北崖底紫色任务点；第五处：赤林猎场东侧信标西南绕上高地落坑，左侧大树下调查；第六处：同信标南行绕右柱，下到有飞行声骸的中层平台，清怪查遗物；终战：安息地东南声骸挑战传送点，沿西南道路到问号NPC。",
+                "role": "support",
+                "start": 8.76,
+                "end": 322.033
+              },
+              {
+                "source": "BV1Aeh2zvEko:p3",
+                "locator": "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00320.50.jpg",
+                "reason": "本成员领取/出现邻近原帧，不把其它成员截图作为其独有身份证明。",
+                "role": "support",
+                "start": 8.76,
+                "end": 322.033
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "KuroMap:8:1411099204107186176",
+                "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176.json",
+                "reason": "官方点位原始API记录，ID及类型保持原字符串；完成隐藏任务不死的角斗士后可获得（P2为任务一图流，由攻略作者Lee小坏制作）",
+                "role": "support"
+              },
+              {
+                "source": "KuroMap:8:1411099204107186176",
+                "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176-1.png",
+                "reason": "两箱位于终战调查点后的紫草岩台，guide同样展示并排两箱。官方两记录都标辉光，视频成员一蓝色方箱、成员二紫金圆盖；名称/类型与左右标记对应尚不充分，不能按ID顺序分派。 原攻略图片，可能引用作者游戏截图，未宣称独立实机复测。",
+                "role": "support"
+              },
+              {
+                "source": "KuroMap:8:1411099204107186176",
+                "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176-2.png",
+                "reason": "两箱位于终战调查点后的紫草岩台，guide同样展示并排两箱。官方两记录都标辉光，视频成员一蓝色方箱、成员二紫金圆盖；名称/类型与左右标记对应尚不充分，不能按ID顺序分派。 原攻略图片，可能引用作者游戏截图，未宣称独立实机复测。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [
+              "尚无位置、视频过程及同一ID攻略三证共同唯一绑定本成员。",
+              "奖励处小地图没有通过全部冻结门禁；地图视窗配准和路线只能提供区域先验，不能当箱坐标。",
+              "同一事件多个奖励需分别对应实际箱型/空间位置；禁止按候选数组或领取序号直接分配ID。",
+              "本分P缺明确探测仪属性说明，身份与属性分开，属性unknown。"
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "本成员身份尚未唯一绑定点位。该分P只说明任务/成就与奖励，未明确探测仪范围，属性保持unknown。",
+              "evidence": [
+                {
+                  "source": "BV1Aeh2zvEko:p3",
+                  "locator": "ASR 0–8.50s",
+                  "reason": "开头只说明任务/成就范围，未作探测仪结论；这是保持unknown的审阅依据。",
+                  "role": "support",
+                  "start": 0,
+                  "end": 8.5
+                },
+                {
+                  "source": "BV1Aeh2zvEko:p3",
+                  "locator": "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00320.50.jpg",
+                  "reason": "本成员实际奖励过程已核对；该图单独不证明探测仪属性。",
+                  "role": "support",
+                  "start": 8.76,
+                  "end": 322.033
+                }
+              ],
+              "confidenceBasis": "no-scanner-specific-scope; unknown"
+            },
+            "localizationAttempts": [
+              {
+                "locator": "out/detectability-v2/matching-rinascita/fullscale-minimap.json#62",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/fullscale-minimap.json#63",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/fullscale-minimap.json#64",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#68",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#69",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#70",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#71",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#72",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              }
+            ],
+            "reviewedBy": "offline-v2-rinascita-first-pass",
+            "sourceEventPreserved": true
+          }
+        },
+        {
+          "member": 2,
+          "observedType": "紫金圆盖奇藏箱（开启金光）",
+          "triggerSeconds": 312.5,
+          "appearanceSeconds": 314.5,
+          "collectionSeconds": 322,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "成员2（紫金圆盖奇藏箱（开启金光），领取322秒）首轮核对：两箱位于终战调查点后的紫草岩台，guide同样展示并排两箱。官方两记录都标辉光，视频成员一蓝色方箱、成员二紫金圆盖；名称/类型与左右标记对应尚不充分，不能按ID顺序分派。 已做半幅地图参考、scale1局部参考和邻帧补查；本事件合格小地图结果0条，大地图配准2条；人工机制关键词与state描述交叉检索；候选而非身份结论。本轮已实际检索候选并核对来源/攻略，以上歧义未消除，保留reviewed-unresolved，不把算法失败当作点位不存在。",
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1411099204107186176",
+                "status": "candidate-not-confirmed",
+                "name": "辉光奇藏箱",
+                "analysis": "完成隐藏任务不死的角斗士后可获得（P2为任务一图流，由攻略作者Lee小坏制作）",
+                "evidence": [],
+                "distanceFromViewportCenterGameUnits": 175.4,
+                "distanceBasis": "仅粗检索视窗中心，不能作箱位置证明",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176.json",
+                "guideImages": [
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176-1.png",
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176-2.png"
+                ],
+                "imageReview": "已核对本成员指定图像"
+              },
+              {
+                "stateId": "8",
+                "pointId": "1411099204195266560",
+                "status": "candidate-not-confirmed",
+                "name": "辉光奇藏箱",
+                "analysis": "完成隐藏任务不死的角斗士后可获得（P2为任务一图流，由攻略作者Lee小坏制作）",
+                "evidence": [],
+                "distanceFromViewportCenterGameUnits": 180.17,
+                "distanceBasis": "仅粗检索视窗中心，不能作箱位置证明",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204195266560.json",
+                "guideImages": [
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204195266560-1.png",
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204195266560-2.png"
+                ],
+                "imageReview": "尚未逐图消歧，保留文本与位置候选"
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "localize:full-map-registration",
+                "locator": "out/detectability-v2/matching-rinascita/BV1Aeh2zvEko-localization.json#80",
+                "reason": "本事件大地图10.0秒配准252内点，只确认地图区域/视窗，配置中心不是玩家或奖励位置，不足以确认身份。",
+                "role": "support"
+              },
+              {
+                "source": "localize:full-map-registration",
+                "locator": "out/detectability-v2/matching-rinascita/BV1Aeh2zvEko-localization.json#81",
+                "reason": "本事件大地图15.0秒配准264内点，只确认地图区域/视窗，配置中心不是玩家或奖励位置，不足以确认身份。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV1Aeh2zvEko:p3",
+                "locator": "8.76–322.03s",
+                "reason": "成员2：紫金圆盖奇藏箱（开启金光）；触发312.5，出现314.5，领取322。六处遗物/问号NPC为同一隐藏任务的前置线索，部分同时给成就；集齐后与路上问号角斗士对话，战斗等待抗性变化后击败，随后调查地上光点，领取两个箱子。 路线：第一处：安息地东侧中枢信标向东穿过楼与高塔中间，清三怪调查；第二处：返回该信标东北高处进入深坑边，给问号NPC辉光金盏后查遗物；第三处：北侧高地右侧枯树旁问号NPC；第四处：往事花野北侧中枢信标东北崖底紫色任务点；第五处：赤林猎场东侧信标西南绕上高地落坑，左侧大树下调查；第六处：同信标南行绕右柱，下到有飞行声骸的中层平台，清怪查遗物；终战：安息地东南声骸挑战传送点，沿西南道路到问号NPC。",
+                "role": "support",
+                "start": 8.76,
+                "end": 322.033
+              },
+              {
+                "source": "BV1Aeh2zvEko:p3",
+                "locator": "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00322.00.jpg",
+                "reason": "本成员领取/出现邻近原帧，不把其它成员截图作为其独有身份证明。",
+                "role": "support",
+                "start": 8.76,
+                "end": 322.033
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "KuroMap:8:1411099204107186176",
+                "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176.json",
+                "reason": "官方点位原始API记录，ID及类型保持原字符串；完成隐藏任务不死的角斗士后可获得（P2为任务一图流，由攻略作者Lee小坏制作）",
+                "role": "support"
+              },
+              {
+                "source": "KuroMap:8:1411099204107186176",
+                "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176-1.png",
+                "reason": "两箱位于终战调查点后的紫草岩台，guide同样展示并排两箱。官方两记录都标辉光，视频成员一蓝色方箱、成员二紫金圆盖；名称/类型与左右标记对应尚不充分，不能按ID顺序分派。 原攻略图片，可能引用作者游戏截图，未宣称独立实机复测。",
+                "role": "support"
+              },
+              {
+                "source": "KuroMap:8:1411099204107186176",
+                "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176-2.png",
+                "reason": "两箱位于终战调查点后的紫草岩台，guide同样展示并排两箱。官方两记录都标辉光，视频成员一蓝色方箱、成员二紫金圆盖；名称/类型与左右标记对应尚不充分，不能按ID顺序分派。 原攻略图片，可能引用作者游戏截图，未宣称独立实机复测。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [
+              "尚无位置、视频过程及同一ID攻略三证共同唯一绑定本成员。",
+              "奖励处小地图没有通过全部冻结门禁；地图视窗配准和路线只能提供区域先验，不能当箱坐标。",
+              "同一事件多个奖励需分别对应实际箱型/空间位置；禁止按候选数组或领取序号直接分配ID。",
+              "本分P缺明确探测仪属性说明，身份与属性分开，属性unknown。"
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "本成员身份尚未唯一绑定点位。该分P只说明任务/成就与奖励，未明确探测仪范围，属性保持unknown。",
+              "evidence": [
+                {
+                  "source": "BV1Aeh2zvEko:p3",
+                  "locator": "ASR 0–8.50s",
+                  "reason": "开头只说明任务/成就范围，未作探测仪结论；这是保持unknown的审阅依据。",
+                  "role": "support",
+                  "start": 0,
+                  "end": 8.5
+                },
+                {
+                  "source": "BV1Aeh2zvEko:p3",
+                  "locator": "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00322.00.jpg",
+                  "reason": "本成员实际奖励过程已核对；该图单独不证明探测仪属性。",
+                  "role": "support",
+                  "start": 8.76,
+                  "end": 322.033
+                }
+              ],
+              "confidenceBasis": "no-scanner-specific-scope; unknown"
+            },
+            "localizationAttempts": [
+              {
+                "locator": "out/detectability-v2/matching-rinascita/fullscale-minimap.json#62",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/fullscale-minimap.json#63",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/fullscale-minimap.json#64",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#68",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#69",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#70",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#71",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#72",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              }
+            ],
+            "reviewedBy": "offline-v2-rinascita-first-pass",
+            "sourceEventPreserved": true
+          }
+        }
+      ],
+      "uncertainties": [
+        "六处前置属于同一任务，未拆成六个箱子事件；部分成就非宝箱奖励。",
+        "两箱在战斗结束后、地面光点对话前已可见；不得把调查光点误写为生成触发。",
+        "箱子交互小字待核，不依据外观强行映射奖励等级。",
+        "语音中的任务名称和部分地名识别不准，路线以画面为依据，暂不做实体匹配。"
+      ]
+    }
+  ],
+  "nonEventIntervals": [
+    [
+      0,
+      8.76,
+      "开场任务说明；不读取总览定位"
+    ]
+  ],
+  "reviewedEvidence": [
+    "out/detectability-v2/BV1Aeh2zvEko/p03/transcript.txt",
+    "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00320.00.jpg",
+    "out/detectability-v2/BV1Aeh2zvEko/p03/visual/scenes-0.5s-00310.00.jpg",
+    "out/detectability-v2/BV1Aeh2zvEko/p03/visual/scenes-0.5s-00316.00.jpg",
+    "out/detectability-v2/BV1Aeh2zvEko/p03/visual/scenes-0.5s-00322.00.jpg",
+    "out/detectability-v2/BV1Aeh2zvEko/p03/visual/scenes-1s-00258.00.jpg",
+    "out/detectability-v2/BV1Aeh2zvEko/p03/visual/scenes-1s-00270.00.jpg",
+    "out/detectability-v2/BV1Aeh2zvEko/p03/visual/scenes-5s-00010.00.jpg",
+    "out/detectability-v2/BV1Aeh2zvEko/p03/visual/scenes-5s-00070.00.jpg",
+    "out/detectability-v2/BV1Aeh2zvEko/p03/visual/scenes-5s-00130.00.jpg",
+    "out/detectability-v2/BV1Aeh2zvEko/p03/visual/scenes-5s-00190.00.jpg",
+    "out/detectability-v2/BV1Aeh2zvEko/p03/visual/scenes-5s-00250.00.jpg",
+    "out/detectability-v2/BV1Aeh2zvEko/p03/visual/scenes-5s-00310.00.jpg"
+  ],
+  "transcriptCorrections": [
+    {
+      "start": 68.81,
+      "end": 69.81,
+      "raw": "角度式",
+      "corrected": "角斗士",
+      "basis": "70秒NPC形象及后续战斗语境"
+    },
+    {
+      "start": 226.66,
+      "end": 229.14,
+      "raw": "植物",
+      "corrected": "遗物",
+      "basis": "230–235秒调查结果为两把匕首的描述"
+    }
+  ],
+  "coverageNotes": [
+    "5秒全程路线场景表已审；终战触发258–272逐秒、结束及两箱310–322每0.5秒密集复核。",
+    "六段前置线索与终战按同一任务关联，最终2奖励成员。",
+    "原ASR未修改，无直接听音频；不读取旧候选、不进行ID匹配。"
+  ]
+}

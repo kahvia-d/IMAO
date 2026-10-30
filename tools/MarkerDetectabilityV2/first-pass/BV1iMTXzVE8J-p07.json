@@ -1,0 +1,2784 @@
+{
+  "bvid": "BV1iMTXzVE8J",
+  "part": 7,
+  "duration": 606.866,
+  "reviewStatus": "reviewed",
+  "audioReviewStatus": "reviewed",
+  "audioReviewMethod": "local-ASR-text-and-visual; no-direct-listening",
+  "progressBarReviewStatus": "reviewed",
+  "events": [
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e001",
+      "ordinal": 1,
+      "start": 14,
+      "end": 33,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 28,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "三只狗旁依次挖掘，黑狗旁挖掘出现箱",
+      "route": "从传送点向南到河边斜坡三只狗处",
+      "transcriptRefs": [
+        {
+          "start": 14.46,
+          "end": 15.18,
+          "text": "传过来之后"
+        },
+        {
+          "start": 15.18,
+          "end": 16.14,
+          "text": "我们转向小地图下方"
+        },
+        {
+          "start": 16.14,
+          "end": 17.12,
+          "text": "南方向朝前方走"
+        },
+        {
+          "start": 21.01,
+          "end": 21.83,
+          "text": "再往前走"
+        },
+        {
+          "start": 21.83,
+          "end": 23.11,
+          "text": "然后左边的坡上"
+        },
+        {
+          "start": 23.11,
+          "end": 24.57,
+          "text": "能看到有三只小狗"
+        },
+        {
+          "start": 24.57,
+          "end": 24.91,
+          "text": "来我们"
+        },
+        {
+          "start": 25.53,
+          "end": 26.83,
+          "text": "挨个跟它挖掘一下"
+        },
+        {
+          "start": 27.39,
+          "end": 28.99,
+          "text": "接着我们来到面前的黑狗这里"
+        },
+        {
+          "start": 28.99,
+          "end": 29.69,
+          "text": "我们再挖掘一下"
+        },
+        {
+          "start": 29.69,
+          "end": 30.43,
+          "text": "出来一个宝箱"
+        },
+        {
+          "start": 31.17,
+          "end": 32.45,
+          "text": "好开完这个宝箱之后"
+        },
+        {
+          "start": 32.45,
+          "end": 33.23,
+          "text": "我们打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00026.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00029.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00030.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00031.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "白色箱",
+          "triggerSeconds": 29,
+          "appearanceSeconds": 30,
+          "collectionSeconds": 31,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "8",
+          "pointId": "1287880062581293056",
+          "matchingReview": {
+            "analysis": "已肉眼核对34秒黄色玩家箭头（不是画面中心），地图配准112内点；raw坐标[-10420.8, 80772.3]。对应点距离2.32；该图紧接本事件领奖后打开；结合本事件路线和攻略场景，不以近邻单独确认。黑狗紧贴箱左侧、河岸黄色草坡及两只黄狗分布与攻略两图一致。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00031.00.jpg",
+                "reason": "三只狗旁依次挖掘，黑狗旁挖掘出现箱",
+                "role": "support",
+                "start": 14,
+                "end": 33
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-sift-player-arrow",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/map-anchors.json",
+                "reason": "已肉眼核对34秒黄色玩家箭头（不是画面中心），地图配准112内点；raw坐标[-10420.8, 80772.3]。对应点距离2.32；该图紧接本事件领奖后打开；结合本事件路线和攻略场景，不以近邻单独确认。",
+                "role": "support"
+              },
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00034.00.jpg",
+                "reason": "目检黄色箭头位置，使用该帧自身变换避免地图拖动偏移",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287880062581293056.json",
+                "reason": "隐藏宝箱，先在一只小黄狗那里挖掘是蜥蜴，再到两只小黄狗那里挖是禽肉，最后在小黑狗这里挖掘出现宝箱（现版本直接找黑狗就有箱子了哦）",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287880062581293056-1.png",
+                "reason": "黑狗紧贴箱左侧、河岸黄色草坡及两只黄狗分布与攻略两图一致。",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287880062581293056-2.png",
+                "reason": "黑狗紧贴箱左侧、河岸黄色草坡及两只黄狗分布与攻略两图一致。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1287880062581293056",
+                "status": "confirmed",
+                "analysis": "黑狗紧贴箱左侧、河岸黄色草坡及两只黄狗分布与攻略两图一致。"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00026.00.jpg",
+                  "reason": "三只狗旁依次挖掘，黑狗旁挖掘出现箱",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e002",
+      "ordinal": 2,
+      "start": 33,
+      "end": 114,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 112,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "建筑攀爬挑战两轮；第一轮解锁底部青箱，第二轮在顶端生成紫箱",
+      "route": "传送今州城内，登房顶启动挑战；切换角色攀爬，返回底部再挑战",
+      "transcriptRefs": [
+        {
+          "start": 34.11,
+          "end": 35.81,
+          "text": "这里我们传送到荆州城界"
+        },
+        {
+          "start": 35.81,
+          "end": 36.99,
+          "text": "右上方这一个小印标"
+        },
+        {
+          "start": 36.99,
+          "end": 37.85,
+          "text": "在城里面的"
+        },
+        {
+          "start": 43.84,
+          "end": 44.66,
+          "text": "传过来之后"
+        },
+        {
+          "start": 44.66,
+          "end": 45.42,
+          "text": "右转"
+        },
+        {
+          "start": 45.42,
+          "end": 46.84,
+          "text": "这样小蜥蜴左上方西北方向"
+        },
+        {
+          "start": 46.84,
+          "end": 47.72,
+          "text": "在这个房子上面"
+        },
+        {
+          "start": 47.72,
+          "end": 49.04,
+          "text": "是有一个限制挑战的"
+        },
+        {
+          "start": 50.32,
+          "end": 51.1,
+          "text": "我们跑过来"
+        },
+        {
+          "start": 51.94,
+          "end": 52.88,
+          "text": "这里一个挑战"
+        },
+        {
+          "start": 52.88,
+          "end": 53.96,
+          "text": "一共是有两个宝箱"
+        },
+        {
+          "start": 53.96,
+          "end": 54.86,
+          "text": "这里第一个宝箱"
+        },
+        {
+          "start": 54.86,
+          "end": 56.8,
+          "text": "是探测仪可以探到的"
+        },
+        {
+          "start": 56.8,
+          "end": 57.96,
+          "text": "然后第二个宝箱我们探不到"
+        },
+        {
+          "start": 58.86,
+          "end": 60.08,
+          "text": "这里我们开启一下"
+        },
+        {
+          "start": 60.08,
+          "end": 60.9,
+          "text": "开启完之后"
+        },
+        {
+          "start": 60.9,
+          "end": 62.6,
+          "text": "我们这里可以切换一个队伍"
+        },
+        {
+          "start": 62.6,
+          "end": 63.66,
+          "text": "随便切一个人出来"
+        },
+        {
+          "start": 66.44,
+          "end": 68.4,
+          "text": "然后就可以直接朝上方爬了"
+        },
+        {
+          "start": 77.7,
+          "end": 79.42,
+          "text": "我们来一路来到终点"
+        },
+        {
+          "start": 85.98,
+          "end": 86.96,
+          "text": "到达终点之后"
+        },
+        {
+          "start": 86.96,
+          "end": 87.88,
+          "text": "我们再原路返回"
+        },
+        {
+          "start": 88.28,
+          "end": 90.42,
+          "text": "这里发现还能再开一次"
+        },
+        {
+          "start": 90.42,
+          "end": 91.36,
+          "text": "我们再开启一下"
+        },
+        {
+          "start": 92.36,
+          "end": 93.72,
+          "text": "开启完之后来还是切换"
+        },
+        {
+          "start": 93.72,
+          "end": 95.06,
+          "text": "切换队伍可以切一个人"
+        },
+        {
+          "start": 97.3,
+          "end": 98.98,
+          "text": "接着我们直接攀爬就行了"
+        },
+        {
+          "start": 108.8,
+          "end": 109.82,
+          "text": "好到达终点"
+        },
+        {
+          "start": 110.56,
+          "end": 112.48,
+          "text": "我们这里开启第二个宝箱"
+        },
+        {
+          "start": 113.54,
+          "end": 114.48,
+          "text": "开完这个之后"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00058.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00059.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00088.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00091.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00092.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00110.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00112.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "预先可见的封锁青色箱",
+          "triggerSeconds": 59,
+          "appearanceSeconds": 58,
+          "collectionSeconds": null,
+          "identityStatus": "unresolved",
+          "detectability": "detectable",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "已复看33–114秒，建筑攀爬挑战两轮；第一轮解锁底部青箱，第二轮在顶端生成紫箱；路线：传送今州城内，登房顶启动挑战；切换角色攀爬，返回底部再挑战。第一轮青箱在58秒已封锁可见，作者53.96–56.8秒明确可探；已核对的攻略只证明第二轮屋顶精密箱，不能共用ID。缺底部青箱的独立点位和攻略。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00112.00.jpg",
+                "reason": "建筑攀爬挑战两轮；第一轮解锁底部青箱，第二轮在顶端生成紫箱",
+                "role": "support",
+                "start": 33,
+                "end": 114
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-geometric-review",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/geometry.json",
+                "reason": "全图变换仅给视口搜索先验，不把中心认作玩家；第一轮青箱在58秒已封锁可见，作者53.96–56.8秒明确可探；已核对的攻略只证明第二轮屋顶精密箱，不能共用ID。缺底部青箱的独立点位和攻略。",
+                "role": "context"
+              }
+            ],
+            "guideEvidence": [],
+            "exclusionEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287107914627497984.json",
+                "reason": "已审读原始描述：第二次完成屋顶的飞檐挑战后获得，这次要求不使用攀爬到达房顶，多用钩索和空中冲刺，跳接钩索加空中冲刺跟随光点就能到达（挑战途中切二队直接就可以攀爬了）；第一轮青箱在58秒已封锁可见，作者53.96–56.8秒明确可探；已核对的攻略只证明第二轮屋顶精密箱，不能共用ID。缺底部青箱的独立点位和攻略。",
+                "role": "exclusion"
+              }
+            ],
+            "missingEvidence": [
+              "底部青箱的独立点位和攻略。"
+            ],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1287107914627497984",
+                "status": "rejected-for-this-member",
+                "analysis": "第一轮青箱在58秒已封锁可见，作者53.96–56.8秒明确可探；已核对的攻略只证明第二轮屋顶精密箱，不能共用ID。缺底部青箱的独立点位和攻略。",
+                "guide": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287107914627497984.json"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "detectable",
+              "analysis": "53.96–56.8秒作者逐成员明确第一轮箱可探；58秒已封锁可见。仅作者明示加过程视觉，无独立游戏内试扫。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/transcript.raw.json",
+                  "reason": "53.96–56.8秒作者逐成员明确第一轮箱可探；58秒已封锁可见。仅作者明示加过程视觉，无独立游戏内试扫。",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00058.00.jpg",
+                  "reason": "建筑攀爬挑战两轮；第一轮解锁底部青箱，第二轮在顶端生成紫箱",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        },
+        {
+          "member": 2,
+          "observedType": "紫色箱",
+          "triggerSeconds": 92,
+          "appearanceSeconds": 110,
+          "collectionSeconds": 112,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "8",
+          "pointId": "1287107914627497984",
+          "matchingReview": {
+            "analysis": "已肉眼核对115秒黄色玩家箭头（不是画面中心），地图配准322内点；raw坐标[-33410.4, 96569.3]。对应点距离2.48；该图紧接本事件领奖后打开；结合本事件路线和攻略场景，不以近邻单独确认。仅第二奖励：六角金色瓦面斜屋顶的最高端紫箱与攻略相同；第一轮楼下青箱是另一成员。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00112.00.jpg",
+                "reason": "建筑攀爬挑战两轮；第一轮解锁底部青箱，第二轮在顶端生成紫箱",
+                "role": "support",
+                "start": 33,
+                "end": 114
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-sift-player-arrow",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/map-anchors.json",
+                "reason": "已肉眼核对115秒黄色玩家箭头（不是画面中心），地图配准322内点；raw坐标[-33410.4, 96569.3]。对应点距离2.48；该图紧接本事件领奖后打开；结合本事件路线和攻略场景，不以近邻单独确认。",
+                "role": "support"
+              },
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00115.00.jpg",
+                "reason": "目检黄色箭头位置，使用该帧自身变换避免地图拖动偏移",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287107914627497984.json",
+                "reason": "第二次完成屋顶的飞檐挑战后获得，这次要求不使用攀爬到达房顶，多用钩索和空中冲刺，跳接钩索加空中冲刺跟随光点就能到达（挑战途中切二队直接就可以攀爬了）",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287107914627497984-1.png",
+                "reason": "仅第二奖励：六角金色瓦面斜屋顶的最高端紫箱与攻略相同；第一轮楼下青箱是另一成员。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1287107914627497984",
+                "status": "confirmed",
+                "analysis": "仅第二奖励：六角金色瓦面斜屋顶的最高端紫箱与攻略相同；第一轮楼下青箱是另一成员。"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "56.8–57.96秒作者逐成员明确第二轮箱探不到；92秒第二轮触发，110秒屋顶生成紫箱。仅作者明示加过程视觉，无独立游戏内试扫。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/transcript.raw.json",
+                  "reason": "56.8–57.96秒作者逐成员明确第二轮箱探不到；92秒第二轮触发，110秒屋顶生成紫箱。仅作者明示加过程视觉，无独立游戏内试扫。",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00058.00.jpg",
+                  "reason": "建筑攀爬挑战两轮；第一轮解锁底部青箱，第二轮在顶端生成紫箱",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "第一箱58秒已封锁可见，88-92秒解锁但未见领取；appearanceSeconds表示首次选用证据帧，不表示生成时刻。"
+      ],
+      "authorDetectabilityStatements": [
+        {
+          "member": 1,
+          "claim": "can-detect",
+          "start": 53.96,
+          "end": 56.8
+        },
+        {
+          "member": 2,
+          "claim": "cannot-detect",
+          "start": 56.8,
+          "end": 57.96
+        }
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e003",
+      "ordinal": 3,
+      "start": 114,
+      "end": 161,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 154,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "沙滩柱状战斗机关，激活后剪辑到挑战达成并开箱",
+      "route": "传送后沿山坡下行，经两块石头夹缝跳向沙滩",
+      "transcriptRefs": [
+        {
+          "start": 114.48,
+          "end": 115.22,
+          "text": "我们再打开地图"
+        },
+        {
+          "start": 115.22,
+          "end": 116.58,
+          "text": "这里我们朝下方看"
+        },
+        {
+          "start": 116.58,
+          "end": 117.6,
+          "text": "我们朝上到平亭山"
+        },
+        {
+          "start": 117.6,
+          "end": 118.74,
+          "text": "左上方那个小银杏苗"
+        },
+        {
+          "start": 124.85,
+          "end": 125.53,
+          "text": "翻过来之后"
+        },
+        {
+          "start": 125.53,
+          "end": 126.65,
+          "text": "我们就朝着面前直走"
+        },
+        {
+          "start": 131.2,
+          "end": 132.34,
+          "text": "这里一直往山下走"
+        },
+        {
+          "start": 133.34,
+          "end": 134.82,
+          "text": "这里的宝箱都是单独的"
+        },
+        {
+          "start": 139.58,
+          "end": 140.9,
+          "text": "这里我们一直走到悬崖边"
+        },
+        {
+          "start": 146.72,
+          "end": 149.02,
+          "text": "从这两个石头的夹缝中往下方看"
+        },
+        {
+          "start": 149.02,
+          "end": 149.74,
+          "text": "跳下来"
+        },
+        {
+          "start": 149.74,
+          "end": 151.92,
+          "text": "下方有一个阴障仪的挑战"
+        },
+        {
+          "start": 151.92,
+          "end": 156.6,
+          "text": "好来我们青亚怪"
+        },
+        {
+          "start": 156.6,
+          "end": 158.26,
+          "text": "青王怪来我们开启到宝箱"
+        },
+        {
+          "start": 158.64,
+          "end": 160.48,
+          "text": "开完这个宝箱之后我们打开地图"
+        },
+        {
+          "start": 160.48,
+          "end": 161.72,
+          "text": "我们朝左边看"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00156.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00157.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00159.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "青色箱",
+          "triggerSeconds": 156,
+          "appearanceSeconds": 157,
+          "collectionSeconds": 159,
+          "identityStatus": "unresolved",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "已复看114–161秒，沙滩柱状战斗机关，激活后剪辑到挑战达成并开箱；路线：传送后沿山坡下行，经两块石头夹缝跳向沙滩。检索候选攻略是荆棘及炸药苞压板，视频却是沙滩音障仪，机制和地形均不符。缺平庭山下沙滩音障仪的玩家定位与点位攻略。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00159.00.jpg",
+                "reason": "沙滩柱状战斗机关，激活后剪辑到挑战达成并开箱",
+                "role": "support",
+                "start": 114,
+                "end": 161
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-geometric-review",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/geometry.json",
+                "reason": "全图变换仅给视口搜索先验，不把中心认作玩家；检索候选攻略是荆棘及炸药苞压板，视频却是沙滩音障仪，机制和地形均不符。缺平庭山下沙滩音障仪的玩家定位与点位攻略。",
+                "role": "context"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-v2/review-mid-resume/guides/guide-8-1253173215523540992.json",
+                "reason": "已审读原始描述：这个视角往后走会有解开箱子所需要的，需要用炸药苞压压感台；检索候选攻略是荆棘及炸药苞压板，视频却是沙滩音障仪，机制和地形均不符。缺平庭山下沙滩音障仪的玩家定位与点位攻略。",
+                "role": "context"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [
+              "平庭山下沙滩音障仪的玩家定位与点位攻略。"
+            ],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1253173215523540992",
+                "status": "unresolved",
+                "analysis": "检索候选攻略是荆棘及炸药苞压板，视频却是沙滩音障仪，机制和地形均不符。缺平庭山下沙滩音障仪的玩家定位与点位攻略。",
+                "guide": "out/detectability-v2/review-mid-resume/guides/guide-8-1253173215523540992.json"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00156.00.jpg",
+                  "reason": "沙滩柱状战斗机关，激活后剪辑到挑战达成并开箱",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "原视频跳剪省略战斗细节；时间戳仅定位可见触发/完成，不补造被剪掉过程。"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e004",
+      "ordinal": 4,
+      "start": 161,
+      "end": 214,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 202,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "河边拼图：三个拼块无须旋转，放左下、中间及剩余位置",
+      "route": "传送后向南略偏西至河边，跳下坡",
+      "transcriptRefs": [
+        {
+          "start": 162.24,
+          "end": 163.86,
+          "text": "这里我们传送到龙望礁"
+        },
+        {
+          "start": 163.86,
+          "end": 165.7,
+          "text": "右下方这一个小银杏苗"
+        },
+        {
+          "start": 166.1,
+          "end": 167.98,
+          "text": "它在这一个预燃之声的右边"
+        },
+        {
+          "start": 167.98,
+          "end": 168.92,
+          "text": "传上过来"
+        },
+        {
+          "start": 176.51,
+          "end": 178.17,
+          "text": "传过来之后我们转向小地图"
+        },
+        {
+          "start": 178.17,
+          "end": 180.39,
+          "text": "这个下方南方向来朝前方走"
+        },
+        {
+          "start": 182.47,
+          "end": 183.97,
+          "text": "稍微偏右下方一点"
+        },
+        {
+          "start": 183.97,
+          "end": 185.23,
+          "text": "要走到河边"
+        },
+        {
+          "start": 189.6,
+          "end": 190.48,
+          "text": "那么往下方看"
+        },
+        {
+          "start": 190.48,
+          "end": 192.52,
+          "text": "下方有一个俄罗斯这个方块"
+        },
+        {
+          "start": 192.52,
+          "end": 193.48,
+          "text": "这个拼图"
+        },
+        {
+          "start": 196.18,
+          "end": 198.74,
+          "text": "好我们先拿起左边的这个平四边形"
+        },
+        {
+          "start": 198.74,
+          "end": 200.04,
+          "text": "就放在左下角"
+        },
+        {
+          "start": 202.15,
+          "end": 203.21,
+          "text": "再拿起中间的"
+        },
+        {
+          "start": 203.21,
+          "end": 204.07,
+          "text": "给它放在中间"
+        },
+        {
+          "start": 205.59,
+          "end": 207.19,
+          "text": "右边的我们也是放上来"
+        },
+        {
+          "start": 207.19,
+          "end": 208.59,
+          "text": "这里都不用旋转就行"
+        },
+        {
+          "start": 211.85,
+          "end": 212.57,
+          "text": "开启宝箱"
+        },
+        {
+          "start": 213.05,
+          "end": 214.41,
+          "text": "开完宝箱之后打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00198.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00200.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00204.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00207.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00211.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00213.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "青色箱",
+          "triggerSeconds": 207,
+          "appearanceSeconds": 211,
+          "collectionSeconds": 213,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "8",
+          "pointId": "1287856922316566528",
+          "matchingReview": {
+            "analysis": "已肉眼核对215秒黄色玩家箭头（不是画面中心），地图配准121内点；raw坐标[-69185.4, 140167.6]。对应点距离2.48；该图紧接本事件领奖后打开；结合本事件路线和攻略场景，不以近邻单独确认。河边白花草坡、背后三道排水口、石阶和三块拼图的板面形状一致。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00213.00.jpg",
+                "reason": "河边拼图：三个拼块无须旋转，放左下、中间及剩余位置",
+                "role": "support",
+                "start": 161,
+                "end": 214
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-sift-player-arrow",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/map-anchors.json",
+                "reason": "已肉眼核对215秒黄色玩家箭头（不是画面中心），地图配准121内点；raw坐标[-69185.4, 140167.6]。对应点距离2.48；该图紧接本事件领奖后打开；结合本事件路线和攻略场景，不以近邻单独确认。",
+                "role": "support"
+              },
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00215.00.jpg",
+                "reason": "目检黄色箭头位置，使用该帧自身变换避免地图拖动偏移",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287856922316566528.json",
+                "reason": "完成能量分区解密获得，摆放参考如图二所示",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287856922316566528-1.png",
+                "reason": "河边白花草坡、背后三道排水口、石阶和三块拼图的板面形状一致。",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287856922316566528-2.png",
+                "reason": "河边白花草坡、背后三道排水口、石阶和三块拼图的板面形状一致。",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287856922316566528-3.png",
+                "reason": "河边白花草坡、背后三道排水口、石阶和三块拼图的板面形状一致。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1287856922316566528",
+                "status": "confirmed",
+                "analysis": "河边白花草坡、背后三道排水口、石阶和三块拼图的板面形状一致。"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00198.00.jpg",
+                  "reason": "河边拼图：三个拼块无须旋转，放左下、中间及剩余位置",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e005",
+      "ordinal": 5,
+      "start": 214,
+      "end": 249,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 242,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "射击挑战，拾取爆炸果投掷木箱群",
+      "route": "从副本入口向东北越过树干到凸石左侧",
+      "transcriptRefs": [
+        {
+          "start": 214.41,
+          "end": 216.23,
+          "text": "我们传送到御燃之深这个副本"
+        },
+        {
+          "start": 220.95,
+          "end": 221.59,
+          "text": "传过来之后"
+        },
+        {
+          "start": 221.59,
+          "end": 222.33,
+          "text": "我们转一下小地图"
+        },
+        {
+          "start": 222.33,
+          "end": 223.23,
+          "text": "右上方东北方向"
+        },
+        {
+          "start": 223.85,
+          "end": 225.37,
+          "text": "翻过这一个树干"
+        },
+        {
+          "start": 228.84,
+          "end": 229.76,
+          "text": "我这棵大树"
+        },
+        {
+          "start": 230.12,
+          "end": 230.8,
+          "text": "往前走"
+        },
+        {
+          "start": 233.55,
+          "end": 233.87,
+          "text": "好"
+        },
+        {
+          "start": 233.87,
+          "end": 235.53,
+          "text": "在右边这个凸出来的石头"
+        },
+        {
+          "start": 235.53,
+          "end": 237.01,
+          "text": "左边有一个射击挑战"
+        },
+        {
+          "start": 238.47,
+          "end": 239.11,
+          "text": "开启一下"
+        },
+        {
+          "start": 239.89,
+          "end": 242.25,
+          "text": "这样之后捡起旁边的这一个爆炸果"
+        },
+        {
+          "start": 242.99,
+          "end": 244.01,
+          "text": "然后我们瞄准一下"
+        },
+        {
+          "start": 246.35,
+          "end": 247.37,
+          "text": "这里又开启到宝箱"
+        },
+        {
+          "start": 247.37,
+          "end": 248.25,
+          "text": "开完宝箱之后"
+        },
+        {
+          "start": 248.25,
+          "end": 249.71,
+          "text": "我们在这张小地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00239.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00244.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00245.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00246.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00247.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "青色箱",
+          "triggerSeconds": 239,
+          "appearanceSeconds": 246,
+          "collectionSeconds": 247,
+          "identityStatus": "unresolved",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "已复看214–249秒，射击挑战，拾取爆炸果投掷木箱群；路线：从副本入口向东北越过树干到凸石左侧。候选同为致爆挑战，但攻略是临海棕草高地，视频从副本越树干至凸岩左侧绿草地；仅机制相似不足确认。缺此凸岩挑战的坐标及起点图一致证据。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00247.00.jpg",
+                "reason": "射击挑战，拾取爆炸果投掷木箱群",
+                "role": "support",
+                "start": 214,
+                "end": 249
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-geometric-review",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/geometry.json",
+                "reason": "全图变换仅给视口搜索先验，不把中心认作玩家；候选同为致爆挑战，但攻略是临海棕草高地，视频从副本越树干至凸岩左侧绿草地；仅机制相似不足确认。缺此凸岩挑战的坐标及起点图一致证据。",
+                "role": "context"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287873379048493056.json",
+                "reason": "已审读原始描述：完成全息战略·致爆获得（可以用角色清理箱子。不用爆炸果实。也算挑战成功。）[辅助机·射击]也可；候选同为致爆挑战，但攻略是临海棕草高地，视频从副本越树干至凸岩左侧绿草地；仅机制相似不足确认。缺此凸岩挑战的坐标及起点图一致证据。",
+                "role": "context"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [
+              "此凸岩挑战的坐标及起点图一致证据。"
+            ],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1287873379048493056",
+                "status": "unresolved",
+                "analysis": "候选同为致爆挑战，但攻略是临海棕草高地，视频从副本越树干至凸岩左侧绿草地；仅机制相似不足确认。缺此凸岩挑战的坐标及起点图一致证据。",
+                "guide": "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287873379048493056.json"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00239.00.jpg",
+                  "reason": "射击挑战，拾取爆炸果投掷木箱群",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e006",
+      "ordinal": 6,
+      "start": 249,
+      "end": 269,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 266,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "坑底战斗挑战，视频剪辑跳过战斗",
+      "route": "向西北经过任务标记，跳入地坑",
+      "transcriptRefs": [
+        {
+          "start": 249.71,
+          "end": 251.25,
+          "text": "左上方西北方向朝前方走"
+        },
+        {
+          "start": 256.82,
+          "end": 258.08,
+          "text": "这里会有一个任务"
+        },
+        {
+          "start": 258.08,
+          "end": 258.78,
+          "text": "我们等会再来"
+        },
+        {
+          "start": 259.26,
+          "end": 260.04,
+          "text": "先往前走"
+        },
+        {
+          "start": 260.48,
+          "end": 262.12,
+          "text": "然后看到地上有一个大坑"
+        },
+        {
+          "start": 262.12,
+          "end": 262.74,
+          "text": "我们跳下来"
+        },
+        {
+          "start": 262.74,
+          "end": 263.38,
+          "text": "下方有一个"
+        },
+        {
+          "start": 263.9,
+          "end": 264.88,
+          "text": "一个战斗挑战"
+        },
+        {
+          "start": 264.88,
+          "end": 265.56,
+          "text": "来我们开启一下"
+        },
+        {
+          "start": 265.56,
+          "end": 267.46,
+          "text": "好清完怪来开启宝箱"
+        },
+        {
+          "start": 267.46,
+          "end": 268.28,
+          "text": "开完宝箱之后"
+        },
+        {
+          "start": 268.28,
+          "end": 269.44,
+          "text": "转向小地图右边东方向"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00265.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00266.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00268.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "青色箱",
+          "triggerSeconds": 265,
+          "appearanceSeconds": 266,
+          "collectionSeconds": 268,
+          "identityStatus": "unresolved",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "已复看249–269秒，坑底战斗挑战，视频剪辑跳过战斗；路线：向西北经过任务标记，跳入地坑。候选为中层山上的预先封锁镇守箱，视频为坑底紫色挑战台完成出箱，机制不符。缺坑底挑战台精确位置及攻略。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00268.00.jpg",
+                "reason": "坑底战斗挑战，视频剪辑跳过战斗",
+                "role": "support",
+                "start": 249,
+                "end": 269
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-geometric-review",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/geometry.json",
+                "reason": "全图变换仅给视口搜索先验，不把中心认作玩家；候选为中层山上的预先封锁镇守箱，视频为坑底紫色挑战台完成出箱，机制不符。缺坑底挑战台精确位置及攻略。",
+                "role": "context"
+              }
+            ],
+            "guideEvidence": [],
+            "exclusionEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-v2/review-mid-resume/guides/guide-8-1251512993619648512.json",
+                "reason": "已审读原始描述：战斗宝箱。中层山上。；候选为中层山上的预先封锁镇守箱，视频为坑底紫色挑战台完成出箱，机制不符。缺坑底挑战台精确位置及攻略。",
+                "role": "exclusion"
+              }
+            ],
+            "missingEvidence": [
+              "坑底挑战台精确位置及攻略。"
+            ],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1251512993619648512",
+                "status": "rejected-for-this-member",
+                "analysis": "候选为中层山上的预先封锁镇守箱，视频为坑底紫色挑战台完成出箱，机制不符。缺坑底挑战台精确位置及攻略。",
+                "guide": "out/detectability-v2/review-mid-resume/guides/guide-8-1251512993619648512.json"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00265.00.jpg",
+                  "reason": "坑底战斗挑战，视频剪辑跳过战斗",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "原视频跳剪省略战斗细节；时间戳仅定位可见触发/完成，不补造被剪掉过程。"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e007",
+      "ordinal": 7,
+      "start": 269,
+      "end": 296,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": null,
+        "authorNumber": null,
+        "note": "救援前置无独立箱形刻度；关联后续对话事件。"
+      },
+      "observedMechanism": "救援巡卫前置：爬回坡顶清理围困敌人；现场青箱未领取，作者明确非目标",
+      "route": "出洞右转爬山，接近三个问号与围困敌人",
+      "transcriptRefs": [
+        {
+          "start": 269.44,
+          "end": 270.72,
+          "text": "先走出这个洞"
+        },
+        {
+          "start": 273.02,
+          "end": 274.64,
+          "text": "走出这个洞我们就右转"
+        },
+        {
+          "start": 275.32,
+          "end": 276.68,
+          "text": "要爬到这个山上去"
+        },
+        {
+          "start": 283.6,
+          "end": 285.82,
+          "text": "上山我们看到这一个三个问号"
+        },
+        {
+          "start": 285.82,
+          "end": 287.98,
+          "text": "来我们把这上面的三个怪"
+        },
+        {
+          "start": 287.98,
+          "end": 289.02,
+          "text": "给四个怪给清了"
+        },
+        {
+          "start": 289.02,
+          "end": 289.92,
+          "text": "这里过完任务"
+        },
+        {
+          "start": 289.92,
+          "end": 291.16,
+          "text": "这个宝箱可拿可不拿"
+        },
+        {
+          "start": 291.6,
+          "end": 292.86,
+          "text": "然后我们转向小地图"
+        },
+        {
+          "start": 292.86,
+          "end": 294.62,
+          "text": "右边东方向朝前方走"
+        },
+        {
+          "start": 295.0,
+          "end": 296.64,
+          "text": "这不是我们的目标宝箱"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00284.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00289.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00290.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00292.00.jpg"
+      ],
+      "rewards": [],
+      "uncertainties": [
+        "原视频跳剪省略战斗细节；时间戳仅定位可见触发/完成，不补造被剪掉过程。"
+      ],
+      "linkedEventIds": [
+        "BV1iMTXzVE8J:p7:e009"
+      ],
+      "incidentalObjects": [
+        {
+          "description": "救援现场青色箱",
+          "appearanceSeconds": 289,
+          "collectionSeconds": null,
+          "labelApplied": false,
+          "reason": "作者295-296.64秒明确称不是目标宝箱。"
+        }
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e008",
+      "ordinal": 8,
+      "start": 296,
+      "end": 325,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 312,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "哨塔限时收集光点，飞向营地棚顶完成",
+      "route": "从山坡飞往左边哨塔，开启后穿过光点到棚顶",
+      "transcriptRefs": [
+        {
+          "start": 297.16,
+          "end": 297.98,
+          "text": "往下方看"
+        },
+        {
+          "start": 300.22,
+          "end": 301.72,
+          "text": "下方我们看到左边哨塔上"
+        },
+        {
+          "start": 301.72,
+          "end": 302.58,
+          "text": "是有一个挑战的"
+        },
+        {
+          "start": 302.58,
+          "end": 303.7,
+          "text": "我们先去开启这个挑战"
+        },
+        {
+          "start": 312.58,
+          "end": 313.42,
+          "text": "来开启一下"
+        },
+        {
+          "start": 313.42,
+          "end": 316.02,
+          "text": "开完之后我们就从这里直接朝前方飞"
+        },
+        {
+          "start": 319.73,
+          "end": 321.33,
+          "text": "出来一个宝箱在这个屋顶上"
+        },
+        {
+          "start": 321.33,
+          "end": 321.73,
+          "text": "来我们开"
+        },
+        {
+          "start": 321.73,
+          "end": 323.13,
+          "text": "拿到这个宝箱"
+        },
+        {
+          "start": 323.13,
+          "end": 324.99,
+          "text": "拿完宝箱之后我们从旁边跳下来"
+        },
+        {
+          "start": 324.99,
+          "end": 326.43,
+          "text": "跟这个巡卫小队长对话"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00313.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00314.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00319.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00321.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00323.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "白色箱",
+          "triggerSeconds": 313,
+          "appearanceSeconds": 321,
+          "collectionSeconds": 323,
+          "identityStatus": "unresolved",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "已复看296–325秒，哨塔限时收集光点，飞向营地棚顶完成；路线：从山坡飞往左边哨塔，开启后穿过光点到棚顶。候选为营地突袭任务奖励，攻略箱在棚下地面；视频为哨塔光点跑酷后棚顶奖励。缺棚顶白箱独立ID及终点攻略。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00323.00.jpg",
+                "reason": "哨塔限时收集光点，飞向营地棚顶完成",
+                "role": "support",
+                "start": 296,
+                "end": 325
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-geometric-review",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/geometry.json",
+                "reason": "全图变换仅给视口搜索先验，不把中心认作玩家；候选为营地突袭任务奖励，攻略箱在棚下地面；视频为哨塔光点跑酷后棚顶奖励。缺棚顶白箱独立ID及终点攻略。",
+                "role": "context"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1287104752935976960.json",
+                "reason": "已审读原始描述：完成纪闻任务：营地突袭 后出现，任务接取位置如图二所示，接取人物为聆笛（图三所示）；候选为营地突袭任务奖励，攻略箱在棚下地面；视频为哨塔光点跑酷后棚顶奖励。缺棚顶白箱独立ID及终点攻略。",
+                "role": "context"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [
+              "棚顶白箱独立ID及终点攻略。"
+            ],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1287104752935976960",
+                "status": "unresolved",
+                "analysis": "候选为营地突袭任务奖励，攻略箱在棚下地面；视频为哨塔光点跑酷后棚顶奖励。缺棚顶白箱独立ID及终点攻略。",
+                "guide": "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1287104752935976960.json"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00313.00.jpg",
+                  "reason": "哨塔限时收集光点，飞向营地棚顶完成",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e009",
+      "ordinal": 9,
+      "start": 325,
+      "end": 335,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 334,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "与刚解救的巡卫小队长对话，旁边封锁箱解锁",
+      "route": "从棚顶跳下到巡卫小队长身旁",
+      "transcriptRefs": [
+        {
+          "start": 326.43,
+          "end": 328.03,
+          "text": "这是我们刚刚解救的那一个人"
+        },
+        {
+          "start": 330.81,
+          "end": 332.75,
+          "text": "对话我们开启到这个隐藏宝箱"
+        },
+        {
+          "start": 332.75,
+          "end": 335.19,
+          "text": "开完之后我们转向小队的左上方西北方向"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00327.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00329.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00331.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00332.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "青色箱，先封锁后解锁",
+          "triggerSeconds": 329,
+          "appearanceSeconds": 327,
+          "collectionSeconds": 332,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "8",
+          "pointId": "1280898927634468864",
+          "matchingReview": {
+            "analysis": "巡尉小队长站在双圆形金属舱旁，封锁青箱位置和上坡救人前置均与攻略一致。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00332.00.jpg",
+                "reason": "与刚解救的巡卫小队长对话，旁边封锁箱解锁",
+                "role": "support",
+                "start": 325,
+                "end": 335
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "source-route-and-guide-terrain",
+                "locator": "out/detectability-v2/review-mid-resume/guides.json",
+                "reason": "从棚顶跳下到巡卫小队长身旁；巡尉小队长站在双圆形金属舱旁，封锁青箱位置和上坡救人前置均与攻略一致。以现场地形和路线定位，无独立数值坐标精度声明。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1280898927634468864.json",
+                "reason": "对话完成解锁，需要完成一个前置小任务：在图二的位置与一个受伤的巡尉对话，然后解决掉一群流浪者，与NPC对话后隔一段时间到图一的位置对话解锁",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1280898927634468864-1.png",
+                "reason": "巡尉小队长站在双圆形金属舱旁，封锁青箱位置和上坡救人前置均与攻略一致。",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1280898927634468864-2.png",
+                "reason": "巡尉小队长站在双圆形金属舱旁，封锁青箱位置和上坡救人前置均与攻略一致。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1280898927634468864",
+                "status": "confirmed",
+                "analysis": "巡尉小队长站在双圆形金属舱旁，封锁青箱位置和上坡救人前置均与攻略一致。"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00327.00.jpg",
+                  "reason": "与刚解救的巡卫小队长对话，旁边封锁箱解锁",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "327秒箱已封锁可见；329秒对话，331秒解锁。"
+      ],
+      "linkedEventIds": [
+        "BV1iMTXzVE8J:p7:e007"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e010",
+      "ordinal": 10,
+      "start": 335,
+      "end": 382,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 376,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "山上战斗挑战，剪辑后显示成功并开箱",
+      "route": "出营地向西北，穿河，沿路转北再向左上山",
+      "transcriptRefs": [
+        {
+          "start": 335.19,
+          "end": 336.61,
+          "text": "走出这一片营地"
+        },
+        {
+          "start": 339.58,
+          "end": 340.76,
+          "text": "就朝这个方向走"
+        },
+        {
+          "start": 345.22,
+          "end": 346.04,
+          "text": "再往前走"
+        },
+        {
+          "start": 346.04,
+          "end": 347.48,
+          "text": "南方是有一条河"
+        },
+        {
+          "start": 347.48,
+          "end": 349.8,
+          "text": "来我们这里要穿过这条河"
+        },
+        {
+          "start": 354.18,
+          "end": 356.08,
+          "text": "接着继续朝左上方西北方向走"
+        },
+        {
+          "start": 358.79,
+          "end": 360.41,
+          "text": "好我们走到这个小路这里的时候"
+        },
+        {
+          "start": 360.41,
+          "end": 363.31,
+          "text": "我们右转这样小就上往北方向"
+        },
+        {
+          "start": 363.31,
+          "end": 364.17,
+          "text": "我们先往前走"
+        },
+        {
+          "start": 367.11,
+          "end": 368.51,
+          "text": "来到这里之后我们再左转"
+        },
+        {
+          "start": 368.51,
+          "end": 370.11,
+          "text": "我爬到边前那个山上"
+        },
+        {
+          "start": 374.08,
+          "end": 375.24,
+          "text": "上来再往前走两步"
+        },
+        {
+          "start": 375.24,
+          "end": 376.9,
+          "text": "左边就是我们的战斗挑战"
+        },
+        {
+          "start": 376.9,
+          "end": 377.5,
+          "text": "来开启一下"
+        },
+        {
+          "start": 377.84,
+          "end": 379.64,
+          "text": "青王怪来开启到我们的宝箱"
+        },
+        {
+          "start": 380.34,
+          "end": 381.94,
+          "text": "宝箱之后我们打开地图"
+        },
+        {
+          "start": 381.94,
+          "end": 384.32,
+          "text": "我们就传送到我们所在位置"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00376.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00377.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00379.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00381.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "青色箱",
+          "triggerSeconds": 377,
+          "appearanceSeconds": 379,
+          "collectionSeconds": 381,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "8",
+          "pointId": "1282807991457853440",
+          "matchingReview": {
+            "analysis": "已肉眼核对383秒黄色玩家箭头（不是画面中心），地图配准96内点；raw坐标[-86389.0, 96093.7]。对应点距离8.73；该图紧接本事件领奖后打开；结合本事件路线和攻略场景，不以近邻单独确认。山顶草地背后今州建筑、右侧分层岩石及紫色花带与攻略挑战起点一致。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00381.00.jpg",
+                "reason": "山上战斗挑战，剪辑后显示成功并开箱",
+                "role": "support",
+                "start": 335,
+                "end": 382
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-sift-player-arrow",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/map-anchors.json",
+                "reason": "已肉眼核对383秒黄色玩家箭头（不是画面中心），地图配准96内点；raw坐标[-86389.0, 96093.7]。对应点距离8.73；该图紧接本事件领奖后打开；结合本事件路线和攻略场景，不以近邻单独确认。",
+                "role": "support"
+              },
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00383.00.jpg",
+                "reason": "目检黄色箭头位置，使用该帧自身变换避免地图拖动偏移",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1282807991457853440.json",
+                "reason": "完成标点附近挑战后获得（标点由玩家恶如啊静提供）",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1282807991457853440-1.png",
+                "reason": "山顶草地背后今州建筑、右侧分层岩石及紫色花带与攻略挑战起点一致。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1282807991457853440",
+                "status": "confirmed",
+                "analysis": "山顶草地背后今州建筑、右侧分层岩石及紫色花带与攻略挑战起点一致。"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00376.00.jpg",
+                  "reason": "山上战斗挑战，剪辑后显示成功并开箱",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "原视频跳剪省略战斗细节；时间戳仅定位可见触发/完成，不补造被剪掉过程。"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e011",
+      "ordinal": 11,
+      "start": 382,
+      "end": 421,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 416,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "柱状战斗机关，剪辑到完成并开箱",
+      "route": "传送附近西侧点，向西沿路后离路，越过大石头",
+      "transcriptRefs": [
+        {
+          "start": 384.32,
+          "end": 385.52,
+          "text": "左边这个小银心标"
+        },
+        {
+          "start": 391.0,
+          "end": 392.62,
+          "text": "传过来之后我们转向小地图"
+        },
+        {
+          "start": 392.62,
+          "end": 394.9,
+          "text": "左边西方向沿着小路朝上方走"
+        },
+        {
+          "start": 400.68,
+          "end": 402.38,
+          "text": "走到看到这里有几只狼的时候"
+        },
+        {
+          "start": 402.38,
+          "end": 404.46,
+          "text": "我们在我们还是沿着这个方向走"
+        },
+        {
+          "start": 404.46,
+          "end": 406.42,
+          "text": "我们这里不沿着小路走了"
+        },
+        {
+          "start": 409.7,
+          "end": 411.4,
+          "text": "好我翻过面前这个大石头"
+        },
+        {
+          "start": 412.72,
+          "end": 414.26,
+          "text": "我看到一个阴障仪的挑战"
+        },
+        {
+          "start": 414.26,
+          "end": 415.04,
+          "text": "来我们开启一下"
+        },
+        {
+          "start": 416.3,
+          "end": 416.92,
+          "text": "听下怪"
+        },
+        {
+          "start": 417.36,
+          "end": 419.04,
+          "text": "好清完怪来开启到我们的宝箱"
+        },
+        {
+          "start": 419.04,
+          "end": 419.94,
+          "text": "开完宝箱之后"
+        },
+        {
+          "start": 419.94,
+          "end": 421.46,
+          "text": "我们转向小地的左上方西北方向"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00414.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00416.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00418.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00420.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "紫色箱",
+          "triggerSeconds": 416,
+          "appearanceSeconds": 418,
+          "collectionSeconds": 420,
+          "identityStatus": "unresolved",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "已复看382–421秒，柱状战斗机关，剪辑到完成并开箱；路线：传送附近西侧点，向西沿路后离路，越过大石头。候选攻略为荆棘压板，非草坡音障仪；383秒地图是前一山顶战斗事件的终点，不能沿用。缺本机关最终位置和对应攻略。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00420.00.jpg",
+                "reason": "柱状战斗机关，剪辑到完成并开箱",
+                "role": "support",
+                "start": 382,
+                "end": 421
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-geometric-review",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/geometry.json",
+                "reason": "全图变换仅给视口搜索先验，不把中心认作玩家；候选攻略为荆棘压板，非草坡音障仪；383秒地图是前一山顶战斗事件的终点，不能沿用。缺本机关最终位置和对应攻略。",
+                "role": "context"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-v2/review-mid-resume/guides/guide-8-1253173215523540992.json",
+                "reason": "已审读原始描述：这个视角往后走会有解开箱子所需要的，需要用炸药苞压压感台；候选攻略为荆棘压板，非草坡音障仪；383秒地图是前一山顶战斗事件的终点，不能沿用。缺本机关最终位置和对应攻略。",
+                "role": "context"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [
+              "本机关最终位置和对应攻略。"
+            ],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1253173215523540992",
+                "status": "unresolved",
+                "analysis": "候选攻略为荆棘压板，非草坡音障仪；383秒地图是前一山顶战斗事件的终点，不能沿用。缺本机关最终位置和对应攻略。",
+                "guide": "out/detectability-v2/review-mid-resume/guides/guide-8-1253173215523540992.json"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00414.00.jpg",
+                  "reason": "柱状战斗机关，剪辑到完成并开箱",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "原视频跳剪省略战斗细节；时间戳仅定位可见触发/完成，不补造被剪掉过程。"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e012",
+      "ordinal": 12,
+      "start": 421,
+      "end": 467,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 431,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "变身河豚沿河游泳限时挑战，终点岸边领奖",
+      "route": "向西北悬崖下方河边，变身后沿水道向前",
+      "transcriptRefs": [
+        {
+          "start": 421.46,
+          "end": 422.9,
+          "text": "继续往悬崖边走"
+        },
+        {
+          "start": 424.14,
+          "end": 425.38,
+          "text": "好接着我们往下看"
+        },
+        {
+          "start": 425.38,
+          "end": 427.22,
+          "text": "下方有一个这个河豚挑战"
+        },
+        {
+          "start": 428.26,
+          "end": 428.9,
+          "text": "开启一下"
+        },
+        {
+          "start": 436.62,
+          "end": 438.48,
+          "text": "这里就一直游过去就行了"
+        },
+        {
+          "start": 462.02,
+          "end": 463.08,
+          "text": "挑战完成来"
+        },
+        {
+          "start": 463.42,
+          "end": 464.78,
+          "text": "上来开启到我们的宝箱"
+        },
+        {
+          "start": 465.56,
+          "end": 467.1,
+          "text": "刚刚宝箱之后我们再打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00429.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00432.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00459.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00464.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00465.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "紫色箱",
+          "triggerSeconds": 429,
+          "appearanceSeconds": 464,
+          "collectionSeconds": 465,
+          "identityStatus": "unresolved",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "已复看421–467秒，变身河豚沿河游泳限时挑战，终点岸边领奖；路线：向西北悬崖下方河边，变身后沿水道向前。候选也是河豚挑战，攻略首图位于大瀑布脚；视频本段沿河游泳至平缓岸边出紫箱，需核对攻略终点图和起终坐标，不能与p09逆瀑布项混同。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00465.00.jpg",
+                "reason": "变身河豚沿河游泳限时挑战，终点岸边领奖",
+                "role": "support",
+                "start": 421,
+                "end": 467
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-geometric-review",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/geometry.json",
+                "reason": "全图变换仅给视口搜索先验，不把中心认作玩家；候选也是河豚挑战，攻略首图位于大瀑布脚；视频本段沿河游泳至平缓岸边出紫箱，需核对攻略终点图和起终坐标，不能与p09逆瀑布项混同。",
+                "role": "context"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287922301495734272.json",
+                "reason": "已审读原始描述：完成声骸挑战·咕咕河豚获得，终点宝箱出现位置如图二图三所示；候选也是河豚挑战，攻略首图位于大瀑布脚；视频本段沿河游泳至平缓岸边出紫箱，需核对攻略终点图和起终坐标，不能与p09逆瀑布项混同。",
+                "role": "context"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [
+              "候选也是河豚挑战，攻略首图位于大瀑布脚；视频本段沿河游泳至平缓岸边出紫箱，需核对攻略终点图和起终坐标，不能与p09逆瀑布项混同。"
+            ],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1287922301495734272",
+                "status": "unresolved",
+                "analysis": "候选也是河豚挑战，攻略首图位于大瀑布脚；视频本段沿河游泳至平缓岸边出紫箱，需核对攻略终点图和起终坐标，不能与p09逆瀑布项混同。",
+                "guide": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287922301495734272.json"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00429.00.jpg",
+                  "reason": "变身河豚沿河游泳限时挑战，终点岸边领奖",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e013",
+      "ordinal": 13,
+      "start": 467,
+      "end": 524,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 518,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "山尖射击挑战，使用辅助机射击引爆爆炸物和木箱",
+      "route": "传送后向西南连续爬山到山尖",
+      "transcriptRefs": [
+        {
+          "start": 467.1,
+          "end": 468.7,
+          "text": "传送回这一个龙望礁"
+        },
+        {
+          "start": 468.7,
+          "end": 469.84,
+          "text": "左上方这个小银杏苗"
+        },
+        {
+          "start": 475.82,
+          "end": 477.34,
+          "text": "传过来之后我们转向小地图"
+        },
+        {
+          "start": 477.34,
+          "end": 478.38,
+          "text": "左下方西南方向"
+        },
+        {
+          "start": 478.38,
+          "end": 479.5,
+          "text": "来爬上面前这个山"
+        },
+        {
+          "start": 483.64,
+          "end": 485.02,
+          "text": "上来之后我们继续往前方走"
+        },
+        {
+          "start": 490.83,
+          "end": 492.57,
+          "text": "走到看到这有两只狼"
+        },
+        {
+          "start": 492.57,
+          "end": 494.05,
+          "text": "然后我们继续沿这个方向走"
+        },
+        {
+          "start": 494.05,
+          "end": 494.79,
+          "text": "面前还有一个山"
+        },
+        {
+          "start": 494.79,
+          "end": 496.13,
+          "text": "在山的上方"
+        },
+        {
+          "start": 497.09,
+          "end": 499.01,
+          "text": "山尖这里是有一个挑战的"
+        },
+        {
+          "start": 499.49,
+          "end": 500.83,
+          "text": "所以我们稍微留一点体力"
+        },
+        {
+          "start": 506.25,
+          "end": 508.09,
+          "text": "来我们左转来到这个山尖上"
+        },
+        {
+          "start": 509.71,
+          "end": 510.89,
+          "text": "开一下这个射击挑战"
+        },
+        {
+          "start": 512.13,
+          "end": 514.27,
+          "text": "我们可以切换到辅助机射击"
+        },
+        {
+          "start": 516.54,
+          "end": 517.88,
+          "text": "打一下这爆炸果就行了"
+        },
+        {
+          "start": 520.74,
+          "end": 521.18,
+          "text": "好来"
+        },
+        {
+          "start": 521.18,
+          "end": 522.66,
+          "text": "然后我们开启到这个宝箱"
+        },
+        {
+          "start": 523.46,
+          "end": 524.34,
+          "text": "开完宝箱之后"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00510.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00511.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00517.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00519.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00522.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00523.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "青色箱",
+          "triggerSeconds": 510,
+          "appearanceSeconds": 522,
+          "collectionSeconds": 523,
+          "identityStatus": "unresolved",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "已复看467–524秒，山尖射击挑战，使用辅助机射击引爆爆炸物和木箱；路线：传送后向西南连续爬山到山尖。候选全息致爆机制相似，但相同文字同时召回e5，视频本项为另一山尖远景。缺此山尖射击挑战独立点位和排除e5的空间证据。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00523.00.jpg",
+                "reason": "山尖射击挑战，使用辅助机射击引爆爆炸物和木箱",
+                "role": "support",
+                "start": 467,
+                "end": 524
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-geometric-review",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/geometry.json",
+                "reason": "全图变换仅给视口搜索先验，不把中心认作玩家；候选全息致爆机制相似，但相同文字同时召回e5，视频本项为另一山尖远景。缺此山尖射击挑战独立点位和排除e5的空间证据。",
+                "role": "context"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287873379048493056.json",
+                "reason": "已审读原始描述：完成全息战略·致爆获得（可以用角色清理箱子。不用爆炸果实。也算挑战成功。）[辅助机·射击]也可；候选全息致爆机制相似，但相同文字同时召回e5，视频本项为另一山尖远景。缺此山尖射击挑战独立点位和排除e5的空间证据。",
+                "role": "context"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [
+              "此山尖射击挑战独立点位和排除e5的空间证据。"
+            ],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1287873379048493056",
+                "status": "unresolved",
+                "analysis": "候选全息致爆机制相似，但相同文字同时召回e5，视频本项为另一山尖远景。缺此山尖射击挑战独立点位和排除e5的空间证据。",
+                "guide": "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287873379048493056.json"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00510.00.jpg",
+                  "reason": "山尖射击挑战，使用辅助机射击引爆爆炸物和木箱",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e014",
+      "ordinal": 14,
+      "start": 524,
+      "end": 563,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 552,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "拼图：最左拼块旋转放右侧，中间放上方，最后放左下",
+      "route": "继续向西南，经树后滑翔及钩索到平台",
+      "transcriptRefs": [
+        {
+          "start": 524.34,
+          "end": 525.34,
+          "text": "我们转向小地图"
+        },
+        {
+          "start": 525.34,
+          "end": 526.56,
+          "text": "左下方西南方向"
+        },
+        {
+          "start": 526.56,
+          "end": 527.78,
+          "text": "我们继续走"
+        },
+        {
+          "start": 531.33,
+          "end": 532.23,
+          "text": "经过这棵树"
+        },
+        {
+          "start": 532.23,
+          "end": 532.91,
+          "text": "继续往前"
+        },
+        {
+          "start": 534.19,
+          "end": 535.61,
+          "text": "这里远处就能看到一个"
+        },
+        {
+          "start": 535.61,
+          "end": 536.81,
+          "text": "俄罗斯方块的解密"
+        },
+        {
+          "start": 537.95,
+          "end": 538.51,
+          "text": "拼图"
+        },
+        {
+          "start": 539.59,
+          "end": 540.97,
+          "text": "可以接个钩索飞过来"
+        },
+        {
+          "start": 545.1,
+          "end": 546.5,
+          "text": "我们先拿起最左边"
+        },
+        {
+          "start": 546.5,
+          "end": 547.64,
+          "text": "这个平四边形"
+        },
+        {
+          "start": 547.64,
+          "end": 548.68,
+          "text": "给它放在最右边"
+        },
+        {
+          "start": 549.22,
+          "end": 550.18,
+          "text": "要旋转一下"
+        },
+        {
+          "start": 550.82,
+          "end": 552.02,
+          "text": "然后拿起中间的"
+        },
+        {
+          "start": 552.5,
+          "end": 553.78,
+          "text": "把它放在正上方"
+        },
+        {
+          "start": 554.52,
+          "end": 555.62,
+          "text": "再拿起最后一个"
+        },
+        {
+          "start": 555.62,
+          "end": 557.04,
+          "text": "放在左下方"
+        },
+        {
+          "start": 560.86,
+          "end": 561.72,
+          "text": "开启宝箱"
+        },
+        {
+          "start": 562.18,
+          "end": 563.86,
+          "text": "开完宝箱之后我们再打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00546.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00550.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00553.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00556.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00558.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00561.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00562.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "青色箱",
+          "triggerSeconds": 556,
+          "appearanceSeconds": 561,
+          "collectionSeconds": 562,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "8",
+          "pointId": "1280911464501399552",
+          "matchingReview": {
+            "analysis": "已肉眼核对566秒黄色玩家箭头（不是画面中心），地图配准90内点；raw坐标[-106437.3, 119185.7]。对应点距离4.16；该图紧接本事件领奖后打开；结合本事件路线和攻略场景，不以近邻单独确认。板面蓝色图案、岩壁缺口和平台上三块拼块一致，非另一处河边拼图。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00562.00.jpg",
+                "reason": "拼图：最左拼块旋转放右侧，中间放上方，最后放左下",
+                "role": "support",
+                "start": 524,
+                "end": 563
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-sift-player-arrow",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/map-anchors.json",
+                "reason": "已肉眼核对566秒黄色玩家箭头（不是画面中心），地图配准90内点；raw坐标[-106437.3, 119185.7]。对应点距离4.16；该图紧接本事件领奖后打开；结合本事件路线和攻略场景，不以近邻单独确认。",
+                "role": "support"
+              },
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00566.00.jpg",
+                "reason": "目检黄色箭头位置，使用该帧自身变换避免地图拖动偏移",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1280911464501399552.json",
+                "reason": "（标点由玩家安静的时间提供。）可以把蓝色区域填满（白色不用），宝箱会出现",
+                "role": "support"
+              },
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1280911464501399552-1.png",
+                "reason": "板面蓝色图案、岩壁缺口和平台上三块拼块一致，非另一处河边拼图。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1280911464501399552",
+                "status": "confirmed",
+                "analysis": "板面蓝色图案、岩壁缺口和平台上三块拼块一致，非另一处河边拼图。"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00546.00.jpg",
+                  "reason": "拼图：最左拼块旋转放右侧，中间放上方，最后放左下",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e015",
+      "ordinal": 15,
+      "start": 563,
+      "end": 605.25,
+      "progressBarMark": {
+        "symbol": "black chest-pin",
+        "approxSeconds": 602,
+        "authorNumber": null,
+        "note": "作者条带无可读数字；时间为视觉近似。"
+      },
+      "observedMechanism": "柱状战斗机关，剪辑至挑战达成开箱",
+      "route": "传送至庄内，向西南绕建筑到平台，向下坡走",
+      "transcriptRefs": [
+        {
+          "start": 563.86,
+          "end": 565.52,
+          "text": "传送到这个结华庄"
+        },
+        {
+          "start": 566.1,
+          "end": 567.08,
+          "text": "给个小银杏苗"
+        },
+        {
+          "start": 570.73,
+          "end": 572.51,
+          "text": "传送过来之后我们转向小地图"
+        },
+        {
+          "start": 572.51,
+          "end": 573.53,
+          "text": "左下方西南方向"
+        },
+        {
+          "start": 573.53,
+          "end": 574.27,
+          "text": "来从前方走"
+        },
+        {
+          "start": 575.49,
+          "end": 576.39,
+          "text": "绕过这"
+        },
+        {
+          "start": 578.13,
+          "end": 578.97,
+          "text": "继续往前走"
+        },
+        {
+          "start": 583.78,
+          "end": 585.48,
+          "text": "看一个阴障仪的挑战没有拿"
+        },
+        {
+          "start": 587.98,
+          "end": 589.12,
+          "text": "我们走这里往下看"
+        },
+        {
+          "start": 589.12,
+          "end": 591.0,
+          "text": "下方就能看到这个阴障仪的挑战了"
+        },
+        {
+          "start": 600.95,
+          "end": 601.83,
+          "text": "把我们清压怪"
+        },
+        {
+          "start": 602.71,
+          "end": 604.15,
+          "text": "青王怪来开几宝箱"
+        },
+        {
+          "start": 604.15,
+          "end": 605.25,
+          "text": "开完宝箱之后"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00598.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00601.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00602.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00603.00.jpg",
+        "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00604.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "紫色箱",
+          "triggerSeconds": 601,
+          "appearanceSeconds": 603,
+          "collectionSeconds": 604,
+          "identityStatus": "unresolved",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "已复看563–605.25秒，柱状战斗机关，剪辑至挑战达成开箱；路线：传送至庄内，向西南绕建筑到平台，向下坡走。候选荆棘压板机制不符本段音障仪；566秒玩家箭头停在前一拼图位置，不能代表传送后的此箱。缺远端山坡音障仪的定位。",
+            "videoEvidence": [
+              {
+                "source": "BV1iMTXzVE8J:p7",
+                "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00604.00.jpg",
+                "reason": "柱状战斗机关，剪辑至挑战达成开箱",
+                "role": "support",
+                "start": 563,
+                "end": 605.25
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "v2-geometric-review",
+                "locator": "out/detectability-v2/review-root/BV1iMTXzVE8J-p7/geometry.json",
+                "reason": "全图变换仅给视口搜索先验，不把中心认作玩家；候选荆棘压板机制不符本段音障仪；566秒玩家箭头停在前一拼图位置，不能代表传送后的此箱。缺远端山坡音障仪的定位。",
+                "role": "context"
+              }
+            ],
+            "guideEvidence": [],
+            "exclusionEvidence": [
+              {
+                "source": "kuro-source-cache",
+                "locator": "out/detectability-v2/review-mid-resume/guides/guide-8-1253173215523540992.json",
+                "reason": "已审读原始描述：这个视角往后走会有解开箱子所需要的，需要用炸药苞压压感台；候选荆棘压板机制不符本段音障仪；566秒玩家箭头停在前一拼图位置，不能代表传送后的此箱。缺远端山坡音障仪的定位。",
+                "role": "exclusion"
+              }
+            ],
+            "missingEvidence": [
+              "远端山坡音障仪的定位。"
+            ],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1253173215523540992",
+                "status": "rejected-for-this-member",
+                "analysis": "候选荆棘压板机制不符本段音障仪；566秒玩家箭头停在前一拼图位置，不能代表传送后的此箱。缺远端山坡音障仪的定位。",
+                "guide": "out/detectability-v2/review-mid-resume/guides/guide-8-1253173215523540992.json"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "P1开场1.5–6.88秒作者将大世界解密界定为探测仪无法探测范围，本段实际机制及奖励触发帧属于该范围。按作者范围说明加可见过程判定，未独立游戏内试扫；不以标题或仅解锁作证。",
+              "evidence": [
+                {
+                  "source": "BV1iMTXzVE8J:p1",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p01/transcript.raw.json",
+                  "reason": "1.5–6.88秒大世界解密探测范围说明",
+                  "role": "support"
+                },
+                {
+                  "source": "BV1iMTXzVE8J:p7",
+                  "locator": "out/detectability-v2/BV1iMTXzVE8J/p07/visual/frame-00598.00.jpg",
+                  "reason": "柱状战斗机关，剪辑至挑战达成开箱",
+                  "role": "support"
+                }
+              ],
+              "confidenceBasis": "author-statement-plus-visual; not-independent-scanner-test"
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "原视频跳剪省略战斗细节；时间戳仅定位可见触发/完成，不补造被剪掉过程。"
+      ]
+    }
+  ],
+  "nonEventIntervals": [
+    [
+      0,
+      14,
+      "前言与传送说明；开头地图总览未用于事件识别，仅阅读下方进度条。"
+    ],
+    [
+      605.25,
+      606.866,
+      "结束语与开箱后停留"
+    ]
+  ],
+  "reviewedEvidence": [
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00014.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00026.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00058.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00082.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00107.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00150.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00196.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00208.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00238.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00263.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00283.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00312.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00324.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00376.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00413.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00427.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00459.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00510.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00522.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00545.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00557.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-1s-00598.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-5s-00060.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-5s-00120.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-5s-00180.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-5s-00240.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-5s-00300.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-5s-00360.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-5s-00420.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-5s-00480.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-5s-00540.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/scenes-5s-00600.00.jpg",
+    "out/detectability-v2/BV1iMTXzVE8J/p07/visual/progress-5s-00000.00.jpg"
+  ],
+  "transcriptCorrections": [
+    {
+      "start": 1.14,
+      "end": 2.96,
+      "raw": "荆州城",
+      "corrected": "今州城",
+      "basis": "115秒游戏地图区域标题显示今州城。"
+    },
+    {
+      "start": 151.92,
+      "end": 158.26,
+      "raw": "青亚怪 / 青王怪",
+      "corrected": "清一下怪 / 清完怪",
+      "basis": "156秒启动挑战，157秒剪辑至挑战达成，159秒开箱；同类ASR同音误识。"
+    },
+    {
+      "start": 233.87,
+      "end": 247.37,
+      "raw": "射击挑战",
+      "corrected": "射击挑战（使用爆炸果投掷）",
+      "basis": "239秒靶心机关；241-245秒角色拾取并投出爆炸果。"
+    }
+  ],
+  "coverageNotes": [
+    "全606.866秒按连续事件/前言/结束语覆盖；路线、传送及等待纳入对应事件。",
+    "逐项全文ASR文本结合画面核查；没有直接听音，不声称回听。未解决地名/机关名同音词保留原稿；机制采用画面描述。",
+    "5秒接触表只用于发现；每个触发、奖励出现/解锁、领取段均追加1秒帧核查。原视频跳剪不虚构过程。",
+    "作者条带共有14个匿名箱形刻度，救援前置独立成事件但不新增目标奖励；以实际视频事件而非刻度数强制凑数。",
+    "没有点位ID、小地图匹配或总览交叉确认；所有奖励身份pending、探测结论unknown。"
+  ],
+  "matchingReviewStatus": "first-pass-complete"
+}

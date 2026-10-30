@@ -1,0 +1,110 @@
+{
+  "stage": "all-first-pass-complete-before-overview",
+  "createdAt": "2026-10-29T09:44:35.548610+00:00",
+  "files": [
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV13ZvrBtEde-p01.json",
+      "sha256": "4ae8e6ad4b2250c7458f7e3cc6e338976466e359a73e6b8694a968eb92ddfcb3"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV13ZvrBtEde-p02.json",
+      "sha256": "6590c0d2ae87131e91fbba582c5b897da5c74c164019e15e92e63a469f43aa70"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV19kNu6AEVR-p01.json",
+      "sha256": "52299063b98cc7a8270c7fc6b7b3cebe76990be84578efa6dc2139a0ac21f5f7"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1Aeh2zvEko-p01.json",
+      "sha256": "c463925d1e5e3bee0008b291949592796ff8ea45efe53ae1fdf690b9edd29a86"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1Aeh2zvEko-p02.json",
+      "sha256": "81ee3834e65c4c9d14911bcb24d1af5dfccdbfac643c965536b8ab6bdad08fd8"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1Aeh2zvEko-p03.json",
+      "sha256": "8c83fe0f9714d7d0c857d95957311d4d9e27426f26190813c5f283255b4709fc"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1dVuGzeEKk-p01.json",
+      "sha256": "88e51ad83d24665f3ce0bd0270d2f616a0ca816d51cb7e6d90e7c711c61c3134"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1evKmzxE34-p01.json",
+      "sha256": "9c9c053154b18c85e041aeefaea803d53770870c583e9310a58065fd790d1450"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1F3A3zxEDQ-p01.json",
+      "sha256": "698dfeb947e08e151f2827015e08e91673ab49c5c4a09009a907d8c1942cd091"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1hHuGzFEZG-p01.json",
+      "sha256": "683ef801d517a1570656be96cb21eff9faf976c120d81c3435516e2868194a63"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1iMTXzVE8J-p01.json",
+      "sha256": "209342cb1e789ab5838c8e7066bac8c0189694f3b16f56f7d2d9e5e3cd1993eb"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1iMTXzVE8J-p02.json",
+      "sha256": "5e039b5520f1d504ff4c03254d908cb6d231a618922149955f195dba18cbad4d"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1iMTXzVE8J-p03.json",
+      "sha256": "3343f170a0c2027fd347471e90a31954d1ac9af0b6588874de2d5c6d1f4d3f4e"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1iMTXzVE8J-p04.json",
+      "sha256": "7b0a0d8c9a2d909ee49103b40b95e45bc3edb40a68ccfc5ecc69426a13e260a0"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1iMTXzVE8J-p05.json",
+      "sha256": "d628c766c752f2ac41cbec1c6197b47c272ec9f4ad6f2d895ff5a1ae2953e9b9"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1iMTXzVE8J-p06.json",
+      "sha256": "700cab49c575cb2edb78149dda0ab2e658db2f0ab93ed1932d1b12942e90135b"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1iMTXzVE8J-p07.json",
+      "sha256": "6e1be6724144b9303d29e9ce935b1a5253eb853b99e1f965f69904c95557cba0"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1iMTXzVE8J-p08.json",
+      "sha256": "d1d517923079651198f792664bde659e70134ab740c4f0b6cc8d249c2728f405"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1iMTXzVE8J-p09.json",
+      "sha256": "f6a231ff15045479263eefd7d1355cdbe4c40eb5e425f4547be409136e59d660"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1iMTXzVE8J-p10.json",
+      "sha256": "8c828037293fad8b63739b60aed0f4113e7befc538c4f330e164bcf409c06448"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1iMTXzVE8J-p11.json",
+      "sha256": "09a4822b8df386cbabc38322b4530f9d3175e7cc18a0be7f604a184e438cc66d"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1iMTXzVE8J-p12.json",
+      "sha256": "599ee668929eafa2bb2d7a76f6e5376ed042a09f566bdf13221edb35a3063f17"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1JB3Fz2EqG-p01.json",
+      "sha256": "acbec8256103d14efde741be47c6b689f8705d3a47a55e1cd60412eedcce047f"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1k438ziEoG-p01.json",
+      "sha256": "5ed6725256a3d1480e0263f7c1abbf876232a98ca68307f6cfab8d131b53fb03"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1p9K1zvE5E-p01.json",
+      "sha256": "1cc05c5fb8a878d3378572fa5a3b840e8d460117784cf18c332b7355da9f6a69"
+    },
+    {
+      "path": "tools/MarkerDetectabilityV2/first-pass/BV1pa9RBtEPA-p01.json",
+      "sha256": "8796698da5128412bb2adaf8a04c1ecdafa844d9e3ab6d5ab07f0538d7f72b27"
+    }
+  ]
+}

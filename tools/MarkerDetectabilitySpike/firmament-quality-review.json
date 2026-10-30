@@ -1,0 +1,158 @@
+{
+  "reviewer": "new_regions visual quality review, 2026-10-29",
+  "bvid": "BV1p9K1zvE5E",
+  "part": 1,
+  "scope": "Read-only audit of root-review-notes: two ski reward groups, pin7, and obvious ending mismatch. Existing 15-second contacts reviewed; denser local extraction added. No downloads or existing files modified.",
+  "recommendations": [
+    {
+      "pinIndex": 2,
+      "action": "retain_confirmed",
+      "timeRangeSeconds": [
+        365,
+        435
+      ],
+      "rewardSeconds": [
+        425,
+        430
+      ],
+      "pointIdsByType": {
+        "qzx_04": "1261263627113525248",
+        "qzx_03": "1261263531255709696",
+        "qzx_02": "1261263399562522624"
+      },
+      "mechanism": "北部滑雪金牌三档奖励",
+      "reason": "365秒起点左侧大型蓝冰晶对应攻略图1；425秒金牌及三箱后方低矮石拱、左侧圆台对应图3。两端场景均吻合，不与南部组交换。组内按箱品质绑定ID，不假定开箱次序。",
+      "evidence": [
+        "out/detectability-collection/BV1p9K1zvE5E/p01/frame-0365.00.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/frame-0425.00.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/frame-0430.00.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/guides/guide-8-1261263627113525248-1.png",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/guides/guide-8-1261263627113525248-3.png",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/guides/guide-8-1261263627113525248.json"
+      ]
+    },
+    {
+      "pinIndex": 16,
+      "action": "promote_confirmed",
+      "previousStatus": "unknown",
+      "timeRangeSeconds": [
+        536,
+        560
+      ],
+      "rewardSeconds": [
+        556,
+        558,
+        560
+      ],
+      "pointIdsByType": {
+        "qzx_04": "1255666985136345088",
+        "qzx_03": "1255667700036911104",
+        "qzx_02": "1255668147912626176"
+      },
+      "mechanism": "南部滑雪金牌三档奖励",
+      "reason": "536秒接近滑雪装置，538至554秒持续滑行穿环下坡，556秒金牌及三箱，558/560秒开箱。终点海岸、金色屏障和屏障外三箱的布局精确对应南部攻略图3；不是仅总览出现。北部终点在石拱前，南部终点在海岸屏障前，属于两组独立奖励。",
+      "evidence": [
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/south-528-570.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0536.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0556.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0558.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0560.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/guides/guide-8-1255666985136345088-1.png",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/guides/guide-8-1255666985136345088-3.png",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/guides/guide-8-1255666985136345088.json"
+      ],
+      "caution": "屏障内另有现成基准箱，仅是沿途观察，不纳入本次三档奖励或遗漏标签。"
+    },
+    {
+      "pinIndex": 7,
+      "action": "retain_unknown",
+      "candidatePointId": "1255666411713368064",
+      "candidateDistance": 130.53282531658272,
+      "timeRangeSeconds": [
+        72,
+        78
+      ],
+      "mechanism": "剑形战斗挑战，完成后精密箱",
+      "reason": "密集帧72至74秒显示剑形装置，75/76秒挑战成功和精密箱，77秒开箱。机制已确认；候选攻略描述为空且只显示雪坡、红岩、树林和远处灯火，无法与视频唯一定位。候选距总览130.5，仍不能据此证明起点/终点关系。不可因为都是剑形挑战而升级。",
+      "evidence": [
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/challenge-55-78.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0074.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0075.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0077.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/guides/guide-8-1255666411713368064-1.png",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/guides/guide-8-1255666411713368064.json"
+      ]
+    },
+    {
+      "pinIndex": 15,
+      "action": "downgrade_unknown",
+      "previousStatus": "confirmed",
+      "candidatePointId": "1260175017361457152",
+      "invalidPreviousFrameSeconds": 645,
+      "reason": "原645秒证据不是该精密箱。639秒清楚出现辉光金箱，642秒开箱获得星声50；攻略图为石环前红岩旁的紫色精密箱。品质和近景均不符。未能在本轮短段审核中唯一绑定候选的正确时间，撤回确认。",
+      "evidence": [
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/ending-630-645.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0639.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0642.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/guides/guide-8-1260175017361457152-1.png",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/guides/guide-8-1260175017361457152.json"
+      ]
+    }
+  ],
+  "coverageObservations": [
+    {
+      "timeRangeSeconds": [
+        568,
+        645
+      ],
+      "status": "unbound_observation_do_not_add_count",
+      "mechanism": "三处机关、石环脚踏装置之后的辉光金箱",
+      "reason": "片尾金箱应优先作为已记录pin13（1253810339575873536）机关段的末端奖励继续核对，而非pin15紫箱。当前保留观察；不在既有21目标之外重复新增，不单凭石环场景判定另一ID。",
+      "evidence": [
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/ending-630-645.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/frame-0600.00.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/frame-0615.00.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0630.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0639.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0642.jpg"
+      ]
+    },
+    {
+      "timeRangeSeconds": [
+        536,
+        560
+      ],
+      "status": "incidental_existing_chest",
+      "reason": "南部滑雪终点金屏障内有基准箱；本轮只确认屏障外三档滑雪奖励，不将屏障内箱推定为不可探测。",
+      "evidence": [
+        "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/frame-0556.jpg",
+        "out/detectability-collection/BV1p9K1zvE5E/p01/guides/guide-8-1255666985136345088-3.png"
+      ]
+    }
+  ],
+  "countImplication": {
+    "overviewPinGroups": 17,
+    "existingTargetSlots": 21,
+    "netConfirmedDelta": 2,
+    "recommendedConfirmedIfOtherRowsUnchanged": 19,
+    "recommendedUnknownIfOtherRowsUnchanged": 2,
+    "unknownPins": [
+      7,
+      15
+    ],
+    "note": "南部3目标升级、pin15单目标撤回。此处计数沿用既有21目标模型，不声称新做了所有路线和独立奖励的穷尽计数。"
+  },
+  "limitations": "抽帧视觉审核，不声称逐帧播放全部原视频；pin7和pin15缺唯一身份支持。没有做探测仪实机实验，沿用用户已定义的触发后才出现/可探测语义。",
+  "reviewedContactSheets": [
+    "out/detectability-collection/BV1p9K1zvE5E/p01/contact-15s-0000.jpg",
+    "out/detectability-collection/BV1p9K1zvE5E/p01/contact-15s-0300.jpg",
+    "out/detectability-collection/BV1p9K1zvE5E/p01/contact-15s-0600.jpg",
+    "out/detectability-collection/BV1p9K1zvE5E/p01/contact-5s-0000.jpg",
+    "out/detectability-collection/BV1p9K1zvE5E/p01/contact-5s-0360.jpg",
+    "out/detectability-collection/BV1p9K1zvE5E/p01/contact-5s-0460.jpg",
+    "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/challenge-55-78.jpg",
+    "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/south-528-570.jpg",
+    "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/arch-153-177.jpg",
+    "out/detectability-collection/BV1p9K1zvE5E/p01/quality-review/ending-630-645.jpg"
+  ]
+}

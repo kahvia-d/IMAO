@@ -1,0 +1,888 @@
+{
+  "scope": "黄龙P3–P6连续跟跑，逐项状态为准",
+  "entries": [
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e001",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1251346038554099712",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "追加核对候选局部瓦片和攻略第二张图：57秒的北侧弯路、南侧深色崖缘及西侧秘境标记与目标山坡一致；从7秒地图锚点东行至秘境旁、先击西侧石再东侧石的路线连续。攻略第二图保留上坡假石、枯树干与左侧针叶树，和40秒原片前态及下坡青箱相符。此前只查看终箱局部图不足，本轮以补图与锚定路线确认；低分全图模板错峰仍排除。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e001/route-map.png",
+        "out/detectability-v2/route-early/p03-e001/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e001/proposals.json",
+        "out/detectability-v2/route-early/p3p4-unresolved-expected.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1251346038554099712-2.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1251346038554099712.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1251346038554099712-1.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e002",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1275206043661885440",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "从斜灯塔北行越过细长岩脊到下层尖端；90–105秒小地图中成束东西向尖石轮廓、南侧信标和实际瓦片一致。接着东行到E3，和口播方向吻合。射击器、头顶斜檐、边沿青箱与攻略图一致，排除东侧另一射击点。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e002/route-map.png",
+        "out/detectability-v2/route-early/p03-e002/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e002/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1275206043661885440.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1275206043661885440-1.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e003",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1275206899442794496",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E2之后连续向东沿尖石到尽头下跳，120–128秒营地大矩形建筑西南角与道路分支共同定位；随后向南下跳E4。攻略同一岩壁高低台、射击器、青箱与三靶机制相符，不能与105秒西侧射击点混用。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e003/route-map.png",
+        "out/detectability-v2/route-early/p03-e003/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e003/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1275206899442794496.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1275206899442794496-1.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e004",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1276922898202378240",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "由E3向南跳下尖石，135–147秒抵达路边音障仪；小地图长尖岩、东侧营地边缘与道路过河处一致。随后向北沿岩体右侧绕行至E5。攻略背景方形营地楼、两棵针叶树、柱底与影片吻合。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e004/route-map.png",
+        "out/detectability-v2/route-early/p03-e004/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e004/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1276922898202378240.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1276922898202378240-1.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e005",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1273395457423740928",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E4之后北行绕尖石东侧上台，170–175秒启动钩索，180–196秒沿钩索到邻侧崖顶。196秒目标在道路弯曲的西南岩面，独立于起点标记；新增查看攻略第二图的左侧大岩壁、尖端弧形草台和远方成束石尖，与原片终箱吻合。该ID代表整场跑酷，不把起点坐标当终箱坐标。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e005/route-map.png",
+        "out/detectability-v2/route-early/p03-e005/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e005/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1273395457423740928.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1273395457423740928-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1273395457423740928-2.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e006",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1275207506543132672",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E5后向东北下降，北侧小型废墟与东南矩形营地同时进入小地图；206–222秒在岔路北支南边尖石射击，随后向西北到已确认E7拼图平台。单帧相关较低，采用两端路线、岔路/双建筑组合与攻略尖石前圆盘、对岸塔式营地联合核对；未宣称SIFT通过。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e006/route-map.png",
+        "out/detectability-v2/route-early/p03-e006/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e006/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1275207506543132672.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1275207506543132672-1.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e008",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1276922034972672000",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "明确新传送从远望营地东北信标重新出发，261–275秒向东南落下，282–296秒跨河谷边坡到音障仪。领取位置的长条河岸、桥、南岸道路与瓦片同形（296秒相关0.75），攻略灯杆旁石块、枯树、柱状机关及紫箱均吻合；不沿用254秒传送前位置。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e008/route-map.png",
+        "out/detectability-v2/route-early/p03-e008/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e008/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1276922034972672000.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1276922034972672000-1.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e013",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1273393774387957760",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "开图先选择别处再调整，509秒加载画面明确排除；514秒在止戈关峡西北信标落地，520–532秒向北沿弯路走到机关。连续道路西侧尖岩与东侧断桥轮廓吻合，攻略柱后大石壁和斜尖石也一致。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e013/route-map.png",
+        "out/detectability-v2/route-early/p03-e013/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e013/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1273393774387957760.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1273393774387957760-1.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e014",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1273394782959689728",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E13后向东南过桥墩，在弯桥西侧的独立废墟平台推箱。535–563秒弯桥西缘与旁边小建筑固定对应，推箱格子布局、外围残墙缺口及青箱角落与攻略一致。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e014/route-map.png",
+        "out/detectability-v2/route-early/p03-e014/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e014/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1273394782959689728.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1273394782959689728-1.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e015",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1273028065116938240",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "从E14向东飞落到另一独立方台，571秒能看到目的地拼图全貌；577–602秒瓦片上弯桥东侧两座小建筑与北侧道路吻合。攻略三箭头、南北长条加东西支岔的拼图及残墙箱角一致，不能与上一推箱平台合并。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e015/route-map.png",
+        "out/detectability-v2/route-early/p03-e015/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e015/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1273028065116938240.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1273028065116938240-1.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e016",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1270794393618784256",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E15后向东翻墙到草坡，605–625秒走向北侧独立小方台与南侧弯桥之间的草地；跟随蝴蝶逐柱击打回到靠石壁箱。小地图长道路、东侧首领圆坑和小方台相对关系一致，攻略柱阵、石壁底青箱及坡边构图吻合。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e016/route-map.png",
+        "out/detectability-v2/route-early/p03-e016/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e016/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1270794393618784256.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1270794393618784256-1.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e017",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1278115230679719936",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E16后向南登弯桥西头，再向东到桥面射击器；628–636秒桥体曲线和首领坑位置给出连续约束。645–655秒巨大的首领图标遮住地形，模板分数不足，未把它作为精确坐标；按无跳剪桥面路线和攻略桥端地面、圆盘、青箱及远处尖山联合确认。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e017/route-map.png",
+        "out/detectability-v2/route-early/p03-e017/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e017/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1278115230679719936.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1278115230679719936-1.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p3:e018",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1273032064897507328",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E17后向北下桥落到路边，670–683秒经过北向道路与桥侧建筑群到挑战柱；领取处小地图建筑拐角、斜长石壁和岔路同时吻合（0.61），攻略柱后大桥残部、左侧成束针叶林与草路吻合。",
+      "evidence": [
+        "out/detectability-v2/route-early/p03-e018/route-map.png",
+        "out/detectability-v2/route-early/p03-e018/source-terrain.jpg",
+        "out/detectability-v2/route-early/p03-e018/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1273032064897507328.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p03/guides/guide-8-1273032064897507328-1.png",
+        "out/detectability-v2/route-early/p03-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e001",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1275214558501945344",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "追加查看攻略第二图，清楚展示晶体拾取处、东北方橙色裂石、左侧悬挑巨岩和右侧紫花；与28秒拾取、31–35秒北爬投石的地形和操作吻合。攻略小地图的北侧信标、环形道路及西侧红边界也与视频一致，独立于错误模板主峰。该点坐标表示拾取晶体的位置，39秒奖励在北侧较高台，不能把两者按同一坐标比较。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e001/route-map.png",
+        "out/detectability-v2/route-early/p04-e001/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e001/proposals.json",
+        "out/detectability-v2/route-early/p3p4-unresolved-expected.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1275214558501945344-2.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1275214558501945344.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1275214558501945344-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e004",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1278112971451424768",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "143秒传送首领处后东南出坑，174秒进入弯桥飞檐起点，沿桥东北跑跳至206秒领奖。连续桥体弧线与瓦片匹配，相关0.49–0.62；攻略显示同一起点和最后击人偶机制。标记代表整场挑战，不能把起点raw直接当终箱坐标。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e004/route-map.png",
+        "out/detectability-v2/route-early/p04-e004/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e004/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1278112971451424768.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1278112971451424768-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e005",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1275216117105025024",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "209秒重新传送回首领处，216–237秒向南出坑穿过尖石和熊，244秒破石后252秒领奖。多帧尖岩簇/岔路一致，相关0.40–0.51；攻略背后崖壁、草坡与破石藏箱机制吻合。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e005/route-map.png",
+        "out/detectability-v2/route-early/p04-e005/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e005/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1275216117105025024.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1275216117105025024-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e007",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1278105121682141184",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "292秒中枢信标重新出发，东北屋顶进入飞檐，326秒到塔顶，再下落东侧射击平台，最后跳邻台领奖。营地建筑轮廓与长阳台定位一致，395秒地形相关0.64；攻略明确西侧飞檐为射击前置，图中射击器与视频一致。377秒靶标UI遮挡帧排除。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e007/route-map.png",
+        "out/detectability-v2/route-early/p04-e007/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e007/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1278105121682141184.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1278105121682141184-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e008",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1278106371121487872",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "从E7营地连续向东北出门沿路，404–421秒弯路/岔口与瓦片吻合，再在右侧崖根破石领取。攻略裂岩位置、路边岩壁与箱型一致。领取时信标图标遮挡造成错误海港峰，未采用该峰；通过此前道路锚点与无传送短路线确认。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e008/route-map.png",
+        "out/detectability-v2/route-early/p04-e008/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e008/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1278106371121487872.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1278106371121487872-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e009",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1267885301815492608",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E8后向东南爬至屋顶北侧营地，446–461秒通过两传送门推箱。小地图营地屋顶、弯路与西侧信标关系连续一致；攻略平台格局、墙角与箱子位置吻合，区别相邻射击点。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e009/route-map.png",
+        "out/detectability-v2/route-early/p04-e009/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e009/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1267885301815492608.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1267885301815492608-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e010",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1278114443575435264",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E9后向南连续下降两层，到临崖射击平台；476–489秒固定位置地形相关0.49–0.55，北侧营地与西北直角建筑、南侧岸缘同时吻合。攻略崖沿圆盘、橙花灌木和青箱吻合。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e010/route-map.png",
+        "out/detectability-v2/route-early/p04-e010/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e010/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1278114443575435264.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1278114443575435264-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e011",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1276680409515048960",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "492–513秒从营地东下至水池，河豚起点raw约(-4565,-581)与标记(-4600,-1100)相符；沿水道石柱到535秒东岸领奖，岸线相关0.58，终点raw约(8052,-8633)。攻略水边河豚装置与视频起点一致；520/527秒低质量模板不作为轨迹锚点，起点与终点分开记录。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e011/route-map.png",
+        "out/detectability-v2/route-early/p04-e011/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e011/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1276680409515048960.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1276680409515048960-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e012",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1276681052719955968",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "承接E11领奖后向南沿西岸行走：539–566秒岸线多帧相关0.56–0.73，位置由(8052,-8384)沿湾岸到(-830,7803)，随后抵达南端音障仪。末段地形变少但走势连续，攻略柱旁岸坡、花草、紫箱一致。583/585秒旧地图漂移不再作为证据。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e012/route-map.png",
+        "out/detectability-v2/route-early/p04-e012/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e012/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1276681052719955968.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1276681052719955968-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e015",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1287458705422741504",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "691秒离开矩形营地，连续东南翻墙到尖石平台，702–714秒地形相关0.57–0.64，raw约(4482,-6143)；攻略两片斜石夹草尖、射击器和青箱相符，独立于水面下一点。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e015/route-map.png",
+        "out/detectability-v2/route-early/p04-e015/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e015/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1287458705422741504.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1287458705422741504-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e016",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1273393217427619840",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E15后向东下降，718–726秒海岸到浅滩路径连续，地形相关0.56–0.59；之后到浅水圆盘，攻略对岸帐篷桅杆、岛边和青箱同时相符。末段相关较低未单独用作精确配准，依赖前段地形与浅滩连续路线。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e016/route-map.png",
+        "out/detectability-v2/route-early/p04-e016/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e016/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1273393217427619840.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1273393217427619840-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e019",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1280658618548232192",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "901秒为传送加载，不沿用900秒旧位置；915秒在新场景向东下降，弯路、长条建筑和东侧小方台连续匹配，944秒raw约(29053,-32290)相关0.70。箭头六边形面板布局与梯子上钢架青箱逐层对应攻略。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e019/route-map.png",
+        "out/detectability-v2/route-early/p04-e019/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e019/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1280658618548232192.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1280658618548232192-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e020",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1278117257468751872",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "从E19向东跨草坡，948–956秒双尖岩轮廓连续匹配，再走右侧尖端射击。后半段图标遮挡导致低峰误配，明确不采用；攻略背后河湾、成束斜岩及射击器旁箱与973/974秒相符，前后E19和E21路线共同约束。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e020/route-map.png",
+        "out/detectability-v2/route-early/p04-e020/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e020/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1278117257468751872.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1278117257468751872-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e021",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1273036809942982656",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E20后向西南滑翔下崖，987–1002秒岸线移动与瓦片连续对应，沿水边到音障仪；攻略柱后尖岩、浅水岸线、青箱与1007秒画面相同。末段弱纹理不作为独立精确定位。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e021/route-map.png",
+        "out/detectability-v2/route-early/p04-e021/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e021/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1273036809942982656.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1273036809942982656-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p4:e022",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1273039381390069760",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "从E21向南涉水到对岸起点，1018秒raw约(31709,-8218)符合挑战标记；随后连续攀尖石、钩索越过山尖，1054秒落到岛东北岸。额外核对攻略图2巨石旁草岸终箱和图3岛东北端终点地图，与视频终点岛形一致。中途模板多为低分错峰未采纳；起点标记与终点不混用。",
+      "evidence": [
+        "out/detectability-v2/route-early/p04-e022/route-map.png",
+        "out/detectability-v2/route-early/p04-e022/source-terrain.jpg",
+        "out/detectability-v2/route-early/p04-e022/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1273039381390069760-2.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1273039381390069760-3.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1273039381390069760.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p04/guides/guide-8-1273039381390069760-1.png",
+        "out/detectability-v2/route-early/p04-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p5:e002",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1276663196972236800",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "追加传送后45秒与本地小型信标1253821076822667264的局部瓦片对照：信标位于弯路北侧、村落西侧，河道在东北，三者吻合；50秒沿西北到草坡起点，攻略同一草台、岩壁与灌木吻合。随后钩索登山领奖再向东下到E3，整段无传送。自动全图模板的海岸错峰排除，依靠真实信标/路/村/河组合和连续路线确认整个挑战，不混淆起终点坐标。",
+      "evidence": [
+        "out/detectability-v2/route-early/p05-e002/route-map.png",
+        "out/detectability-v2/route-early/p05-e002/source-terrain.jpg",
+        "out/detectability-v2/route-early/p05-e002/proposals.json",
+        "out/detectability-v2/route-early/p05-e2e3-anchor-check.jpg",
+        "out/detectability-v2/route-early/p05-extra-50.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1276663196972236800.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1276663196972236800-1.png",
+        "out/detectability-v2/route-early/p05-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p5:e003",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1277747809087959040",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "在补足E2传送信标锚点后，跟随登山到顶再向东下跳至枯木。新增82秒视频小地图与候选局部瓦片对照：北侧河道折线、河岸三角坡面及南侧道路走势吻合，原模板错误海岸峰不采纳。攻略斜坡俯瞰村落/屋顶位置、枯木破坏后朴素箱与视频相符，明确不同于37秒木箱。",
+      "evidence": [
+        "out/detectability-v2/route-early/p05-e003/route-map.png",
+        "out/detectability-v2/route-early/p05-e003/source-terrain.jpg",
+        "out/detectability-v2/route-early/p05-e003/proposals.json",
+        "out/detectability-v2/route-early/p05-e2e3-anchor-check.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1277747809087959040.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1277747809087959040-1.png",
+        "out/detectability-v2/route-early/p05-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p5:e005",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1272675138737774592",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "133秒选择营地北侧中枢信标，139秒落地后东南下落，再上右侧小屋顶。小地图信标、弯路、南侧大块营地和东侧独立建筑同时对应瓦片，形成独立于132秒旧位置的锚定；攻略两铁箱/屋顶边线/黄叶树与调查箱一致。低分模板错峰未采用。",
+      "evidence": [
+        "out/detectability-v2/route-early/p05-e005/route-map.png",
+        "out/detectability-v2/route-early/p05-e005/source-terrain.jpg",
+        "out/detectability-v2/route-early/p05-e005/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1272675138737774592.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1272675138737774592-1.png",
+        "out/detectability-v2/route-early/p05-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p5:e006",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1273040761853960192",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E5屋顶旁直接走到同一小平台外栏杆射击，157–163秒无传送和位置跳变。以中枢信标东南小建筑定位，攻略黄树、栏杆、屋墙、射击器及青箱布局相同；与下一营地主平台的射击器区分。",
+      "evidence": [
+        "out/detectability-v2/route-early/p05-e006/route-map.png",
+        "out/detectability-v2/route-early/p05-e006/source-terrain.jpg",
+        "out/detectability-v2/route-early/p05-e006/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1273040761853960192.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1273040761853960192-1.png",
+        "out/detectability-v2/route-early/p05-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p5:e007",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1276664442291347456",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "从E6向西下落再进大营地，175–195秒沿楼梯登上西侧主平台，矩形营地外轮廓和北侧弯路随移动连续对应。攻略高塔、平台对面棚屋和射击器底座吻合，排除E6东侧小平台。",
+      "evidence": [
+        "out/detectability-v2/route-early/p05-e007/route-map.png",
+        "out/detectability-v2/route-early/p05-e007/source-terrain.jpg",
+        "out/detectability-v2/route-early/p05-e007/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1276664442291347456.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1276664442291347456-1.png",
+        "out/detectability-v2/route-early/p05-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p5:e008",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1277747045768417280",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "从E7沿营地平台东南走到阶梯上方箱堆，204秒击破后墙角现朴素箱；营地地图相对位置与移动方向连续。攻略蓝色交叉支架墙、竖黄色立柱和两侧铁箱围出的角落与视频完全同构，非按距离选点。",
+      "evidence": [
+        "out/detectability-v2/route-early/p05-e008/route-map.png",
+        "out/detectability-v2/route-early/p05-e008/source-terrain.jpg",
+        "out/detectability-v2/route-early/p05-e008/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1277747045768417280.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1277747045768417280-1.png",
+        "out/detectability-v2/route-early/p05-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p5:e009",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1252725747315646464",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E8后直接向南跳出营地，到首领坑北缘草台；213–226秒北侧营地与南侧坑形在小地图连续可见。攻略三石围紫花、三角草台边缘和旁侧树共同吻合三石破坏过程，排除附近单石藏箱。",
+      "evidence": [
+        "out/detectability-v2/route-early/p05-e009/route-map.png",
+        "out/detectability-v2/route-early/p05-e009/source-terrain.jpg",
+        "out/detectability-v2/route-early/p05-e009/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1252725747315646464.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1252725747315646464-1.png",
+        "out/detectability-v2/route-early/p05-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p5:e010",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1276665954420822016",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "由三石草台向东滑翔到坑东北缘射击器，230–243秒坑标始终西南侧；攻略坑内成排肋状尖岩、对岸台地音障仪与装置布局一致。模板因图标与弱纹理产生海岸错峰，未把它当位置证据；采用营地至坑缘的连贯路线和特征地标。",
+      "evidence": [
+        "out/detectability-v2/route-early/p05-e010/route-map.png",
+        "out/detectability-v2/route-early/p05-e010/source-terrain.jpg",
+        "out/detectability-v2/route-early/p05-e010/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1276665954420822016.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1276665954420822016-1.png",
+        "out/detectability-v2/route-early/p05-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p5:e011",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1276664886366584832",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E10射击器旁向东几步击破木箱堆后领取，246–252秒始终同一坑缘；攻略左侧黑枯树、后方肋状尖岩与坑壁、箱前草地和视频一致。与E10为相邻但不同奖励，分别对应各自机制。",
+      "evidence": [
+        "out/detectability-v2/route-early/p05-e011/route-map.png",
+        "out/detectability-v2/route-early/p05-e011/source-terrain.jpg",
+        "out/detectability-v2/route-early/p05-e011/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1276664886366584832.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1276664886366584832-1.png",
+        "out/detectability-v2/route-early/p05-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p5:e012",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1287092658610061312",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "从坑东北缘沿东侧向南滑翔，到东南瀑布对岸发射器，启动后沿新钩索到瀑布侧岩台。小地图首领坑与南侧信标相对方位连续变化，攻略发射器正对瀑布、侧壁小台青箱吻合。记录候选为整套装置事件，不把启动点视作领奖点；弱模板不作为精确坐标。",
+      "evidence": [
+        "out/detectability-v2/route-early/p05-e012/route-map.png",
+        "out/detectability-v2/route-early/p05-e012/source-terrain.jpg",
+        "out/detectability-v2/route-early/p05-e012/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1287092658610061312.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1287092658610061312-1.png",
+        "out/detectability-v2/route-early/p05-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p5:e013",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1276667480296144896",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "从瀑布侧奖励返回发射器，再向西沿层状崖壁爬到音障仪。286–314秒首领坑由西北移至东北，路向与拼图一致，攻略草台柱后层叠岩面和紫箱相符。依据前后坑形和连续爬崖路线，未声称通过单帧SIFT。",
+      "evidence": [
+        "out/detectability-v2/route-early/p05-e013/route-map.png",
+        "out/detectability-v2/route-early/p05-e013/source-terrain.jpg",
+        "out/detectability-v2/route-early/p05-e013/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1276667480296144896.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1276667480296144896-1.png",
+        "out/detectability-v2/route-early/p05-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p5:e014",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1277749076604276736",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E13领奖后继续西南跳下，落在花旁，再向西北角落打裂石；整段无传送。攻略三层刻痕石、两片垂直灰墙的接缝与326秒触发前一致，位于上一音障仪西侧下层。低分模板错峰排除，以相邻事件连续下落和墙缝形态确认。",
+      "evidence": [
+        "out/detectability-v2/route-early/p05-e014/route-map.png",
+        "out/detectability-v2/route-early/p05-e014/source-terrain.jpg",
+        "out/detectability-v2/route-early/p05-e014/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1277749076604276736.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1277749076604276736-1.png",
+        "out/detectability-v2/route-early/p05-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p6:e001",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1278105638451597312",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "由中枢信标沿东南河谷飞到南岸断桥，17–51秒城市南缘、河湾与断桥同时对应瓦片，多帧相关0.64–0.69，领奖raw约(-32207,13032)。攻略断桥、峡谷灰墙、路边装置与箱吻合；113秒后续终点不作本点证据。",
+      "evidence": [
+        "out/detectability-v2/route-early/p06-e001/route-map.png",
+        "out/detectability-v2/route-early/p06-e001/source-terrain.jpg",
+        "out/detectability-v2/route-early/p06-e001/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1278105638451597312.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1278105638451597312-1.png",
+        "out/detectability-v2/route-early/p06-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p6:e003",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1282807805496680448",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "114秒重新选择桃源乡西北信标，加载后126秒信标仍在玩家东南，向西北下草坡到仪器。134秒弯路、南侧村落建筑与信标相对位置吻合，攻略坡下红檐房、灯杆和夹谷岩墙与140秒视角一致。模板主峰不稳定，采用实际传送后的短路线与村落地标，不传播113秒旧坐标。",
+      "evidence": [
+        "out/detectability-v2/route-early/p06-e003/route-map.png",
+        "out/detectability-v2/route-early/p06-e003/source-terrain.jpg",
+        "out/detectability-v2/route-early/p06-e003/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1282807805496680448.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1282807805496680448-1.png",
+        "out/detectability-v2/route-early/p06-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p6:e006",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1287523024343273472",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "改配为基准飞檐挑战1287523024343273472。249秒紫色挑战柱不符原蓝色装置；新攻略起点为崖边紫色飞檐柱，图2终箱在河西紫花草台石壁下，与274秒相符。图3终点地图实际玩家箭头经独立SIFT得到raw(-83476,38313)，83内点；视频276秒真实箭头(325,266)独立配准raw(-82997,38610)，70内点，两者相差约5.6游戏单位，位于同一草台。无音区出发向西北上崖，再穿圈跨河降落的路线闭合；原精密箱候选移入排除证据。",
+      "evidence": [
+        "out/detectability-v2/route-early/p06-e006/route-map.png",
+        "out/detectability-v2/route-early/p06-e006/source-terrain.jpg",
+        "out/detectability-v2/route-early/p06-e006/proposals.json",
+        "out/detectability-v2/route-early/p06-extra-249.jpg",
+        "out/detectability-v2/route-early/p06-e006/corrected-guide-endpoint-fit.json",
+        "out/detectability-v2/route-early/p06-e006/video-endpoint-fit.json",
+        "out/detectability-v2/BV1iMTXzVE8J/p06/visual/frame-00276.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287523024343273472-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287523024343273472-2.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287523024343273472-3.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287523024343273472.json",
+        "out/detectability-v2/route-early/p06-reviewed-sequence-map.png"
+      ],
+      "rejectedPointIds": [
+        "1279903105480445952"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p6:e008",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1287868509784510464",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "由前一处向东南走，316–332秒小池塘、弯路、路旁哨塔组合持续吻合，末帧相关0.46，raw约(-36108,35361)。登塔至屋顶射击器，攻略栏杆、侧山草台与屋顶青箱一致，不能用365秒后续锚点代替。",
+      "evidence": [
+        "out/detectability-v2/route-early/p06-e008/route-map.png",
+        "out/detectability-v2/route-early/p06-e008/source-terrain.jpg",
+        "out/detectability-v2/route-early/p06-e008/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287868509784510464.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287868509784510464-1.png",
+        "out/detectability-v2/route-early/p06-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p6:e010",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1287871312784846848",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "新传送潮生崖北信标后东南下坡，390秒港口码头建筑与岸线定位一致；进入水面竞速沿海湾回到西岸。补看攻略终点地图及终箱图：湾口西岸位置、身后高台建筑、两侧树和沙岸与442秒吻合。沿海低纹理模板多错峰，不宣称连续精确轨迹；起点与返岸终点分开。",
+      "evidence": [
+        "out/detectability-v2/route-early/p06-e010/route-map.png",
+        "out/detectability-v2/route-early/p06-e010/source-terrain.jpg",
+        "out/detectability-v2/route-early/p06-e010/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287871312784846848-2.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287871312784846848-3.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287871312784846848.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287871312784846848-1.png",
+        "out/detectability-v2/route-early/p06-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p6:e011",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1287873379048493056",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E10后向西登旁侧低台，453秒可见红色爆炸果与靶标柱，按紫色投影射击下层木箱后469秒领奖。攻略岸边台地、红果、侧边缺口与对面斜岩相符，前一海湾终点与后一岩拱仪器组成连续路线。图标遮挡后的匹配峰未采用；不把此点与P6末尾浮台爆炸果挑战混用。",
+      "evidence": [
+        "out/detectability-v2/route-early/p06-e011/route-map.png",
+        "out/detectability-v2/route-early/p06-e011/source-terrain.jpg",
+        "out/detectability-v2/route-early/p06-e011/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287873379048493056.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287873379048493056-1.png",
+        "out/detectability-v2/route-early/p06-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p6:e012",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1287875252396244992",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "从E11低台直接向西走到平地音障仪，472–483秒全程可见目标，无传送；攻略后方横向岩拱、右侧立岩和紫箱与挑战场地吻合，路线位置处于海湾内侧而非其它沙地仪器。",
+      "evidence": [
+        "out/detectability-v2/route-early/p06-e012/route-map.png",
+        "out/detectability-v2/route-early/p06-e012/source-terrain.jpg",
+        "out/detectability-v2/route-early/p06-e012/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287875252396244992.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287875252396244992-1.png",
+        "out/detectability-v2/route-early/p06-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p6:e015",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1279902537512964096",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "新传送桃源乡东南信标，沿路东北右转；补看590秒起点的路灯、紫花、弯树和道路右侧飞檐柱，与攻略起点一致。随后通过风场与悬空平台到633秒浮台紫箱，小地图道路岔口连续北移。ID指整场飞檐挑战，不能用起点坐标代表终箱；不采纳图标干扰造成的低分模板。",
+      "evidence": [
+        "out/detectability-v2/route-early/p06-e015/route-map.png",
+        "out/detectability-v2/route-early/p06-e015/source-terrain.jpg",
+        "out/detectability-v2/route-early/p06-e015/proposals.json",
+        "out/detectability-v2/route-early/p06-extra-590.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1279902537512964096.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1279902537512964096-1.png",
+        "out/detectability-v2/route-early/p06-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p6:e016",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1275217189881155584",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "E15后向西北落地，沿岔路过弹跳蘑菇后到水湾南侧紫花草地。653–670秒弯水体、道路三岔及北侧建筑在小地图的关系连续对应，攻略夹谷层岩、紫花和剑形战斗柱一致，奖励为紫箱。",
+      "evidence": [
+        "out/detectability-v2/route-early/p06-e016/route-map.png",
+        "out/detectability-v2/route-early/p06-e016/source-terrain.jpg",
+        "out/detectability-v2/route-early/p06-e016/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1275217189881155584.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1275217189881155584-1.png",
+        "out/detectability-v2/route-early/p06-reviewed-sequence-map.png"
+      ]
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p6:e017",
+      "member": 1,
+      "stateId": "8",
+      "pointId": "1287527472542728192",
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "analysis": "从E16连续向南翻岩台到水边高台，673秒水湾还在北侧，随后过路下到树根洞口旁靶标柱。攻略树根拱洞、岩墙和紫树与视频起点一致；689–698秒三组悬空平台木箱/爆炸果射击并在原台领奖，区别之前海边投影木箱挑战。",
+      "evidence": [
+        "out/detectability-v2/route-early/p06-e017/route-map.png",
+        "out/detectability-v2/route-early/p06-e017/source-terrain.jpg",
+        "out/detectability-v2/route-early/p06-e017/proposals.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287527472542728192.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1287527472542728192-1.png",
+        "out/detectability-v2/route-early/p06-reviewed-sequence-map.png"
+      ]
+    }
+  ],
+  "limitations": [
+    "地形相关是定位提议；本报告仅reviewed条目实际逐图核对，未审不得导入。",
+    "视频来源/触发奖励已在v2时间轴审核，此轮补路线和身份。"
+  ],
+  "reviewedCount": 50,
+  "confirmedProposalCount": 50,
+  "independentReview": {
+    "reviewer": "route_roy",
+    "scope": "P5 E5–14, P6 E3/E10–12/E15–17; P3 E4/P4 E10 spot checks",
+    "finding": "No identity conflict found; corrected P5 E12 direction and explicit guide references."
+  }
+}

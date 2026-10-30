@@ -1570,6 +1570,19 @@ int main(int argc,char** argv){
         VerifyGuideSkipGuard(original);
         VerifyRouteToolbarNavigation();
         VerifyToolbarLayoutNavigation();
+        {
+            const auto before=RoutePlanningService::View();
+            RoutePlanningService::SetGapFillModeEnabled(true);
+            const auto filtered=RoutePlanningService::View();
+            Check(filtered.gapFillModeEnabled&&filtered.active.has_value()==before.active.has_value(),"gap fill keeps the active route");
+            if(before.active)Check(Ids(*filtered.active)==Ids(*before.active),"gap fill preserves all route targets");
+            Check(filtered.selected.size()==before.selected.size(),"gap fill preserves hidden selected draft targets");
+            RoutePlanningService::ObserveMap(original.sceneId,original.stops);
+            Check(RoutePlanningService::Snapshot().at("gapFillVisibleCount")==0,"stale map observation cannot republish hidden points");
+            const auto refused=RoutePlanningService::Command({{"action","add"},{"keys",Json::array({AutoRoute::Key(original.stops.front())})},{"expectedGeneration",filtered.generation}});
+            Check(!refused.value("accepted",true),"stale add rejected at mutation boundary after filter changes");
+            RoutePlanningService::SetGapFillModeEnabled(false);
+        }
         VerifyFarmMode();
         VerifyRouteListShape();
         VerifyCollections();

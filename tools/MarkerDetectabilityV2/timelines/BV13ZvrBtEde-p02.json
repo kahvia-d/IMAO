@@ -1,0 +1,2689 @@
+{
+  "bvid": "BV13ZvrBtEde",
+  "part": 2,
+  "duration": 293.433,
+  "reviewStatus": "reviewed",
+  "audioReviewStatus": "reviewed",
+  "audioReviewMethod": "local-ASR-text-and-visual; no-direct-listening",
+  "progressBarReviewStatus": "reviewed",
+  "events": [
+    {
+      "eventId": "BV13ZvrBtEde:p2:e001",
+      "ordinal": 1,
+      "start": 4.79,
+      "end": 97,
+      "progressBarMark": {
+        "kind": "group-label",
+        "rawLabel": "箱28-30",
+        "approxXFraction": 0.2934272300469484,
+        "source": "out/detectability-v2/BV13ZvrBtEde/p02/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "摩托挑战完成后出现三箱，分别领取",
+      "route": "牙列石窟右侧天帷机兵→投掷至对岸→骑车沿平台向东→斜坡尽头摩托挑战",
+      "transcriptRefs": [
+        {
+          "start": 4.79,
+          "end": 6.27,
+          "text": "然后首先我们打开地图"
+        },
+        {
+          "start": 6.27,
+          "end": 8.21,
+          "text": "来到这个右上方"
+        },
+        {
+          "start": 8.21,
+          "end": 9.83,
+          "text": "牙石牙裂石鹤"
+        },
+        {
+          "start": 9.83,
+          "end": 11.75,
+          "text": "右边就有一个天威机兵"
+        },
+        {
+          "start": 11.75,
+          "end": 13.35,
+          "text": "越越送行传过来"
+        },
+        {
+          "start": 15.49,
+          "end": 16.23,
+          "text": "传过来之后"
+        },
+        {
+          "start": 16.23,
+          "end": 17.47,
+          "text": "来直接替一下他"
+        },
+        {
+          "start": 20.8,
+          "end": 23.12,
+          "text": "那么选择这个对岸"
+        },
+        {
+          "start": 24.84,
+          "end": 27.48,
+          "text": "对岸我们随便扔一下就行了"
+        },
+        {
+          "start": 34.63,
+          "end": 35.91,
+          "text": "好直接朝前方开"
+        },
+        {
+          "start": 49.82,
+          "end": 50.56,
+          "text": "开过来之后"
+        },
+        {
+          "start": 50.56,
+          "end": 51.7,
+          "text": "转向小刘右边东方向"
+        },
+        {
+          "start": 52.98,
+          "end": 53.8,
+          "text": "朝右边起"
+        },
+        {
+          "start": 62.92,
+          "end": 64.4,
+          "text": "从这里直接往下冲"
+        },
+        {
+          "start": 64.86,
+          "end": 66.58,
+          "text": "一直冲到这个斜坡的尽头"
+        },
+        {
+          "start": 66.58,
+          "end": 70.91,
+          "text": "下方有一个启动挑战"
+        },
+        {
+          "start": 79.92,
+          "end": 81.32,
+          "text": "来过来我们开启挑战"
+        },
+        {
+          "start": 84.04,
+          "end": 86.66,
+          "text": "好这里挑战成功来拿到三个宝箱"
+        },
+        {
+          "start": 86.66,
+          "end": 88.4,
+          "text": "这里给大家说一下"
+        },
+        {
+          "start": 88.4,
+          "end": 89.08,
+          "text": "这个比较难"
+        },
+        {
+          "start": 89.08,
+          "end": 90.04,
+          "text": "我也是用了"
+        },
+        {
+          "start": 91.66,
+          "end": 93.02,
+          "text": "超级久才过了"
+        },
+        {
+          "start": 93.02,
+          "end": 95.08,
+          "text": "大家就是注意一点"
+        },
+        {
+          "start": 95.08,
+          "end": 96.6,
+          "text": "就是走的时候一定要慢"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00011.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00017.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00023.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00050.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00065.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00080.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00081.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00083.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00084.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00086.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00089.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00090.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00091.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00092.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 81,
+          "appearanceSeconds": 86,
+          "collectionSeconds": 90,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+              "attemptedTimes": [
+                5.0,
+                10.0,
+                97.0,
+                101.0,
+                81.0,
+                86.0,
+                90.0,
+                91.0,
+                92.0
+              ],
+              "fullmapAccepted": [
+                5.0,
+                10.0,
+                101.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p2",
+                "locator": "event 1, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "摩托挑战完成后出现三箱，分别领取；牙列石窟右侧天帷机兵→投掷至对岸→骑车沿平台向东→斜坡尽头摩托挑战",
+                "role": "support",
+                "start": 4.79,
+                "end": 97
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240.json",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-1.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-2.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-3.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p2",
+                  "locator": "event 1 mechanism",
+                  "reason": "摩托挑战完成后出现三箱，分别领取",
+                  "role": "support",
+                  "start": 4.79,
+                  "end": 97
+                }
+              ]
+            },
+            "missingEvidence": [],
+            "routeLimitations": [],
+            "routeCounterEvidence": [
+              "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+            ],
+            "supersededGuideEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "support"
+              }
+            ],
+            "diagnosticEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "reason": "其他候选的对照证据，不支持当前ID。19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "role": "diagnostic"
+              }
+            ]
+          },
+          "routeFollowup": {
+            "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+            "digest": "fd6225ea46e58621240ed840e4c0b3bef362181a5bad640040c7cfef9f00769f",
+            "decision": "confirm",
+            "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+            "evidence": [
+              "tools/MarkerDetectabilityV2/route-review-roy.json",
+              "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+              "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+              "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+              "out/detectability-v2/route-roy/roy-p2-anchors.json",
+              "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+              "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240.json",
+              "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-1.png",
+              "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-2.png",
+              "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-3.png"
+            ],
+            "reviewRow": {
+              "eventId": "BV13ZvrBtEde:p2:e001",
+              "member": 1,
+              "status": "reviewed-route-and-guide",
+              "decision": "confirm",
+              "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+                "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+                "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240.json",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-1.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-2.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-3.png"
+              ],
+              "counterEvidence": [
+                "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+              ],
+              "limitations": [],
+              "rejectedPointIds": [],
+              "exclusionReversals": [],
+              "stateId": "906",
+              "pointId": "1454100367756554240"
+            },
+            "before": {
+              "member": 1,
+              "observedType": "朴素",
+              "triggerSeconds": 81,
+              "appearanceSeconds": 86,
+              "collectionSeconds": 90,
+              "identityStatus": "pending",
+              "detectability": "undetectable",
+              "firstPassStatus": "reviewed-unresolved",
+              "matchingReview": {
+                "analysis": "5/10秒全图可定位牙列石壑，但黄色带圈屏边指示在平移时不代表实际地理坐标；86–92秒奖励区小地图无地形。97秒奖励后的全图遮罩内主要为水面，只有3匹配；挑战有剪辑，不能从起点外推到三箱。需扩展奖励后地图地形或沿地图视角恢复领奖点。 本奖励为成员1，观测类型朴素；路线：牙列石窟右侧天帷机兵→投掷至对岸→骑车沿平台向东→斜坡尽头摩托挑战。",
+                "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+                "geometryReview": {
+                  "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+                  "attemptedTimes": [
+                    5.0,
+                    10.0,
+                    97.0,
+                    101.0,
+                    81.0,
+                    86.0,
+                    90.0,
+                    91.0,
+                    92.0
+                  ],
+                  "fullmapAccepted": [
+                    5.0,
+                    10.0,
+                    101.0
+                  ],
+                  "minimapAccepted": [],
+                  "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+                },
+                "videoEvidence": [
+                  {
+                    "source": "BV13ZvrBtEde:p2",
+                    "locator": "event 1, member 1; evidenceFrames + local-ASR transcript",
+                    "reason": "摩托挑战完成后出现三箱，分别领取；牙列石窟右侧天帷机兵→投掷至对岸→骑车沿平台向东→斜坡尽头摩托挑战",
+                    "role": "support",
+                    "start": 4.79,
+                    "end": 97
+                  }
+                ],
+                "positionEvidence": [],
+                "guideEvidence": [],
+                "exclusionEvidence": [],
+                "attributeReview": {
+                  "status": "reviewed",
+                  "detectability": "undetectable",
+                  "basis": "user-authorized-video-scope-default",
+                  "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+                  "evidence": [
+                    {
+                      "source": "user-approved-scope",
+                      "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                      "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                      "role": "support"
+                    }
+                  ]
+                },
+                "attributeReviewBeforeVideoScopeDefault": {
+                  "status": "reviewed",
+                  "detectability": "unknown",
+                  "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+                  "evidence": [
+                    {
+                      "source": "BV13ZvrBtEde:p2",
+                      "locator": "event 1 mechanism",
+                      "reason": "摩托挑战完成后出现三箱，分别领取",
+                      "role": "support",
+                      "start": 4.79,
+                      "end": 97
+                    }
+                  ]
+                }
+              }
+            },
+            "previousRevision": {
+              "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+              "digest": "32ff33b25fc3b96ed2cd96425bad83006c49d887678f8428961b6e09c7b25252",
+              "decision": "confirm",
+              "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+                "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+                "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240.json",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-1.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-2.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-3.png"
+              ],
+              "previousRevision": {
+                "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "digest": "f7c573d826d6a39d2d642a816e1bbe4f33528e0beb06b8cc7f4f75caa9854622",
+                "decision": "confirm",
+                "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。",
+                "evidence": [
+                  "tools/MarkerDetectabilityV2/route-review-roy.json",
+                  "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+                  "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                  "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                  "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240.json",
+                  "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-1.png",
+                  "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-2.png",
+                  "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-3.png"
+                ]
+              }
+            }
+          },
+          "stateId": "906",
+          "pointId": "1454100367756554240"
+        },
+        {
+          "member": 2,
+          "observedType": "基准",
+          "triggerSeconds": 81,
+          "appearanceSeconds": 86,
+          "collectionSeconds": 91,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+              "attemptedTimes": [
+                5.0,
+                10.0,
+                97.0,
+                101.0,
+                81.0,
+                86.0,
+                90.0,
+                91.0,
+                92.0
+              ],
+              "fullmapAccepted": [
+                5.0,
+                10.0,
+                101.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p2",
+                "locator": "event 1, member 2; evidenceFrames + local-ASR transcript",
+                "reason": "摩托挑战完成后出现三箱，分别领取；牙列石窟右侧天帷机兵→投掷至对岸→骑车沿平台向东→斜坡尽头摩托挑战",
+                "role": "support",
+                "start": 4.79,
+                "end": 97
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080.json",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-1.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-2.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-3.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p2",
+                  "locator": "event 1 mechanism",
+                  "reason": "摩托挑战完成后出现三箱，分别领取",
+                  "role": "support",
+                  "start": 4.79,
+                  "end": 97
+                }
+              ]
+            },
+            "missingEvidence": [],
+            "routeLimitations": [],
+            "routeCounterEvidence": [
+              "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+            ],
+            "supersededGuideEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "support"
+              }
+            ],
+            "diagnosticEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "reason": "其他候选的对照证据，不支持当前ID。19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "role": "diagnostic"
+              }
+            ]
+          },
+          "routeFollowup": {
+            "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+            "digest": "0595c539c93bdc60e25a7e37f2f86a2ea1e86fa79daef4a7a9261c17bc740f53",
+            "decision": "confirm",
+            "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+            "evidence": [
+              "tools/MarkerDetectabilityV2/route-review-roy.json",
+              "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+              "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+              "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+              "out/detectability-v2/route-roy/roy-p2-anchors.json",
+              "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+              "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080.json",
+              "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-1.png",
+              "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-2.png",
+              "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-3.png"
+            ],
+            "reviewRow": {
+              "eventId": "BV13ZvrBtEde:p2:e001",
+              "member": 2,
+              "status": "reviewed-route-and-guide",
+              "decision": "confirm",
+              "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+                "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+                "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080.json",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-1.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-2.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-3.png"
+              ],
+              "counterEvidence": [
+                "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+              ],
+              "limitations": [],
+              "rejectedPointIds": [],
+              "exclusionReversals": [],
+              "stateId": "906",
+              "pointId": "1454100828267950080"
+            },
+            "before": {
+              "member": 2,
+              "observedType": "基准",
+              "triggerSeconds": 81,
+              "appearanceSeconds": 86,
+              "collectionSeconds": 91,
+              "identityStatus": "pending",
+              "detectability": "undetectable",
+              "firstPassStatus": "reviewed-unresolved",
+              "matchingReview": {
+                "analysis": "5/10秒全图可定位牙列石壑，但黄色带圈屏边指示在平移时不代表实际地理坐标；86–92秒奖励区小地图无地形。97秒奖励后的全图遮罩内主要为水面，只有3匹配；挑战有剪辑，不能从起点外推到三箱。需扩展奖励后地图地形或沿地图视角恢复领奖点。 本奖励为成员2，观测类型基准；路线：牙列石窟右侧天帷机兵→投掷至对岸→骑车沿平台向东→斜坡尽头摩托挑战。",
+                "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+                "geometryReview": {
+                  "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+                  "attemptedTimes": [
+                    5.0,
+                    10.0,
+                    97.0,
+                    101.0,
+                    81.0,
+                    86.0,
+                    90.0,
+                    91.0,
+                    92.0
+                  ],
+                  "fullmapAccepted": [
+                    5.0,
+                    10.0,
+                    101.0
+                  ],
+                  "minimapAccepted": [],
+                  "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+                },
+                "videoEvidence": [
+                  {
+                    "source": "BV13ZvrBtEde:p2",
+                    "locator": "event 1, member 2; evidenceFrames + local-ASR transcript",
+                    "reason": "摩托挑战完成后出现三箱，分别领取；牙列石窟右侧天帷机兵→投掷至对岸→骑车沿平台向东→斜坡尽头摩托挑战",
+                    "role": "support",
+                    "start": 4.79,
+                    "end": 97
+                  }
+                ],
+                "positionEvidence": [],
+                "guideEvidence": [],
+                "exclusionEvidence": [],
+                "attributeReview": {
+                  "status": "reviewed",
+                  "detectability": "undetectable",
+                  "basis": "user-authorized-video-scope-default",
+                  "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+                  "evidence": [
+                    {
+                      "source": "user-approved-scope",
+                      "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                      "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                      "role": "support"
+                    }
+                  ]
+                },
+                "attributeReviewBeforeVideoScopeDefault": {
+                  "status": "reviewed",
+                  "detectability": "unknown",
+                  "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+                  "evidence": [
+                    {
+                      "source": "BV13ZvrBtEde:p2",
+                      "locator": "event 1 mechanism",
+                      "reason": "摩托挑战完成后出现三箱，分别领取",
+                      "role": "support",
+                      "start": 4.79,
+                      "end": 97
+                    }
+                  ]
+                }
+              }
+            },
+            "previousRevision": {
+              "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+              "digest": "b7e7c7996803622e0ab478baa59b039cfa2d432037f0fa5abb8787a3ad3d77ab",
+              "decision": "confirm",
+              "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+                "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+                "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080.json",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-1.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-2.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-3.png"
+              ],
+              "previousRevision": {
+                "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "digest": "cd0c9f759859d3c78fa2bc0d3d1e48b131ad9b97929fbc4c01dc92d73a295cbd",
+                "decision": "confirm",
+                "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。",
+                "evidence": [
+                  "tools/MarkerDetectabilityV2/route-review-roy.json",
+                  "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+                  "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                  "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                  "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080.json",
+                  "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-1.png",
+                  "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-2.png",
+                  "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-3.png"
+                ]
+              }
+            }
+          },
+          "stateId": "906",
+          "pointId": "1454100828267950080"
+        },
+        {
+          "member": 3,
+          "observedType": "精密",
+          "triggerSeconds": 81,
+          "appearanceSeconds": 86,
+          "collectionSeconds": 92,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+              "attemptedTimes": [
+                5.0,
+                10.0,
+                97.0,
+                101.0,
+                81.0,
+                86.0,
+                90.0,
+                91.0,
+                92.0
+              ],
+              "fullmapAccepted": [
+                5.0,
+                10.0,
+                101.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p2",
+                "locator": "event 1, member 3; evidenceFrames + local-ASR transcript",
+                "reason": "摩托挑战完成后出现三箱，分别领取；牙列石窟右侧天帷机兵→投掷至对岸→骑车沿平台向东→斜坡尽头摩托挑战",
+                "role": "support",
+                "start": 4.79,
+                "end": 97
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032.json",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-1.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-2.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-3.png",
+                "reason": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p2",
+                  "locator": "event 1 mechanism",
+                  "reason": "摩托挑战完成后出现三箱，分别领取",
+                  "role": "support",
+                  "start": 4.79,
+                  "end": 97
+                }
+              ]
+            },
+            "missingEvidence": [],
+            "routeLimitations": [],
+            "routeCounterEvidence": [
+              "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+            ]
+          },
+          "routeFollowup": {
+            "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+            "digest": "2a1f682c9aa08f5a48d6988f18be838a6ec40014e30ad4f621542f9877266600",
+            "decision": "confirm",
+            "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+            "evidence": [
+              "tools/MarkerDetectabilityV2/route-review-roy.json",
+              "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+              "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+              "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+              "out/detectability-v2/route-roy/roy-p2-anchors.json",
+              "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+              "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032.json",
+              "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-1.png",
+              "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-2.png",
+              "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-3.png"
+            ],
+            "reviewRow": {
+              "eventId": "BV13ZvrBtEde:p2:e001",
+              "member": 3,
+              "status": "reviewed-route-and-guide",
+              "decision": "confirm",
+              "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+                "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+                "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032.json",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-1.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-2.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-3.png"
+              ],
+              "counterEvidence": [
+                "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+              ],
+              "limitations": [],
+              "rejectedPointIds": [],
+              "exclusionReversals": [],
+              "stateId": "906",
+              "pointId": "1454101048523436032"
+            },
+            "before": {
+              "member": 3,
+              "observedType": "精密",
+              "triggerSeconds": 81,
+              "appearanceSeconds": 86,
+              "collectionSeconds": 92,
+              "identityStatus": "pending",
+              "detectability": "undetectable",
+              "firstPassStatus": "reviewed-unresolved",
+              "matchingReview": {
+                "analysis": "5/10秒全图可定位牙列石壑，但黄色带圈屏边指示在平移时不代表实际地理坐标；86–92秒奖励区小地图无地形。97秒奖励后的全图遮罩内主要为水面，只有3匹配；挑战有剪辑，不能从起点外推到三箱。需扩展奖励后地图地形或沿地图视角恢复领奖点。 本奖励为成员3，观测类型精密；路线：牙列石窟右侧天帷机兵→投掷至对岸→骑车沿平台向东→斜坡尽头摩托挑战。",
+                "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+                "geometryReview": {
+                  "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+                  "attemptedTimes": [
+                    5.0,
+                    10.0,
+                    97.0,
+                    101.0,
+                    81.0,
+                    86.0,
+                    90.0,
+                    91.0,
+                    92.0
+                  ],
+                  "fullmapAccepted": [
+                    5.0,
+                    10.0,
+                    101.0
+                  ],
+                  "minimapAccepted": [],
+                  "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+                },
+                "videoEvidence": [
+                  {
+                    "source": "BV13ZvrBtEde:p2",
+                    "locator": "event 1, member 3; evidenceFrames + local-ASR transcript",
+                    "reason": "摩托挑战完成后出现三箱，分别领取；牙列石窟右侧天帷机兵→投掷至对岸→骑车沿平台向东→斜坡尽头摩托挑战",
+                    "role": "support",
+                    "start": 4.79,
+                    "end": 97
+                  }
+                ],
+                "positionEvidence": [],
+                "guideEvidence": [],
+                "exclusionEvidence": [],
+                "attributeReview": {
+                  "status": "reviewed",
+                  "detectability": "undetectable",
+                  "basis": "user-authorized-video-scope-default",
+                  "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+                  "evidence": [
+                    {
+                      "source": "user-approved-scope",
+                      "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                      "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                      "role": "support"
+                    }
+                  ]
+                },
+                "attributeReviewBeforeVideoScopeDefault": {
+                  "status": "reviewed",
+                  "detectability": "unknown",
+                  "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+                  "evidence": [
+                    {
+                      "source": "BV13ZvrBtEde:p2",
+                      "locator": "event 1 mechanism",
+                      "reason": "摩托挑战完成后出现三箱，分别领取",
+                      "role": "support",
+                      "start": 4.79,
+                      "end": 97
+                    }
+                  ]
+                }
+              }
+            },
+            "previousRevision": {
+              "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+              "digest": "69df77fd3a6b6b6aa07b06b91ff7155b85e6c596a64f2df075088c0445c9b15b",
+              "decision": "confirm",
+              "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+                "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+                "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032.json",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-1.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-2.png",
+                "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-3.png"
+              ],
+              "previousRevision": {
+                "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "digest": "3a5107d4a666e915a872f5756acd249588146662e9f7edf4d811b9362fddf229",
+                "decision": "confirm",
+                "analysis": "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。",
+                "evidence": [
+                  "tools/MarkerDetectabilityV2/route-review-roy.json",
+                  "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+                  "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                  "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+                  "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032.json",
+                  "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-1.png",
+                  "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-2.png",
+                  "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-3.png"
+                ]
+              }
+            }
+          },
+          "stateId": "906",
+          "pointId": "1454101048523436032"
+        }
+      ],
+      "uncertainties": [
+        "81秒启动挑战，82–84秒直接剪切至完成场面；实际挑战未展示，不能用此路线代替挑战路线。"
+      ]
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p2:e002",
+      "ordinal": 2,
+      "start": 97,
+      "end": 193,
+      "progressBarMark": {
+        "kind": "group-label",
+        "rawLabel": "箱31-33",
+        "approxXFraction": 0.6408450704225352,
+        "source": "out/detectability-v2/BV13ZvrBtEde/p02/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "摩托挑战完成后出现三箱，分别领取",
+      "route": "地图选择造陆相关路网左侧信标，骑车至摩托装置→挑战内沿浮空石道至终点",
+      "transcriptRefs": [
+        {
+          "start": 97.3,
+          "end": 98.36,
+          "text": "那就差不多了"
+        },
+        {
+          "start": 98.9,
+          "end": 100.56,
+          "text": "拿完这三个之后来到下方"
+        },
+        {
+          "start": 101.92,
+          "end": 103.72,
+          "text": "我们传送到这个路网"
+        },
+        {
+          "start": 103.72,
+          "end": 105.6,
+          "text": "叫做造陆悬疑沙原通路"
+        },
+        {
+          "start": 105.6,
+          "end": 107.02,
+          "text": "左边这个小银杏标传过来"
+        },
+        {
+          "start": 107.02,
+          "end": 115.08,
+          "text": "这里直接就有一个挑战"
+        },
+        {
+          "start": 115.08,
+          "end": 116.26,
+          "text": "那我们直接骑车过去"
+        },
+        {
+          "start": 123.01,
+          "end": 124.47,
+          "text": "来过来开开始骑摩托"
+        },
+        {
+          "start": 183.88,
+          "end": 185.56,
+          "text": "来前方这个到达终点"
+        },
+        {
+          "start": 188.16,
+          "end": 189.52,
+          "text": "好三个宝箱开一下"
+        },
+        {
+          "start": 191.52,
+          "end": 192.76,
+          "text": "看完之后打开地图"
+        },
+        {
+          "start": 192.76,
+          "end": 193.76,
+          "text": "来还剩下最后一个"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00100.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00112.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00118.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00123.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00124.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00127.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00150.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00180.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00185.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00188.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00189.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00190.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00191.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00192.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "基准",
+          "triggerSeconds": 124,
+          "appearanceSeconds": 189,
+          "collectionSeconds": 190,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "906",
+          "pointId": "1457059030387585024",
+          "matchingReview": {
+            "analysis": "193秒三箱领取完即时打开大地图，玩家位于弧形外缘；三guide地图和黄色树/矮墙前排列一致。按视频各成员基准、精密、朴素类型区分，不依候选顺序。 本奖励为成员1，观测类型基准；路线：地图选择造陆相关路网左侧信标，骑车至摩托装置→挑战内沿浮空石道至终点。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+              "attemptedTimes": [
+                97.0,
+                101.0,
+                105.0,
+                193.0,
+                124.0,
+                189.0,
+                190.0,
+                191.0
+              ],
+              "fullmapAccepted": [
+                101.0,
+                105.0,
+                193.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p2",
+                "locator": "event 2, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "摩托挑战完成后出现三箱，分别领取；地图选择造陆相关路网左侧信标，骑车至摩托装置→挑战内沿浮空石道至终点",
+                "role": "support",
+                "start": 97,
+                "end": 193
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+                "locator": "t=193; affineFrameToReference + pixelToGame; manual player pixel=[424.4795918367347, 356.44897959183675]",
+                "reason": "真实玩家箭头在领取后打开的地图上；固定阈值SIFT通过127内点。投影为候选范围，不把玩家像素当作箱像素；再由实景guide消歧。layer=canonical-base。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457059030387585024.json",
+                "locator": "data.id + content.description + content.coordinate",
+                "reason": "摩托挑战宝箱，挑战有点小难，可以故意失败5次后直接强制解锁。位置在第二、三图片所示。（感谢玩家反馈。）完成附近路网建设后出现。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457059030387585024-1.png",
+                "locator": "source guide image",
+                "reason": "193秒三箱领取完即时打开大地图，玩家位于弧形外缘；三guide地图和黄色树/矮墙前排列一致。按视频各成员基准、精密、朴素类型区分，不依候选顺序。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457059030387585024-2.png",
+                "locator": "source guide image",
+                "reason": "193秒三箱领取完即时打开大地图，玩家位于弧形外缘；三guide地图和黄色树/矮墙前排列一致。按视频各成员基准、精密、朴素类型区分，不依候选顺序。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457059030387585024-3.png",
+                "locator": "source guide image",
+                "reason": "193秒三箱领取完即时打开大地图，玩家位于弧形外缘；三guide地图和黄色树/矮墙前排列一致。按视频各成员基准、精密、朴素类型区分，不依候选顺序。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "manualAnchor": {
+              "time": 193,
+              "pixel": [
+                424.4795918367347,
+                356.44897959183675
+              ],
+              "role": "player-arrow-after-reward-not-box",
+              "source": "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00193.00.jpg"
+            },
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "P2开场只明确“三个摩托挑战/九箱”，没有独立说出探测仪结论。P1开场全片范围能否覆盖此续P需进一步界定；身份可确认，但不凭共享标题把属性自动升级。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p2",
+                  "locator": "event 2 mechanism",
+                  "reason": "摩托挑战完成后出现三箱，分别领取",
+                  "role": "support",
+                  "start": 97,
+                  "end": 193
+                }
+              ]
+            }
+          }
+        },
+        {
+          "member": 2,
+          "observedType": "精密",
+          "triggerSeconds": 124,
+          "appearanceSeconds": 189,
+          "collectionSeconds": 191,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "906",
+          "pointId": "1457059161283424256",
+          "matchingReview": {
+            "analysis": "193秒三箱领取完即时打开大地图，玩家位于弧形外缘；三guide地图和黄色树/矮墙前排列一致。按视频各成员基准、精密、朴素类型区分，不依候选顺序。 本奖励为成员2，观测类型精密；路线：地图选择造陆相关路网左侧信标，骑车至摩托装置→挑战内沿浮空石道至终点。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+              "attemptedTimes": [
+                97.0,
+                101.0,
+                105.0,
+                193.0,
+                124.0,
+                189.0,
+                190.0,
+                191.0
+              ],
+              "fullmapAccepted": [
+                101.0,
+                105.0,
+                193.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p2",
+                "locator": "event 2, member 2; evidenceFrames + local-ASR transcript",
+                "reason": "摩托挑战完成后出现三箱，分别领取；地图选择造陆相关路网左侧信标，骑车至摩托装置→挑战内沿浮空石道至终点",
+                "role": "support",
+                "start": 97,
+                "end": 193
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+                "locator": "t=193; affineFrameToReference + pixelToGame; manual player pixel=[424.4795918367347, 356.44897959183675]",
+                "reason": "真实玩家箭头在领取后打开的地图上；固定阈值SIFT通过127内点。投影为候选范围，不把玩家像素当作箱像素；再由实景guide消歧。layer=canonical-base。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457059161283424256.json",
+                "locator": "data.id + content.description + content.coordinate",
+                "reason": "摩托挑战宝箱，挑战有点小难，可以故意失败5次后直接强制解锁。位置在第二、三图片所示。（感谢玩家反馈。）完成附近路网建设后出现。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457059161283424256-1.png",
+                "locator": "source guide image",
+                "reason": "193秒三箱领取完即时打开大地图，玩家位于弧形外缘；三guide地图和黄色树/矮墙前排列一致。按视频各成员基准、精密、朴素类型区分，不依候选顺序。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457059161283424256-2.png",
+                "locator": "source guide image",
+                "reason": "193秒三箱领取完即时打开大地图，玩家位于弧形外缘；三guide地图和黄色树/矮墙前排列一致。按视频各成员基准、精密、朴素类型区分，不依候选顺序。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457059161283424256-3.png",
+                "locator": "source guide image",
+                "reason": "193秒三箱领取完即时打开大地图，玩家位于弧形外缘；三guide地图和黄色树/矮墙前排列一致。按视频各成员基准、精密、朴素类型区分，不依候选顺序。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "manualAnchor": {
+              "time": 193,
+              "pixel": [
+                424.4795918367347,
+                356.44897959183675
+              ],
+              "role": "player-arrow-after-reward-not-box",
+              "source": "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00193.00.jpg"
+            },
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "P2开场只明确“三个摩托挑战/九箱”，没有独立说出探测仪结论。P1开场全片范围能否覆盖此续P需进一步界定；身份可确认，但不凭共享标题把属性自动升级。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p2",
+                  "locator": "event 2 mechanism",
+                  "reason": "摩托挑战完成后出现三箱，分别领取",
+                  "role": "support",
+                  "start": 97,
+                  "end": 193
+                }
+              ]
+            }
+          }
+        },
+        {
+          "member": 3,
+          "observedType": "朴素",
+          "triggerSeconds": 124,
+          "appearanceSeconds": 189,
+          "collectionSeconds": 191,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "906",
+          "pointId": "1457058935520817152",
+          "matchingReview": {
+            "analysis": "193秒三箱领取完即时打开大地图，玩家位于弧形外缘；三guide地图和黄色树/矮墙前排列一致。按视频各成员基准、精密、朴素类型区分，不依候选顺序。 本奖励为成员3，观测类型朴素；路线：地图选择造陆相关路网左侧信标，骑车至摩托装置→挑战内沿浮空石道至终点。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+              "attemptedTimes": [
+                97.0,
+                101.0,
+                105.0,
+                193.0,
+                124.0,
+                189.0,
+                190.0,
+                191.0
+              ],
+              "fullmapAccepted": [
+                101.0,
+                105.0,
+                193.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p2",
+                "locator": "event 2, member 3; evidenceFrames + local-ASR transcript",
+                "reason": "摩托挑战完成后出现三箱，分别领取；地图选择造陆相关路网左侧信标，骑车至摩托装置→挑战内沿浮空石道至终点",
+                "role": "support",
+                "start": 97,
+                "end": 193
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+                "locator": "t=193; affineFrameToReference + pixelToGame; manual player pixel=[424.4795918367347, 356.44897959183675]",
+                "reason": "真实玩家箭头在领取后打开的地图上；固定阈值SIFT通过127内点。投影为候选范围，不把玩家像素当作箱像素；再由实景guide消歧。layer=canonical-base。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457058935520817152.json",
+                "locator": "data.id + content.description + content.coordinate",
+                "reason": "摩托挑战宝箱，挑战有点小难，可以故意失败5次后直接强制解锁。位置在第二、三图片所示。（感谢玩家反馈。）完成附近路网建设后出现。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457058935520817152-1.png",
+                "locator": "source guide image",
+                "reason": "193秒三箱领取完即时打开大地图，玩家位于弧形外缘；三guide地图和黄色树/矮墙前排列一致。按视频各成员基准、精密、朴素类型区分，不依候选顺序。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457058935520817152-2.png",
+                "locator": "source guide image",
+                "reason": "193秒三箱领取完即时打开大地图，玩家位于弧形外缘；三guide地图和黄色树/矮墙前排列一致。按视频各成员基准、精密、朴素类型区分，不依候选顺序。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457058935520817152-3.png",
+                "locator": "source guide image",
+                "reason": "193秒三箱领取完即时打开大地图，玩家位于弧形外缘；三guide地图和黄色树/矮墙前排列一致。按视频各成员基准、精密、朴素类型区分，不依候选顺序。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "manualAnchor": {
+              "time": 193,
+              "pixel": [
+                424.4795918367347,
+                356.44897959183675
+              ],
+              "role": "player-arrow-after-reward-not-box",
+              "source": "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00193.00.jpg"
+            },
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "P2开场只明确“三个摩托挑战/九箱”，没有独立说出探测仪结论。P1开场全片范围能否覆盖此续P需进一步界定；身份可确认，但不凭共享标题把属性自动升级。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p2",
+                  "locator": "event 2 mechanism",
+                  "reason": "摩托挑战完成后出现三箱，分别领取",
+                  "role": "support",
+                  "start": 97,
+                  "end": 193
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "124–128秒挑战入场切换；186–188秒返回领奖场景，应分别定位起点终点与奖励点。"
+      ]
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p2:e003",
+      "ordinal": 3,
+      "start": 193,
+      "end": 293.433,
+      "progressBarMark": {
+        "kind": "group-label",
+        "rawLabel": "箱34-36",
+        "approxXFraction": 0.9859154929577465,
+        "source": "out/detectability-v2/BV13ZvrBtEde/p02/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "摩托挑战完成后出现三箱，分别领取",
+      "route": "地图缩小至星矩学院北面信标→向北骑车跟紫色引导至装置→挑战内沿石梁到终点",
+      "transcriptRefs": [
+        {
+          "start": 192.76,
+          "end": 193.76,
+          "text": "来还剩下最后一个"
+        },
+        {
+          "start": 193.76,
+          "end": 195.2,
+          "text": "我们缩小地图来到"
+        },
+        {
+          "start": 196.62,
+          "end": 197.2,
+          "text": "上方"
+        },
+        {
+          "start": 197.9,
+          "end": 199.86,
+          "text": "这个星聚学院上方再上方"
+        },
+        {
+          "start": 199.86,
+          "end": 200.52,
+          "text": "这个小银杏标"
+        },
+        {
+          "start": 200.52,
+          "end": 201.86,
+          "text": "给大家看一眼是这个"
+        },
+        {
+          "start": 208.17,
+          "end": 208.87,
+          "text": "传过来之后"
+        },
+        {
+          "start": 208.87,
+          "end": 210.07,
+          "text": "这样小银杏上方北方向"
+        },
+        {
+          "start": 210.07,
+          "end": 210.95,
+          "text": "骑车往前走"
+        },
+        {
+          "start": 212.65,
+          "end": 214.99,
+          "text": "来这里就有一个紫色任务的指引了"
+        },
+        {
+          "start": 214.99,
+          "end": 215.69,
+          "text": "我们直接跑过去"
+        },
+        {
+          "start": 225.89,
+          "end": 226.61,
+          "text": "来下车"
+        },
+        {
+          "start": 227.03,
+          "end": 228.03,
+          "text": "过来开启挑战"
+        },
+        {
+          "start": 281.56,
+          "end": 282.8,
+          "text": "来这里到达终点"
+        },
+        {
+          "start": 282.8,
+          "end": 284.16,
+          "text": "也是会有三个宝箱"
+        },
+        {
+          "start": 287.04,
+          "end": 288.56,
+          "text": "来过来开启到三个宝箱"
+        },
+        {
+          "start": 290.08,
+          "end": 291.04,
+          "text": "那开完之后"
+        },
+        {
+          "start": 291.04,
+          "end": 292.5,
+          "text": "我们这一批就拿到这里"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00195.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00200.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00210.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00225.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00227.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00228.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00230.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00250.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00280.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00281.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00284.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00286.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00287.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00288.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00289.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00290.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00291.00.jpg",
+        "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00292.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": 228,
+          "appearanceSeconds": 287,
+          "collectionSeconds": 289,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+              "attemptedTimes": [
+                193.0,
+                200.0,
+                228.0,
+                287.0,
+                289.0,
+                290.0
+              ],
+              "fullmapAccepted": [
+                193.0,
+                200.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p2",
+                "locator": "event 3, member 1; evidenceFrames + local-ASR transcript",
+                "reason": "摩托挑战完成后出现三箱，分别领取；地图缩小至星矩学院北面信标→向北骑车跟紫色引导至装置→挑战内沿石梁到终点",
+                "role": "support",
+                "start": 193,
+                "end": 293.433
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952.json",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-1.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-2.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-3.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p2",
+                  "locator": "event 3 mechanism",
+                  "reason": "摩托挑战完成后出现三箱，分别领取",
+                  "role": "support",
+                  "start": 193,
+                  "end": 293.433
+                }
+              ]
+            },
+            "missingEvidence": [],
+            "routeLimitations": [],
+            "routeCounterEvidence": [
+              "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+            ],
+            "supersededGuideEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "support"
+              }
+            ],
+            "diagnosticEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "reason": "其他候选的对照证据，不支持当前ID。213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "role": "diagnostic"
+              }
+            ]
+          },
+          "routeFollowup": {
+            "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+            "digest": "8b0f675255bcfb8574a37756962b7b444ae8c5e60bccc64d218826d4705a2d17",
+            "decision": "confirm",
+            "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+            "evidence": [
+              "tools/MarkerDetectabilityV2/route-review-roy.json",
+              "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+              "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+              "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+              "out/detectability-v2/route-roy/roy-p2-anchors.json",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952.json",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-1.png",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-2.png",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-3.png"
+            ],
+            "reviewRow": {
+              "eventId": "BV13ZvrBtEde:p2:e003",
+              "member": 1,
+              "status": "reviewed-route-and-guide",
+              "decision": "confirm",
+              "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+                "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+                "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+                "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952.json",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-1.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-2.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-3.png"
+              ],
+              "counterEvidence": [
+                "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+              ],
+              "limitations": [],
+              "rejectedPointIds": [],
+              "exclusionReversals": [],
+              "stateId": "906",
+              "pointId": "1457043289922301952"
+            },
+            "before": {
+              "member": 1,
+              "observedType": "朴素",
+              "triggerSeconds": 228,
+              "appearanceSeconds": 287,
+              "collectionSeconds": 289,
+              "identityStatus": "pending",
+              "detectability": "undetectable",
+              "firstPassStatus": "reviewed-unresolved",
+              "matchingReview": {
+                "analysis": "200秒图显示下一起点且黄色靠右下角可能为屏外方向指示；283–290秒三箱落在学院周边斜坡，期间挑战切换使起终点不能直接合并。当前需领奖点地图配准并确认三成员方位，保留unknown。 本奖励为成员1，观测类型朴素；路线：地图缩小至星矩学院北面信标→向北骑车跟紫色引导至装置→挑战内沿石梁到终点。",
+                "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+                "geometryReview": {
+                  "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+                  "attemptedTimes": [
+                    193.0,
+                    200.0,
+                    228.0,
+                    287.0,
+                    289.0,
+                    290.0
+                  ],
+                  "fullmapAccepted": [
+                    193.0,
+                    200.0
+                  ],
+                  "minimapAccepted": [],
+                  "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+                },
+                "videoEvidence": [
+                  {
+                    "source": "BV13ZvrBtEde:p2",
+                    "locator": "event 3, member 1; evidenceFrames + local-ASR transcript",
+                    "reason": "摩托挑战完成后出现三箱，分别领取；地图缩小至星矩学院北面信标→向北骑车跟紫色引导至装置→挑战内沿石梁到终点",
+                    "role": "support",
+                    "start": 193,
+                    "end": 293.433
+                  }
+                ],
+                "positionEvidence": [],
+                "guideEvidence": [],
+                "exclusionEvidence": [],
+                "attributeReview": {
+                  "status": "reviewed",
+                  "detectability": "undetectable",
+                  "basis": "user-authorized-video-scope-default",
+                  "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+                  "evidence": [
+                    {
+                      "source": "user-approved-scope",
+                      "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                      "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                      "role": "support"
+                    }
+                  ]
+                },
+                "attributeReviewBeforeVideoScopeDefault": {
+                  "status": "reviewed",
+                  "detectability": "unknown",
+                  "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+                  "evidence": [
+                    {
+                      "source": "BV13ZvrBtEde:p2",
+                      "locator": "event 3 mechanism",
+                      "reason": "摩托挑战完成后出现三箱，分别领取",
+                      "role": "support",
+                      "start": 193,
+                      "end": 293.433
+                    }
+                  ]
+                }
+              }
+            },
+            "previousRevision": {
+              "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+              "digest": "1aa8c2a4a2573f6685adc4c65bd1b2ae17be73a118f60d007ea3dc1ba4951ff2",
+              "decision": "confirm",
+              "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+                "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+                "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+                "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952.json",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-1.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-2.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-3.png"
+              ],
+              "previousRevision": {
+                "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "digest": "7120bd2584cae724396b84161c3bc897fa580b54ce769182b8db1604844f3f55",
+                "decision": "confirm",
+                "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。",
+                "evidence": [
+                  "tools/MarkerDetectabilityV2/route-review-roy.json",
+                  "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952.json",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-1.png",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-2.png",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-3.png"
+                ]
+              }
+            }
+          },
+          "stateId": "906",
+          "pointId": "1457043289922301952"
+        },
+        {
+          "member": 2,
+          "observedType": "精密",
+          "triggerSeconds": 228,
+          "appearanceSeconds": 287,
+          "collectionSeconds": 289,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+              "attemptedTimes": [
+                193.0,
+                200.0,
+                228.0,
+                287.0,
+                289.0,
+                290.0
+              ],
+              "fullmapAccepted": [
+                193.0,
+                200.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p2",
+                "locator": "event 3, member 2; evidenceFrames + local-ASR transcript",
+                "reason": "摩托挑战完成后出现三箱，分别领取；地图缩小至星矩学院北面信标→向北骑车跟紫色引导至装置→挑战内沿石梁到终点",
+                "role": "support",
+                "start": 193,
+                "end": 293.433
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568.json",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-2.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-3.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p2",
+                  "locator": "event 3 mechanism",
+                  "reason": "摩托挑战完成后出现三箱，分别领取",
+                  "role": "support",
+                  "start": 193,
+                  "end": 293.433
+                }
+              ]
+            },
+            "missingEvidence": [],
+            "routeLimitations": [],
+            "routeCounterEvidence": [
+              "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+            ]
+          },
+          "routeFollowup": {
+            "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+            "digest": "061ba8e240203004254d7054609d1c5657c6ca08b45d3c31d6a7c624b8b8ca02",
+            "decision": "confirm",
+            "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+            "evidence": [
+              "tools/MarkerDetectabilityV2/route-review-roy.json",
+              "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+              "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+              "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+              "out/detectability-v2/route-roy/roy-p2-anchors.json",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568.json",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-2.png",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-3.png"
+            ],
+            "reviewRow": {
+              "eventId": "BV13ZvrBtEde:p2:e003",
+              "member": 2,
+              "status": "reviewed-route-and-guide",
+              "decision": "confirm",
+              "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+                "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+                "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+                "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568.json",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-2.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-3.png"
+              ],
+              "counterEvidence": [
+                "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+              ],
+              "limitations": [],
+              "rejectedPointIds": [],
+              "exclusionReversals": [],
+              "stateId": "906",
+              "pointId": "1457043525350125568"
+            },
+            "before": {
+              "member": 2,
+              "observedType": "精密",
+              "triggerSeconds": 228,
+              "appearanceSeconds": 287,
+              "collectionSeconds": 289,
+              "identityStatus": "pending",
+              "detectability": "undetectable",
+              "firstPassStatus": "reviewed-unresolved",
+              "matchingReview": {
+                "analysis": "200秒图显示下一起点且黄色靠右下角可能为屏外方向指示；283–290秒三箱落在学院周边斜坡，期间挑战切换使起终点不能直接合并。当前需领奖点地图配准并确认三成员方位，保留unknown。 本奖励为成员2，观测类型精密；路线：地图缩小至星矩学院北面信标→向北骑车跟紫色引导至装置→挑战内沿石梁到终点。",
+                "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+                "geometryReview": {
+                  "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+                  "attemptedTimes": [
+                    193.0,
+                    200.0,
+                    228.0,
+                    287.0,
+                    289.0,
+                    290.0
+                  ],
+                  "fullmapAccepted": [
+                    193.0,
+                    200.0
+                  ],
+                  "minimapAccepted": [],
+                  "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+                },
+                "videoEvidence": [
+                  {
+                    "source": "BV13ZvrBtEde:p2",
+                    "locator": "event 3, member 2; evidenceFrames + local-ASR transcript",
+                    "reason": "摩托挑战完成后出现三箱，分别领取；地图缩小至星矩学院北面信标→向北骑车跟紫色引导至装置→挑战内沿石梁到终点",
+                    "role": "support",
+                    "start": 193,
+                    "end": 293.433
+                  }
+                ],
+                "positionEvidence": [],
+                "guideEvidence": [],
+                "exclusionEvidence": [],
+                "attributeReview": {
+                  "status": "reviewed",
+                  "detectability": "undetectable",
+                  "basis": "user-authorized-video-scope-default",
+                  "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+                  "evidence": [
+                    {
+                      "source": "user-approved-scope",
+                      "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                      "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                      "role": "support"
+                    }
+                  ]
+                },
+                "attributeReviewBeforeVideoScopeDefault": {
+                  "status": "reviewed",
+                  "detectability": "unknown",
+                  "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+                  "evidence": [
+                    {
+                      "source": "BV13ZvrBtEde:p2",
+                      "locator": "event 3 mechanism",
+                      "reason": "摩托挑战完成后出现三箱，分别领取",
+                      "role": "support",
+                      "start": 193,
+                      "end": 293.433
+                    }
+                  ]
+                }
+              }
+            },
+            "previousRevision": {
+              "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+              "digest": "f7a3a0d0f681c3cb4db9e66d025f24bbc1316b2c72406b79292ba09ddb47c1ea",
+              "decision": "confirm",
+              "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+                "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+                "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+                "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568.json",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-2.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-3.png"
+              ],
+              "previousRevision": {
+                "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "digest": "d0d0ef5117ba40c239c38dbc78fc375dbb8d62f59d4c5d9268a0beae66834d73",
+                "decision": "confirm",
+                "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。",
+                "evidence": [
+                  "tools/MarkerDetectabilityV2/route-review-roy.json",
+                  "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568.json",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-2.png",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-3.png"
+                ]
+              }
+            }
+          },
+          "stateId": "906",
+          "pointId": "1457043525350125568"
+        },
+        {
+          "member": 3,
+          "observedType": "基准",
+          "triggerSeconds": 228,
+          "appearanceSeconds": 287,
+          "collectionSeconds": 290,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+            "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+            "geometryReview": {
+              "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+              "attemptedTimes": [
+                193.0,
+                200.0,
+                228.0,
+                287.0,
+                289.0,
+                290.0
+              ],
+              "fullmapAccepted": [
+                193.0,
+                200.0
+              ],
+              "minimapAccepted": [],
+              "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+            },
+            "videoEvidence": [
+              {
+                "source": "BV13ZvrBtEde:p2",
+                "locator": "event 3, member 3; evidenceFrames + local-ASR transcript",
+                "reason": "摩托挑战完成后出现三箱，分别领取；地图缩小至星矩学院北面信标→向北骑车跟紫色引导至装置→挑战内沿石梁到终点",
+                "role": "support",
+                "start": 193,
+                "end": 293.433
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728.json",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-1.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-2.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-3.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+              "evidence": [
+                {
+                  "source": "BV13ZvrBtEde:p2",
+                  "locator": "event 3 mechanism",
+                  "reason": "摩托挑战完成后出现三箱，分别领取",
+                  "role": "support",
+                  "start": 193,
+                  "end": 293.433
+                }
+              ]
+            },
+            "missingEvidence": [],
+            "routeLimitations": [],
+            "routeCounterEvidence": [
+              "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+            ],
+            "supersededGuideEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "reason": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "support"
+              }
+            ],
+            "diagnosticEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "reason": "其他候选的对照证据，不支持当前ID。213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "role": "diagnostic"
+              }
+            ]
+          },
+          "routeFollowup": {
+            "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+            "digest": "4b01f51a7017e4698146ade16a11c5481cac3dcefa93ae33dad5ebdb1703cc4b",
+            "decision": "confirm",
+            "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+            "evidence": [
+              "tools/MarkerDetectabilityV2/route-review-roy.json",
+              "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+              "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+              "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+              "out/detectability-v2/route-roy/roy-p2-anchors.json",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728.json",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-1.png",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-2.png",
+              "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-3.png"
+            ],
+            "reviewRow": {
+              "eventId": "BV13ZvrBtEde:p2:e003",
+              "member": 3,
+              "status": "reviewed-route-and-guide",
+              "decision": "confirm",
+              "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+                "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+                "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+                "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728.json",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-1.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-2.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-3.png"
+              ],
+              "counterEvidence": [
+                "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+              ],
+              "limitations": [],
+              "rejectedPointIds": [],
+              "exclusionReversals": [],
+              "stateId": "906",
+              "pointId": "1457043417928265728"
+            },
+            "before": {
+              "member": 3,
+              "observedType": "基准",
+              "triggerSeconds": 228,
+              "appearanceSeconds": 287,
+              "collectionSeconds": 290,
+              "identityStatus": "pending",
+              "detectability": "undetectable",
+              "firstPassStatus": "reviewed-unresolved",
+              "matchingReview": {
+                "analysis": "200秒图显示下一起点且黄色靠右下角可能为屏外方向指示；283–290秒三箱落在学院周边斜坡，期间挑战切换使起终点不能直接合并。当前需领奖点地图配准并确认三成员方位，保留unknown。 本奖励为成员3，观测类型基准；路线：地图缩小至星矩学院北面信标→向北骑车跟紫色引导至装置→挑战内沿石梁到终点。",
+                "method": "source chronology + fixed-limit SIFT fullmap/minimap + source guide review; no overview/v1 IDs",
+                "geometryReview": {
+                  "source": "out/detectability-v2/review-roy/BV13ZvrBtEde-p2/geometry.json",
+                  "attemptedTimes": [
+                    193.0,
+                    200.0,
+                    228.0,
+                    287.0,
+                    289.0,
+                    290.0
+                  ],
+                  "fullmapAccepted": [
+                    193.0,
+                    200.0
+                  ],
+                  "minimapAccepted": [],
+                  "arbitraryAnchorWarning": "fullmap initial anchor400,240 is NOT player; manual yellow arrow is required"
+                },
+                "videoEvidence": [
+                  {
+                    "source": "BV13ZvrBtEde:p2",
+                    "locator": "event 3, member 3; evidenceFrames + local-ASR transcript",
+                    "reason": "摩托挑战完成后出现三箱，分别领取；地图缩小至星矩学院北面信标→向北骑车跟紫色引导至装置→挑战内沿石梁到终点",
+                    "role": "support",
+                    "start": 193,
+                    "end": 293.433
+                  }
+                ],
+                "positionEvidence": [],
+                "guideEvidence": [],
+                "exclusionEvidence": [],
+                "attributeReview": {
+                  "status": "reviewed",
+                  "detectability": "undetectable",
+                  "basis": "user-authorized-video-scope-default",
+                  "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+                  "evidence": [
+                    {
+                      "source": "user-approved-scope",
+                      "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                      "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                      "role": "support"
+                    }
+                  ]
+                },
+                "attributeReviewBeforeVideoScopeDefault": {
+                  "status": "reviewed",
+                  "detectability": "unknown",
+                  "analysis": "触发过程已复核；身份未定或证言范围不足时保留unknown，不以需要解锁或视频标题单独归类。",
+                  "evidence": [
+                    {
+                      "source": "BV13ZvrBtEde:p2",
+                      "locator": "event 3 mechanism",
+                      "reason": "摩托挑战完成后出现三箱，分别领取",
+                      "role": "support",
+                      "start": 193,
+                      "end": 293.433
+                    }
+                  ]
+                }
+              }
+            },
+            "previousRevision": {
+              "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+              "digest": "9f68fd238b0ccfacc976b8e9c00566fe2720b7f0864d0d52f6c06ec80734fffe",
+              "decision": "confirm",
+              "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+                "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+                "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+                "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728.json",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-1.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-2.png",
+                "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-3.png"
+              ],
+              "previousRevision": {
+                "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "digest": "4da5de354f2525bfd6b5c4f85f9d3e60d871ee85cc74d33a316fb797d3809182",
+                "decision": "confirm",
+                "analysis": "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。",
+                "evidence": [
+                  "tools/MarkerDetectabilityV2/route-review-roy.json",
+                  "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+                  "out/detectability-v2/route-roy/roy-p2-anchors.json",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728.json",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-1.png",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-2.png",
+                  "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-3.png"
+                ]
+              }
+            }
+          },
+          "stateId": "906",
+          "pointId": "1457043417928265728"
+        }
+      ],
+      "uncertainties": [
+        "228–231秒进入挑战；285–287秒返回领奖场景。两箱同一秒开启，成员以画面箱体左右/类型区分，不表示ID顺序。"
+      ]
+    }
+  ],
+  "nonEventIntervals": [
+    [
+      0,
+      4.79,
+      "本分P主题介绍：三个摩托挑战；地图为游戏中实际打开的地图，非作者总览"
+    ]
+  ],
+  "reviewedEvidence": [
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-1s-00005.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-1s-00017.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-1s-00080.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-1s-00092.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-1s-00112.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-1s-00124.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-1s-00185.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-1s-00222.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-1s-00280.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-1s-00292.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-5s-00020.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-5s-00080.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-5s-00120.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-5s-00180.00.jpg",
+    "out/detectability-v2/BV13ZvrBtEde/p02/visual/scenes-5s-00240.00.jpg"
+  ],
+  "transcriptCorrections": [
+    {
+      "start": 8.21,
+      "end": 9.83,
+      "raw": "牙石牙裂石鹤",
+      "corrected": "牙列石窟",
+      "basis": "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00008.00.jpg"
+    },
+    {
+      "start": 197.9,
+      "end": 200.52,
+      "raw": "星聚学院 / 小银杏标",
+      "corrected": "星矩学院 / 小型信标",
+      "basis": "out/detectability-v2/BV13ZvrBtEde/p02/visual/frame-00200.00.jpg"
+    }
+  ],
+  "coverageNotes": [
+    "3个作者进度标识，各自对应3奖励成员，共9成员；逐个箱体观察，不以图标数量代替奖励数。",
+    "星声领取HUD在切地图/赶路后继续滚动，不算新奖励。",
+    "文本时间与画面基本顺序对应，但首挑战过程缺失；已保留剪辑缺口。"
+  ],
+  "matchingReviewMethod": "independent source frames/local-ASR + fixed SIFT + source guide images; no overview/v1 candidate inheritance"
+}

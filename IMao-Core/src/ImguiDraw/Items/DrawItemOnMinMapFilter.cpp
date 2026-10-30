@@ -121,6 +121,7 @@ vector<ItemDatas> DrawItemOnMinMap::GetAndFilterItemsData(const RECT& rect, cons
     constexpr double kStayUnits = 155.0;
     for (const auto& itemsData : *itemsDatas_StoragePtr) {
         for (const auto& itemDatas : itemsData.itemsDatas) {
+            if (!DrawItemBase::AllowsGapFill(senceName, itemDatas)) continue;
             const bool alreadyDrawn = wasDrawn(itemDatas.itemId);
             const double limit = alreadyDrawn ? kStayUnits : kEnterUnits;
             if (abs(playerROC.x - itemDatas.itemMapROC.x) <= limit && abs(playerROC.y - itemDatas.itemMapROC.y) <= limit) {

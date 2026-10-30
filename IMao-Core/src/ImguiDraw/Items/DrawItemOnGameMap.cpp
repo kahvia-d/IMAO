@@ -94,6 +94,7 @@ vector<ItemDatas> DrawItemOnGameMap::GetAndFilterItemsData(const Coordinate& gam
     if (!completions.Compatible()) return filterItemsData;
 	for (const auto& itemsDatas : *itemsDatas_StoragePtr) {
 		for (const auto& itemDatas : itemsDatas.itemsDatas) {
+            if (!DrawItemBase::AllowsGapFill(senceName, itemDatas)) continue;
 			Coordinate itemScreen = ScreenCoordinate::ItemScreenCoordinateOnMap(gameMapcenterPointRC, itemDatas.itemMapROC, captureCorners, rect);
 			if (itemScreen.x < rect.right + 64 && itemScreen.x >= -64 && itemScreen.y < rect.bottom + 64 && itemScreen.y >= -64) {
 				ItemDatas tempItemData = itemDatas;

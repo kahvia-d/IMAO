@@ -1,0 +1,1379 @@
+{
+  "schemaVersion": 1,
+  "bvid": "BV1iMTXzVE8J",
+  "part": 11,
+  "scope": "All currently identity-pending P11 members, independent sampled route follow-up",
+  "noMainTimelineEdits": true,
+  "summary": {
+    "totalPendingMembers": 12,
+    "routeReviewedMembers": 12,
+    "confirmationProposals": 11,
+    "reviewedUnresolvedMembers": 1,
+    "notYetRouteReviewed": 0
+  },
+  "maps": [
+    {
+      "path": "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+      "manifest": "Assets/FeaturesDatas/KuroTilePacks/jinzhou/manifest.json",
+      "bounds": [
+        -1,
+        2,
+        -4,
+        -2
+      ],
+      "area": [
+        55,
+        2310,
+        1100,
+        3080
+      ],
+      "pixelToGame": [
+        [
+          0.830078125,
+          0.0,
+          -1700.0
+        ],
+        [
+          0.0,
+          0.830078125,
+          1700.0
+        ]
+      ],
+      "nodes": {
+        "E1": {
+          "game": [
+            221.0,
+            2664.0
+          ],
+          "pointId": "1282805566957203456",
+          "basis": "route + reviewed guide candidate; not a measured reward endpoint"
+        },
+        "E3": {
+          "game": [
+            258.0,
+            2889.0
+          ],
+          "pointId": "1282806504977227776",
+          "basis": "route + reviewed guide candidate; not a measured reward endpoint"
+        },
+        "E4": {
+          "game": [
+            278.0,
+            2925.0
+          ],
+          "pointId": "1282457638774849536",
+          "basis": "route + reviewed guide candidate; not a measured reward endpoint"
+        },
+        "E5起点": {
+          "game": [
+            237.0,
+            2932.0
+          ],
+          "pointId": "1282458053562155008",
+          "basis": "route + reviewed guide candidate; not a measured reward endpoint"
+        },
+        "E6": {
+          "game": [
+            354.0,
+            2784.0
+          ],
+          "pointId": "1282806804558565376",
+          "basis": "route + reviewed guide candidate; not a measured reward endpoint"
+        },
+        "E7起点": {
+          "game": [
+            437.0,
+            2770.0
+          ],
+          "pointId": "1285624536032034816",
+          "basis": "route + reviewed guide candidate; not a measured reward endpoint"
+        },
+        "E8": {
+          "game": [
+            470.0,
+            2847.0
+          ],
+          "pointId": "1288593346525675520",
+          "basis": "route + reviewed guide candidate; not a measured reward endpoint"
+        },
+        "E10": {
+          "game": [
+            740.0,
+            2891.0
+          ],
+          "pointId": "1287381442547216384",
+          "basis": "route + reviewed guide candidate; not a measured reward endpoint"
+        },
+        "E13起点": {
+          "game": [
+            790.0,
+            2710.0
+          ],
+          "pointId": "1286366346314530816",
+          "basis": "route + reviewed guide candidate; not a measured reward endpoint"
+        },
+        "E14": {
+          "game": [
+            721.0,
+            2687.0
+          ],
+          "pointId": "1287382629642801152",
+          "basis": "route + reviewed guide candidate; not a measured reward endpoint"
+        },
+        "E25起点": {
+          "game": [
+            847.0,
+            2380.0
+          ],
+          "pointId": "1288094056361291776",
+          "basis": "route + reviewed guide candidate; not a measured reward endpoint"
+        },
+        "E5终点锚": {
+          "game": [
+            268.32278262703676,
+            2947.6121245238637
+          ],
+          "basis": "162s actual player arrow"
+        },
+        "E7终点锚": {
+          "game": [
+            511.9107139699295,
+            2728.468835297102
+          ],
+          "basis": "253s actual player arrow"
+        },
+        "E13终点锚": {
+          "game": [
+            821.2517088905329,
+            2783.411102610382
+          ],
+          "basis": "539s actual player arrow"
+        },
+        "E25前917锚": {
+          "game": [
+            914.7883186989147,
+            2510.617226427241
+          ],
+          "basis": "actual player after E24, no new teleport"
+        },
+        "E12已确认/房区参考": {
+          "game": [
+            855.9559406464664,
+            2826.650011028347
+          ],
+          "basis": "E12 flower chest endpoint; context only, not crystal coordinate"
+        }
+      },
+      "facilities": [
+        {
+          "stateId": "8",
+          "pointId": "1253821276787363840",
+          "game": [
+            752.2,
+            2759.4
+          ],
+          "type": "小型信标",
+          "label": "小型信标1",
+          "actuallyUsed": true
+        },
+        {
+          "stateId": "8",
+          "pointId": "1253821413936910336",
+          "game": [
+            411.723,
+            2479.1419
+          ],
+          "type": "小型信标",
+          "label": "小型信标2",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1255956793287491584",
+          "game": [
+            1055.3688,
+            2841.7266
+          ],
+          "type": "小型信标",
+          "label": "小型信标3",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1255956793342017536",
+          "game": [
+            852.1682000000001,
+            2561.8422
+          ],
+          "type": "小型信标",
+          "label": "小型信标4",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1255956793434292224",
+          "game": [
+            720.1832,
+            3007.9741
+          ],
+          "type": "小型信标",
+          "label": "小型信标5",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1255956793480429568",
+          "game": [
+            529.0431,
+            2854.5753000000004
+          ],
+          "type": "小型信标",
+          "label": "小型信标6",
+          "actuallyUsed": true
+        },
+        {
+          "stateId": "8",
+          "pointId": "1255956793526566912",
+          "game": [
+            199.0768,
+            2901.6209000000003
+          ],
+          "type": "小型信标",
+          "label": "小型信标7",
+          "actuallyUsed": true
+        },
+        {
+          "stateId": "8",
+          "pointId": "1255956793568509952",
+          "game": [
+            134.3409,
+            2629.2290999999996
+          ],
+          "type": "小型信标",
+          "label": "小型信标8",
+          "actuallyUsed": true
+        },
+        {
+          "stateId": "8",
+          "pointId": "1255665588235935744",
+          "game": [
+            681.9703,
+            2458.9738
+          ],
+          "type": "中枢信标",
+          "label": "中枢信标9",
+          "actuallyUsed": false
+        },
+        {
+          "stateId": "8",
+          "pointId": "1255665588319821824",
+          "game": [
+            295.0713,
+            2762.1981
+          ],
+          "type": "中枢信标",
+          "label": "中枢信标10",
+          "actuallyUsed": true
+        }
+      ],
+      "edges": [
+        [
+          [
+            134.3409,
+            2629.2290999999996
+          ],
+          [
+            221.0,
+            2664.0
+          ]
+        ],
+        [
+          [
+            199.0768,
+            2901.6209000000003
+          ],
+          [
+            258.0,
+            2889.0
+          ],
+          [
+            278.0,
+            2925.0
+          ],
+          [
+            237.0,
+            2932.0
+          ],
+          [
+            268.32278262703676,
+            2947.6121245238637
+          ]
+        ],
+        [
+          [
+            295.0713,
+            2762.1981
+          ],
+          [
+            354.0,
+            2784.0
+          ],
+          [
+            437.0,
+            2770.0
+          ],
+          [
+            511.9107139699295,
+            2728.468835297102
+          ]
+        ],
+        [
+          [
+            529.0431,
+            2854.5753000000004
+          ],
+          [
+            470.0,
+            2847.0
+          ]
+        ],
+        [
+          [
+            752.2,
+            2759.4
+          ],
+          [
+            740.0,
+            2891.0
+          ],
+          [
+            855.9559406464664,
+            2826.650011028347
+          ]
+        ],
+        [
+          [
+            752.2,
+            2759.4
+          ],
+          [
+            790.0,
+            2710.0
+          ],
+          [
+            821.2517088905329,
+            2783.411102610382
+          ]
+        ],
+        [
+          [
+            752.2,
+            2759.4
+          ],
+          [
+            721.0,
+            2687.0
+          ]
+        ],
+        [
+          [
+            914.7883186989147,
+            2510.617226427241
+          ],
+          [
+            847.0,
+            2380.0
+          ]
+        ]
+      ],
+      "edgeMeaning": "dashed stage relations only; no inferred exact trajectory"
+    }
+  ],
+  "members": [
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e001",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "9秒实际黄色玩家箭头在无明湾南侧小型信标附近，13秒东行正前营地、17秒向右转上草坡，21秒到山尖射击器；25–37秒依次射多组空中靶，38–41秒青箱。草坡与电线杆/横拉缆、斜岩营地、对岸悬崖对应攻略，排除旧炸药苞三阵列和灯塔任务。",
+      "support": [
+        "9秒实际黄色玩家箭头在无明湾南侧小型信标附近，13秒东行正前营地、17秒向右转上草坡，21秒到山尖射击器；25–37秒依次射多组空中靶，38–41秒青箱。草坡与电线杆/横拉缆、斜岩营地、对岸悬崖对应攻略，排除旧炸药苞三阵列和灯塔任务。",
+        "9秒实际玩家箭头game[133.56,2625.21]与起点小信标[134.34,2629.23]一致。"
+      ],
+      "counterEvidence": [
+        "保留旧文本候选用于审计；与本次实际路线/箱型不同的炸药阵列、灯塔、声匣和浮岛压板不再作为本成员支持。"
+      ],
+      "gaps": [
+        "连续路线采用4秒步长及奖励出现帧人工审阅；地图虚线仅示阶段关系，不是逐帧位置。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1273024217174368256",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。东方营地右坡山尖射击，文本最佳候选为炸药苞三阵列而非靶组；无合格小地图，需此山尖射击起点和近景攻略。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1287150807243689984",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。东方营地右坡山尖射击，文本最佳候选为炸药苞三阵列而非靶组；无合格小地图，需此山尖射击起点和近景攻略。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1282805566957203456",
+          "status": "route-and-guide-proposal"
+        }
+      ],
+      "detectability": "undetectable",
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-p11/e1-route-0.jpg",
+        "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+        "out/detectability-v2/route-huanglong-p11/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1282805566957203456-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1282805566957203456.json",
+        "out/detectability-v2/route-huanglong-p11/map-9.jpg"
+      ],
+      "reviewedSampleTimes": [
+        6.0,
+        9.0,
+        13.0,
+        17.0,
+        21.0,
+        25.0,
+        29.0,
+        33.0,
+        37.0,
+        38.0,
+        41.0,
+        42.0
+      ],
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1282805566957203456"
+      },
+      "guideLandmarkReview": "上述support中写明逐图复核的地形/设施/奖励形态；不是文本机制检索自动确认。"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e003",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "71–75秒打开地图选鸣呜仓储站南侧小型信标并加载；79秒新信标起点，83秒东北跃崖，87秒贴岩壁右转下降，91–93秒打碎岩堆得青箱。攻略同岸边碎石、斜灰石壁、水中独立枯树巨石及对岸断崖；并非旧三压感台谜题。",
+      "support": [
+        "71–75秒打开地图选鸣呜仓储站南侧小型信标并加载；79秒新信标起点，83秒东北跃崖，87秒贴岩壁右转下降，91–93秒打碎岩堆得青箱。攻略同岸边碎石、斜灰石壁、水中独立枯树巨石及对岸断崖；并非旧三压感台谜题。",
+        "地图选中十字/设施面板已单独核对并配准；不把选中十字当玩家奖励位置。"
+      ],
+      "counterEvidence": [
+        "保留旧文本候选用于审计；与本次实际路线/箱型不同的炸药阵列、灯塔、声匣和浮岛压板不再作为本成员支持。"
+      ],
+      "gaps": [
+        "连续路线采用4秒步长及奖励出现帧人工审阅；地图虚线仅示阶段关系，不是逐帧位置。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1282806504977227776",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。72秒地图之后传送，东北跳崖再右转碎石；不能用传送前海岸箱位置。通用碎石描述覆盖多点，缺新的岩壁锚点。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1251280321834123264",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。72秒地图之后传送，东北跳崖再右转碎石；不能用传送前海岸箱位置。通用碎石描述覆盖多点，缺新的岩壁锚点。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1282806504977227776",
+          "status": "route-and-guide-proposal"
+        }
+      ],
+      "detectability": "undetectable",
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-p11/e3-route-0.jpg",
+        "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+        "out/detectability-v2/route-huanglong-p11/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1282806504977227776-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1282806504977227776.json",
+        "out/detectability-v2/route-huanglong-p11/map-73.jpg"
+      ],
+      "reviewedSampleTimes": [
+        68.0,
+        71.0,
+        75.0,
+        79.0,
+        83.0,
+        87.0,
+        91.0,
+        92.0,
+        93.0
+      ],
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1282806504977227776"
+      },
+      "guideLandmarkReview": "上述support中写明逐图复核的地形/设施/奖励形态；不是文本机制检索自动确认。",
+      "facilityEvidence": {
+        "time": 73,
+        "source": "out/detectability-v2/route-huanglong-p11/map-73.jpg",
+        "gamePosition": [
+          203.38804769803892,
+          2897.769462108783
+        ],
+        "inliers": 111,
+        "acceptedGeometry": true,
+        "role": "selected-teleport-facility"
+      }
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e004",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "94–98秒从E3青箱处攀回岩壁顶向东南，102秒在高台射击，106–109秒青箱与射击器同处。小地图可见原信标在西北，攻略同下方水池中央横卧枯树、对岸平崖及平台松树；与E1电线营地草坡为不同射击点。",
+      "support": [
+        "94–98秒从E3青箱处攀回岩壁顶向东南，102秒在高台射击，106–109秒青箱与射击器同处。小地图可见原信标在西北，攻略同下方水池中央横卧枯树、对岸平崖及平台松树；与E1电线营地草坡为不同射击点。",
+        "地图选中十字/设施面板已单独核对并配准；不把选中十字当玩家奖励位置。"
+      ],
+      "counterEvidence": [
+        "保留旧文本候选用于审计；与本次实际路线/箱型不同的炸药阵列、灯塔、声匣和浮岛压板不再作为本成员支持。"
+      ],
+      "gaps": [
+        "连续路线采用4秒步长及奖励出现帧人工审阅；地图虚线仅示阶段关系，不是逐帧位置。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1273024217174368256",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。从前石堆爬回崖壁再向东南射击，文字检索误召回三阵列；需同一高地靶组与终点照片，不能因辅助射击技能相同认作阵列。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1251309038845296640",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。从前石堆爬回崖壁再向东南射击，文字检索误召回三阵列；需同一高地靶组与终点照片，不能因辅助射击技能相同认作阵列。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1282457638774849536",
+          "status": "route-and-guide-proposal"
+        }
+      ],
+      "detectability": "undetectable",
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-p11/e4-route-0.jpg",
+        "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+        "out/detectability-v2/route-huanglong-p11/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1282457638774849536-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1282457638774849536.json",
+        "out/detectability-v2/route-huanglong-p11/map-73.jpg"
+      ],
+      "reviewedSampleTimes": [
+        91.0,
+        94.0,
+        98.0,
+        102.0,
+        106.0,
+        109.0
+      ],
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1282457638774849536"
+      },
+      "guideLandmarkReview": "上述support中写明逐图复核的地形/设施/奖励形态；不是文本机制检索自动确认。",
+      "facilityEvidence": {
+        "time": 73,
+        "source": "out/detectability-v2/route-huanglong-p11/map-73.jpg",
+        "gamePosition": [
+          203.38804769803892,
+          2897.769462108783
+        ],
+        "inliers": 111,
+        "acceptedGeometry": true,
+        "role": "selected-teleport-facility"
+      }
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e005",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "110秒接E4转西南绕岩壁，114–118秒上花坡至跑酷装置；122–138秒蓝墙上攀后弹跳平台，142–154秒环绕浮空平台，158–161秒最高双层蓝平台紫箱。攻略第2图是相同双层终台、后方巨型岩拱和两岸崖线；162秒开图玩家在终台，点库标记237,2932对应起点，不能把终点268.32,2947.61当成起点反证。",
+      "support": [
+        "110秒接E4转西南绕岩壁，114–118秒上花坡至跑酷装置；122–138秒蓝墙上攀后弹跳平台，142–154秒环绕浮空平台，158–161秒最高双层蓝平台紫箱。攻略第2图是相同双层终台、后方巨型岩拱和两岸崖线；162秒开图玩家在终台，点库标记237,2932对应起点，不能把终点268.32,2947.61当成起点反证。",
+        "地图选中十字/设施面板已单独核对并配准；不把选中十字当玩家奖励位置。"
+      ],
+      "counterEvidence": [
+        "官方点记录挑战起点；玩家箭头是领奖终点，两者不同，不按终点最近邻改身份。",
+        "保留旧文本候选用于审计；与本次实际路线/箱型不同的炸药阵列、灯塔、声匣和浮岛压板不再作为本成员支持。"
+      ],
+      "gaps": [
+        "连续路线采用4秒步长及奖励出现帧人工审阅；地图虚线仅示阶段关系，不是逐帧位置。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1285624536032034816",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。西南大石上限时跑酷，终点163秒开图靠近裸露箱及射击挑战；两个近邻机制均不符。挑战标点可能在起点，奖励终点漂移不能靠最近箱解决。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1288273919918084096",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。西南大石上限时跑酷，终点163秒开图靠近裸露箱及射击挑战；两个近邻机制均不符。挑战标点可能在起点，奖励终点漂移不能靠最近箱解决。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1282458053562155008",
+          "status": "route-and-guide-proposal"
+        }
+      ],
+      "detectability": "undetectable",
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-p11/e5-route-0.jpg",
+        "out/detectability-v2/route-huanglong-p11/e5-route-1.jpg",
+        "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+        "out/detectability-v2/route-huanglong-p11/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1282458053562155008-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1282458053562155008-2.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1282458053562155008.json",
+        "out/detectability-v2/route-huanglong-p11/map-162.jpg",
+        "out/detectability-v2/route-huanglong-p11/map-73.jpg"
+      ],
+      "reviewedSampleTimes": [
+        107.0,
+        110.0,
+        114.0,
+        118.0,
+        122.0,
+        126.0,
+        130.0,
+        134.0,
+        138.0,
+        142.0,
+        146.0,
+        150.0,
+        154.0,
+        158.0,
+        159.0,
+        161.0
+      ],
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1282458053562155008"
+      },
+      "guideLandmarkReview": "上述support中写明逐图复核的地形/设施/奖励形态；不是文本机制检索自动确认。",
+      "absoluteEndpointEvidence": {
+        "time": 162,
+        "source": "out/detectability-v2/route-huanglong-p11/map-162.jpg",
+        "gamePosition": [
+          268.32278262703676,
+          2947.6121245238637
+        ],
+        "rawPosition": [
+          26832.278262703676,
+          294761.2124523864
+        ],
+        "inliers": 260,
+        "acceptedGeometry": true,
+        "playerPixel": [
+          425.0,
+          239.37894736842105
+        ]
+      },
+      "facilityEvidence": {
+        "time": 73,
+        "source": "out/detectability-v2/route-huanglong-p11/map-73.jpg",
+        "gamePosition": [
+          203.38804769803892,
+          2897.769462108783
+        ],
+        "inliers": 111,
+        "acceptedGeometry": true,
+        "role": "selected-teleport-facility"
+      }
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e006",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "162–170秒实际选择中枢信标并加载（不是小型信标）；174秒向东到断栏/地表高沿，178–182秒往东南下跳，186–188秒低岩层碎石中朴素箱。攻略相同上层残木栏、下层倾斜灰岩与枯树、对面金属道路；新点354,2784在中枢东南。",
+      "support": [
+        "162–170秒实际选择中枢信标并加载（不是小型信标）；174秒向东到断栏/地表高沿，178–182秒往东南下跳，186–188秒低岩层碎石中朴素箱。攻略相同上层残木栏、下层倾斜灰岩与枯树、对面金属道路；新点354,2784在中枢东南。",
+        "地图选中十字/设施面板已单独核对并配准；不把选中十字当玩家奖励位置。"
+      ],
+      "counterEvidence": [
+        "保留旧文本候选用于审计；与本次实际路线/箱型不同的炸药阵列、灯塔、声匣和浮岛压板不再作为本成员支持。"
+      ],
+      "gaps": [
+        "连续路线采用4秒步长及奖励出现帧人工审阅；地图虚线仅示阶段关系，不是逐帧位置。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1282806504977227776",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。163秒开图后传送，东面栏杆处东南下跳碎石；新的低层与旧高地断开。无有效小地图，普通碎石描述无法唯一确定。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1251280321834123264",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。163秒开图后传送，东面栏杆处东南下跳碎石；新的低层与旧高地断开。无有效小地图，普通碎石描述无法唯一确定。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1282806804558565376",
+          "status": "route-and-guide-proposal"
+        }
+      ],
+      "detectability": "undetectable",
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-p11/e6-route-0.jpg",
+        "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+        "out/detectability-v2/route-huanglong-p11/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1282806804558565376-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1282806804558565376.json",
+        "out/detectability-v2/route-huanglong-p11/map-164.jpg"
+      ],
+      "reviewedSampleTimes": [
+        159.0,
+        162.0,
+        166.0,
+        170.0,
+        174.0,
+        178.0,
+        182.0,
+        186.0,
+        187.0
+      ],
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1282806804558565376"
+      },
+      "guideLandmarkReview": "上述support中写明逐图复核的地形/设施/奖励形态；不是文本机制检索自动确认。",
+      "facilityEvidence": {
+        "time": 164,
+        "source": "out/detectability-v2/route-huanglong-p11/map-164.jpg",
+        "gamePosition": [
+          295.1091199980833,
+          2762.1922681109518
+        ],
+        "inliers": 104,
+        "acceptedGeometry": true,
+        "role": "selected-teleport-facility"
+      }
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e007",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "188秒接E6向东爬出低层，196秒越敌人旁金属轨道，200–204秒上小坎到跑酷器；208–224秒蓝台及弹跳，228秒魔方压板、236秒击柱继续开路，240–248秒向东北连续上坡，249–252秒山坡青箱。攻略标记437,2770为挑战起点，文字明确40硬币；图中圆底座、左侧金属轨道、背后灰岩横层与起点吻合，253秒真实玩家终点为511.91,2728.47，不能拿终点近邻去绑沿途强击阵列。",
+      "support": [
+        "188秒接E6向东爬出低层，196秒越敌人旁金属轨道，200–204秒上小坎到跑酷器；208–224秒蓝台及弹跳，228秒魔方压板、236秒击柱继续开路，240–248秒向东北连续上坡，249–252秒山坡青箱。攻略标记437,2770为挑战起点，文字明确40硬币；图中圆底座、左侧金属轨道、背后灰岩横层与起点吻合，253秒真实玩家终点为511.91,2728.47，不能拿终点近邻去绑沿途强击阵列。",
+        "地图选中十字/设施面板已单独核对并配准；不把选中十字当玩家奖励位置。"
+      ],
+      "counterEvidence": [
+        "官方点记录挑战起点；玩家箭头是领奖终点，两者不同，不按终点最近邻改身份。",
+        "保留旧文本候选用于审计；与本次实际路线/箱型不同的炸药阵列、灯塔、声匣和浮岛压板不再作为本成员支持。"
+      ],
+      "gaps": [
+        "连续路线采用4秒步长及奖励出现帧人工审阅；地图虚线仅示阶段关系，不是逐帧位置。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1255985231231295488",
+          "status": "excluded",
+          "analysis": "249秒SIFT17内点raw(51088,273570)，254/256秒大地图相近，玩家位置可信。最近1255985231231295488为三阵列池塘箱，攻略图与视频跑酷终点树坡并不一致。明确排除该近邻；仍需找到蓝平台/魔方/代币挑战的起点ID与终点攻略。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1288273919918084096",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。249秒SIFT17内点raw(51088,273570)，254/256秒大地图相近，玩家位置可信。最近1255985231231295488为三阵列池塘箱，攻略图与视频跑酷终点树坡并不一致。明确排除该近邻；仍需找到蓝平台/魔方/代币挑战的起点ID与终点攻略。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1258931888181538816",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。249秒SIFT17内点raw(51088,273570)，254/256秒大地图相近，玩家位置可信。最近1255985231231295488为三阵列池塘箱，攻略图与视频跑酷终点树坡并不一致。明确排除该近邻；仍需找到蓝平台/魔方/代币挑战的起点ID与终点攻略。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1285624536032034816",
+          "status": "route-and-guide-proposal"
+        }
+      ],
+      "detectability": "undetectable",
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-p11/e7-route-0.jpg",
+        "out/detectability-v2/route-huanglong-p11/e7-route-1.jpg",
+        "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+        "out/detectability-v2/route-huanglong-p11/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1285624536032034816-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1285624536032034816.json",
+        "out/detectability-v2/route-huanglong-p11/map-253.jpg",
+        "out/detectability-v2/route-huanglong-p11/map-164.jpg"
+      ],
+      "reviewedSampleTimes": [
+        185.0,
+        188.0,
+        192.0,
+        196.0,
+        200.0,
+        204.0,
+        208.0,
+        212.0,
+        216.0,
+        220.0,
+        224.0,
+        228.0,
+        232.0,
+        236.0,
+        240.0,
+        244.0,
+        248.0,
+        249.0,
+        252.0
+      ],
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1285624536032034816"
+      },
+      "guideLandmarkReview": "上述support中写明逐图复核的地形/设施/奖励形态；不是文本机制检索自动确认。",
+      "absoluteEndpointEvidence": {
+        "time": 253,
+        "source": "out/detectability-v2/route-huanglong-p11/map-253.jpg",
+        "gamePosition": [
+          511.9107139699295,
+          2728.468835297102
+        ],
+        "rawPosition": [
+          51191.07139699295,
+          272846.8835297102
+        ],
+        "inliers": 379,
+        "acceptedGeometry": true,
+        "playerPixel": [
+          425.05288461538464,
+          239.6778846153846
+        ]
+      },
+      "facilityEvidence": {
+        "time": 164,
+        "source": "out/detectability-v2/route-huanglong-p11/map-164.jpg",
+        "gamePosition": [
+          295.1091199980833,
+          2762.1922681109518
+        ],
+        "inliers": 104,
+        "acceptedGeometry": true,
+        "role": "selected-teleport-facility"
+      }
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e008",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "253–261秒传到羽鹭湿地悬崖小型信标；265–269秒西南落出崖边，273秒向右/西北侧飞近峡谷瀑布，277–284秒瀑布前岩层间碎石得朴素箱。攻略同狭窄瀑布、两侧松树遮挡、草地低石与白枯枝；旧候选是悬空声匣，类型和位置高度均不符。",
+      "support": [
+        "253–261秒传到羽鹭湿地悬崖小型信标；265–269秒西南落出崖边，273秒向右/西北侧飞近峡谷瀑布，277–284秒瀑布前岩层间碎石得朴素箱。攻略同狭窄瀑布、两侧松树遮挡、草地低石与白枯枝；旧候选是悬空声匣，类型和位置高度均不符。",
+        "地图选中十字/设施面板已单独核对并配准；不把选中十字当玩家奖励位置。"
+      ],
+      "counterEvidence": [
+        "保留旧文本候选用于审计；与本次实际路线/箱型不同的炸药阵列、灯塔、声匣和浮岛压板不再作为本成员支持。"
+      ],
+      "gaps": [
+        "连续路线采用4秒步长及奖励出现帧人工审阅；地图虚线仅示阶段关系，不是逐帧位置。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1258934512261115904",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。传送后西南落到右侧瀑布前破碎石，文字检索只命中瀑布声匣，类型和操作不符；不能把同瀑布的声匣替代朴素箱。待核实碎石在瀑布哪一层。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1258953713845190656",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。传送后西南落到右侧瀑布前破碎石，文字检索只命中瀑布声匣，类型和操作不符；不能把同瀑布的声匣替代朴素箱。待核实碎石在瀑布哪一层。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1288593346525675520",
+          "status": "route-and-guide-proposal"
+        }
+      ],
+      "detectability": "undetectable",
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-p11/e8-route-0.jpg",
+        "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+        "out/detectability-v2/route-huanglong-p11/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1288593346525675520-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1288593346525675520.json",
+        "out/detectability-v2/route-huanglong-p11/map-255.jpg"
+      ],
+      "reviewedSampleTimes": [
+        250.0,
+        253.0,
+        257.0,
+        261.0,
+        265.0,
+        269.0,
+        273.0,
+        277.0,
+        281.0,
+        284.0
+      ],
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1288593346525675520"
+      },
+      "guideLandmarkReview": "上述support中写明逐图复核的地形/设施/奖励形态；不是文本机制检索自动确认。",
+      "facilityEvidence": {
+        "time": 255,
+        "source": "out/detectability-v2/route-huanglong-p11/map-255.jpg",
+        "gamePosition": [
+          528.9677627136148,
+          2854.6361513100105
+        ],
+        "inliers": 210,
+        "acceptedGeometry": true,
+        "role": "selected-teleport-facility"
+      }
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e010",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "324–329秒重新选稷廷遗址北侧小型信标，336–352秒向南经过蓝花、两级石坡持续上山，356秒山坡挑战器，360–380秒60秒内用爆炸果多轮摧毁木箱，383–388秒青箱。攻略同蓝花草坡、爆炸果、左侧松树后废墟平台；旧烧荆棘裸露箱机制不符。",
+      "support": [
+        "324–329秒重新选稷廷遗址北侧小型信标，336–352秒向南经过蓝花、两级石坡持续上山，356秒山坡挑战器，360–380秒60秒内用爆炸果多轮摧毁木箱，383–388秒青箱。攻略同蓝花草坡、爆炸果、左侧松树后废墟平台；旧烧荆棘裸露箱机制不符。",
+        "地图选中十字/设施面板已单独核对并配准；不把选中十字当玩家奖励位置。"
+      ],
+      "counterEvidence": [
+        "保留旧文本候选用于审计；与本次实际路线/箱型不同的炸药阵列、灯塔、声匣和浮岛压板不再作为本成员支持。"
+      ],
+      "gaps": [
+        "连续路线采用4秒步长及奖励出现帧人工审阅；地图虚线仅示阶段关系，不是逐帧位置。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1251279506112548864",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。南爬山到东南60秒炸药苞多轮木箱射击；候选烧荆棘是不同机制。无本段通过的小地图，缺挑战装置位置及木箱轮次攻略。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1251558433315467264",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。南爬山到东南60秒炸药苞多轮木箱射击；候选烧荆棘是不同机制。无本段通过的小地图，缺挑战装置位置及木箱轮次攻略。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1287381442547216384",
+          "status": "route-and-guide-proposal"
+        }
+      ],
+      "detectability": "undetectable",
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-p11/e10-route-0.jpg",
+        "out/detectability-v2/route-huanglong-p11/e10-route-1.jpg",
+        "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+        "out/detectability-v2/route-huanglong-p11/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1287381442547216384-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1287381442547216384.json",
+        "out/detectability-v2/route-huanglong-p11/map-329.jpg"
+      ],
+      "reviewedSampleTimes": [
+        317.0,
+        320.0,
+        324.0,
+        328.0,
+        332.0,
+        336.0,
+        340.0,
+        344.0,
+        348.0,
+        352.0,
+        356.0,
+        360.0,
+        364.0,
+        368.0,
+        372.0,
+        376.0,
+        380.0,
+        383.0,
+        384.0,
+        387.0
+      ],
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1287381442547216384"
+      },
+      "guideLandmarkReview": "上述support中写明逐图复核的地形/设施/奖励形态；不是文本机制检索自动确认。",
+      "facilityEvidence": {
+        "time": 329,
+        "source": "out/detectability-v2/route-huanglong-p11/map-329.jpg",
+        "gamePosition": [
+          751.9706234243167,
+          2759.376623308687
+        ],
+        "inliers": 298,
+        "acceptedGeometry": true,
+        "role": "selected-teleport-facility"
+      }
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e011",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "retain-unresolved",
+      "route": "388秒从E10箱旁连续向东偏东北下滑，396秒已见圆形大平台和实验室，400–408秒进入房外压板区；412/416秒第一块与角色解第二块，424–440秒挪两块压板，444秒房门打开，448秒只取引导晶核，452秒离开。攻略1288287493370998784图1同两方块、多压板及绿色圆门，定位实验室区充分；但该点是外部金箱，屋内紫箱也明确未领取，不能替晶核赋箱ID。",
+      "support": [
+        "388秒从E10箱旁连续向东偏东北下滑，396秒已见圆形大平台和实验室，400–408秒进入房外压板区；412/416秒第一块与角色解第二块，424–440秒挪两块压板，444秒房门打开，448秒只取引导晶核，452秒离开。攻略1288287493370998784图1同两方块、多压板及绿色圆门，定位实验室区充分；但该点是外部金箱，屋内紫箱也明确未领取，不能替晶核赋箱ID。",
+        "地图选中十字/设施面板已单独核对并配准；不把选中十字当玩家奖励位置。"
+      ],
+      "counterEvidence": [
+        "448秒交互对象是引导晶核，未开旁边紫箱；1288287493370998784是外部辉光箱，1288578802371588096是交付两个晶核后的另一奖励，均不等于当前晶核。"
+      ],
+      "gaps": [
+        "连续路线采用4秒步长及奖励出现帧人工审阅；地图虚线仅示阶段关系，不是逐帧位置。",
+        "同一实验室位置已核实，但state-8点位组未找到独立引导晶核类别；不借紫箱或外部辉光箱ID。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1288287493370998784",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。448/449秒界面是引导晶核；1288287493370998784攻略图1/2说明房门前置及紫箱、图3说明外部辉光箱。当前成员是晶核，不绑定任何宝箱ID，室内紫箱明确不属于此次领取；需要独立晶核点位类别。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1288578802371588096",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。448/449秒界面是引导晶核；1288287493370998784攻略图1/2说明房门前置及紫箱、图3说明外部辉光箱。当前成员是晶核，不绑定任何宝箱ID，室内紫箱明确不属于此次领取；需要独立晶核点位类别。"
+        }
+      ],
+      "detectability": "undetectable",
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-p11/e11-route-0.jpg",
+        "out/detectability-v2/route-huanglong-p11/e11-route-1.jpg",
+        "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+        "out/detectability-v2/route-huanglong-p11/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1288287493370998784-1.png",
+        "out/detectability-v2/route-huanglong-p11/map-329.jpg"
+      ],
+      "reviewedSampleTimes": [
+        385.0,
+        388.0,
+        392.0,
+        396.0,
+        400.0,
+        404.0,
+        408.0,
+        412.0,
+        416.0,
+        420.0,
+        424.0,
+        428.0,
+        432.0,
+        436.0,
+        440.0,
+        444.0,
+        445.0,
+        448.0,
+        452.0
+      ],
+      "facilityEvidence": {
+        "time": 329,
+        "source": "out/detectability-v2/route-huanglong-p11/map-329.jpg",
+        "gamePosition": [
+          751.9706234243167,
+          2759.376623308687
+        ],
+        "inliers": 298,
+        "acceptedGeometry": true,
+        "role": "selected-teleport-facility"
+      }
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e013",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "476–480秒传回同一北侧信标，484–488秒东北越金属路到河边蓝色变身球；492秒变身黑屏不作地形连续外推；496–524秒河道绕巨大枯根/斜岩及低石拱，528–536秒回到带藤实验室岸边紫箱。攻略第1图蓝球在金属路北侧、第2图实验室双圆锁门旁紫箱与视频终点完全一致；点790,2710为起点，539秒玩家终点821.25,2783.41不同。",
+      "support": [
+        "476–480秒传回同一北侧信标，484–488秒东北越金属路到河边蓝色变身球；492秒变身黑屏不作地形连续外推；496–524秒河道绕巨大枯根/斜岩及低石拱，528–536秒回到带藤实验室岸边紫箱。攻略第1图蓝球在金属路北侧、第2图实验室双圆锁门旁紫箱与视频终点完全一致；点790,2710为起点，539秒玩家终点821.25,2783.41不同。",
+        "地图选中十字/设施面板已单独核对并配准；不把选中十字当玩家奖励位置。"
+      ],
+      "counterEvidence": [
+        "官方点记录挑战起点；玩家箭头是领奖终点，两者不同，不按终点最近邻改身份。",
+        "保留旧文本候选用于审计；与本次实际路线/箱型不同的炸药阵列、灯塔、声匣和浮岛压板不再作为本成员支持。"
+      ],
+      "gaps": [
+        "连续路线采用4秒步长及奖励出现帧人工审阅；地图虚线仅示阶段关系，不是逐帧位置。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287505166411821056",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。从477秒地图后传送至东北河边，河豚环路线领取精密箱；候选1288583124337618944属于后续P12水域，1287505166411821056要求先送蝶。缺新水域起点/终点地图链，不能复用P12身份。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1288583124337618944",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。从477秒地图后传送至东北河边，河豚环路线领取精密箱；候选1288583124337618944属于后续P12水域，1287505166411821056要求先送蝶。缺新水域起点/终点地图链，不能复用P12身份。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1286366346314530816",
+          "status": "route-and-guide-proposal"
+        }
+      ],
+      "detectability": "undetectable",
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-p11/e13-route-0.jpg",
+        "out/detectability-v2/route-huanglong-p11/e13-route-1.jpg",
+        "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+        "out/detectability-v2/route-huanglong-p11/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1286366346314530816-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1286366346314530816-2.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1286366346314530816.json",
+        "out/detectability-v2/route-huanglong-p11/map-539.jpg",
+        "out/detectability-v2/route-huanglong-p11/map-477.jpg"
+      ],
+      "reviewedSampleTimes": [
+        473.0,
+        476.0,
+        480.0,
+        484.0,
+        488.0,
+        492.0,
+        496.0,
+        500.0,
+        504.0,
+        508.0,
+        512.0,
+        516.0,
+        520.0,
+        524.0,
+        528.0,
+        532.0,
+        533.0,
+        536.0
+      ],
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1286366346314530816"
+      },
+      "guideLandmarkReview": "上述support中写明逐图复核的地形/设施/奖励形态；不是文本机制检索自动确认。",
+      "absoluteEndpointEvidence": {
+        "time": 539,
+        "source": "out/detectability-v2/route-huanglong-p11/map-539.jpg",
+        "gamePosition": [
+          821.2517088905329,
+          2783.411102610382
+        ],
+        "rawPosition": [
+          82125.17088905329,
+          278341.1102610382
+        ],
+        "inliers": 238,
+        "acceptedGeometry": true,
+        "playerPixel": [
+          467.8369565217391,
+          254.3913043478261
+        ]
+      },
+      "facilityEvidence": {
+        "time": 477,
+        "source": "out/detectability-v2/route-huanglong-p11/map-477.jpg",
+        "gamePosition": [
+          752.1201587478085,
+          2759.4286135052294
+        ],
+        "inliers": 316,
+        "acceptedGeometry": true,
+        "role": "selected-teleport-facility"
+      }
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e014",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "539–545秒再次选同北侧小型信标；549–553秒向西北跨浅水经过蓝色蘑菇晶簇，557–577秒巨悬岩下向不同高度浮岛射多轮空中靶，581–583秒射击器旁青箱。攻略同顶端大岩檐垂藤、右侧两簇蓝晶草、对面低浮岛圆钩索及青箱，排除旧5固定靶的鸣呜仓储站地表点。",
+      "support": [
+        "539–545秒再次选同北侧小型信标；549–553秒向西北跨浅水经过蓝色蘑菇晶簇，557–577秒巨悬岩下向不同高度浮岛射多轮空中靶，581–583秒射击器旁青箱。攻略同顶端大岩檐垂藤、右侧两簇蓝晶草、对面低浮岛圆钩索及青箱，排除旧5固定靶的鸣呜仓储站地表点。",
+        "地图选中十字/设施面板已单独核对并配准；不把选中十字当玩家奖励位置。"
+      ],
+      "counterEvidence": [
+        "保留旧文本候选用于审计；与本次实际路线/箱型不同的炸药阵列、灯塔、声匣和浮岛压板不再作为本成员支持。"
+      ],
+      "gaps": [
+        "连续路线采用4秒步长及奖励出现帧人工审阅；地图虚线仅示阶段关系，不是逐帧位置。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1273024217174368256",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。538秒开图未提取可靠黄箭头，传送后西北经蘑菇到射击；1282457638774849536描述固定5靶但视频多轮空中靶，缺近景证据，不因射击通用机制确认。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1282457638774849536",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。538秒开图未提取可靠黄箭头，传送后西北经蘑菇到射击；1282457638774849536描述固定5靶但视频多轮空中靶，缺近景证据，不因射击通用机制确认。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1287382629642801152",
+          "status": "route-and-guide-proposal"
+        }
+      ],
+      "detectability": "undetectable",
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-p11/e14-route-0.jpg",
+        "out/detectability-v2/route-huanglong-p11/e14-route-1.jpg",
+        "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+        "out/detectability-v2/route-huanglong-p11/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1287382629642801152-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1287382629642801152.json",
+        "out/detectability-v2/route-huanglong-p11/map-539.jpg"
+      ],
+      "reviewedSampleTimes": [
+        534.0,
+        537.0,
+        541.0,
+        545.0,
+        549.0,
+        553.0,
+        557.0,
+        561.0,
+        565.0,
+        569.0,
+        573.0,
+        577.0,
+        581.0,
+        583.0
+      ],
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1287382629642801152"
+      },
+      "guideLandmarkReview": "上述support中写明逐图复核的地形/设施/奖励形态；不是文本机制检索自动确认。",
+      "facilityEvidence": {
+        "time": 539,
+        "source": "out/detectability-v2/route-huanglong-p11/map-539.jpg",
+        "gamePosition": [
+          756.8884073429781,
+          2761.224393491608
+        ],
+        "inliers": 239,
+        "acceptedGeometry": true,
+        "role": "selected-teleport-facility"
+      }
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e025",
+      "member": 1,
+      "sourceIdentityStatus": "pending",
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm-proposed-for-parent-review",
+      "route": "917秒只是打开地图查看位置，未传送；921–933秒从上次蓝平台西北飞过无音区金色高构件落到最低长草崖，937–941秒沿崖向西北到跑酷起点；945–965秒海面移动蓝台，969秒穿崖下石拱，973秒沿途声匣是顺路拾取，977–985秒继续钩索到海岸上层，989–992秒紫箱。攻略起点同海边突出草崖、左侧直立灰崖/木架台及紫花；原始点847,2380是挑战起点，旧声匣候选不能替代末端紫箱。",
+      "support": [
+        "917秒只是打开地图查看位置，未传送；921–933秒从上次蓝平台西北飞过无音区金色高构件落到最低长草崖，937–941秒沿崖向西北到跑酷起点；945–965秒海面移动蓝台，969秒穿崖下石拱，973秒沿途声匣是顺路拾取，977–985秒继续钩索到海岸上层，989–992秒紫箱。攻略起点同海边突出草崖、左侧直立灰崖/木架台及紫花；原始点847,2380是挑战起点，旧声匣候选不能替代末端紫箱。",
+        "917秒实际玩家锚game[914.79,2510.62]只作E24后的路线出发位置；无传送，西北下滑到新挑战起点。"
+      ],
+      "counterEvidence": [
+        "保留旧文本候选用于审计；与本次实际路线/箱型不同的炸药阵列、灯塔、声匣和浮岛压板不再作为本成员支持。"
+      ],
+      "gaps": [
+        "连续路线采用4秒步长及奖励出现帧人工审阅；地图虚线仅示阶段关系，不是逐帧位置。",
+        "末端紫箱没有独立地图箭头锚；采用完整海面平台路线、起点攻略和箱型共同对应。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1258915112415576064",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。上一遗迹终点918/920秒开图后，西北跳至最低崖沿开始新跑酷并延伸海面蓝平台；明确不同于事件24。没有新终点SIFT/对应攻略，不能重复使用1288283699782414336。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1258954901592391680",
+          "status": "unverified-text-candidate",
+          "analysis": "仅原始库街区文本检索候选，未据词相似确认。上一遗迹终点918/920秒开图后，西北跳至最低崖沿开始新跑酷并延伸海面蓝平台；明确不同于事件24。没有新终点SIFT/对应攻略，不能重复使用1288283699782414336。"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1288094056361291776",
+          "status": "route-and-guide-proposal"
+        }
+      ],
+      "detectability": "undetectable",
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-p11/e25-route-0.jpg",
+        "out/detectability-v2/route-huanglong-p11/e25-route-1.jpg",
+        "out/detectability-v2/route-huanglong-p11/route-atlas.png",
+        "out/detectability-v2/route-huanglong-p11/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1288094056361291776-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p11/guides/guide-8-1288094056361291776.json",
+        "out/detectability-v2/route-huanglong-p11/map-917.jpg"
+      ],
+      "reviewedSampleTimes": [
+        914.0,
+        917.0,
+        921.0,
+        925.0,
+        929.0,
+        933.0,
+        937.0,
+        941.0,
+        945.0,
+        949.0,
+        953.0,
+        957.0,
+        961.0,
+        965.0,
+        969.0,
+        973.0,
+        977.0,
+        981.0,
+        985.0,
+        989.0,
+        992.0
+      ],
+      "proposedIdentity": {
+        "stateId": "8",
+        "pointId": "1288094056361291776"
+      },
+      "guideLandmarkReview": "上述support中写明逐图复核的地形/设施/奖励形态；不是文本机制检索自动确认。"
+    }
+  ]
+}

@@ -1,0 +1,341 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-29",
+  "experimentOnly": true,
+  "runtimeIntegration": false,
+  "bvid": "BV1iMTXzVE8J",
+  "requestedPart": 12,
+  "scope": "追加只读审核P12全目标计数、晶核房和两辉光箱区别；P11只补关联晶核房及房外奖励。",
+  "summary": {
+    "p12OverviewPins": 8,
+    "p12VisibleChestTargets": 9,
+    "p12AdditionalRoomChests": 1,
+    "p11AdditionalLinkedRoomChests": 1,
+    "newConfirmedIdentities": 2,
+    "existingIdentityConfirmations": 2,
+    "newRoomDetectabilityUnknown": 2,
+    "totalCountCaveat": "9按视频中独立可见箱目标计数，不声称9个都观察到开箱；压板房在P11，不能将它再次计入P12。"
+  },
+  "crossPartRelationship": {
+    "p11PressureRoom": "1251555702716850176",
+    "p11OutdoorPressureReward": "1288287493370998784",
+    "p12MatrixRoom": "1251555676983664640",
+    "p12TwoCoreTerraceReward": "1288578802371588096",
+    "duplicateConclusion": "两个辉光箱是不同地点、不同触发：P11房外改压板，P12高处交两个晶核。不同ID在此有独立图像和动作证据，不能合并。"
+  },
+  "reviewMethod": "查看P12全部15秒时间轴，并在385秒附近、两房/室外压板奖励和P12结尾补1–5秒原尺寸抽帧；读取并实际查看库街区相关攻略图文。下载失败有限重试后两房攻略均成功。",
+  "reviewedContacts": [
+    "out/detectability-collection/BV1iMTXzVE8J/p12/contact-15s-0000.jpg",
+    "out/detectability-collection/BV1iMTXzVE8J/p12/contact-15s-0300.jpg",
+    "out/detectability-collection/BV1iMTXzVE8J/p11/contact-15s-0000.jpg",
+    "out/detectability-collection/BV1iMTXzVE8J/p11/contact-15s-0300.jpg",
+    "out/detectability-collection/BV1iMTXzVE8J/p11/contact-15s-0600.jpg",
+    "out/detectability-collection/BV1iMTXzVE8J/p11/contact-15s-0900.jpg"
+  ],
+  "p12TargetInventory": [
+    {
+      "timelineOrdinal": 1,
+      "overviewPinZeroBased": 5,
+      "segmentSecondsApprox": [
+        0,
+        89
+      ],
+      "mechanism": "限时收集辉光挑战",
+      "pointId": "1282456677512798208",
+      "identityStatus": "existing-review-reference-not-revalidated-in-detail",
+      "countBasis": "独立奖励/开箱序列与overview目标相合"
+    },
+    {
+      "timelineOrdinal": 2,
+      "overviewPinZeroBased": 6,
+      "segmentSecondsApprox": [
+        95,
+        169
+      ],
+      "mechanism": "地面拼图/能量矩阵解谜",
+      "pointId": "1283912847875268608",
+      "identityStatus": "existing-review-reference-not-revalidated-in-detail",
+      "countBasis": "独立奖励/开箱序列与overview目标相合"
+    },
+    {
+      "timelineOrdinal": 3,
+      "overviewPinZeroBased": 7,
+      "segmentSecondsApprox": [
+        180,
+        294
+      ],
+      "mechanism": "蓝色平台跑酷挑战",
+      "pointId": "1287379692742459392",
+      "identityStatus": "existing-review-reference-not-revalidated-in-detail",
+      "countBasis": "独立奖励/开箱序列与overview目标相合"
+    },
+    {
+      "timelineOrdinal": 4,
+      "overviewPinZeroBased": 0,
+      "segmentSecondsApprox": [
+        300,
+        333
+      ],
+      "mechanism": "标靶速射挑战",
+      "pointId": "1288582349052198912",
+      "identityStatus": "existing-review-reference-not-revalidated-in-detail",
+      "countBasis": "独立奖励/开箱序列与overview目标相合"
+    },
+    {
+      "timelineOrdinal": 5,
+      "overviewPinZeroBased": 1,
+      "segmentSecondsApprox": [
+        335,
+        379
+      ],
+      "mechanism": "咕咕河豚挑战",
+      "pointId": "1288583124337618944",
+      "identityStatus": "existing-review-reference-not-revalidated-in-detail",
+      "countBasis": "独立奖励/开箱序列与overview目标相合"
+    },
+    {
+      "timelineOrdinal": 6,
+      "overviewPinZeroBased": 3,
+      "segmentSecondsApprox": [
+        395,
+        421
+      ],
+      "mechanism": "打破岩壁旁碎石露出朴素箱",
+      "pointId": "1288594077072769024",
+      "identityStatus": "existing-review-reference-not-revalidated-in-detail",
+      "countBasis": "独立奖励/开箱序列与overview目标相合"
+    },
+    {
+      "timelineOrdinal": 7,
+      "overviewPinZeroBased": null,
+      "segmentSecondsApprox": [
+        425,
+        475
+      ],
+      "mechanism": "矩阵实验室中的精密箱",
+      "pointId": "1251555676983664640",
+      "identityStatus": "confirmed-by-this-additional-review",
+      "countBasis": "独立箱目标可见；房内箱不等于已观察到开启"
+    },
+    {
+      "timelineOrdinal": 8,
+      "overviewPinZeroBased": 4,
+      "segmentSecondsApprox": [
+        480,
+        510
+      ],
+      "mechanism": "限时击败敌人挑战",
+      "pointId": "1287380389842522112",
+      "identityStatus": "existing-review-reference-not-revalidated-in-detail",
+      "countBasis": "独立奖励/开箱序列与overview目标相合"
+    },
+    {
+      "timelineOrdinal": 9,
+      "overviewPinZeroBased": 2,
+      "segmentSecondsApprox": [
+        515,
+        565
+      ],
+      "mechanism": "交两晶核的露台辉光箱",
+      "pointId": "1288578802371588096",
+      "identityStatus": "confirmed-by-this-additional-review",
+      "countBasis": "独立奖励/开箱序列与overview目标相合"
+    }
+  ],
+  "confirmedIdentityReviews": [
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 11,
+      "segmentSecondsApprox": [
+        400,
+        452
+      ],
+      "pointId": "1251555702716850176",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "name": "精密奇藏箱",
+      "rawPosition": [
+        81333.88,
+        283957.97
+      ],
+      "reviewStatus": "confirmed-identity-by-agent-cross-check",
+      "detectability": "unknown",
+      "mechanism": "将方块放在压板上分阶段解锁实验室；室内有精密箱和引导晶核",
+      "basis": "攻略三图的方块/压板布局、绿色圆门、门内晶核台及后方精密箱与P11 442/446/448/450秒一致。P12并未再次展示本房，应归P11。",
+      "aggregationAction": "新增P11可见箱身份；是否列入不可探测表需另审，不能因位于锁门内就推定扫不到。",
+      "sourceUrl": "https://www.bilibili.com/video/BV1iMTXzVE8J/?p=11&t=400",
+      "guide": {
+        "description": "先把方块如图1所示摆放，这时石块上的方块会解锁，再将两个方块如图2所示拜访，大门就会解锁",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1251555702716850176",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/b11acb2c11ed4e8bb36e0dffbf295a8920240712.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/987617cb3f4546a897255227fa3473d520240712.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/379bd53535d94d5bb4b33ec1f724173020240908.png"
+        ]
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p11-room-442.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p11-room-446.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p11-room-448.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p11-room-450.jpg"
+        ],
+        "guideJson": "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/guides/guide-8-1251555702716850176.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/guides/guide-8-1251555702716850176-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/guides/guide-8-1251555702716850176-2.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/guides/guide-8-1251555702716850176-3.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 12,
+      "segmentSecondsApprox": [
+        425,
+        475
+      ],
+      "pointId": "1251555676983664640",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "name": "精密奇藏箱",
+      "rawPosition": [
+        86330.59,
+        295584.5
+      ],
+      "reviewStatus": "confirmed-identity-by-agent-cross-check",
+      "detectability": "unknown",
+      "mechanism": "火球烧掉建筑荆棘，再完成能量矩阵开门，室内有精密箱及引导晶核",
+      "basis": "攻略外景图的圆门、矩阵缺口、左右灯柱与435–465秒一致；攻略内景的倾斜灯管、晶核台、右侧箱与470秒一致。",
+      "aggregationAction": "新增P12可见箱身份；视频明确拾晶核，未把开箱或扫不到当成已经验证。",
+      "sourceUrl": "https://www.bilibili.com/video/BV1iMTXzVE8J/?p=12&t=425",
+      "guide": {
+        "description": "先用大门左边的火球烧掉建筑上的荆棘，然后完成能量矩阵进入建筑。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1251555676983664640",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/032ba41012f64a6fb8cd626efdec58d320240804.jpg",
+          "https://prod-alicdn-community.kurobbs.com/forum/c6843276870344879c23c9208908838620240908.png"
+        ]
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/frame-430.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/frame-435.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/frame-445.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/frame-450.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/frame-460.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/frame-465.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/frame-470.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/frame-475.jpg"
+        ],
+        "guideJson": "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/guides/guide-8-1251555676983664640.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/guides/guide-8-1251555676983664640-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/guides/guide-8-1251555676983664640-2.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 11,
+      "segmentSecondsApprox": [
+        454,
+        475
+      ],
+      "pointId": "1288287493370998784",
+      "stateId": 8,
+      "typeId": "qzx_04",
+      "name": "辉光奇藏箱",
+      "rawPosition": [
+        85600.0,
+        282600.0
+      ],
+      "reviewStatus": "confirmed-identity-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "mechanism": "拿到晶核后再次调整室外压板，房外生成辉光箱",
+      "basis": "攻略第3图显示不同于开门阶段的压板布置及实验室右侧金箱。P11 464–470再次改压板，472接近房外金箱，474明确开启；不是交两晶核的高处露台。",
+      "aggregationAction": "保留P11现有辉光身份；不能与1288578802371588096合并去重。",
+      "sourceUrl": "https://www.bilibili.com/video/BV1iMTXzVE8J/?p=11&t=454",
+      "guide": {
+        "description": "按照图1解锁石头，按照图二解锁实验室拿到紫色宝箱和引导晶核，按照图3解锁金色宝箱。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_04&pointId=1288287493370998784",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/ee098343b6aa4a6a9fb9d64fdd10db4320250609.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/3fc3abcf669841fe9eb097939e406a3220250609.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/82fc2da00ebe4db49bca9a4457d0dd4220250609.png"
+        ]
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p11-room-464.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p11-room-466.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p11-room-468.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p11-room-470.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p11-room-472.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p11-room-474.jpg"
+        ],
+        "guideJson": "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/guides/guide-8-1288287493370998784.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/guides/guide-8-1288287493370998784-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/guides/guide-8-1288287493370998784-2.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/guides/guide-8-1288287493370998784-3.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 12,
+      "segmentSecondsApprox": [
+        515,
+        565
+      ],
+      "pointId": "1288578802371588096",
+      "stateId": 8,
+      "typeId": "qzx_04",
+      "name": "辉光奇藏箱",
+      "rawPosition": [
+        78100.0,
+        301500.0
+      ],
+      "reviewStatus": "confirmed-identity-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "mechanism": "高处露台两边交付两个引导晶核，生成辉光箱",
+      "basis": "557和560秒分别交付晶核；562/563/564秒出现并开启辉光箱。露台斜纹地板、中央高塔、两侧台子、周围松树与攻略第1图一一对应，排除附近无名宗师挖掘箱。",
+      "aggregationAction": "确认P12 overview零基pin2；并非仅凭距离最近。",
+      "sourceUrl": "https://www.bilibili.com/video/BV1iMTXzVE8J/?p=12&t=515",
+      "guide": {
+        "description": "将山崖下两间有紫色宝箱房间里的两个引导晶核(图3)交付两边的台子（图1）后出现，具体获取方法见两处宝箱描述（如图2）",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_04&pointId=1288578802371588096",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/0a12301667ca4c138917cef7aac0302720240925.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/b7454e8cc35948bb99281e050fe3913920240925.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/3a555dc91a4b484db6ce4acc67322cf920240928.jpg"
+        ]
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/frame-557.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/frame-560.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/frame-563.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p12-rewards-561.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p12-rewards-562.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/p12-rewards-564.jpg"
+        ],
+        "guideJson": "out/detectability-collection/BV1iMTXzVE8J/p12/guides/guide-8-1288578802371588096.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1iMTXzVE8J/p12/guides/guide-8-1288578802371588096-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p12/guides/guide-8-1288578802371588096-2.png"
+        ]
+      }
+    }
+  ],
+  "unresolved": [
+    {
+      "pointIds": [
+        "1251555702716850176",
+        "1251555676983664640"
+      ],
+      "reason": "身份和门禁解谜已确认，但作者在两房主要拾取晶核；没有探测仪触发前后对照，不足以独立确认不可探测类别，也不声称看到了两箱完整开启。"
+    }
+  ]
+}

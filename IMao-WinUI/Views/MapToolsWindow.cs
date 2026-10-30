@@ -20,6 +20,8 @@ namespace IMao_WinUI.Views;
 internal sealed class MapToolsWindow : Window
 {
     private readonly Grid root = new() { Padding = new Thickness(18), RowSpacing = 10 };
+    private const string GapFillDescription = "仅显示当前筛选中已确认无法被探测仪发现的点位。查漏补缺点位取自B站up主：又肝又氪ya，欢迎大家关注催更。";
+    private readonly Button gapFillButton;
     private readonly Grid body = new();
     private readonly ContentControl bodyHost = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch };
     private readonly TextBlock title = new() { FontSize = 22, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
@@ -105,6 +107,10 @@ internal sealed class MapToolsWindow : Window
         Grid.SetRow(notice, 2); root.Children.Add(notice);
         notice.Foreground = GamepadWindowChrome.Brush("IMaoMutedBrush", 0xA4B8C8);
         filter = new FilterControl(filters) { CompactMode = true, FormatGamepadButtons = this.formatButtons };
+        gapFillButton = MakeButton("查漏补缺：关", "gapFill");
+        gapFillButton.MinHeight = 32; gapFillButton.FontSize = 14; gapFillButton.Padding = new Thickness(10, 4, 10, 4);
+        filter.AdditionalFilterButton = gapFillButton;
+        filter.InvokeAdditionalFilterButton = async () => { if (CanInteract) await command("gapFill"); };
         route.Children.Add(summary); route.Children.Add(routeStatus); route.Children.Add(routeButtons);
         homeScroll.Content = home; routeScroll.Content = route; routesScroll.Content = routes;
         var routeCard = MakeButton("路径自动规划", "page:route");
@@ -259,6 +265,15 @@ internal sealed class MapToolsWindow : Window
     public void RenderRoute(RoutePlanningState next)
     {
         state = next;
+        filter.Attribution = next.GapFillModeEnabled
+            ? "查漏补缺点位取自B站up主：又肝又氪ya，欢迎大家关注催更。" : "";
+        gapFillButton.Content = next.GapFillModeEnabled ? "查漏补缺：开" : "查漏补缺：关";
+        gapFillButton.Background = GamepadWindowChrome.Brush(next.GapFillModeEnabled ? "IMaoAccentBrush" : "IMaoSurfaceBrush", next.GapFillModeEnabled ? 0x63D8E8u : 0x19222Eu);
+        gapFillButton.Foreground = GamepadWindowChrome.Brush(next.GapFillModeEnabled ? "IMaoCanvasBrush" : "IMaoTextBrush", next.GapFillModeEnabled ? 0x10151Du : 0xE7F0F7u);
+        ToolTipService.SetToolTip(gapFillButton, GapFillDescription);
+        filter.AdditionalStatus = !next.GapFillModeEnabled ? "" : !next.GapFillCatalogAvailable
+            ? "查漏补缺名录不可用，已隐藏普通点位；可关闭此模式恢复显示。"
+            : next.GapFillVisibleCount == 0 ? "当前筛选下没有已收录的查漏补缺点位" : "";
         if (Page != "route" || CanvasTool != "pan") return;        summary.Text = next.Enabled ? $"已选 {next.SelectedCount} 个点 · 视野外 {next.HiddenCount} 个" :
             next.Active is { } active ? $"{active.Name} · {next.NavigationLabel}" : "选择点位，规划你的探索路线";
         routeStatus.Text = next.Enabled

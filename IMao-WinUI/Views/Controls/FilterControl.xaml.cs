@@ -19,6 +19,22 @@ public sealed partial class FilterControl : UserControl
     private Action? pendingPointFocus;
     private bool catalogNoticeOpen;
     public FilterSelectionService Selection => selection;
+    public Button? AdditionalFilterButton
+    {
+        get => AdditionalToolHost.Content as Button;
+        set { AdditionalToolHost.Content = value; AdditionalToolHost.Visibility = value is null ? Visibility.Collapsed : Visibility.Visible; }
+    }
+    public Action? InvokeAdditionalFilterButton { get; set; }
+    public string Attribution
+    {
+        set { AttributionText.Text = value; AttributionText.Visibility = string.IsNullOrEmpty(value) ? Visibility.Collapsed : Visibility.Visible; }
+    }
+    public string AdditionalStatus
+    {
+        set { AdditionalFilterStatus.Text = value; AdditionalFilterStatus.Visibility = string.IsNullOrEmpty(value) ? Visibility.Collapsed : Visibility.Visible; }
+    }
+
+
     public bool CompactMode
     {
         get => compactMode;
@@ -83,6 +99,7 @@ public sealed partial class FilterControl : UserControl
     private void FilterControl_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateCompactLayout(e.NewSize.Height);
     private void UpdateCompactLayout(double height)
     {
+        AttributionText.MaxWidth = Math.Max(1, ActualWidth - 20);
         bool compact = CompactMode || height < 460;
         FilterEyebrow.Visibility = FilterDescription.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         FilterTitle.Visibility = CompactMode ? Visibility.Collapsed : Visibility.Visible;
@@ -151,8 +168,11 @@ public sealed partial class FilterControl : UserControl
     {
         if (!ready || sender is not CheckBox { Tag: FilterSelectionRow row } box) return;
         selection.SetEnabled([row.Id], box.IsChecked == true);
-        // A failed disk commit must immediately restore the initiating CheckBox too.
-        if (ReferenceEquals(box.Tag, row)) box.IsChecked = row.IsEnabled;
+        // Restore the saved value without replacing the OneWay binding with a local
+        // IsChecked value: that disconnects later bulk edits from this realized box.
+        if (ReferenceEquals(box.Tag, row)) box.SetBinding(CheckBox.IsCheckedProperty,
+            new Microsoft.UI.Xaml.Data.Binding { Source = row, Path = new PropertyPath(nameof(FilterSelectionRow.IsEnabled)),
+                Mode = Microsoft.UI.Xaml.Data.BindingMode.OneWay });
     }
 
     public void FocusGamepad()
@@ -211,6 +231,7 @@ public sealed partial class FilterControl : UserControl
             var tool = tools[toolIndex];
             if (tool is ComboBox combo) combo.IsDropDownOpen = true;
             else if (ReferenceEquals(tool, SelectedOnly)) { SelectedOnly.IsChecked = SelectedOnly.IsChecked != true; RefreshResults(); }
+            else if (ReferenceEquals(tool, AdditionalFilterButton)) InvokeAdditionalFilterButton?.Invoke();
             else if (ReferenceEquals(tool, SelectResults)) SelectResults_Click(tool, new());
             else if (ReferenceEquals(tool, ClearResults)) ClearResults_Click(tool, new());
             else if (ReferenceEquals(tool, RetrySync)) selection.RetrySynchronization();
@@ -225,7 +246,8 @@ public sealed partial class FilterControl : UserControl
         }
         UpdateGamepadHint(); return true;
     }
-    private List<Control> Tools() => new Control[] { SearchBox, CategoryPicker, PresetPicker, SelectedOnly, SelectResults, ClearResults, CatalogNotice, RetrySync }
+    private List<Control> Tools() => new Control?[] { SearchBox, CategoryPicker, PresetPicker, SelectedOnly, AdditionalFilterButton, SelectResults, ClearResults, CatalogNotice, RetrySync }
+        .OfType<Control>()
         .Where(control => control.Visibility == Visibility.Visible && control.IsEnabled).ToList();
     private void FocusTool()
     {

@@ -1,0 +1,102 @@
+{
+  "entries": [
+    {
+      "eventId": "BV1k438ziEoG:p1:e002",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1322593540720869376",
+      "analysis": "41秒重新传送后向东北穿石洞进入白墙营地，绕帐篷木箱到白墙脚；红草/蓝色高灌木、断墙轮廓、右侧帐篷木台与攻略完全对应。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1k438ziEoG-p01-e002-0.jpg",
+        "out/detectability-v2/route-laguna-parent/e2-70s.jpg",
+        "out/detectability-v2/route-laguna-parent/e2-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1322593540720869376-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1322593540720869376.json"
+      ],
+      "limitations": [
+        "身份依据设施/连续场景与独特攻略结构，未声称奖励帧SIFT成功。"
+      ]
+    },
+    {
+      "eventId": "BV1k438ziEoG:p1:e004",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1327045111214792704",
+      "analysis": "97秒重新传送后从桥沿向西北跳下，落大桥下方低层草台，打碎蓝石出青箱；攻略图1岩壁多块蓝石，图2青箱靠灌木岩台，图3巨桥柱和对面断墙共同确认该层。点库正文另有坐标修正提示，不能只用最近点。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1k438ziEoG-p01-e004-0.jpg",
+        "out/detectability-v2/route-laguna-parent/e4-130s.jpg",
+        "out/detectability-v2/route-laguna-parent/e4-comparison.jpg",
+        "out/detectability-v2/route-shrines/guide-8-1327045111214792704-1.png",
+        "out/detectability-v2/route-shrines/guide-8-1327045111214792704.json",
+        "out/detectability-v2/route-shrines/guide-8-1327045111214792704-2.png",
+        "out/detectability-v2/route-shrines/guide-8-1327045111214792704-3.png"
+      ],
+      "limitations": [
+        "身份依据设施/连续场景与独特攻略结构，未声称奖励帧SIFT成功。"
+      ]
+    },
+    {
+      "eventId": "BV1k438ziEoG:p1:e006",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1327042673113206784",
+      "analysis": "新传送后东北翻浅色石台，沿树荫到布偶群；全库补搜得到与布偶旁闪光点交互的点，攻略中的左侧密树、中央草地/蓝色矮花、右侧灌丛及后方白树桩与172–185秒画面对应。随后向东到已确认E7树根挑战，两点方位连续。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1k438ziEoG-p01-e006-0.jpg",
+        "out/detectability-v2/route-laguna-parent/e6-185s.jpg",
+        "out/detectability-v2/route-laguna-parent/e6-comparison.jpg",
+        "out/detectability-v2/route-shrines/guide-8-1327042673113206784-1.png",
+        "out/detectability-v2/route-shrines/guide-8-1327042673113206784.json"
+      ],
+      "limitations": [
+        "身份依据设施/连续场景与独特攻略结构，未声称奖励帧SIFT成功。"
+      ]
+    },
+    {
+      "eventId": "BV1k438ziEoG:p1:e017",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1326948391330144256",
+      "analysis": "690秒选中中枢，落地正前方高楼勾索上屋顶；四柱拉到中央书盘变兔吸球。攻略两图的屋顶螺旋铺纹、中央书盘、边缘倾斜三角装饰/金杯、四条拉柱轨道和柱脚青箱共同对应，不是地面同型机关。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1k438ziEoG-p01-e017-0.jpg",
+        "out/detectability-v2/route-laguna-parent/e17-774s.jpg",
+        "out/detectability-v2/route-laguna-parent/e17-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1326948391330144256-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1326948391330144256.json",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1326948391330144256-2.png"
+      ],
+      "limitations": [
+        "身份依据设施/连续场景与独特攻略结构，未声称奖励帧SIFT成功。"
+      ]
+    },
+    {
+      "eventId": "BV1k438ziEoG:p1:e020",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1325876464312541184",
+      "analysis": "948秒重新传送后东北草坪四柱，变兔按粉球数量操作。攻略是同一四柱草坪、双树干和背后高弧门；前候选石铺搬柱机制不符，正确guide的数量顺序文字及场景均吻合。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1k438ziEoG-p01-e020-0.jpg",
+        "out/detectability-v2/route-laguna-parent/e20-992s.jpg",
+        "out/detectability-v2/route-laguna-parent/e20-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1325876464312541184-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1325876464312541184.json"
+      ],
+      "limitations": [
+        "身份依据设施/连续场景与独特攻略结构，未声称奖励帧SIFT成功。"
+      ]
+    }
+  ]
+}

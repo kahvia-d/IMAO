@@ -1,0 +1,381 @@
+{
+  "parts": [
+    {
+      "bvid": "BV1evKmzxE34",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "首段0–5秒为角色在建筑前口播，尾段为第三个箱子领取；全片已按三个进度条事件审阅，没有作者标点总览。途中普通游戏开图是路线定位，不当作作者总览。3事件/3奖励在首轮已独立匹配，无需总览新增。",
+      "evidence": [
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00000.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00003.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00113.00.jpg"
+      ],
+      "associations": [],
+      "unresolved": []
+    },
+    {
+      "bvid": "BV1p9K1zvE5E",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0秒作者标点总览共17个图标位置；其中两处3宝箱对应两个滑雪事件各3成员，其余15单奖励，合计与独立时间轴17事件21奖励对应。原图没有数字编号，E编号仅本轮视频事件序号，不继承旧版总览16。总览东侧辉光对应事件10跑酷，东南辉光对应事件17机关兽；西南海岛精密对应事件7，位置、视频和攻略分别核对，三者不可混用。首轮唯一未决事件10经总览补坐标并返回355/358秒和攻略起点说明后确认。没有只在总览而无视频的新增目标。",
+      "evidence": [
+        "out/detectability-v2/BV1p9K1zvE5E/p01/visual/frame-00000.00.jpg",
+        "out/detectability-v2/overview-root/firmament-overview-sift.json",
+        "out/detectability-v2/overview-root/firmament-overview-events.jpg",
+        "out/detectability-v2/BV1p9K1zvE5E/p01/visual/frame-00355.00.jpg",
+        "out/detectability-v2/BV1p9K1zvE5E/p01/visual/frame-00358.00.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "基准",
+          "screenIconCenter": [
+            145,
+            43
+          ],
+          "approxTipPixel": [
+            145,
+            62
+          ],
+          "approxRawPosition": [
+            158520.17062886478,
+            275987.8425224787
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e002",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "基准",
+          "screenIconCenter": [
+            201,
+            64
+          ],
+          "approxTipPixel": [
+            201,
+            83
+          ],
+          "approxRawPosition": [
+            171376.17308981201,
+            280811.9515148014
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e001",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "基准",
+          "screenIconCenter": [
+            402,
+            118
+          ],
+          "approxTipPixel": [
+            402,
+            137
+          ],
+          "approxRawPosition": [
+            217521.07914375284,
+            293219.576750788
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e004",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "基准",
+          "screenIconCenter": [
+            362,
+            135
+          ],
+          "approxTipPixel": [
+            362,
+            154
+          ],
+          "approxRawPosition": [
+            208336.66316717863,
+            297120.6556374175
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e003",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "精密",
+          "screenIconCenter": [
+            392,
+            176
+          ],
+          "approxTipPixel": [
+            392,
+            195
+          ],
+          "approxRawPosition": [
+            215222.35974868754,
+            306535.2938955752
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e005",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "3宝箱",
+          "screenIconCenter": [
+            464,
+            88
+          ],
+          "approxTipPixel": [
+            464,
+            107
+          ],
+          "approxRawPosition": [
+            231757.1015114123,
+            286334.9020003369
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e011",
+          "rewardMembers": [
+            1,
+            2,
+            3
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "精密",
+          "screenIconCenter": [
+            477,
+            73
+          ],
+          "approxTipPixel": [
+            477,
+            92
+          ],
+          "approxRawPosition": [
+            234742.49774424048,
+            282891.688769919
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e012",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "精密",
+          "screenIconCenter": [
+            493,
+            57
+          ],
+          "approxTipPixel": [
+            493,
+            76
+          ],
+          "approxRawPosition": [
+            238416.71179419072,
+            279219.0317958663
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e013",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "基准",
+          "screenIconCenter": [
+            502,
+            154
+          ],
+          "approxTipPixel": [
+            502,
+            173
+          ],
+          "approxRawPosition": [
+            240478.2993833769,
+            301489.67251497123
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e009",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "朴素",
+          "screenIconCenter": [
+            562,
+            217
+          ],
+          "approxTipPixel": [
+            562,
+            236
+          ],
+          "approxRawPosition": [
+            254250.61706020887,
+            315956.7443607848
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e008",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "辉光",
+          "screenIconCenter": [
+            699,
+            248
+          ],
+          "approxTipPixel": [
+            699,
+            267
+          ],
+          "approxRawPosition": [
+            285702.90021444537,
+            323080.69189647416
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e010",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "精密",
+          "screenIconCenter": [
+            739,
+            235
+          ],
+          "approxTipPixel": [
+            739,
+            254
+          ],
+          "approxRawPosition": [
+            294887.12155653234,
+            320097.971887845
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e014",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "基准",
+          "screenIconCenter": [
+            678,
+            343
+          ],
+          "approxTipPixel": [
+            678,
+            362
+          ],
+          "approxRawPosition": [
+            280876.89353587246,
+            344890.69341792486
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e015",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "辉光",
+          "screenIconCenter": [
+            645,
+            362
+          ],
+          "approxTipPixel": [
+            645,
+            381
+          ],
+          "approxRawPosition": [
+            273299.50827855535,
+            349251.2923539072
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e017",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "3宝箱",
+          "screenIconCenter": [
+            549,
+            438
+          ],
+          "approxTipPixel": [
+            549,
+            457
+          ],
+          "approxRawPosition": [
+            251255.19715129,
+            366695.4398082212
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e016",
+          "rewardMembers": [
+            1,
+            2,
+            3
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "精密",
+          "screenIconCenter": [
+            409,
+            338
+          ],
+          "approxTipPixel": [
+            409,
+            357
+          ],
+          "approxRawPosition": [
+            219117.50228345746,
+            343729.6556511603
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e006",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "精密",
+          "screenIconCenter": [
+            351,
+            409
+          ],
+          "approxTipPixel": [
+            351,
+            428
+          ],
+          "approxRawPosition": [
+            205797.84379030447,
+            360027.70353560225
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e007",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        }
+      ],
+      "unresolved": [
+        "总览标签位置人工读数有像素误差；事件10攻略无终点实景图，该限制保留。"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,3451 @@
+{
+  "bvid": "BV1pa9RBtEPA",
+  "part": 1,
+  "duration": 669.999,
+  "reviewStatus": "reviewed",
+  "audioReviewStatus": "reviewed",
+  "audioReviewMethod": "local-ASR-text-and-visual; no-direct-listening",
+  "progressBarReviewStatus": "reviewed",
+  "events": [
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e001",
+      "ordinal": 1,
+      "start": 50,
+      "end": 132,
+      "progressBarMark": {
+        "rawLabel": "前置（无箱编号）"
+      },
+      "observedMechanism": "铸光仪解开后用显像解除花朵、与日灵交谈；未领取旁边箱",
+      "route": "中心信标西侧上风场，再转东北到铸光仪",
+      "transcriptRefs": [
+        {
+          "start": 48.68,
+          "end": 50.36,
+          "text": "好那做完这些准备工作之后"
+        },
+        {
+          "start": 50.36,
+          "end": 51.26,
+          "text": "我们打开地图来"
+        },
+        {
+          "start": 52.02,
+          "end": 53.74,
+          "text": "先传送到落日低雨"
+        },
+        {
+          "start": 54.4,
+          "end": 57.08,
+          "text": "看看竖井的暗原竖井右边这个中心信标"
+        },
+        {
+          "start": 63.37,
+          "end": 65.21,
+          "text": "传过来之后来我们装备上摩托车"
+        },
+        {
+          "start": 65.79,
+          "end": 66.93,
+          "text": "然后转向小地图"
+        },
+        {
+          "start": 66.93,
+          "end": 67.95,
+          "text": "左边西方向"
+        },
+        {
+          "start": 69.19,
+          "end": 70.37,
+          "text": "来往这个山上走"
+        },
+        {
+          "start": 70.37,
+          "end": 71.59,
+          "text": "把山上能看到一个风场"
+        },
+        {
+          "start": 74.06,
+          "end": 75.2,
+          "text": "我们站到风场这里"
+        },
+        {
+          "start": 76.18,
+          "end": 77.52,
+          "text": "然后来跳起来"
+        },
+        {
+          "start": 79.78,
+          "end": 80.14,
+          "text": "好"
+        },
+        {
+          "start": 80.14,
+          "end": 81.16,
+          "text": "我们再转个身"
+        },
+        {
+          "start": 81.16,
+          "end": 81.68,
+          "text": "转向小地图"
+        },
+        {
+          "start": 81.68,
+          "end": 82.9,
+          "text": "右上方都没发现往前"
+        },
+        {
+          "start": 83.8,
+          "end": 84.16,
+          "text": "对"
+        },
+        {
+          "start": 84.16,
+          "end": 87.5,
+          "text": "往前前方是我们的一个这个助光仪"
+        },
+        {
+          "start": 87.88,
+          "end": 88.76,
+          "text": "来助光仪"
+        },
+        {
+          "start": 89.16,
+          "end": 91.06,
+          "text": "这里是宝箱的前置"
+        },
+        {
+          "start": 93.09,
+          "end": 96.13,
+          "text": "这个助光仪就是我们的这个影子"
+        },
+        {
+          "start": 96.13,
+          "end": 98.29,
+          "text": "要跟这个图案相对应"
+        },
+        {
+          "start": 98.29,
+          "end": 100.05,
+          "text": "然后来我们这一关是"
+        },
+        {
+          "start": 100.45,
+          "end": 102.15,
+          "text": "先给它方向给它默证"
+        },
+        {
+          "start": 102.57,
+          "end": 103.17,
+          "text": "有证"
+        },
+        {
+          "start": 103.17,
+          "end": 105.51,
+          "text": "然后我们再转向这个侧面"
+        },
+        {
+          "start": 106.11,
+          "end": 107.67,
+          "text": "看到这个孔洞给它相对应"
+        },
+        {
+          "start": 107.67,
+          "end": 108.47,
+          "text": "这样就解开了"
+        },
+        {
+          "start": 109.27,
+          "end": 110.07,
+          "text": "解开完之后"
+        },
+        {
+          "start": 110.07,
+          "end": 111.91,
+          "text": "我们来拿出深海显像"
+        },
+        {
+          "start": 112.65,
+          "end": 113.37,
+          "text": "往前走"
+        },
+        {
+          "start": 113.37,
+          "end": 115.29,
+          "text": "这里在左边有个紫色的任务指引"
+        },
+        {
+          "start": 116.25,
+          "end": 117.87,
+          "text": "我们要用这个迷龙幻鹅"
+        },
+        {
+          "start": 120.25,
+          "end": 121.83,
+          "text": "右边的宝箱不是隐藏宝箱"
+        },
+        {
+          "start": 121.83,
+          "end": 124.63,
+          "text": "左边这个日灵是我们需要的"
+        },
+        {
+          "start": 129.95,
+          "end": 131.53,
+          "text": "跟这个日灵对昂化之后"
+        },
+        {
+          "start": 131.53,
+          "end": 132.69,
+          "text": "我们再打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00050.00.jpg"
+      ],
+      "rewards": [],
+      "uncertainties": [
+        "地名和显像专名的ASR错字不作为确定引用；后续结合地图文字核对。"
+      ],
+      "observations": [
+        {
+          "seconds": 123,
+          "type": "uncollected-chest",
+          "description": "右侧可见朴素箱，旁白明确不是隐藏宝箱；未开启，不增加奖励成员。"
+        },
+        {
+          "seconds": 109,
+          "type": "mechanism-direct-loot",
+          "description": "铸光仪直接结算显示星声等提示，不是开箱。"
+        }
+      ],
+      "linkedEvents": [
+        "BV1pa9RBtEPA:p1:e004",
+        "BV1pa9RBtEPA:p1:e008"
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e002",
+      "ordinal": 2,
+      "start": 132,
+      "end": 200,
+      "progressBarMark": {
+        "rawLabel": "箱1"
+      },
+      "observedMechanism": "显像撞碎矿石得到箱；继续撞第二矿并对话作为后续前置",
+      "route": "薄暮林地附近小型信标向西至双矿石",
+      "transcriptRefs": [
+        {
+          "start": 131.53,
+          "end": 132.69,
+          "text": "我们再打开地图"
+        },
+        {
+          "start": 133.33,
+          "end": 134.59,
+          "text": "来这里我们来到右边"
+        },
+        {
+          "start": 134.59,
+          "end": 136.93,
+          "text": "我们穿上到薄木林地右上方这个小银星标"
+        },
+        {
+          "start": 139.29,
+          "end": 139.95,
+          "text": "穿过来之后"
+        },
+        {
+          "start": 139.95,
+          "end": 141.97,
+          "text": "左边西方向来朝前方走"
+        },
+        {
+          "start": 145.19,
+          "end": 147.45,
+          "text": "好走到左边能看到这个珠光仪挑战"
+        },
+        {
+          "start": 147.45,
+          "end": 148.63,
+          "text": "来右边就是我们的"
+        },
+        {
+          "start": 149.73,
+          "end": 150.91,
+          "text": "一个隐藏宝箱点位"
+        },
+        {
+          "start": 150.91,
+          "end": 152.45,
+          "text": "然后这里给大家说一下"
+        },
+        {
+          "start": 152.45,
+          "end": 154.23,
+          "text": "如果你们这里没有两个矿石的话"
+        },
+        {
+          "start": 155.01,
+          "end": 157.11,
+          "text": "你们就传送到这个地图上"
+        },
+        {
+          "start": 157.11,
+          "end": 157.53,
+          "text": "其他地方"
+        },
+        {
+          "start": 157.53,
+          "end": 159.11,
+          "text": "比方说传送到另外一个岛"
+        },
+        {
+          "start": 159.11,
+          "end": 160.41,
+          "text": "然后我们再传送回来"
+        },
+        {
+          "start": 160.41,
+          "end": 161.85,
+          "text": "或者你们重登一下游戏"
+        },
+        {
+          "start": 161.85,
+          "end": 162.87,
+          "text": "多试几次"
+        },
+        {
+          "start": 162.87,
+          "end": 163.89,
+          "text": "这样是一定会有的"
+        },
+        {
+          "start": 163.89,
+          "end": 164.67,
+          "text": "我这里试过了"
+        },
+        {
+          "start": 165.53,
+          "end": 167.05,
+          "text": "来我们站到这个矿石这里"
+        },
+        {
+          "start": 167.05,
+          "end": 169.43,
+          "text": "这里我们拿出深海选项"
+        },
+        {
+          "start": 170.05,
+          "end": 172.21,
+          "text": "找到这个矿岩机密"
+        },
+        {
+          "start": 174.39,
+          "end": 175.61,
+          "text": "让他去撞这些矿"
+        },
+        {
+          "start": 177.62,
+          "end": 179.24,
+          "text": "他们左边拿到这个宝箱"
+        },
+        {
+          "start": 180.54,
+          "end": 183.64,
+          "text": "拿着宝箱肉了这里还有个矿石我们还需要再撞一下"
+        },
+        {
+          "start": 186.72,
+          "end": 187.76,
+          "text": "跟日灵对话"
+        },
+        {
+          "start": 196.59,
+          "end": 197.53,
+          "text": "变化之后"
+        },
+        {
+          "start": 198.19,
+          "end": 200.85,
+          "text": "变化之后先不用管他我们打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00174.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00178.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00179.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素奇藏",
+          "triggerSeconds": 174,
+          "appearanceSeconds": 178,
+          "collectionSeconds": 179,
+          "identityStatus": "confirmed",
+          "detectability": "unknown",
+          "stateId": "909",
+          "pointId": "1501515016669847552",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "原片178–179s矿石旁朴素箱；攻略图中的紫色卷曲植物、岩壁与箱位相符，矿石救日灵后再打邻矿的文字机制吻合。201s玩家箭头在同一双矿区，距离候选13.84游戏单位；不是把地图中心当位置。",
+            "routeReview": "薄暮林地附近小型信标向西至双矿石",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00201.00.jpg",
+                "locator": "201s manually verified yellow player arrow; affine raw state plane",
+                "reason": "After reward, before next teleport; rawPosition=[82033.27841781166, 80339.39760969506]; inliers=200. 原片178–179s矿石旁朴素箱；攻略图中的紫色卷曲植物、岩壁与箱位相符，矿石救日灵后再打邻矿的文字机制吻合。201s玩家箭头在同一双矿区，距离候选13.84游戏单位；不是把地图中心当位置。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV1pa9RBtEPA:p1",
+                "locator": "132–200s member 1",
+                "reason": "显像撞碎矿石得到箱；继续撞第二矿并对话作为后续前置",
+                "role": "support",
+                "start": 132,
+                "end": 200
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501515016669847552.json",
+                "locator": "point 1501515016669847552; description and image 1",
+                "reason": "原片178–179s矿石旁朴素箱；攻略图中的紫色卷曲植物、岩壁与箱位相符，矿石救日灵后再打邻矿的文字机制吻合。201s玩家箭头在同一双矿区，距离候选13.84游戏单位；不是把地图中心当位置。",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 2,
+                "pointId": "1501515016669847552",
+                "stateId": "909",
+                "guide": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501515016669847552.json",
+                "images": [
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501515016669847552-1.png"
+                ],
+                "description": "成就:小小的愿望，打碎矿石解救日灵后，在打碎旁边的矿石获得"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV1pa9RBtEPA-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 133,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 135,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 156,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 158,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 174,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 178,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 179,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 199,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 174,
+                    "eventId": "BV1pa9RBtEPA:p1:e002",
+                    "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00174.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 3,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "darkplain-kurotiles",
+                          "scene": "Darkplain",
+                          "state": 909,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            0,
+                            2,
+                            -1,
+                            1
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 0.0,
+                            "originY": 0.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 158,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV1pa9RBtEPA:p1",
+                  "locator": "132–200s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 132,
+                  "end": 200
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-e2.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim"
+          }
+        }
+      ],
+      "uncertainties": [
+        "地名和显像专名的ASR错字不作为确定引用；后续结合地图文字核对。"
+      ],
+      "linkedEvents": [
+        "BV1pa9RBtEPA:p1:e004",
+        "BV1pa9RBtEPA:p1:e008"
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e003",
+      "ordinal": 3,
+      "start": 200,
+      "end": 261,
+      "progressBarMark": {
+        "rawLabel": "箱2"
+      },
+      "observedMechanism": "猛犸显像破冰露箱；对日灵交谈后开箱",
+      "route": "西侧岛小型信标面对西侧高台，摩托连续起跳",
+      "transcriptRefs": [
+        {
+          "start": 198.19,
+          "end": 200.85,
+          "text": "变化之后先不用管他我们打开地图"
+        },
+        {
+          "start": 201.35,
+          "end": 203.31,
+          "text": "对来到左边这个小岛上"
+        },
+        {
+          "start": 204.55,
+          "end": 207.65,
+          "text": "能够尝到绵鹰台地左下方小银锡喵"
+        },
+        {
+          "start": 212.48,
+          "end": 213.22,
+          "text": "传过来之后"
+        },
+        {
+          "start": 213.22,
+          "end": 214.86,
+          "text": "小地图左边西方向"
+        },
+        {
+          "start": 214.86,
+          "end": 215.56,
+          "text": "抬头往上看"
+        },
+        {
+          "start": 215.56,
+          "end": 216.9,
+          "text": "面朝这个"
+        },
+        {
+          "start": 217.96,
+          "end": 219.4,
+          "text": "面朝这个小银心镖"
+        },
+        {
+          "start": 219.4,
+          "end": 220.74,
+          "text": "然后来召唤出摩托"
+        },
+        {
+          "start": 221.32,
+          "end": 222.42,
+          "text": "这里我们蓄下力"
+        },
+        {
+          "start": 222.42,
+          "end": 222.8,
+          "text": "然后"
+        },
+        {
+          "start": 223.52,
+          "end": 225.58,
+          "text": "长按这个鼠标左键跳起来"
+        },
+        {
+          "start": 227.94,
+          "end": 228.96,
+          "text": "再往前跳"
+        },
+        {
+          "start": 233.16,
+          "end": 234.16,
+          "text": "来到上方"
+        },
+        {
+          "start": 234.16,
+          "end": 236.32,
+          "text": "这个平台上面"
+        },
+        {
+          "start": 236.32,
+          "end": 237.34,
+          "text": "这个平台上面"
+        },
+        {
+          "start": 237.34,
+          "end": 239.54,
+          "text": "这里也有一个这个冰晶"
+        },
+        {
+          "start": 239.54,
+          "end": 240.38,
+          "text": "然后冰晶的话"
+        },
+        {
+          "start": 240.38,
+          "end": 241.02,
+          "text": "我们来"
+        },
+        {
+          "start": 241.02,
+          "end": 242.72,
+          "text": "在这里使用"
+        },
+        {
+          "start": 243.7,
+          "end": 244.42,
+          "text": "猛马像"
+        },
+        {
+          "start": 244.42,
+          "end": 245.42,
+          "text": "召唤出来"
+        },
+        {
+          "start": 247.26,
+          "end": 248.68,
+          "text": "然后冰晶里面有一个宝箱"
+        },
+        {
+          "start": 256.38,
+          "end": 258.18,
+          "text": "过来我们拿到宝箱"
+        },
+        {
+          "start": 259.24,
+          "end": 260.3,
+          "text": "开完这个宝箱之后"
+        },
+        {
+          "start": 260.3,
+          "end": 262.08,
+          "text": "我们再打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00200.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00246.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00250.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00258.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素奇藏",
+          "triggerSeconds": 246,
+          "appearanceSeconds": 250,
+          "collectionSeconds": 258,
+          "identityStatus": "confirmed",
+          "detectability": "unknown",
+          "stateId": "909",
+          "pointId": "1501515398184411136",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "原片250–258s岩台上的朴素箱、蓝白树和黑岩台边吻合攻略；猛犸破冰/矿石后领取与候选文字一致。262s开图仍在刚领取的岩台，距离4.82。另一破冰候选1499224795374772224图是激光/机关冰区，排除该图而不拿它支持确认。",
+            "routeReview": "西侧岛小型信标面对西侧高台，摩托连续起跳",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00262.00.jpg",
+                "locator": "262s manually verified yellow player arrow; affine raw state plane",
+                "reason": "After reward, before next teleport; rawPosition=[-36331.49533209807, 74364.01580320335]; inliers=186. 原片250–258s岩台上的朴素箱、蓝白树和黑岩台边吻合攻略；猛犸破冰/矿石后领取与候选文字一致。262s开图仍在刚领取的岩台，距离4.82。另一破冰候选1499224795374772224图是激光/机关冰区，排除该图而不拿它支持确认。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV1pa9RBtEPA:p1",
+                "locator": "200–261s member 1",
+                "reason": "猛犸显像破冰露箱；对日灵交谈后开箱",
+                "role": "support",
+                "start": 200,
+                "end": 261
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501515398184411136.json",
+                "locator": "point 1501515398184411136; description and image 1",
+                "reason": "原片250–258s岩台上的朴素箱、蓝白树和黑岩台边吻合攻略；猛犸破冰/矿石后领取与候选文字一致。262s开图仍在刚领取的岩台，距离4.82。另一破冰候选1499224795374772224图是激光/机关冰区，排除该图而不拿它支持确认。",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 3,
+                "pointId": "1501515398184411136",
+                "stateId": "909",
+                "guide": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501515398184411136.json",
+                "images": [
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501515398184411136-1.png"
+                ],
+                "description": "成就:小小的愿望，使用大象打碎矿石后获得"
+              },
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 3,
+                "pointId": "1499224795374772224",
+                "stateId": "909",
+                "guide": "out/detectability-v2/review-new-resume/guides/guide-909-1499224795374772224.json",
+                "images": [
+                  "out/detectability-v2/review-new-resume/guides/guide-909-1499224795374772224-1.png"
+                ],
+                "description": "完成机关解密后破冰出现（需要完成任务勘探悖论之域）"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV1pa9RBtEPA-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 201,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 203,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 246,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 250,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": "player arrow ambiguous (0); configure player pixel"
+                  },
+                  {
+                    "time": 258,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 246,
+                    "eventId": "BV1pa9RBtEPA:p1:e003",
+                    "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00246.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 1,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "darkplain-kurotiles",
+                          "scene": "Darkplain",
+                          "state": 909,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -1,
+                            1,
+                            -1,
+                            1
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 0.0,
+                            "originY": 0.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 262,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV1pa9RBtEPA:p1",
+                  "locator": "200–261s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 200,
+                  "end": 261
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-e3.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim"
+          }
+        }
+      ],
+      "uncertainties": [
+        "地名和显像专名的ASR错字不作为确定引用；后续结合地图文字核对。"
+      ],
+      "linkedEvents": [
+        "BV1pa9RBtEPA:p1:e004",
+        "BV1pa9RBtEPA:p1:e008"
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e004",
+      "ordinal": 4,
+      "start": 261,
+      "end": 327,
+      "progressBarMark": {
+        "rawLabel": "箱3"
+      },
+      "observedMechanism": "双日灵对话、显像与剧情后再次交谈出箱",
+      "route": "返回同信标，向西北气流翻上岩台",
+      "transcriptRefs": [
+        {
+          "start": 260.3,
+          "end": 262.08,
+          "text": "我们再打开地图"
+        },
+        {
+          "start": 262.08,
+          "end": 263.56,
+          "text": "我们传送回免疫台的左下方"
+        },
+        {
+          "start": 263.56,
+          "end": 264.12,
+          "text": "小心心标"
+        },
+        {
+          "start": 269.18,
+          "end": 269.9,
+          "text": "传过来之后"
+        },
+        {
+          "start": 269.9,
+          "end": 270.78,
+          "text": "我们转向小地图"
+        },
+        {
+          "start": 271.24,
+          "end": 272.4,
+          "text": "左上方心肺方向"
+        },
+        {
+          "start": 272.72,
+          "end": 273.42,
+          "text": "我们站在这里"
+        },
+        {
+          "start": 273.42,
+          "end": 274.96,
+          "text": "然后看一下我鼠标指的这个方向"
+        },
+        {
+          "start": 274.96,
+          "end": 276.94,
+          "text": "这里有个喷气的这个气流"
+        },
+        {
+          "start": 277.96,
+          "end": 279.38,
+          "text": "咱们朝这个气流方向"
+        },
+        {
+          "start": 280.82,
+          "end": 281.82,
+          "text": "先续一下能"
+        },
+        {
+          "start": 284.14,
+          "end": 284.98,
+          "text": "来往前飞"
+        },
+        {
+          "start": 286.48,
+          "end": 287.34,
+          "text": "笔直的朝前"
+        },
+        {
+          "start": 287.34,
+          "end": 288.7,
+          "text": "我们翻过这个气流"
+        },
+        {
+          "start": 291.42,
+          "end": 293.56,
+          "text": "来一直来到这个街角上面"
+        },
+        {
+          "start": 293.56,
+          "end": 294.6,
+          "text": "能看到两只日灵"
+        },
+        {
+          "start": 295.16,
+          "end": 296.56,
+          "text": "咱们站到两只日灵这里"
+        },
+        {
+          "start": 296.56,
+          "end": 297.82,
+          "text": "然后跟他们对下话"
+        },
+        {
+          "start": 298.82,
+          "end": 300.84,
+          "text": "虽然话我们在这里用深海显向"
+        },
+        {
+          "start": 301.88,
+          "end": 303.06,
+          "text": "这个迷龙换鹅"
+        },
+        {
+          "start": 316.72,
+          "end": 318.16,
+          "text": "我们从旁边跳下来"
+        },
+        {
+          "start": 319.66,
+          "end": 320.56,
+          "text": "带来肉对话"
+        },
+        {
+          "start": 323.23,
+          "end": 324.95,
+          "text": "虽然话这里就有一个宝箱"
+        },
+        {
+          "start": 324.95,
+          "end": 326.07,
+          "text": "并且拿到一个成就"
+        },
+        {
+          "start": 326.55,
+          "end": 327.85,
+          "text": "接着这张小的左边"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00321.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00324.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00325.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "基准奇藏",
+          "triggerSeconds": 321,
+          "appearanceSeconds": 324,
+          "collectionSeconds": 325,
+          "identityStatus": "unresolved",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "候选1500305893891219456的两球与一杆入袋成就、岩坡箱子吻合原片324–325s；但现有262s地图在前一事件终点，不能沿传送/飞行外推。本事件小地图固定门限失败，缺本事件终点坐标证据，保留候选不确认。",
+            "routeReview": "返回同信标，向西北气流翻上岩台",
+            "positionEvidence": [],
+            "videoEvidence": [
+              {
+                "source": "BV1pa9RBtEPA:p1",
+                "locator": "261–327s member 1",
+                "reason": "双日灵对话、显像与剧情后再次交谈出箱",
+                "role": "support",
+                "start": 261,
+                "end": 327
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500305893891219456.json",
+                "locator": "point 1500305893891219456; content.description and picturesUrl",
+                "reason": "山坡上，询问日灵后出现，获得成就“一杆入袋”",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 4,
+                "pointId": "1500305893891219456",
+                "stateId": "909",
+                "guide": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500305893891219456.json",
+                "images": [
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500305893891219456-1.png",
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500305893891219456-2.png"
+                ],
+                "description": "山坡上，询问日灵后出现，获得成就“一杆入袋”"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV1pa9RBtEPA-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 261,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 262,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 263,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 264,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 321,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": "player arrow ambiguous (0); configure player pixel"
+                  },
+                  {
+                    "time": 324,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 325,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 321,
+                    "eventId": "BV1pa9RBtEPA:p1:e004",
+                    "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00321.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 0,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "darkplain-kurotiles",
+                          "scene": "Darkplain",
+                          "state": 909,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -1,
+                            1,
+                            -1,
+                            1
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 0.0,
+                            "originY": 0.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 263,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV1pa9RBtEPA:p1",
+                  "locator": "261–327s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 261,
+                  "end": 327
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-e4.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim"
+          }
+        }
+      ],
+      "uncertainties": [
+        "地名和显像专名的ASR错字不作为确定引用；后续结合地图文字核对。",
+        "前三处日灵交谈保留为可能前置关联，未以同一系列名称证明强制依赖。"
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e005",
+      "ordinal": 5,
+      "start": 327,
+      "end": 381,
+      "progressBarMark": {
+        "rawLabel": "箱4"
+      },
+      "observedMechanism": "营地日灵、火堆交互、显像后再次对话得箱",
+      "route": "由上一处向西跳上营地悬崖",
+      "transcriptRefs": [
+        {
+          "start": 326.55,
+          "end": 327.85,
+          "text": "接着这张小的左边"
+        },
+        {
+          "start": 327.85,
+          "end": 329.27,
+          "text": "希望让我们面朝这个山"
+        },
+        {
+          "start": 329.27,
+          "end": 330.81,
+          "text": "这个方向来蓄力"
+        },
+        {
+          "start": 331.35,
+          "end": 332.93,
+          "text": "这里要跳三次"
+        },
+        {
+          "start": 332.93,
+          "end": 333.81,
+          "text": "来一次"
+        },
+        {
+          "start": 333.81,
+          "end": 336.25,
+          "text": "一次两次跳两次吧"
+        },
+        {
+          "start": 336.25,
+          "end": 337.05,
+          "text": "跳两次上来之后"
+        },
+        {
+          "start": 337.05,
+          "end": 337.73,
+          "text": "我们先往前走"
+        },
+        {
+          "start": 338.17,
+          "end": 340.67,
+          "text": "在前方这个悬崖边就能看到这里"
+        },
+        {
+          "start": 340.67,
+          "end": 342.07,
+          "text": "是一个小营地"
+        },
+        {
+          "start": 342.07,
+          "end": 344.47,
+          "text": "营地里面有一个日灵跟日灵对话"
+        },
+        {
+          "start": 349.26,
+          "end": 350.58,
+          "text": "对话之后旁边"
+        },
+        {
+          "start": 350.58,
+          "end": 352.0,
+          "text": "还有这个篝火"
+        },
+        {
+          "start": 352.58,
+          "end": 353.78,
+          "text": "打开附近的火堆"
+        },
+        {
+          "start": 359.64,
+          "end": 360.56,
+          "text": "刚刚完成之后"
+        },
+        {
+          "start": 360.56,
+          "end": 362.98,
+          "text": "来我们打开一个显像"
+        },
+        {
+          "start": 362.98,
+          "end": 364.28,
+          "text": "然后放出迷龙幻鹅"
+        },
+        {
+          "start": 370.36,
+          "end": 371.02,
+          "text": "来对话"
+        },
+        {
+          "start": 376.53,
+          "end": 377.33,
+          "text": "对完话之后"
+        },
+        {
+          "start": 377.33,
+          "end": 378.07,
+          "text": "我们再转身"
+        },
+        {
+          "start": 378.07,
+          "end": 378.95,
+          "text": "然后开到宝箱"
+        },
+        {
+          "start": 380.55,
+          "end": 381.45,
+          "text": "拿完宝箱之后"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00371.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00378.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00379.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "基准奇藏",
+          "triggerSeconds": 371,
+          "appearanceSeconds": 378,
+          "collectionSeconds": 379,
+          "identityStatus": "confirmed",
+          "detectability": "unknown",
+          "stateId": "909",
+          "pointId": "1500314688993714176",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "原片378–379s营地日灵旁获得箱，攻略显示同一帐篷、火堆、崖壁与日灵。382s下一段开图尚在该营地，手工确认黄色玩家箭头，距离候选3.38游戏单位；排除附近赛道箱机制。",
+            "routeReview": "由上一处向西跳上营地悬崖",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00382.00.jpg",
+                "locator": "382s manually verified yellow player arrow; affine raw state plane",
+                "reason": "After reward, before next teleport; rawPosition=[-46506.385499153796, 59407.526357407594]; inliers=110. 原片378–379s营地日灵旁获得箱，攻略显示同一帐篷、火堆、崖壁与日灵。382s下一段开图尚在该营地，手工确认黄色玩家箭头，距离候选3.38游戏单位；排除附近赛道箱机制。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV1pa9RBtEPA:p1",
+                "locator": "327–381s member 1",
+                "reason": "营地日灵、火堆交互、显像后再次对话得箱",
+                "role": "support",
+                "start": 327,
+                "end": 381
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500314688993714176.json",
+                "locator": "point 1500314688993714176; description and image 1",
+                "reason": "原片378–379s营地日灵旁获得箱，攻略显示同一帐篷、火堆、崖壁与日灵。382s下一段开图尚在该营地，手工确认黄色玩家箭头，距离候选3.38游戏单位；排除附近赛道箱机制。",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 5,
+                "pointId": "1500314688993714176",
+                "stateId": "909",
+                "guide": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500314688993714176.json",
+                "images": [
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500314688993714176-1.png"
+                ],
+                "description": "与日灵交互后出现"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV1pa9RBtEPA-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 328,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 330,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 371,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": "player arrow ambiguous (0); configure player pixel"
+                  },
+                  {
+                    "time": 378,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 379,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 371,
+                    "eventId": "BV1pa9RBtEPA:p1:e005",
+                    "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00371.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 0,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "darkplain-kurotiles",
+                          "scene": "Darkplain",
+                          "state": 909,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -1,
+                            1,
+                            -1,
+                            1
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 0.0,
+                            "originY": 0.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 382,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV1pa9RBtEPA:p1",
+                  "locator": "327–381s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 327,
+                  "end": 381
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-e5.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim"
+          }
+        }
+      ],
+      "uncertainties": [
+        "地名和显像专名的ASR错字不作为确定引用；后续结合地图文字核对。"
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e006",
+      "ordinal": 6,
+      "start": 381,
+      "end": 461,
+      "progressBarMark": {
+        "rawLabel": "箱5-6"
+      },
+      "observedMechanism": "触摸石碑进入日灵视角，完成圆环/队形/高柱后返回获得两箱",
+      "route": "北侧小型信标向西下悬崖至石碑",
+      "transcriptRefs": [
+        {
+          "start": 380.55,
+          "end": 381.45,
+          "text": "拿完宝箱之后"
+        },
+        {
+          "start": 381.45,
+          "end": 382.13,
+          "text": "打开地图"
+        },
+        {
+          "start": 382.13,
+          "end": 383.27,
+          "text": "来我们来到上方"
+        },
+        {
+          "start": 383.79,
+          "end": 385.63,
+          "text": "这里我们传上到星间蝶铺"
+        },
+        {
+          "start": 385.63,
+          "end": 386.91,
+          "text": "左上方这个小银七喵"
+        },
+        {
+          "start": 391.74,
+          "end": 392.42,
+          "text": "传过来之后"
+        },
+        {
+          "start": 392.42,
+          "end": 394.68,
+          "text": "小地图左边西方向往前走"
+        },
+        {
+          "start": 398.84,
+          "end": 400.34,
+          "text": "走悬二边我们往下跳"
+        },
+        {
+          "start": 402.02,
+          "end": 403.46,
+          "text": "在前方跳过来"
+        },
+        {
+          "start": 403.46,
+          "end": 406.62,
+          "text": "在右边能看到有一个小石碑"
+        },
+        {
+          "start": 407.24,
+          "end": 408.5,
+          "text": "来触摸一下这个石碑"
+        },
+        {
+          "start": 414.05,
+          "end": 415.57,
+          "text": "这里我们先转向左边"
+        },
+        {
+          "start": 415.57,
+          "end": 417.21,
+          "text": "小地图右边东方向往前"
+        },
+        {
+          "start": 417.69,
+          "end": 418.61,
+          "text": "来到日灵这里"
+        },
+        {
+          "start": 418.61,
+          "end": 420.09,
+          "text": "跟日灵给它拼成一个圈"
+        },
+        {
+          "start": 425.19,
+          "end": 428.13,
+          "text": "接着我们来转向左边西方向往前"
+        },
+        {
+          "start": 429.77,
+          "end": 432.47,
+          "text": "走进来之后我们来到这一群日灵这里"
+        },
+        {
+          "start": 432.47,
+          "end": 433.35,
+          "text": "来我们站到这里"
+        },
+        {
+          "start": 433.69,
+          "end": 444.49,
+          "text": "接着我们再跟随这个紫色任务之影"
+        },
+        {
+          "start": 444.49,
+          "end": 447.03,
+          "text": "我们要跳到上面这个最高处的石头"
+        },
+        {
+          "start": 448.07,
+          "end": 448.75,
+          "text": "来跳上来"
+        },
+        {
+          "start": 457.0,
+          "end": 459.18,
+          "text": "接着是来两个宝箱都开一下"
+        },
+        {
+          "start": 460.38,
+          "end": 461.84,
+          "text": "拿完之后打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00408.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00454.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00458.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00459.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "基准奇藏",
+          "triggerSeconds": 408,
+          "appearanceSeconds": 454,
+          "collectionSeconds": 458,
+          "identityStatus": "unresolved",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "两个原始ID 1500200422475800576、1500200454327345152 使用完全相同的双箱石碑攻略图。454–459s可确认两箱分别领取，462s箭头位于二者7.83/8.56游戏单位附近，但没有图内左右与ID对应关系。集合身份支持强，成员1/2不能互相猜配，逐成员保留未解。",
+            "routeReview": "北侧小型信标向西下悬崖至石碑",
+            "positionEvidence": [],
+            "videoEvidence": [
+              {
+                "source": "BV1pa9RBtEPA:p1",
+                "locator": "381–461s member 1",
+                "reason": "触摸石碑进入日灵视角，完成圆环/队形/高柱后返回获得两箱",
+                "role": "support",
+                "start": 381,
+                "end": 461
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200422475800576.json",
+                "locator": "point 1500200422475800576; content.description and picturesUrl",
+                "reason": "触摸石像后，变身日灵完成交互后出现",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200454327345152.json",
+                "locator": "point 1500200454327345152; content.description and picturesUrl",
+                "reason": "触摸石像后，变身日灵完成交互后出现",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 6,
+                "pointId": "1500200422475800576",
+                "stateId": "909",
+                "guide": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200422475800576.json",
+                "images": [
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200422475800576-1.png"
+                ],
+                "description": "触摸石像后，变身日灵完成交互后出现"
+              },
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 6,
+                "pointId": "1500200454327345152",
+                "stateId": "909",
+                "guide": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200454327345152.json",
+                "images": [
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200454327345152-1.png"
+                ],
+                "description": "触摸石像后，变身日灵完成交互后出现"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV1pa9RBtEPA-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 382,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 384,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 408,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 454,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 458,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 459,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 408,
+                    "eventId": "BV1pa9RBtEPA:p1:e006",
+                    "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00408.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 0,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "darkplain-kurotiles",
+                          "scene": "Darkplain",
+                          "state": 909,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -1,
+                            1,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 0.0,
+                            "originY": 0.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 384,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV1pa9RBtEPA:p1",
+                  "locator": "381–461s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 381,
+                  "end": 461
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-e6.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim"
+          }
+        },
+        {
+          "member": 2,
+          "observedType": "基准奇藏",
+          "triggerSeconds": 408,
+          "appearanceSeconds": 454,
+          "collectionSeconds": 459,
+          "identityStatus": "unresolved",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "两个原始ID 1500200422475800576、1500200454327345152 使用完全相同的双箱石碑攻略图。454–459s可确认两箱分别领取，462s箭头位于二者7.83/8.56游戏单位附近，但没有图内左右与ID对应关系。集合身份支持强，成员1/2不能互相猜配，逐成员保留未解。",
+            "routeReview": "北侧小型信标向西下悬崖至石碑",
+            "positionEvidence": [],
+            "videoEvidence": [
+              {
+                "source": "BV1pa9RBtEPA:p1",
+                "locator": "381–461s member 2",
+                "reason": "触摸石碑进入日灵视角，完成圆环/队形/高柱后返回获得两箱",
+                "role": "support",
+                "start": 381,
+                "end": 461
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200422475800576.json",
+                "locator": "point 1500200422475800576; content.description and picturesUrl",
+                "reason": "触摸石像后，变身日灵完成交互后出现",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200454327345152.json",
+                "locator": "point 1500200454327345152; content.description and picturesUrl",
+                "reason": "触摸石像后，变身日灵完成交互后出现",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 6,
+                "pointId": "1500200422475800576",
+                "stateId": "909",
+                "guide": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200422475800576.json",
+                "images": [
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200422475800576-1.png"
+                ],
+                "description": "触摸石像后，变身日灵完成交互后出现"
+              },
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 6,
+                "pointId": "1500200454327345152",
+                "stateId": "909",
+                "guide": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200454327345152.json",
+                "images": [
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200454327345152-1.png"
+                ],
+                "description": "触摸石像后，变身日灵完成交互后出现"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV1pa9RBtEPA-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 382,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 384,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 408,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 454,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 458,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 459,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 408,
+                    "eventId": "BV1pa9RBtEPA:p1:e006",
+                    "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00408.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 0,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "darkplain-kurotiles",
+                          "scene": "Darkplain",
+                          "state": 909,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -1,
+                            1,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 0.0,
+                            "originY": 0.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 384,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV1pa9RBtEPA:p1",
+                  "locator": "381–461s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 381,
+                  "end": 461
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-e6.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim"
+          }
+        }
+      ],
+      "uncertainties": [
+        "地名和显像专名的ASR错字不作为确定引用；后续结合地图文字核对。",
+        "石碑内场景与外部地图位置不可连续延拓；双箱按454秒画面左/右及开启顺序区分。"
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e007",
+      "ordinal": 7,
+      "start": 461,
+      "end": 527,
+      "progressBarMark": {
+        "rawLabel": "箱7"
+      },
+      "observedMechanism": "铸光仪解开后打开假箱触发陷阱，传送至真箱处",
+      "route": "回同信标，向北飞至浮岛左侧铸光仪",
+      "transcriptRefs": [
+        {
+          "start": 460.38,
+          "end": 461.84,
+          "text": "拿完之后打开地图"
+        },
+        {
+          "start": 463.12,
+          "end": 465.08,
+          "text": "来这里我们传送到"
+        },
+        {
+          "start": 466.5,
+          "end": 468.64,
+          "text": "也是刚刚这个静静断崖的小银星标"
+        },
+        {
+          "start": 468.64,
+          "end": 470.22,
+          "text": "这个星间蝶部左上方传过来"
+        },
+        {
+          "start": 473.87,
+          "end": 475.57,
+          "text": "传过来之后我们转向小地图上方"
+        },
+        {
+          "start": 475.57,
+          "end": 477.41,
+          "text": "每方样来站这里"
+        },
+        {
+          "start": 477.41,
+          "end": 478.05,
+          "text": "我们蓄能"
+        },
+        {
+          "start": 480.72,
+          "end": 482.46,
+          "text": "蓄完能量之后就朝前方直走"
+        },
+        {
+          "start": 482.46,
+          "end": 483.76,
+          "text": "然后跳起来往前飞"
+        },
+        {
+          "start": 483.76,
+          "end": 485.28,
+          "text": "看到面前这个小岛"
+        },
+        {
+          "start": 485.28,
+          "end": 486.3,
+          "text": "我们来到左侧"
+        },
+        {
+          "start": 487.52,
+          "end": 488.84,
+          "text": "这个宝箱是要做完"
+        },
+        {
+          "start": 488.84,
+          "end": 489.98,
+          "text": "这个助光仪的挑战"
+        },
+        {
+          "start": 489.98,
+          "end": 491.8,
+          "text": "然后才会显示出来的"
+        },
+        {
+          "start": 492.14,
+          "end": 493.74,
+          "text": "咱们来到这一处小岛上面"
+        },
+        {
+          "start": 493.74,
+          "end": 494.58,
+          "text": "助光仪挑战"
+        },
+        {
+          "start": 494.58,
+          "end": 503.39,
+          "text": "这里大家可以看到"
+        },
+        {
+          "start": 503.39,
+          "end": 505.59,
+          "text": "它的形状是两个实心的圆"
+        },
+        {
+          "start": 505.59,
+          "end": 506.51,
+          "text": "两个空心的圆"
+        },
+        {
+          "start": 506.89,
+          "end": 508.53,
+          "text": "大家就是方向给它调整过来"
+        },
+        {
+          "start": 509.27,
+          "end": 509.97,
+          "text": "上过来之后"
+        },
+        {
+          "start": 509.97,
+          "end": 510.87,
+          "text": "这里大家旋转一下"
+        },
+        {
+          "start": 512.41,
+          "end": 513.35,
+          "text": "这样就解开了"
+        },
+        {
+          "start": 514.77,
+          "end": 515.61,
+          "text": "咱们走进来"
+        },
+        {
+          "start": 515.61,
+          "end": 517.45,
+          "text": "拿到里面的这个假宝箱"
+        },
+        {
+          "start": 518.67,
+          "end": 520.21,
+          "text": "我们会掉进这个陷阱里面"
+        },
+        {
+          "start": 521.51,
+          "end": 523.31,
+          "text": "来过传送到了一个珍宝箱的位置"
+        },
+        {
+          "start": 523.31,
+          "end": 523.81,
+          "text": "我们过来"
+        },
+        {
+          "start": 524.47,
+          "end": 525.53,
+          "text": "开到这个珍宝箱"
+        },
+        {
+          "start": 526.63,
+          "end": 528.31,
+          "text": "拿完之后我们打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00518.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00524.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00525.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "基准奇藏",
+          "triggerSeconds": 518,
+          "appearanceSeconds": 524,
+          "collectionSeconds": 525,
+          "identityStatus": "unresolved",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "候选1499243508455006208文字与陷阱箱传送机制相符，攻略图2标出浮岛入口，图1为真箱；原片524–525s有真箱/传送奖励。462s地图却是前一事件石碑，528s正在移图，不能视作本事件目标。缺传送后终点定位，未确认。",
+            "routeReview": "回同信标，向北飞至浮岛左侧铸光仪",
+            "positionEvidence": [],
+            "videoEvidence": [
+              {
+                "source": "BV1pa9RBtEPA:p1",
+                "locator": "461–527s member 1",
+                "reason": "铸光仪解开后打开假箱触发陷阱，传送至真箱处",
+                "role": "support",
+                "start": 461,
+                "end": 527
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1499243508455006208.json",
+                "locator": "point 1499243508455006208; content.description and picturesUrl",
+                "reason": "做完图二处的解密拿到里面的陷阱宝箱即可解锁",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 7,
+                "pointId": "1499243508455006208",
+                "stateId": "909",
+                "guide": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1499243508455006208.json",
+                "images": [
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1499243508455006208-1.png",
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1499243508455006208-2.png"
+                ],
+                "description": "做完图二处的解密拿到里面的陷阱宝箱即可解锁"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV1pa9RBtEPA-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 461,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 462,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 463,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 464,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 475,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 477,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 518,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 524,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 525,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 518,
+                    "eventId": "BV1pa9RBtEPA:p1:e007",
+                    "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00518.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 1,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "darkplain-kurotiles",
+                          "scene": "Darkplain",
+                          "state": 909,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            1,
+                            3,
+                            -1,
+                            1
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 0.0,
+                            "originY": 0.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 528,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV1pa9RBtEPA:p1",
+                  "locator": "461–527s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 461,
+                  "end": 527
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-e7.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim"
+          }
+        }
+      ],
+      "uncertainties": [
+        "地名和显像专名的ASR错字不作为确定引用；后续结合地图文字核对。",
+        "518秒假箱不是奖励成员，519–520秒陷阱传送后须重新定位；522秒提示含机关/成就奖励，不当成真箱领取。"
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e008",
+      "ordinal": 8,
+      "start": 527,
+      "end": 593,
+      "progressBarMark": {
+        "rawLabel": "箱8"
+      },
+      "observedMechanism": "清怪营救日灵后交谈出箱",
+      "route": "回同信标向北，经蓝光柱旁前行，下崖到大石头",
+      "transcriptRefs": [
+        {
+          "start": 526.63,
+          "end": 528.31,
+          "text": "拿完之后我们打开地图"
+        },
+        {
+          "start": 529.87,
+          "end": 530.43,
+          "text": "缩小一下"
+        },
+        {
+          "start": 530.43,
+          "end": 532.03,
+          "text": "我们回到刚刚这个传送点"
+        },
+        {
+          "start": 532.03,
+          "end": 532.63,
+          "text": "星间蝶户"
+        },
+        {
+          "start": 532.63,
+          "end": 533.07,
+          "text": "左上方"
+        },
+        {
+          "start": 533.07,
+          "end": 533.57,
+          "text": "小心细妙"
+        },
+        {
+          "start": 540.13,
+          "end": 540.87,
+          "text": "传送过来之后"
+        },
+        {
+          "start": 540.87,
+          "end": 542.39,
+          "text": "小地图上方每方向"
+        },
+        {
+          "start": 544.11,
+          "end": 546.43,
+          "text": "还是面朝这个方向"
+        },
+        {
+          "start": 546.43,
+          "end": 547.35,
+          "text": "然后我们跳起来"
+        },
+        {
+          "start": 547.75,
+          "end": 548.07,
+          "text": "飞"
+        },
+        {
+          "start": 551.48,
+          "end": 552.88,
+          "text": "这里我们来看一下右边"
+        },
+        {
+          "start": 552.88,
+          "end": 555.1,
+          "text": "这里有一个蓝色的光柱"
+        },
+        {
+          "start": 555.72,
+          "end": 556.72,
+          "text": "跑蓝色光柱走"
+        },
+        {
+          "start": 557.08,
+          "end": 558.92,
+          "text": "这里我们来走过蓝色光柱"
+        },
+        {
+          "start": 561.35,
+          "end": 562.95,
+          "text": "然后往前一直走到这个悬崖边"
+        },
+        {
+          "start": 566.04,
+          "end": 567.72,
+          "text": "走到悬崖边之后我们低头往下看"
+        },
+        {
+          "start": 568.12,
+          "end": 569.74,
+          "text": "在左边能看到一个大石头"
+        },
+        {
+          "start": 575.05,
+          "end": 576.01,
+          "text": "看到大石头旁边"
+        },
+        {
+          "start": 577.03,
+          "end": 578.17,
+          "text": "接着我们清一下怪"
+        },
+        {
+          "start": 579.17,
+          "end": 581.21,
+          "text": "清完怪之后我们跟着一群日灵对话"
+        },
+        {
+          "start": 589.18,
+          "end": 591.02,
+          "text": "这样的话会给我们一个宝箱来开一下"
+        },
+        {
+          "start": 592.1,
+          "end": 593.08,
+          "text": "拿完这个宝箱之后"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00581.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00589.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00591.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素奇藏",
+          "triggerSeconds": 581,
+          "appearanceSeconds": 589,
+          "collectionSeconds": 591,
+          "identityStatus": "unresolved",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "检索到1500363088875986944仅写小小的愿望且无攻略图片；原片589–591s大树岩块旁营救日灵出箱，文字不能区分同成就链多个箱。无目标小地图定位，攻略视觉支持缺失，未确认。",
+            "routeReview": "回同信标向北，经蓝光柱旁前行，下崖到大石头",
+            "positionEvidence": [],
+            "videoEvidence": [
+              {
+                "source": "BV1pa9RBtEPA:p1",
+                "locator": "527–593s member 1",
+                "reason": "清怪营救日灵后交谈出箱",
+                "role": "support",
+                "start": 527,
+                "end": 593
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500363088875986944.json",
+                "locator": "point 1500363088875986944; content.description and picturesUrl",
+                "reason": "小小的愿望 成就宝箱",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 8,
+                "pointId": "1500363088875986944",
+                "stateId": "909",
+                "guide": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500363088875986944.json",
+                "images": [],
+                "description": "小小的愿望 成就宝箱"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV1pa9RBtEPA-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 528,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 530,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 581,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 589,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 591,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 581,
+                    "eventId": "BV1pa9RBtEPA:p1:e008",
+                    "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00581.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 2,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "darkplain-kurotiles",
+                          "scene": "Darkplain",
+                          "state": 909,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -1,
+                            1,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 0.0,
+                            "originY": 0.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 623,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV1pa9RBtEPA:p1",
+                  "locator": "527–593s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 527,
+                  "end": 593
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-e8.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim"
+          }
+        }
+      ],
+      "uncertainties": [
+        "地名和显像专名的ASR错字不作为确定引用；后续结合地图文字核对。"
+      ],
+      "observations": [
+        {
+          "seconds": 555,
+          "type": "incidental-failed-challenge",
+          "description": "经过蓝光柱误触计时挑战，565秒失败，无奖励，不新增收集成员。"
+        }
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e009",
+      "ordinal": 9,
+      "start": 593,
+      "end": 622,
+      "progressBarMark": {
+        "rawLabel": "箱9"
+      },
+      "observedMechanism": "地面闪光查看出箱；插入另一角色领取录像",
+      "route": "前处向东北下到谷底，再向南沿小道",
+      "transcriptRefs": [
+        {
+          "start": 592.1,
+          "end": 593.08,
+          "text": "拿完这个宝箱之后"
+        },
+        {
+          "start": 593.08,
+          "end": 593.78,
+          "text": "我们转一个小地图"
+        },
+        {
+          "start": 593.78,
+          "end": 594.96,
+          "text": "右上方多米方向往前"
+        },
+        {
+          "start": 594.96,
+          "end": 600.14,
+          "text": "跟在我身后 咱们走到悬崖边 这里地图往下跳 一直跳到最底部"
+        },
+        {
+          "start": 602.0,
+          "end": 606.0,
+          "text": "然后我们再转向小地图 下方拿完样 我们沿着条小道往前走"
+        },
+        {
+          "start": 607.12,
+          "end": 613.74,
+          "text": "啊 这里在路的左边就能看到有一个闪光点 然后地上会看到一个闪光点 这里我们点击查看 会出来一个宝箱"
+        },
+        {
+          "start": 614.22,
+          "end": 620.84,
+          "text": "上枪 哎 这这一个宝箱是要做完我们的种树任务 才会就是拿到了这个宝箱"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00593.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00611.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00612.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00614.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素奇藏",
+          "triggerSeconds": 611,
+          "appearanceSeconds": 612,
+          "collectionSeconds": 614,
+          "identityStatus": "unresolved",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "候选1501513441654841344文字为调查地上闪光点，攻略岩壁/紫草与612–614s插入录像相似。但611–615s是另一角色的旧录像，禁止沿610s或623s位置传递；该插片自身小地图匹配失败，缺独立定位，未确认。",
+            "routeReview": "前处向东北下到谷底，再向南沿小道",
+            "positionEvidence": [],
+            "videoEvidence": [
+              {
+                "source": "BV1pa9RBtEPA:p1",
+                "locator": "593–622s member 1",
+                "reason": "地面闪光查看出箱；插入另一角色领取录像",
+                "role": "support",
+                "start": 593,
+                "end": 622
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501513441654841344.json",
+                "locator": "point 1501513441654841344; content.description and picturesUrl",
+                "reason": "危行任务:勘探悖论之域 寂寞断崖的还原培育 追寻学生和日灵时候调查地上闪光点",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 9,
+                "pointId": "1501513441654841344",
+                "stateId": "909",
+                "guide": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501513441654841344.json",
+                "images": [
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501513441654841344-1.png"
+                ],
+                "description": "危行任务:勘探悖论之域 寂寞断崖的还原培育 追寻学生和日灵时候调查地上闪光点"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV1pa9RBtEPA-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 594,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 596,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 611,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 612,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 614,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 611,
+                    "eventId": "BV1pa9RBtEPA:p1:e009",
+                    "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00611.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 1,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "darkplain-kurotiles",
+                          "scene": "Darkplain",
+                          "state": 909,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -1,
+                            1,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 0.0,
+                            "originY": 0.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 623,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV1pa9RBtEPA:p1",
+                  "locator": "593–622s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 593,
+                  "end": 622
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-e9.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim"
+          }
+        }
+      ],
+      "uncertainties": [
+        "地名和显像专名的ASR错字不作为确定引用；后续结合地图文字核对。",
+        "611–615秒插入另一角色的领取片段，616秒回到路线；必须为该插入片段重新定位，不能直接继承610秒玩家位置。",
+        "作者称需要完成种树任务；仅此前置说明不能单独确认不可探测。"
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e010",
+      "ordinal": 10,
+      "start": 622,
+      "end": 666,
+      "progressBarMark": {
+        "rawLabel": "箱10"
+      },
+      "observedMechanism": "与长椅老人对话并等待，出现箱和成就",
+      "route": "传北岛东南小型信标，向东北上石阶",
+      "transcriptRefs": [
+        {
+          "start": 622.18,
+          "end": 624.68,
+          "text": "这个拿完之后 我们再打开地图 来到右边"
+        },
+        {
+          "start": 625.42,
+          "end": 627.7,
+          "text": "上到紫金黄丘右下方的小银细喵"
+        },
+        {
+          "start": 633.15,
+          "end": 635.01,
+          "text": "然后是右上方东北方向"
+        },
+        {
+          "start": 635.01,
+          "end": 636.37,
+          "text": "我们就朝面前这个方向"
+        },
+        {
+          "start": 637.17,
+          "end": 638.73,
+          "text": "跳起来往前飞"
+        },
+        {
+          "start": 641.13,
+          "end": 643.35,
+          "text": "来这里就一个紫色的任务"
+        },
+        {
+          "start": 643.35,
+          "end": 644.41,
+          "text": "指引我们过来"
+        },
+        {
+          "start": 644.41,
+          "end": 646.11,
+          "text": "跟这个老爷爷对话"
+        },
+        {
+          "start": 652.49,
+          "end": 653.87,
+          "text": "对话这里我们稍微等一下"
+        },
+        {
+          "start": 661.01,
+          "end": 662.59,
+          "text": "来等一会儿就会出来一个宝箱"
+        },
+        {
+          "start": 662.59,
+          "end": 663.63,
+          "text": "并且拿到一个成就"
+        },
+        {
+          "start": 663.63,
+          "end": 665.17,
+          "text": "好这个宝箱拿完之后"
+        },
+        {
+          "start": 665.17,
+          "end": 668.81,
+          "text": "那我们这个3.3版本暗原的隐藏宝箱"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00622.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00647.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00661.00.jpg",
+        "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00663.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "基准奇藏",
+          "triggerSeconds": 647,
+          "appearanceSeconds": 661,
+          "collectionSeconds": 663,
+          "identityStatus": "unresolved",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "候选1500192871343808512长椅坐下文字、攻略双座椅/树根/石阶与661–663s画面相符。623s黄色箭头是传送前上一位置，不能绑定本箱；本事件小地图固定门限失败，缺领取点定位。",
+            "routeReview": "传北岛东南小型信标，向东北上石阶",
+            "positionEvidence": [],
+            "videoEvidence": [
+              {
+                "source": "BV1pa9RBtEPA:p1",
+                "locator": "622–666s member 1",
+                "reason": "与长椅老人对话并等待，出现箱和成就",
+                "role": "support",
+                "start": 622,
+                "end": 666
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500192871343808512.json",
+                "locator": "point 1500192871343808512; content.description and picturesUrl",
+                "reason": "在长椅坐下后出现",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV1pa9RBtEPA",
+                "event": 10,
+                "pointId": "1500192871343808512",
+                "stateId": "909",
+                "guide": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500192871343808512.json",
+                "images": [
+                  "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500192871343808512-1.png"
+                ],
+                "description": "在长椅坐下后出现"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV1pa9RBtEPA-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 623,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 625,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 647,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": "player arrow ambiguous (0); configure player pixel"
+                  },
+                  {
+                    "time": 661,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 663,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 647,
+                    "eventId": "BV1pa9RBtEPA:p1:e010",
+                    "source": "out/detectability-v2/BV1pa9RBtEPA/p01/visual/frame-00647.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 0,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "darkplain-kurotiles",
+                          "scene": "Darkplain",
+                          "state": 909,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            0,
+                            2,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 0.0,
+                            "originY": 0.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 625,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV1pa9RBtEPA:p1",
+                  "locator": "622–666s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 622,
+                  "end": 666
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV1pa9RBtEPA-e10.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim"
+          }
+        }
+      ],
+      "uncertainties": [
+        "地名和显像专名的ASR错字不作为确定引用；后续结合地图文字核对。"
+      ]
+    }
+  ],
+  "nonEventIntervals": [
+    [
+      0,
+      50,
+      "前言、任务建议和显像准备"
+    ],
+    [
+      666,
+      669.999,
+      "结尾说明"
+    ]
+  ],
+  "reviewedEvidence": [
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00103.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00115.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00127.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00172.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00184.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00196.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00244.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00256.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00296.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00308.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00320.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00352.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00364.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00376.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00407.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00419.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00431.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00443.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00455.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00508.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00520.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00577.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00589.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00601.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00613.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00645.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-1s-00657.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-5s-00005.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-5s-00065.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-5s-00125.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-5s-00185.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-5s-00245.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-5s-00305.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-5s-00365.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-5s-00425.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-5s-00485.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-5s-00545.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-5s-00605.00.jpg",
+    "out/detectability-v2/BV1pa9RBtEPA/p01/visual/scenes-5s-00665.00.jpg"
+  ],
+  "transcriptCorrections": [
+    {
+      "start": 93.09,
+      "end": 108.47,
+      "raw": "助光仪",
+      "corrected": "铸光仪",
+      "basis": "103秒机关界面标题明确可见"
+    },
+    {
+      "start": 186.72,
+      "end": 187.76,
+      "raw": "日灵",
+      "corrected": "日灵",
+      "basis": "193秒对话界面好奇的日灵；其余ASR错字保留不做原话校正"
+    }
+  ],
+  "coverageNotes": [
+    "全片5秒路线发现图已查看；全部触发/奖励段1秒检查；不把稀疏图当作开箱证据。",
+    "作者进度条箱1至箱10，其中箱5-6为同一事件双奖励。另保留无箱编号的前置事件。",
+    "音频为本地ASR文本+画面对照，不能直接回听；未知专名保留待核实。",
+    "未读总览、未引用旧匹配。"
+  ]
+}

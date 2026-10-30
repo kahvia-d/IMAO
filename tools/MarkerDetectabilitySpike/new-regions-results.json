@@ -1,0 +1,4733 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-29",
+  "experimentOnly": true,
+  "runtimeIntegration": false,
+  "sourceAuthor": "又肝又氪ya",
+  "collectionId": "5640337",
+  "definition": "正常探测仪查漏会漏掉的目标，包括触发前扫不到、触发后出现或可探测；未知不猜。",
+  "automationBoundary": "程序辅助下载/抽帧/SIFT地图配准和近点候选，代理视觉比较视频与库街区攻略图及描述后确认。没有把最近点或标题直接当最终身份。",
+  "coordinateCaution": "geometry中的rawPosition是固定参考屏幕点；yellow-all含边缘画外玩家箭头和其他黄色图标，均不能自动当玩家真实位置。记录basis所述为人工复核后的位置。distance单位为原坐标/100，非额外游戏米制承诺。",
+  "groupPolicy": "每箱计一记录；多箱集合确认时以组成员编号列点位，不声称组成员编号等于视频开箱序号。",
+  "coverage": {
+    "targetCount": 90,
+    "confirmedPointCount": 62,
+    "unresolvedTargetCount": 28,
+    "videos": 4,
+    "parts": 5,
+    "byVideo": {
+      "BV13ZvrBtEde": {
+        "total": 36,
+        "confirmed": 30
+      },
+      "BV19kNu6AEVR": {
+        "total": 11,
+        "confirmed": 8
+      },
+      "BV1F3A3zxEDQ": {
+        "total": 33,
+        "confirmed": 15
+      },
+      "BV1pa9RBtEPA": {
+        "total": 10,
+        "confirmed": 9
+      }
+    }
+  },
+  "reviewManifest": [
+    {
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "durationSeconds": 892,
+      "mediaSha256": "2983b560d7884d48a9e1860539c7cd9020a33f72d9bb0325d7e8203f555e4a56",
+      "reviewedContactSheets": [
+        "out/detectability-collection/BV13ZvrBtEde/p01/contact-10s-0000.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/p01/contact-10s-0200.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/p01/contact-10s-0400.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/p01/contact-10s-0600.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/p01/contact-10s-0800.jpg"
+      ],
+      "reviewMethod": "完整10秒抽帧时间轴逐页清点所有作者标注目标；目标附近额外查看原分辨率图和1秒大地图帧。不是连续播放或逐帧盲测。"
+    },
+    {
+      "bvid": "BV13ZvrBtEde",
+      "part": 2,
+      "durationSeconds": 294,
+      "mediaSha256": "35f3695e39e7d959e83ea8e4e226f19d4083e38b1ff4a40d99e8ffbbefbc09f6",
+      "reviewedContactSheets": [
+        "out/detectability-collection/BV13ZvrBtEde/p02/contact-10s-0000.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/p02/contact-10s-0200.jpg"
+      ],
+      "reviewMethod": "完整10秒抽帧时间轴逐页清点所有作者标注目标；目标附近额外查看原分辨率图和1秒大地图帧。不是连续播放或逐帧盲测。"
+    },
+    {
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "durationSeconds": 1251,
+      "mediaSha256": "8750d963dfa9520449c9f059f2829b21f63718ad83075a677518f10643830d7f",
+      "reviewedContactSheets": [
+        "out/detectability-collection/BV1F3A3zxEDQ/p01/contact-10s-0000.jpg",
+        "out/detectability-collection/BV1F3A3zxEDQ/p01/contact-10s-0200.jpg",
+        "out/detectability-collection/BV1F3A3zxEDQ/p01/contact-10s-0400.jpg",
+        "out/detectability-collection/BV1F3A3zxEDQ/p01/contact-10s-0600.jpg",
+        "out/detectability-collection/BV1F3A3zxEDQ/p01/contact-10s-0800.jpg",
+        "out/detectability-collection/BV1F3A3zxEDQ/p01/contact-10s-1000.jpg",
+        "out/detectability-collection/BV1F3A3zxEDQ/p01/contact-10s-1200.jpg"
+      ],
+      "reviewMethod": "完整10秒抽帧时间轴逐页清点所有作者标注目标；目标附近额外查看原分辨率图和1秒大地图帧。不是连续播放或逐帧盲测。"
+    },
+    {
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "durationSeconds": 671,
+      "mediaSha256": "f1d60c0a4f8efd2122db021535d63abded1943df4b3915d57d4cc659773fbae9",
+      "reviewedContactSheets": [
+        "out/detectability-collection/BV1pa9RBtEPA/p01/contact-10s-0000.jpg",
+        "out/detectability-collection/BV1pa9RBtEPA/p01/contact-10s-0200.jpg",
+        "out/detectability-collection/BV1pa9RBtEPA/p01/contact-10s-0400.jpg",
+        "out/detectability-collection/BV1pa9RBtEPA/p01/contact-10s-0600.jpg"
+      ],
+      "reviewMethod": "完整10秒抽帧时间轴逐页清点所有作者标注目标；目标附近额外查看原分辨率图和1秒大地图帧。不是连续播放或逐帧盲测。"
+    },
+    {
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "durationSeconds": 426,
+      "mediaSha256": "b5181ca5f193809c650254e8baef91df8c3bfc7b6559bc13a3fb7df24e988288",
+      "reviewedContactSheets": [
+        "out/detectability-collection/BV19kNu6AEVR/p01/contact-10s-0000.jpg",
+        "out/detectability-collection/BV19kNu6AEVR/p01/contact-10s-0200.jpg",
+        "out/detectability-collection/BV19kNu6AEVR/p01/contact-10s-0400.jpg"
+      ],
+      "reviewMethod": "完整10秒抽帧时间轴逐页清点所有作者标注目标；目标附近额外查看原分辨率图和1秒大地图帧。不是连续播放或逐帧盲测。"
+    }
+  ],
+  "targets": [
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱1",
+      "sourceLabel": "箱1",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        95,
+        115
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          95,
+          115
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=95"
+      },
+      "mechanism": "显像岩蛛后出现奇藏箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略的圆形建筑入口、金色草丛与视频相同。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0100.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0110.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454172613768327168.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454172613768327168-1.png"
+        ]
+      },
+      "pointId": "1454172613768327168",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -363700.0,
+        -651700.0
+      ],
+      "guide": {
+        "description": "需要使用显像功能，显像岩蛛声骸。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1454172613768327168",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/cbfa70e18db14329b2637cbf186d1d0b20251226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/bf8a3ad64e5042bcb91f98aebbb7671120251226.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱2",
+      "sourceLabel": "箱2",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        120,
+        148
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          120,
+          148
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=120"
+      },
+      "mechanism": "显像岩蛛后出现奇藏箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略建筑旁金色草丛一致；143–146秒大地图玩家位置附近候选相合。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0130.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0140.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0145.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451279944887103488.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451279944887103488-1.png"
+        ]
+      },
+      "pointId": "1451279944887103488",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -353700.0,
+        -653900.0
+      ],
+      "guide": {
+        "description": "显像宝箱，显像声骸岩蛛。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1451279944887103488",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/7a281edaa2f34190b9942d2c9c40da2a20251218.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/c6a7bd71f5a24b4a934e4af6445acb8f20251218.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱3",
+      "sourceLabel": "箱3",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        150,
+        170
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          150,
+          170
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=150"
+      },
+      "mechanism": "显像岩蛛后出现奇藏箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "倾斜紫色建筑、左侧缠绕根须与攻略一致；166秒玩家距点约1.9。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0160.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0166.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451280566250057728.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451280566250057728-1.png"
+        ]
+      },
+      "pointId": "1451280566250057728",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -374300.0,
+        -646000.0
+      ],
+      "guide": {
+        "description": "显像宝箱，显像声骸岩蛛。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1451280566250057728",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/c3a7864b79d24d96aec57bd0ca48fdc820251218.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/50117a7f95bc4962b97f013c474c964f20251218.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱4",
+      "sourceLabel": "箱4",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        175,
+        200
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          175,
+          200
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=175"
+      },
+      "mechanism": "显像岩蛛后出现奇藏箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "紫色浅水、倾斜建筑碎片与攻略一致；193–197秒地图近点。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0180.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0190.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0195.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454087936514781184.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454087936514781184-1.png"
+        ]
+      },
+      "pointId": "1454087936514781184",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -381200.0,
+        -638300.0
+      ],
+      "guide": {
+        "description": "需要使用显像功能，显像岩蛛声骸。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1454087936514781184",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/f20b2a1840154c6bba97b741cf902f1120251226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/6f1ec31769964e6d9b82209ae534e49020251226.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱5",
+      "sourceLabel": "箱5",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        200,
+        225
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          200,
+          225
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=200"
+      },
+      "mechanism": "使用显像/声骸后收取箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "附近多个岩蛛显像箱；墙边深色场景尚不能与攻略唯一对应。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0200.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0210.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0220.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454173376710242304.json",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454883074551902208.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1454173376710242304",
+        "1454883074551902208"
+      ]
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱6",
+      "sourceLabel": "箱6",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        225,
+        245
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          225,
+          245
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=225"
+      },
+      "mechanism": "显像后战斗并收取箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "红色植物和低墙场景缺少唯一地标；地图出现时玩家指标可能在画面外，不能只凭最近点。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0230.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0240.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454173376710242304.json",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454883074551902208.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1454173376710242304",
+        "1454883074551902208"
+      ]
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱7",
+      "sourceLabel": "箱7",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        245,
+        270
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          245,
+          270
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=245"
+      },
+      "mechanism": "显像岩蛛后出现奇藏箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "大树/巨型种子和白花草丛相合；262–266秒玩家位置距离约3–4。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0250.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0260.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0265.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454088428051443712.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454088428051443712-1.png"
+        ]
+      },
+      "pointId": "1454088428051443712",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -369000.0,
+        -628900.0
+      ],
+      "guide": {
+        "description": "需要使用显像功能，显像岩蛛声骸。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1454088428051443712",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/8b21ed472d5c41109b90312873fed84720251226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/ab62a017d1a44038b134062171847f1320251226.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱8",
+      "sourceLabel": "箱8",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        275,
+        310
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          275,
+          310
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=275"
+      },
+      "mechanism": "显像岩蛛后出现奇藏箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "遗迹下坡地的奖励位置与攻略图一致；306秒玩家距离约1.6。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0290.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0300.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0306.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451227352486064128.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451227352486064128-1.png"
+        ]
+      },
+      "pointId": "1451227352486064128",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -430400.0,
+        -636300.0
+      ],
+      "guide": {
+        "description": "这个宝箱需要使用显像功能，在第二张图正对位置使用显像，拿岩蛛S4型。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1451227352486064128",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/423108f8ac4443359d693863489ef5f020251218.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/c304399552d243bcb1067b49d20a36d520251218.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱9",
+      "sourceLabel": "箱9",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        315,
+        357
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          315,
+          357
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=315"
+      },
+      "mechanism": "显像岩蛛后出现奇藏箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "缠绕藤蔓的紫色符文柱一致；353秒玩家距点约2.3。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0340.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0350.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0353.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451234423356993536.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451234423356993536-1.png"
+        ]
+      },
+      "pointId": "1451234423356993536",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -379500.0,
+        -690900.0
+      ],
+      "guide": {
+        "description": "原本的样子是第二张图的模样，靠近之后使用显像功能，显像岩蛛就可以。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1451234423356993536",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/328f793a216e4bb38f6a3378a25c8a2f20251218.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/abefb9f161f144fd8d8986c88d87bee320251218.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱10",
+      "sourceLabel": "箱10",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        360,
+        390
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          360,
+          390
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=360"
+      },
+      "mechanism": "向石像供奉5个松塔获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "小石像、蓝色旗帜和提交松塔机制一致；384–385秒地图近点。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0370.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0380.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0385.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454156009120788480.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454156009120788480-1.png"
+        ]
+      },
+      "pointId": "1454156009120788480",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -117700.0,
+        -608900.0
+      ],
+      "guide": {
+        "description": "第二张图的位置供奉五个松塔，可以获得一个朴素。获得成就“信者有份”",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1454156009120788480",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/199cb78d9f30426286d1bb94d1a2980720251226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/fc47f051ad9849b0859409adba9ea2dd20251226.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱11–14:member-1",
+      "sourceLabel": "箱11–14:member-1",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        395,
+        445
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          395,
+          445
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=395"
+      },
+      "mechanism": "显像噼啪啪激活瘫痪机器人，圆形建筑周围四箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略图与视频圆形建筑及四箱布局一致；三朴素一基准作为集合确认，未指定开箱顺序。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0410.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0420.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0430.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0440.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463621132288.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463621132288-1.png"
+        ]
+      },
+      "sourceGroup": "箱11–14",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1452382463621132288",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -119200.0,
+        -692200.0
+      ],
+      "guide": {
+        "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1452382463621132288",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/1c4c3e07938d4c7b9ecc551c857b559d20251221.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/880be2b54d404b3f969390c33200936b20251221.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱11–14:member-2",
+      "sourceLabel": "箱11–14:member-2",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        395,
+        445
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          395,
+          445
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=395"
+      },
+      "mechanism": "显像噼啪啪激活瘫痪机器人，圆形建筑周围四箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略图与视频圆形建筑及四箱布局一致；三朴素一基准作为集合确认，未指定开箱顺序。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0410.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0420.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0430.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0440.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463721795584.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463721795584-1.png"
+        ]
+      },
+      "sourceGroup": "箱11–14",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1452382463721795584",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -119800.0,
+        -690500.0
+      ],
+      "guide": {
+        "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1452382463721795584",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/81c452e5bf7648b3ba8bf6db46ef8c5520251221.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/64cd12697aba40fca00ecd85d9394f4b20251221.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱11–14:member-3",
+      "sourceLabel": "箱11–14:member-3",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        395,
+        445
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          395,
+          445
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=395"
+      },
+      "mechanism": "显像噼啪啪激活瘫痪机器人，圆形建筑周围四箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略图与视频圆形建筑及四箱布局一致；三朴素一基准作为集合确认，未指定开箱顺序。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0410.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0420.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0430.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0440.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463822458880.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463822458880-1.png"
+        ]
+      },
+      "sourceGroup": "箱11–14",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1452382463822458880",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -117800.0,
+        -689600.0
+      ],
+      "guide": {
+        "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1452382463822458880",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/68e8ac57d6664fd7af0a82ac9fd5d07a20251221.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/0a4dc66a01f34e72bde016417eed280020251221.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱11–14:member-4",
+      "sourceLabel": "箱11–14:member-4",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        395,
+        445
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          395,
+          445
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=395"
+      },
+      "mechanism": "显像噼啪啪激活瘫痪机器人，圆形建筑周围四箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略图与视频圆形建筑及四箱布局一致；三朴素一基准作为集合确认，未指定开箱顺序。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0410.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0420.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0430.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0440.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452383307930333184.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452383307930333184-1.png"
+        ]
+      },
+      "sourceGroup": "箱11–14",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1452383307930333184",
+      "stateId": 906,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -117100.0,
+        -690600.0
+      ],
+      "guide": {
+        "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_02&pointId=1452383307930333184",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/59c750126c05461ea8bc4d0a20667eb120251221.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/d23f24650a2e49bb8f4122eb5c3104fa20251221.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱15",
+      "sourceLabel": "箱15",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        450,
+        475
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          450,
+          475
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=450"
+      },
+      "mechanism": "显像岩蛛后出现奇藏箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "墙边紫色小水池一致；469秒玩家距点约2.1。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0460.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0469.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451682859980222464.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451682859980222464-1.png"
+        ]
+      },
+      "pointId": "1451682859980222464",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -25900.0,
+        -677300.0
+      ],
+      "guide": {
+        "description": "显像宝箱，直接显像岩蛛声骸就可以。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1451682859980222464",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/6adde63f6fe7418db0ecb6624dbfdeb420251219.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱16",
+      "sourceLabel": "箱16",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        480,
+        520
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          480,
+          520
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=480"
+      },
+      "mechanism": "显像岩蛛后出现奇藏箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "高大卷曲植物及金色花丛相合；516秒地图玩家距点约3。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0500.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0510.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0516.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453878917491535872.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453878917491535872-1.png"
+        ]
+      },
+      "pointId": "1453878917491535872",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -5800.0,
+        -580700.0
+      ],
+      "guide": {
+        "description": "需要使用显像功能，显像岩蛛声骸。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1453878917491535872",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/3dbdd4c59bfd4438b42fa2ec927084de20251225.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/24c30ea19df54b9d98e64fe36d12cb3e20251225.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱17–19:member-1",
+      "sourceLabel": "箱17–19:member-1",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        525,
+        590
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          525,
+          590
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=525"
+      },
+      "mechanism": "显像噼啪啪激活机器并战斗后获得三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "紫色三角建筑旁机器及三箱图一致；585秒玩家距组内点约3.7，其余两点在13内。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0550.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0570.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0580.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0585.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454159713108439040.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454159713108439040-1.png"
+        ]
+      },
+      "sourceGroup": "箱17–19",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1454159713108439040",
+      "stateId": 906,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        105200.0,
+        -582700.0
+      ],
+      "guide": {
+        "description": "需要先去第三张图方框位置，显像噼啪啪声骸，激活机器，然后帮机器打怪，才会有两个朴素、一个基准。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_02&pointId=1454159713108439040",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/fb5d47df10fe46debe354cf5e16bf7e120251226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/bde1e3311bf0446c9b16341b384a786f20251226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/5180525d8e6240008b53a0f4c8b8b55520251226.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱17–19:member-2",
+      "sourceLabel": "箱17–19:member-2",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        525,
+        590
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          525,
+          590
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=525"
+      },
+      "mechanism": "显像噼啪啪激活机器并战斗后获得三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "紫色三角建筑旁机器及三箱图一致；585秒玩家距组内点约3.7，其余两点在13内。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0550.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0570.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0580.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0585.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454159815621423104.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454159815621423104-1.png"
+        ]
+      },
+      "sourceGroup": "箱17–19",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1454159815621423104",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        106100.0,
+        -582900.0
+      ],
+      "guide": {
+        "description": "需要先去第三张图方框位置，显像噼啪啪声骸，激活机器，然后帮机器打怪，才会有两个朴素、一个基准。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1454159815621423104",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/f460f482a33041f39f280d5bff158aa520251226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/39cdd794e570498d8f1f0346c697f47f20251226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/14705d5c6d0142a0ba1a7d47133c4e2120251226.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱17–19:member-3",
+      "sourceLabel": "箱17–19:member-3",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        525,
+        590
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          525,
+          590
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=525"
+      },
+      "mechanism": "显像噼啪啪激活机器并战斗后获得三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "紫色三角建筑旁机器及三箱图一致；585秒玩家距组内点约3.7，其余两点在13内。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0550.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0570.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0580.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0585.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454160397155495936.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454160397155495936-1.png"
+        ]
+      },
+      "sourceGroup": "箱17–19",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1454160397155495936",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        106300.0,
+        -581500.0
+      ],
+      "guide": {
+        "description": "需要先去第三张图方框位置，显像噼啪啪声骸，激活机器，然后帮机器打怪，才会有两个朴素、一个基准。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1454160397155495936",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/39fc46f2296d4c0eb41677b1d05e08f020251226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/41d672712c3647bab51516b09ac9a27320251226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/439d765477f945f49debd04e6fda658e20251226.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱20",
+      "sourceLabel": "箱20",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        595,
+        645
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          595,
+          645
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=595"
+      },
+      "mechanism": "显像岩蛛后出现奇藏箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "岩壁边红色高卷曲植物场景一致；640秒玩家距点约3.9。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0620.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0630.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0640.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453504922365784064.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453504922365784064-1.png"
+        ]
+      },
+      "pointId": "1453504922365784064",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        157300.0,
+        -416800.0
+      ],
+      "guide": {
+        "description": "使用显像功能，显像岩蛛声骸。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1453504922365784064",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/937967d616ea4c69b613f0cb1c613a0520251224.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/874bf65c9db44baeb4324818886ef75c20251224.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱21",
+      "sourceLabel": "箱21",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        645,
+        680
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          645,
+          680
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=645"
+      },
+      "mechanism": "圆形建筑/机器人相关触发后收取箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "绿色圆门与两个候选均相似，草地颜色和建筑视角不足以唯一辨别，未取得可信近距地图。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0650.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0660.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0670.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0680.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451932513021931520.json",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451943007086653440.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1451932513021931520",
+        "1451943007086653440"
+      ]
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱22",
+      "sourceLabel": "箱22",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        680,
+        710
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          680,
+          710
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=680"
+      },
+      "mechanism": "显像岩蛛后出现奇藏箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "白墙与石块、左箱右敌场景一致；704–705秒玩家距点约2–4。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0690.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0700.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0705.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454165785776959488.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454165785776959488-1.png"
+        ]
+      },
+      "pointId": "1454165785776959488",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -7300.0,
+        -456000.0
+      ],
+      "guide": {
+        "description": "使用显像功能，显像岩蛛声骸，左边是宝箱，右边是怪。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1454165785776959488",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/a457ba8e7a36496b8f43d16a5109770e20251226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/e5887015cc6f488b8ec547617245db5320251226.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱23",
+      "sourceLabel": "箱23",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        715,
+        750
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          715,
+          750
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=715"
+      },
+      "mechanism": "显像岩蛛并清理敌人获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "倾斜建筑底部蓝花场景一致；746秒玩家距点约3.7。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0730.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0740.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0746.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454171047204171776.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454171047204171776-1.png"
+        ]
+      },
+      "pointId": "1454171047204171776",
+      "stateId": 906,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -177600.0,
+        -451200.0
+      ],
+      "guide": {
+        "description": "使用显像功能，显像岩蛛声骸，之后需要清怪。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_02&pointId=1454171047204171776",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/26e04674289042778f93214a0bbf1cd620251226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/e611d825d7904b1b95f0f708da07bb7920251226.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱24–25:member-1",
+      "sourceLabel": "箱24–25:member-1",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        755,
+        795
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          755,
+          795
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=755"
+      },
+      "mechanism": "倾斜建筑旁显像/日灵触发两朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略同组两箱、日灵和斜建筑一致；790秒玩家距两点约2/3.9。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0770.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0780.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0790.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454557442936729600.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454557442936729600-1.png"
+        ]
+      },
+      "sourceGroup": "箱24–25",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1454557442936729600",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -201400.0,
+        -716900.0
+      ],
+      "guide": {
+        "description": "通过显像显出岩蛛声骸 可出现2个朴素宝箱和1个日灵（标点由玩家改文件用提供）",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1454557442936729600",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/35629def86834f7da02b3a36980b1ffc20251227.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱24–25:member-2",
+      "sourceLabel": "箱24–25:member-2",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        755,
+        795
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          755,
+          795
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=755"
+      },
+      "mechanism": "倾斜建筑旁显像/日灵触发两朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略同组两箱、日灵和斜建筑一致；790秒玩家距两点约2/3.9。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0770.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0780.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0790.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454557443037392896.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454557443037392896-1.png"
+        ]
+      },
+      "sourceGroup": "箱24–25",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1454557443037392896",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -201200.0,
+        -716900.0
+      ],
+      "guide": {
+        "description": "通过显像显出岩蛛声骸 可出现2个朴素宝箱和1个日灵（标点由玩家改文件用提供）",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1454557443037392896",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/d4fd0e4d648244e3bfa0b9ecb090eb5b20251227.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱26",
+      "sourceLabel": "箱26",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        800,
+        858
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          800,
+          858
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=800"
+      },
+      "mechanism": "显像岩蛛及日灵触发箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "蓝花丛与紫柱一致；854–856秒玩家距点约2。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0830.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0840.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0850.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0855.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452464082801455104.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452464082801455104-1.png"
+        ]
+      },
+      "pointId": "1452464082801455104",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -97500.0,
+        -795800.0
+      ],
+      "guide": {
+        "description": "使用声骸显像功能，召唤岩蛛声骸（岩蛛S4型），显像后会有一个朴素奇藏箱，旁边还有一只日灵",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1452464082801455104",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/549879087956437aab4dd72d83c07fab20251222.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/2683eb047c2444b78ae93a828bf9918120251222.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/a79c69cfcd3141efa0d3ce090521708f20251222.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p1:箱27",
+      "sourceLabel": "箱27",
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "segmentSecondsApprox": [
+        860,
+        891
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 1,
+        "segmentSecondsApprox": [
+          860,
+          891
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=1&t=860"
+      },
+      "mechanism": "显像岩蛛获得箱和日灵",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "弯曲道路旁紫岩场景一致；882–890秒玩家距点约1–2。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0870.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0880.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0885.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p01/frame-0890.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453867668039069696.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453867668039069696-1.png"
+        ]
+      },
+      "pointId": "1453867668039069696",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -33900.0,
+        -829900.0
+      ],
+      "guide": {
+        "description": "需要使用显像功能，显像岩蛛声骸，会出现一个朴素宝箱；这个宝箱打开之后，有两个日灵。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1453867668039069696",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/2563367a795e4fcaa80381bb779d742320251225.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/ba2ccf5dc38a4b45a6508ebfae73850820251225.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p2:箱28",
+      "sourceLabel": "箱28",
+      "bvid": "BV13ZvrBtEde",
+      "part": 2,
+      "segmentSecondsApprox": [
+        0,
+        100
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 2,
+        "segmentSecondsApprox": [
+          0,
+          100
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=2&t=0"
+      },
+      "mechanism": "第一场摩托挑战完成后三箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "已核对挑战终点及三箱，但结束后地图立即移到下一路线，缺少可靠终点定位；未找到唯一匹配攻略。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p02/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0070.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0080.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0090.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0095.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/yellow-all.json",
+        "candidateGuides": []
+      },
+      "candidatePointIds": []
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p2:箱29",
+      "sourceLabel": "箱29",
+      "bvid": "BV13ZvrBtEde",
+      "part": 2,
+      "segmentSecondsApprox": [
+        0,
+        100
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 2,
+        "segmentSecondsApprox": [
+          0,
+          100
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=2&t=0"
+      },
+      "mechanism": "第一场摩托挑战完成后三箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "已核对挑战终点及三箱，但结束后地图立即移到下一路线，缺少可靠终点定位；未找到唯一匹配攻略。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p02/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0070.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0080.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0090.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0095.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/yellow-all.json",
+        "candidateGuides": []
+      },
+      "candidatePointIds": []
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p2:箱30",
+      "sourceLabel": "箱30",
+      "bvid": "BV13ZvrBtEde",
+      "part": 2,
+      "segmentSecondsApprox": [
+        0,
+        100
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 2,
+        "segmentSecondsApprox": [
+          0,
+          100
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=2&t=0"
+      },
+      "mechanism": "第一场摩托挑战完成后三箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "已核对挑战终点及三箱，但结束后地图立即移到下一路线，缺少可靠终点定位；未找到唯一匹配攻略。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p02/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0070.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0080.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0090.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0095.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/yellow-all.json",
+        "candidateGuides": []
+      },
+      "candidatePointIds": []
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p2:箱31–33:member-1",
+      "sourceLabel": "箱31–33:member-1",
+      "bvid": "BV13ZvrBtEde",
+      "part": 2,
+      "segmentSecondsApprox": [
+        105,
+        198
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 2,
+        "segmentSecondsApprox": [
+          105,
+          198
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=2&t=105"
+      },
+      "mechanism": "第二场摩托挑战完成后三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略三箱背后黑色平台和高大卷曲植物与190秒相同；193秒玩家距三点约2–3。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p02/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0180.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0190.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0193.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457058935520817152.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457058935520817152-1.png"
+        ]
+      },
+      "sourceGroup": "箱31–33",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1457058935520817152",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        126200.0,
+        -392400.0
+      ],
+      "guide": {
+        "description": "摩托挑战宝箱，挑战有点小难，可以故意失败5次后直接强制解锁。位置在第二、三图片所示。（感谢玩家反馈。）完成附近路网建设后出现。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1457058935520817152",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/e1fae84d70b64251883bfd713b64487020260103.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/20227ba724a5404796a9398bff682f2b20260103.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/8c0848e0db4a4ff3a5101960cd22569920260103.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p2:箱31–33:member-2",
+      "sourceLabel": "箱31–33:member-2",
+      "bvid": "BV13ZvrBtEde",
+      "part": 2,
+      "segmentSecondsApprox": [
+        105,
+        198
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 2,
+        "segmentSecondsApprox": [
+          105,
+          198
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=2&t=105"
+      },
+      "mechanism": "第二场摩托挑战完成后三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略三箱背后黑色平台和高大卷曲植物与190秒相同；193秒玩家距三点约2–3。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p02/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0180.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0190.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0193.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457059030387585024.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457059030387585024-1.png"
+        ]
+      },
+      "sourceGroup": "箱31–33",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1457059030387585024",
+      "stateId": 906,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        126500.0,
+        -392500.0
+      ],
+      "guide": {
+        "description": "摩托挑战宝箱，挑战有点小难，可以故意失败5次后直接强制解锁。位置在第二、三图片所示。（感谢玩家反馈。）完成附近路网建设后出现。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_02&pointId=1457059030387585024",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/9b01b2c1c7d647879a0f378664cd5b6320260103.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/8e0f31eaccf64c1fb500457157cc592720260103.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/7ad695ed19284b4fb01bfc0b69fd776b20260103.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p2:箱31–33:member-3",
+      "sourceLabel": "箱31–33:member-3",
+      "bvid": "BV13ZvrBtEde",
+      "part": 2,
+      "segmentSecondsApprox": [
+        105,
+        198
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 2,
+        "segmentSecondsApprox": [
+          105,
+          198
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=2&t=105"
+      },
+      "mechanism": "第二场摩托挑战完成后三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略三箱背后黑色平台和高大卷曲植物与190秒相同；193秒玩家距三点约2–3。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p02/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0180.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0190.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0193.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457059161283424256.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457059161283424256-1.png"
+        ]
+      },
+      "sourceGroup": "箱31–33",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1457059161283424256",
+      "stateId": 906,
+      "typeId": "qzx_03",
+      "name": "精密奇藏箱",
+      "rawPosition": [
+        126400.0,
+        -392400.0
+      ],
+      "guide": {
+        "description": "摩托挑战宝箱，挑战有点小难，可以故意失败5次后直接强制解锁。位置在第二、三图片所示。（感谢玩家反馈。）完成附近路网建设后出现。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_03&pointId=1457059161283424256",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/a5da5492a8e24310a453474c8e1ec5eb20260103.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/e402c5b304b440faa2df5e05a11a6efc20260103.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/e63795d926e44c3597ef0c339968d61f20260103.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p2:箱34–36:member-1",
+      "sourceLabel": "箱34–36:member-1",
+      "bvid": "BV13ZvrBtEde",
+      "part": 2,
+      "segmentSecondsApprox": [
+        200,
+        293
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 2,
+        "segmentSecondsApprox": [
+          200,
+          293
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=2&t=200"
+      },
+      "mechanism": "第三场摩托挑战完成后三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略红色地表、上坡公路与三箱布局和290秒相同；293秒玩家距组内点约0.4–1.8。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p02/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0280.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0290.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0293.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-1.png"
+        ]
+      },
+      "sourceGroup": "箱34–36",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1457043289922301952",
+      "stateId": 906,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -53400.0,
+        -643700.0
+      ],
+      "guide": {
+        "description": "摩托挑战宝箱，挑战有点小难，可以故意失败几次，触发强制解锁权限（一开始几个转弯的地方可以左右方向键+空格键原地烧胎转弯慢慢调整转向）。挑战地点在第二、三张图。ps：如果没有就是开辟测界之路的星跃公路没有修建（感谢玩家反馈。）",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_01&pointId=1457043289922301952",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/601e4c6bf97f4fc2aca7956d5dce170620260103.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/c75f8ef0443c4d9eb067d5fba9f4d07d20260103.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/d8db45c9c102484b88ac4a83083fe36520260103.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p2:箱34–36:member-2",
+      "sourceLabel": "箱34–36:member-2",
+      "bvid": "BV13ZvrBtEde",
+      "part": 2,
+      "segmentSecondsApprox": [
+        200,
+        293
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 2,
+        "segmentSecondsApprox": [
+          200,
+          293
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=2&t=200"
+      },
+      "mechanism": "第三场摩托挑战完成后三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略红色地表、上坡公路与三箱布局和290秒相同；293秒玩家距组内点约0.4–1.8。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p02/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0280.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0290.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0293.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-1.png"
+        ]
+      },
+      "sourceGroup": "箱34–36",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1457043417928265728",
+      "stateId": 906,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -53200.0,
+        -643500.0
+      ],
+      "guide": {
+        "description": "摩托挑战宝箱，挑战有点小难，可以故意失败几次，触发强制解锁权限（一开始几个转弯的地方可以左右方向键+空格键原地烧胎转弯慢慢调整转向）。挑战地点在第二、三张图。（感谢玩家反馈。）强制结算不了可以尝试摩托翘头飞上去。",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_02&pointId=1457043417928265728",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/df5b114fa0914819950a25278c2b8d2320260103.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/f614bf3a574d423fa296a27fffe2921b20260103.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/db71c00c776a4e07b336c1ba359ad04c20260103.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV13ZvrBtEde:p2:箱34–36:member-3",
+      "sourceLabel": "箱34–36:member-3",
+      "bvid": "BV13ZvrBtEde",
+      "part": 2,
+      "segmentSecondsApprox": [
+        200,
+        293
+      ],
+      "source": {
+        "bvid": "BV13ZvrBtEde",
+        "part": 2,
+        "segmentSecondsApprox": [
+          200,
+          293
+        ],
+        "url": "https://www.bilibili.com/video/BV13ZvrBtEde/?p=2&t=200"
+      },
+      "mechanism": "第三场摩托挑战完成后三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "攻略红色地表、上坡公路与三箱布局和290秒相同；293秒玩家距组内点约0.4–1.8。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV13ZvrBtEde/p02/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0280.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0290.00.jpg",
+          "out/detectability-collection/BV13ZvrBtEde/p02/frame-0293.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV13ZvrBtEde/p02/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png"
+        ]
+      },
+      "sourceGroup": "箱34–36",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1457043525350125568",
+      "stateId": 906,
+      "typeId": "qzx_03",
+      "name": "精密奇藏箱",
+      "rawPosition": [
+        -53300.0,
+        -643600.0
+      ],
+      "guide": {
+        "description": "摩托挑战宝箱，挑战有点小难，可以故意失败几次，触发强制解锁权限（一开始几个转弯的地方可以左右方向键+空格键原地烧胎转弯慢慢调整转向）。挑战地点在第二、三张图。前置修路任务（感谢玩家反馈。）",
+        "url": "https://www.kurobbs.com/mc/map/?state=906&typeId=qzx_03&pointId=1457043525350125568",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/03af153eb2f04060971efe25d9bf47ee20260103.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/82820c3708564107878d8f1b0a74b3de20260103.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/5e0eb0d036664ff5bd28bff7584da83620260103.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱1",
+      "sourceLabel": "箱1",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        45,
+        75
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          45,
+          75
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=45"
+      },
+      "mechanism": "格洛犸破冰，NPC出现并对话后获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "破冰后对话机制和洞壁旁箱场景与攻略对应。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0050.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0060.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0070.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469743197810446336.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469743197810446336-1.png"
+        ]
+      },
+      "pointId": "1469743197810446336",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -160800.0,
+        -619900.0
+      ],
+      "guide": {
+        "description": "此处最开始是一堆冰锥，使用显像功能，显像声骸格洛犸图，之后会出现一个NPC，和她对话，就可以获得宝箱。(如果显像不行就退后两步再放)",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1469743197810446336",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/6f5e2c9a93074395ba995802332e3edf20260207.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱2",
+      "sourceLabel": "箱2",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        80,
+        108
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          80,
+          108
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=80"
+      },
+      "mechanism": "摩托挑战完成后出现箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "斜置圆形平台和挑战奖励场景与攻略一致。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0090.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0100.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469146086203244544.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469146086203244544-1.png"
+        ]
+      },
+      "pointId": "1469146086203244544",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "name": "精密奇藏箱",
+      "rawPosition": [
+        -174800.0,
+        -616400.0
+      ],
+      "guide": {
+        "description": "摩托挑战宝箱，挑战地点就在标点位置，失败五次可解锁强制结算。第二个坡的门直接跳飞过去，第三道坡的门一样",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1469146086203244544",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/0468f98385024d2bb1b1d814d85a0e8e20260206.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/fce76b579b4448c18b294e7e4eb8830620260206.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱3",
+      "sourceLabel": "箱3",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        110,
+        143
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          110,
+          143
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=110"
+      },
+      "mechanism": "救助先遣队员并拔出探测器获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "岸边救助场景与攻略一致；141秒玩家距点约2.4。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0120.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0130.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0141.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469147104529924096.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469147104529924096-1.png"
+        ]
+      },
+      "pointId": "1469147104529924096",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -171600.0,
+        -586200.0
+      ],
+      "guide": {
+        "description": "第一次来到这里的时候，会看到小爱对面的岸上有一个先遣队队员被怪物围攻，清怪，会接到拔探测器的任务，拔完之后在对话，就有这个宝箱。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1469147104529924096",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/3db327240d2a4e7b90cb77741411642c20260206.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/05ff0c26dccb42b98cfa21b07db8ae0820260206.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱4–6:member-1",
+      "sourceLabel": "箱4–6:member-1",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        145,
+        207
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          145,
+          207
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=145"
+      },
+      "mechanism": "格洛犸破冰后同场三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "发光水池及冰柱布局与攻略同组三箱一致；201秒玩家距组点约1.5–11。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0180.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0190.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0200.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0201.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469149723331514368.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469149723331514368-1.png"
+        ]
+      },
+      "sourceGroup": "箱4–6",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1469149723331514368",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -134200.0,
+        -622300.0
+      ],
+      "guide": {
+        "description": "此处需要用摩托跳上来，摩托跳跃地点在第三张图的位置，之后，显像格洛犸图声骸，就会出现三个宝箱。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1469149723331514368",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/4e6cb577e31140288092d1ad8b1d242420260206.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/8b1a6c25bfd443fd92c3e30dc15005fd20260206.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/32bdc7e418b140cc841b98eb5d29726f20260206.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱4–6:member-2",
+      "sourceLabel": "箱4–6:member-2",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        145,
+        207
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          145,
+          207
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=145"
+      },
+      "mechanism": "格洛犸破冰后同场三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "发光水池及冰柱布局与攻略同组三箱一致；201秒玩家距组点约1.5–11。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0180.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0190.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0200.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0201.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469150333640495104.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469150333640495104-1.png"
+        ]
+      },
+      "sourceGroup": "箱4–6",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1469150333640495104",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -135100.0,
+        -622700.0
+      ],
+      "guide": {
+        "description": "此处需要用摩托跳上来，摩托跳跃地点在第三张图的位置，之后，显像格洛犸图声骸，就会出现三个宝箱。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1469150333640495104",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/be145b528b5d45b89b58d856553c51d320260206.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/d4b22e650c1d4ae39a91b2e317d2006e20260206.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/57ef76c66a54470491db59c3a6c82e6d20260206.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱4–6:member-3",
+      "sourceLabel": "箱4–6:member-3",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        145,
+        207
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          145,
+          207
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=145"
+      },
+      "mechanism": "格洛犸破冰后同场三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "发光水池及冰柱布局与攻略同组三箱一致；201秒玩家距组点约1.5–11。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0180.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0190.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0200.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0201.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469151068226895872.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469151068226895872-1.png"
+        ]
+      },
+      "sourceGroup": "箱4–6",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1469151068226895872",
+      "stateId": 8,
+      "typeId": "qzx_04",
+      "name": "辉光奇藏箱",
+      "rawPosition": [
+        -135300.0,
+        -621900.0
+      ],
+      "guide": {
+        "description": "此处需要用摩托跳上来，摩托跳跃地点在第三张图的位置，之后，显像格洛犸图声骸，就会出现三个宝箱。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_04&pointId=1469151068226895872",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/a856b2a85f3547aba991979bbfea4a9c20260206.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/1d617508cee0453b8418406b0835933a20260206.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/b97ec504344d4208b72da59c3de47a0c20260206.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱7",
+      "sourceLabel": "箱7",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        210,
+        243
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          210,
+          243
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=210"
+      },
+      "mechanism": "冰墙附近开箱后日灵对话",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "候选含破冰后触发冰原往事的箱，但视频转身后地标不足，尚不能唯一匹配。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0210.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0220.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0230.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0240.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469344326655721472.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1469344326655721472"
+      ]
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱8",
+      "sourceLabel": "箱8",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        245,
+        272
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          245,
+          272
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=245"
+      },
+      "mechanism": "冰洞中使用格洛犸破冰获得箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "多个冰洞箱描述相同且部分品质随日灵数量变化；未建立可靠地图对应。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0250.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0260.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0270.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1468682049551978496.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1468682049551978496"
+      ]
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱9",
+      "sourceLabel": "箱9",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        275,
+        328
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          275,
+          328
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=275"
+      },
+      "mechanism": "摩托挑战完成获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "雪地圆盘与橙色远景相合；319–325秒玩家距点约1。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0300.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0310.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0320.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0325.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1526394917809278976.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1526394917809278976-1.png"
+        ]
+      },
+      "pointId": "1526394917809278976",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "name": "精密奇藏箱",
+      "rawPosition": [
+        -32000.0,
+        -646100.0
+      ],
+      "guide": {
+        "description": "摩托挑战宝箱，如果觉得小难得，就直接失败五次，然后可以直接领取。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1526394917809278976",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/3f6437a3089c41798407793ab279608f20260714.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/7c953b52234640e4b603e71541a0d2d320260714.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱10",
+      "sourceLabel": "箱10",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        330,
+        363
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          330,
+          363
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=330"
+      },
+      "mechanism": "坡地/瀑布附近交互后收取目标",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "350秒举手发光交互可见，但触发对象与库街区点位均缺少唯一证据。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0330.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0340.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0350.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0360.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": []
+      },
+      "candidatePointIds": []
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱11",
+      "sourceLabel": "箱11",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        365,
+        432
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          365,
+          432
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=365"
+      },
+      "mechanism": "先遣研究员与日灵跟随、拔出探测器后获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "研究员及冰湖大石旁箱与攻略对应；424–430秒玩家距点约4。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0380.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0410.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0420.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0425.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0430.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469095360944979968.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469095360944979968-1.png"
+        ]
+      },
+      "pointId": "1469095360944979968",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "name": "精密奇藏箱",
+      "rawPosition": [
+        -151300.0,
+        -749700.0
+      ],
+      "guide": {
+        "description": "此处是一个小任务，第一次来这里的情况下，小爱对面的海滩边会有一个先遣队员，触发一个跟着日灵的任务，然后拔一下探测器，就可以了。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1469095360944979968",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/cc31686f76f947f8a01078cc1c47169a20260205.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱12",
+      "sourceLabel": "箱12",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        435,
+        483
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          435,
+          483
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=435"
+      },
+      "mechanism": "沿圆形金属高塔飞行并在外壁领取奖励",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "470秒奖励位于金属曲面高处；未找到可唯一对应的点位和完整触发描述。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0440.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0450.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0460.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0470.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0480.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": []
+      },
+      "candidatePointIds": []
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱13",
+      "sourceLabel": "箱13",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        490,
+        533
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          490,
+          533
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=490"
+      },
+      "mechanism": "格洛犸破冰后获得精密箱及日灵",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "冰柱中日灵与岩石斜坡洞穴相合；528秒玩家距点约4。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0500.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0510.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0520.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0528.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469346873109762048.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469346873109762048-1.png"
+        ]
+      },
+      "pointId": "1469346873109762048",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "name": "精密奇藏箱",
+      "rawPosition": [
+        -126400.0,
+        -697800.0
+      ],
+      "guide": {
+        "description": "需要使用显像功能，显像格洛犸图声骸，一个精密、一个日灵。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1469346873109762048",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/3c5d12d7e145431f8d36b9333801167420260206.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/4ac28255dc60459d91435ce5c10e802620260206.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱14",
+      "sourceLabel": "箱14",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        540,
+        578
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          540,
+          578
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=540"
+      },
+      "mechanism": "悬崖摩托挑战获得箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "挑战过程与终点已查看，但多个摩托挑战候选缺少可信终点定位。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0540.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0550.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0560.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0570.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": []
+      },
+      "candidatePointIds": []
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱15",
+      "sourceLabel": "箱15",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        580,
+        612
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          580,
+          612
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=580"
+      },
+      "mechanism": "格洛犸破冰后同场三箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "三箱洞穴已核对，但候选图的雪坡及紫晶与视频角度差异较大，最近可靠地图已在下一箱附近；不凭同机制确认。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0590.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0600.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0610.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469341771443589120.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342014524477440.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342233760747520.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1469341771443589120",
+        "1469342014524477440",
+        "1469342233760747520"
+      ]
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱16",
+      "sourceLabel": "箱16",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        580,
+        612
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          580,
+          612
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=580"
+      },
+      "mechanism": "格洛犸破冰后同场三箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "三箱洞穴已核对，但候选图的雪坡及紫晶与视频角度差异较大，最近可靠地图已在下一箱附近；不凭同机制确认。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0590.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0600.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0610.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469341771443589120.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342014524477440.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342233760747520.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1469341771443589120",
+        "1469342014524477440",
+        "1469342233760747520"
+      ]
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱17",
+      "sourceLabel": "箱17",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        580,
+        612
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          580,
+          612
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=580"
+      },
+      "mechanism": "格洛犸破冰后同场三箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "三箱洞穴已核对，但候选图的雪坡及紫晶与视频角度差异较大，最近可靠地图已在下一箱附近；不凭同机制确认。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0590.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0600.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0610.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469341771443589120.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342014524477440.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342233760747520.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1469341771443589120",
+        "1469342014524477440",
+        "1469342233760747520"
+      ]
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱18",
+      "sourceLabel": "箱18",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        612,
+        632
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          612,
+          632
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=612"
+      },
+      "mechanism": "格洛犸破冰后获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "棱角分明的冰洞与攻略相合；625/626秒玩家距点约8/5.5。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0620.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0625.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0626.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469343029747372032.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469343029747372032-1.png"
+        ]
+      },
+      "pointId": "1469343029747372032",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -101800.0,
+        -697000.0
+      ],
+      "guide": {
+        "description": "可以传送到打牌威尔艾米娜再来这里，先清怪再使用显像功能，显像格洛犸图声骸。\n该宝箱品质并非固定，根据冰洞次数来决定。全图共4个冰洞。\n冰洞第一次为【基准】、第二次【精密】、第三次【涡纹】、第四次【日灵】（之后前往罗伊冰原·地表，日灵归还处上方，与日灵对话，获得成就【日灵三窟】）",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1469343029747372032",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/4e10fc1cf15641a38b4ad32618dbde4f20260213.jpg",
+          "https://prod-alicdn-community.kurobbs.com/forum/ce68e89a34b840e284914ce1715e474220260213.jpg",
+          "https://prod-alicdn-community.kurobbs.com/forum/aad62b9b08bd4402870cdbfb9a938ac420260213.jpg"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱19",
+      "sourceLabel": "箱19",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        635,
+        668
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          635,
+          668
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=635"
+      },
+      "mechanism": "雪地圆盘摩托挑战获得箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "已查看圆盘和奖励，附近存在多个挑战且已缓存攻略多为三箱，单箱终点未唯一对应。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0640.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0650.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0660.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": []
+      },
+      "candidatePointIds": []
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱20",
+      "sourceLabel": "箱20",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        675,
+        708
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          675,
+          708
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=675"
+      },
+      "mechanism": "格洛犸破冰后同场三箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "候选为同机制三箱；冰洞形状和截图视角仍不足以排除其他冰洞，未取得可信组内地图位置。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0690.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0695.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0700.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469406626221703168.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469406943696961536.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469407226372079616.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1469406626221703168",
+        "1469406943696961536",
+        "1469407226372079616"
+      ]
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱21",
+      "sourceLabel": "箱21",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        675,
+        708
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          675,
+          708
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=675"
+      },
+      "mechanism": "格洛犸破冰后同场三箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "候选为同机制三箱；冰洞形状和截图视角仍不足以排除其他冰洞，未取得可信组内地图位置。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0690.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0695.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0700.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469406626221703168.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469406943696961536.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469407226372079616.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1469406626221703168",
+        "1469406943696961536",
+        "1469407226372079616"
+      ]
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱22",
+      "sourceLabel": "箱22",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        675,
+        708
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          675,
+          708
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=675"
+      },
+      "mechanism": "格洛犸破冰后同场三箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "候选为同机制三箱；冰洞形状和截图视角仍不足以排除其他冰洞，未取得可信组内地图位置。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0690.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0695.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0700.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469406626221703168.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469406943696961536.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469407226372079616.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1469406626221703168",
+        "1469406943696961536",
+        "1469407226372079616"
+      ]
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱23",
+      "sourceLabel": "箱23",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        710,
+        730
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          710,
+          730
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=710"
+      },
+      "mechanism": "冰洞高处使用格洛犸后获得箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "多个动态品质破冰箱具有相同机制，缺少可用地图及唯一地形对应。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0710.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0720.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0730.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469355348737179648.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469382021029347328.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1468682049551978496.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1469355348737179648",
+        "1469382021029347328",
+        "1468682049551978496"
+      ]
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱24",
+      "sourceLabel": "箱24",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        735,
+        758
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          735,
+          758
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=735"
+      },
+      "mechanism": "格洛犸破冰获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "右侧下斜雪墙场景一致；755秒玩家距点约1.8。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0740.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0750.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0755.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1466846018397847552.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1466846018397847552-1.png"
+        ]
+      },
+      "pointId": "1466846018397847552",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "name": "精密奇藏箱",
+      "rawPosition": [
+        65700.0,
+        -677100.0
+      ],
+      "guide": {
+        "description": "需要使用显像功能，显像格洛犸图声骸。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1466846018397847552",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/415ada9525474b02a3591d99d193660720260130.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/8040a41c818c41a88019b54ca9406a6020260130.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱25",
+      "sourceLabel": "箱25",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        775,
+        828
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          775,
+          828
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=775"
+      },
+      "mechanism": "冰湖摩托挑战完成获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "冰湖圆盘与攻略相同；823秒玩家距点约3.1。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0800.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0810.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0820.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0823.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469081439357751296.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469081439357751296-1.png"
+        ]
+      },
+      "pointId": "1469081439357751296",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "name": "精密奇藏箱",
+      "rawPosition": [
+        -17000.0,
+        -551700.0
+      ],
+      "guide": {
+        "description": "摩托挑战宝箱，小难，失败五次可以启动强制结算。对准轨道一直点加速即可过",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1469081439357751296",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/9ff429684e624f51923873c391990f1620260205.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/33186dbca0a1486fb4c5a062deb0b88a20260205.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/ed2a17effb68469fb9d824f37e96047d20260205.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱26",
+      "sourceLabel": "箱26",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        835,
+        868
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          835,
+          868
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=835"
+      },
+      "mechanism": "追逐胆怯日灵，被推落后战斗获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "850秒字幕说明又遇到胆小日灵；洞缘位置和随后战斗机制与攻略相合。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0840.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0850.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0860.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469353477272096768.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469353477272096768-1.png"
+        ]
+      },
+      "pointId": "1469353477272096768",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -113600.0,
+        -744700.0
+      ],
+      "guide": {
+        "description": "先传送到这个标点旁边的地下信标，之后会有一个任务指引，一个胆怯的日灵，和它对话，对话之后跟着任务坐到崖边，日灵会把你推下去，卑鄙的日灵，之后清怪就可以。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1469353477272096768",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/0755ebb5dea244b3a0fa673a8f9fe9ef20260206.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱27",
+      "sourceLabel": "箱27",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        890,
+        935
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          890,
+          935
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=890"
+      },
+      "mechanism": "蓝色屏障冰洞中格洛犸/日灵触发箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "候选冰洞和破冰机制相似，缺少足够地形和地图证据。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0890.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0900.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0910.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0920.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0930.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469382021029347328.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469355348737179648.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1469382021029347328",
+        "1469355348737179648"
+      ]
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱28",
+      "sourceLabel": "箱28",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        950,
+        998
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          950,
+          998
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=950"
+      },
+      "mechanism": "救下艾尔玛后获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "大型金属构件旁雪坡和攻略图相合；990秒玩家距点约1.3。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0970.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0980.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-0990.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477787090589339648.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477787090589339648-1.png"
+        ]
+      },
+      "pointId": "1477787090589339648",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        85065.0,
+        -717733.0
+      ],
+      "guide": {
+        "description": "标点处救下艾尔玛——人间无事",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1477787090589339648",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/67be1c385d79461fa58364b9e2ed144120260301.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱29",
+      "sourceLabel": "箱29",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        1000,
+        1028
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          1000,
+          1028
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=1000"
+      },
+      "mechanism": "与安罗相关交互后获得小箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "1010秒NPC名字和1020秒箱可见；未找到名称、位置和场景同时对应的攻略。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1000.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1010.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1020.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": []
+      },
+      "candidatePointIds": []
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱30",
+      "sourceLabel": "箱30",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        1040,
+        1068
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          1040,
+          1068
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=1040"
+      },
+      "mechanism": "洞口清理怪物并格洛犸破冰获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "小型拱形冰洞和“洞里似乎有声音”提示与攻略场景对应。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1040.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1050.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1060.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469424804503011328.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469424804503011328-1.png"
+        ]
+      },
+      "pointId": "1469424804503011328",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "name": "精密奇藏箱",
+      "rawPosition": [
+        12900.0,
+        -725300.0
+      ],
+      "guide": {
+        "description": "这位置第一次来会碰到冰锥变成怪物，打完之后用显像功能，显像格洛犸图声骸，还会获得两个日灵。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1469424804503011328",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/4b3ac93a79094d8baec0321e0fa339a920260206.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/d01d001f551d45a8a510f0bab02204c820260206.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/4a31d2901dad47b995a281170238b5aa20260206.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱31",
+      "sourceLabel": "箱31",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        1070,
+        1135
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          1070,
+          1135
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=1070"
+      },
+      "mechanism": "洞穴内同场两基准箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "候选攻略要求第四次与艾尔玛对话并获得两箱；视频两箱确在洞中，但未核清该任务步骤且紫色帘幕视角不一致，保留候选。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1100.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1110.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1120.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477786265842372608.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477786512450670592.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1477786265842372608",
+        "1477786512450670592"
+      ]
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱32",
+      "sourceLabel": "箱32",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        1070,
+        1135
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          1070,
+          1135
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=1070"
+      },
+      "mechanism": "洞穴内同场两基准箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "候选攻略要求第四次与艾尔玛对话并获得两箱；视频两箱确在洞中，但未核清该任务步骤且紫色帘幕视角不一致，保留候选。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1100.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1110.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1120.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477786265842372608.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477786512450670592.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1477786265842372608",
+        "1477786512450670592"
+      ]
+    },
+    {
+      "targetKey": "BV1F3A3zxEDQ:p1:箱33",
+      "sourceLabel": "箱33",
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "segmentSecondsApprox": [
+        1170,
+        1250
+      ],
+      "source": {
+        "bvid": "BV1F3A3zxEDQ",
+        "part": 1,
+        "segmentSecondsApprox": [
+          1170,
+          1250
+        ],
+        "url": "https://www.bilibili.com/video/BV1F3A3zxEDQ/?p=1&t=1170"
+      },
+      "mechanism": "坐在崖边/缝隙处触发后开启金色箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "坐下及开箱过程可见；两个候选位置描述不同，缺少可信地图和NPC对应。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1F3A3zxEDQ/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1170.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1180.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1190.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1200.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1210.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1220.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1230.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1240.00.jpg",
+          "out/detectability-collection/BV1F3A3zxEDQ/p01/frame-1250.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1F3A3zxEDQ/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477783180906614784.json",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469376206750732288.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1477783180906614784",
+        "1469376206750732288"
+      ]
+    },
+    {
+      "targetKey": "BV1pa9RBtEPA:p1:箱1",
+      "sourceLabel": "箱1",
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "segmentSecondsApprox": [
+        135,
+        205
+      ],
+      "source": {
+        "bvid": "BV1pa9RBtEPA",
+        "part": 1,
+        "segmentSecondsApprox": [
+          135,
+          205
+        ],
+        "url": "https://www.bilibili.com/video/BV1pa9RBtEPA/?p=1&t=135"
+      },
+      "mechanism": "打碎矿石解救日灵并跟随后获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "小小的愿望机制、紫晶与树边箱位置和攻略一致。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1pa9RBtEPA/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0160.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0170.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0180.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0200.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501515016669847552.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501515016669847552-1.png"
+        ]
+      },
+      "pointId": "1501515016669847552",
+      "stateId": 909,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        83018.0,
+        81312.0
+      ],
+      "guide": {
+        "description": "成就:小小的愿望，打碎矿石解救日灵后，在打碎旁边的矿石获得",
+        "url": "https://www.kurobbs.com/mc/map/?state=909&typeId=qzx_01&pointId=1501515016669847552",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/51da797776384a22ac2ad096b494515620260506.jpg"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1pa9RBtEPA:p1:箱2",
+      "sourceLabel": "箱2",
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "segmentSecondsApprox": [
+        210,
+        267
+      ],
+      "source": {
+        "bvid": "BV1pa9RBtEPA",
+        "part": 1,
+        "segmentSecondsApprox": [
+          210,
+          267
+        ],
+        "url": "https://www.bilibili.com/video/BV1pa9RBtEPA/?p=1&t=210"
+      },
+      "mechanism": "格洛犸破矿后获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "崖边矿石/箱场景一致；262秒玩家距点约3.4。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1pa9RBtEPA/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0240.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0250.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0260.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0262.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501515398184411136.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501515398184411136-1.png"
+        ]
+      },
+      "pointId": "1501515398184411136",
+      "stateId": 909,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -36006.0,
+        74719.0
+      ],
+      "guide": {
+        "description": "成就:小小的愿望，使用大象打碎矿石后获得",
+        "url": "https://www.kurobbs.com/mc/map/?state=909&typeId=qzx_01&pointId=1501515398184411136",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/d50bcdd29664488991bf0a5fafe4efea20260506.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1pa9RBtEPA:p1:箱3",
+      "sourceLabel": "箱3",
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "segmentSecondsApprox": [
+        270,
+        330
+      ],
+      "source": {
+        "bvid": "BV1pa9RBtEPA",
+        "part": 1,
+        "segmentSecondsApprox": [
+          270,
+          330
+        ],
+        "url": "https://www.bilibili.com/video/BV1pa9RBtEPA/?p=1&t=270"
+      },
+      "mechanism": "日灵台球一杆入袋挑战",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "黑色球体、岩台布局与特殊日灵台球机制和攻略一致。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1pa9RBtEPA/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0290.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0300.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0310.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0320.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500305893891219456.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500305893891219456-1.png"
+        ]
+      },
+      "pointId": "1500305893891219456",
+      "stateId": 909,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -36787.0,
+        58319.0
+      ],
+      "guide": {
+        "description": "山坡上，询问日灵后出现，获得成就“一杆入袋”",
+        "url": "https://www.kurobbs.com/mc/map/?state=909&typeId=qzx_02&pointId=1500305893891219456",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/ead76c247bec4a83b55411e5736a488020260515.jpg",
+          "https://prod-alicdn-community.kurobbs.com/forum/50cdab7f929d405692a5bc3cd42ed81f20260515.jpg"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1pa9RBtEPA:p1:箱4",
+      "sourceLabel": "箱4",
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "segmentSecondsApprox": [
+        335,
+        386
+      ],
+      "source": {
+        "bvid": "BV1pa9RBtEPA",
+        "part": 1,
+        "segmentSecondsApprox": [
+          335,
+          386
+        ],
+        "url": "https://www.bilibili.com/video/BV1pa9RBtEPA/?p=1&t=335"
+      },
+      "mechanism": "与三角橙色帐篷旁日灵交互获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "橙色帐篷及日灵场景一致；382秒玩家距点约4.2。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1pa9RBtEPA/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0350.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0370.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0380.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0382.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500314688993714176.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500314688993714176-1.png"
+        ]
+      },
+      "pointId": "1500314688993714176",
+      "stateId": 909,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -46804.0,
+        59568.0
+      ],
+      "guide": {
+        "description": "与日灵交互后出现",
+        "url": "https://www.kurobbs.com/mc/map/?state=909&typeId=qzx_02&pointId=1500314688993714176",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/62d7ba9ad0464047ba83f10610e9114020260505.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1pa9RBtEPA:p1:箱5–6:member-1",
+      "sourceLabel": "箱5–6:member-1",
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "segmentSecondsApprox": [
+        390,
+        472
+      ],
+      "source": {
+        "bvid": "BV1pa9RBtEPA",
+        "part": 1,
+        "segmentSecondsApprox": [
+          390,
+          472
+        ],
+        "url": "https://www.bilibili.com/video/BV1pa9RBtEPA/?p=1&t=390"
+      },
+      "mechanism": "触碰石头变成日灵，小游戏后两箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "石头左右各一基准箱与攻略相同；462–469秒玩家距点约2–4。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1pa9RBtEPA/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0410.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0440.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0450.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0460.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0465.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200422475800576.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200422475800576-1.png"
+        ]
+      },
+      "sourceGroup": "箱5–6",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1500200422475800576",
+      "stateId": 909,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -50036.0,
+        -15568.0
+      ],
+      "guide": {
+        "description": "触摸石像后，变身日灵完成交互后出现",
+        "url": "https://www.kurobbs.com/mc/map/?state=909&typeId=qzx_02&pointId=1500200422475800576",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/e8881fc6df1f4ccd94ed47c161e1de7620260502.jpg"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1pa9RBtEPA:p1:箱5–6:member-2",
+      "sourceLabel": "箱5–6:member-2",
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "segmentSecondsApprox": [
+        390,
+        472
+      ],
+      "source": {
+        "bvid": "BV1pa9RBtEPA",
+        "part": 1,
+        "segmentSecondsApprox": [
+          390,
+          472
+        ],
+        "url": "https://www.bilibili.com/video/BV1pa9RBtEPA/?p=1&t=390"
+      },
+      "mechanism": "触碰石头变成日灵，小游戏后两箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "石头左右各一基准箱与攻略相同；462–469秒玩家距点约2–4。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1pa9RBtEPA/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0410.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0440.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0450.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0460.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0465.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200454327345152.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200454327345152-1.png"
+        ]
+      },
+      "sourceGroup": "箱5–6",
+      "sourceOrdinalAssociation": "组内集合成员确认；不主张同品质箱对应视频内单独开箱顺序。",
+      "pointId": "1500200454327345152",
+      "stateId": 909,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -49524.0,
+        -15502.0
+      ],
+      "guide": {
+        "description": "触摸石像后，变身日灵完成交互后出现",
+        "url": "https://www.kurobbs.com/mc/map/?state=909&typeId=qzx_02&pointId=1500200454327345152",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/ecb2333ab23042289555576498fe45e320260502.jpg"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1pa9RBtEPA:p1:箱7",
+      "sourceLabel": "箱7",
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "segmentSecondsApprox": [
+        480,
+        532
+      ],
+      "source": {
+        "bvid": "BV1pa9RBtEPA",
+        "part": 1,
+        "segmentSecondsApprox": [
+          480,
+          532
+        ],
+        "url": "https://www.bilibili.com/video/BV1pa9RBtEPA/?p=1&t=480"
+      },
+      "mechanism": "光仪门解谜及陷阱箱触发奖励",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "蓝紫植物、金色晶状机关和奖励箱与攻略图相合；529秒玩家附近约11。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1pa9RBtEPA/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0500.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0510.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0520.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0529.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1499243508455006208.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1499243508455006208-1.png"
+        ]
+      },
+      "pointId": "1499243508455006208",
+      "stateId": 909,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        169256.0,
+        31578.0
+      ],
+      "guide": {
+        "description": "做完图二处的解密拿到里面的陷阱宝箱即可解锁",
+        "url": "https://www.kurobbs.com/mc/map/?state=909&typeId=qzx_02&pointId=1499243508455006208",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/310e8d5369364208a53a0b90084cf4be20260430.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/01948e7ac9974d70be1019d8055e7b1820260501.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1pa9RBtEPA:p1:箱8",
+      "sourceLabel": "箱8",
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "segmentSecondsApprox": [
+        540,
+        598
+      ],
+      "source": {
+        "bvid": "BV1pa9RBtEPA",
+        "part": 1,
+        "segmentSecondsApprox": [
+          540,
+          598
+        ],
+        "url": "https://www.bilibili.com/video/BV1pa9RBtEPA/?p=1&t=540"
+      },
+      "mechanism": "纸鸢/任务区域往返后领取箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "560秒提示离开任务区域，之后飞向终点并开箱；任务类型和候选摩托挑战不一致，不能仅靠距离确认。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1pa9RBtEPA/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0540.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0550.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0560.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0570.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0580.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0590.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500194235415355392.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1500194235415355392"
+      ]
+    },
+    {
+      "targetKey": "BV1pa9RBtEPA:p1:箱9",
+      "sourceLabel": "箱9",
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "segmentSecondsApprox": [
+        600,
+        630
+      ],
+      "source": {
+        "bvid": "BV1pa9RBtEPA",
+        "part": 1,
+        "segmentSecondsApprox": [
+          600,
+          630
+        ],
+        "url": "https://www.bilibili.com/video/BV1pa9RBtEPA/?p=1&t=600"
+      },
+      "mechanism": "与日灵对话获得赠礼箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "危行破碎黯原之心后的日灵赠礼机制，蓝色植物和崖边阶梯与攻略图相合。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1pa9RBtEPA/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0600.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0610.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0620.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501515759980208128.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1501515759980208128-1.png"
+        ]
+      },
+      "pointId": "1501515759980208128",
+      "stateId": 909,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        61444.0,
+        86737.0
+      ],
+      "guide": {
+        "description": "危行任务:破碎黯原之心 最后日灵的赠礼，该宝箱在水晶后面，可根据日灵寻找",
+        "url": "https://www.kurobbs.com/mc/map/?state=909&typeId=qzx_02&pointId=1501515759980208128",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/a95cdc9a429c4eec8e155895ab3fdcae20260506.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV1pa9RBtEPA:p1:箱10",
+      "sourceLabel": "箱10",
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "segmentSecondsApprox": [
+        635,
+        670
+      ],
+      "source": {
+        "bvid": "BV1pa9RBtEPA",
+        "part": 1,
+        "segmentSecondsApprox": [
+          635,
+          670
+        ],
+        "url": "https://www.bilibili.com/video/BV1pa9RBtEPA/?p=1&t=635"
+      },
+      "mechanism": "坐在长椅上触发箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "长椅及前方风景与攻略相合；666秒玩家距点约4.4。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV1pa9RBtEPA/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0650.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0660.00.jpg",
+          "out/detectability-collection/BV1pa9RBtEPA/p01/frame-0666.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV1pa9RBtEPA/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500192871343808512.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500192871343808512-1.png"
+        ]
+      },
+      "pointId": "1500192871343808512",
+      "stateId": 909,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        77847.0,
+        -30351.0
+      ],
+      "guide": {
+        "description": "在长椅坐下后出现",
+        "url": "https://www.kurobbs.com/mc/map/?state=909&typeId=qzx_02&pointId=1500192871343808512",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/3783b69b3a5b44ecae2dd394b226373820260502.jpg"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV19kNu6AEVR:p1:潮1",
+      "sourceLabel": "潮1",
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "segmentSecondsApprox": [
+        0,
+        49
+      ],
+      "source": {
+        "bvid": "BV19kNu6AEVR",
+        "part": 1,
+        "segmentSecondsApprox": [
+          0,
+          49
+        ],
+        "url": "https://www.bilibili.com/video/BV19kNu6AEVR/?p=1&t=0"
+      },
+      "mechanism": "击败红名敌人后出现潮汐之遗",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "水边平原战斗已查看，候选地形大体相似，但地图最近距约29–31且可能为边缘玩家指示，缺少唯一地点对应。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV19kNu6AEVR/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0020.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0030.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0040.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0047.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524475488800980992.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1524475488800980992"
+      ]
+    },
+    {
+      "targetKey": "BV19kNu6AEVR:p1:潮2",
+      "sourceLabel": "潮2",
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "segmentSecondsApprox": [
+        50,
+        83
+      ],
+      "source": {
+        "bvid": "BV19kNu6AEVR",
+        "part": 1,
+        "segmentSecondsApprox": [
+          50,
+          83
+        ],
+        "url": "https://www.bilibili.com/video/BV19kNu6AEVR/?p=1&t=50"
+      },
+      "mechanism": "击败红名敌人后出现潮汐之遗",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "绿色水帘及橙叶空地与攻略相合；80秒玩家距点约3.9。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV19kNu6AEVR/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0060.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0070.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0080.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524467251682852864.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524467251682852864-1.png"
+        ]
+      },
+      "pointId": "1524467251682852864",
+      "stateId": 8,
+      "typeId": "cx_03",
+      "name": "潮汐之遗·金",
+      "rawPosition": [
+        -865700.0,
+        22400.0
+      ],
+      "guide": {
+        "description": "红名怪挑战宝箱。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=cx_03&pointId=1524467251682852864",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/5de0f9d3abc14434b6a4b66262e31e3220260708.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV19kNu6AEVR:p1:箱1",
+      "sourceLabel": "箱1",
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "segmentSecondsApprox": [
+        85,
+        123
+      ],
+      "source": {
+        "bvid": "BV19kNu6AEVR",
+        "part": 1,
+        "segmentSecondsApprox": [
+          85,
+          123
+        ],
+        "url": "https://www.bilibili.com/video/BV19kNu6AEVR/?p=1&t=85"
+      },
+      "mechanism": "玻璃箱任务触发并击败红名后获得箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "玻璃箱与紫色任务交互及战斗奖励场景和攻略一致；120秒玩家距点约3.2。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV19kNu6AEVR/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0090.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0100.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0110.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0120.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523293737827287040.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523293737827287040-1.png"
+        ]
+      },
+      "pointId": "1523293737827287040",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -805800.0,
+        -12000.0
+      ],
+      "guide": {
+        "description": "在第二张图的红框位置，有一个紫色的任务指引，会看到一个类似玻璃箱子的东西（抱歉没拍照），进入之后就会扔到第一张图的位置，会有一个红名怪，挺简单的，被我秧秧一下就打没了，然后会有一个基准和成就（并非一般心傀）。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1523293737827287040",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/beff218c269e4e7daf0cc1ed53f79eaa20260705.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/5e3b8ea53bef47c784e3fb15cc437d0d20260705.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/4304f7052f3b43cb9dffafd9436ff78e20260713.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV19kNu6AEVR:p1:潮3",
+      "sourceLabel": "潮3",
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "segmentSecondsApprox": [
+        125,
+        158
+      ],
+      "source": {
+        "bvid": "BV19kNu6AEVR",
+        "part": 1,
+        "segmentSecondsApprox": [
+          125,
+          158
+        ],
+        "url": "https://www.bilibili.com/video/BV19kNu6AEVR/?p=1&t=125"
+      },
+      "mechanism": "击败红名敌人后出现潮汐之遗",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "黄色桦树林场景一致；155秒玩家距点约2.7。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV19kNu6AEVR/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0140.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0150.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0155.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524473781098496000.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524473781098496000-1.png"
+        ]
+      },
+      "pointId": "1524473781098496000",
+      "stateId": 8,
+      "typeId": "cx_03",
+      "name": "潮汐之遗·金",
+      "rawPosition": [
+        -705500.0,
+        21800.0
+      ],
+      "guide": {
+        "description": "红名怪挑战宝箱。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=cx_03&pointId=1524473781098496000",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/78167545f9b44bd4b3d6eb5e4933bd5620260708.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV19kNu6AEVR:p1:潮4",
+      "sourceLabel": "潮4",
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "segmentSecondsApprox": [
+        160,
+        193
+      ],
+      "source": {
+        "bvid": "BV19kNu6AEVR",
+        "part": 1,
+        "segmentSecondsApprox": [
+          160,
+          193
+        ],
+        "url": "https://www.bilibili.com/video/BV19kNu6AEVR/?p=1&t=160"
+      },
+      "mechanism": "击败两只红名咎锁遗患出现潮汐之遗",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "桥拱、巨柱和粉色草地场景与攻略相合；190秒玩家距点约1.6。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV19kNu6AEVR/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0170.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0180.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0190.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524138997821722624.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524138997821722624-1.png"
+        ]
+      },
+      "pointId": "1524138997821722624",
+      "stateId": 8,
+      "typeId": "cx_03",
+      "name": "潮汐之遗·金",
+      "rawPosition": [
+        -655400.0,
+        -45700.0
+      ],
+      "guide": {
+        "description": "咎锁遗患挑战宝箱，需要打红名怪。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=cx_03&pointId=1524138997821722624",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/ef27f04920264c50851c57809dac4d7120260707.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV19kNu6AEVR:p1:潮5",
+      "sourceLabel": "潮5",
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "segmentSecondsApprox": [
+        195,
+        228
+      ],
+      "source": {
+        "bvid": "BV19kNu6AEVR",
+        "part": 1,
+        "segmentSecondsApprox": [
+          195,
+          228
+        ],
+        "url": "https://www.bilibili.com/video/BV19kNu6AEVR/?p=1&t=195"
+      },
+      "mechanism": "击败红名敌人后出现潮汐之遗",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "223–224秒几何近点约0.7，但攻略首图疑似重复另一地点，第二图水池断桥与视频树洞视角未充分对应；不单凭几何确认。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV19kNu6AEVR/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0210.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0220.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0224.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1524481633250820096"
+      ]
+    },
+    {
+      "targetKey": "BV19kNu6AEVR:p1:潮6",
+      "sourceLabel": "潮6",
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "segmentSecondsApprox": [
+        230,
+        269
+      ],
+      "source": {
+        "bvid": "BV19kNu6AEVR",
+        "part": 1,
+        "segmentSecondsApprox": [
+          230,
+          269
+        ],
+        "url": "https://www.bilibili.com/video/BV19kNu6AEVR/?p=1&t=230"
+      },
+      "mechanism": "击败红名敌人后出现潮汐之遗",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "岩壁旁粉色水池与攻略相同；266秒玩家距点约1。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV19kNu6AEVR/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0240.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0250.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0260.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0266.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524472584441942016.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524472584441942016-1.png"
+        ]
+      },
+      "pointId": "1524472584441942016",
+      "stateId": 8,
+      "typeId": "cx_03",
+      "name": "潮汐之遗·金",
+      "rawPosition": [
+        -582800.0,
+        -5800.0
+      ],
+      "guide": {
+        "description": "红名怪挑战宝箱。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=cx_03&pointId=1524472584441942016",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/10c5153993954365bb5d2d8145d02a4b20260708.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV19kNu6AEVR:p1:潮7",
+      "sourceLabel": "潮7",
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "segmentSecondsApprox": [
+        270,
+        303
+      ],
+      "source": {
+        "bvid": "BV19kNu6AEVR",
+        "part": 1,
+        "segmentSecondsApprox": [
+          270,
+          303
+        ],
+        "url": "https://www.bilibili.com/video/BV19kNu6AEVR/?p=1&t=270"
+      },
+      "mechanism": "雾锁机伶任务完成后返回室内击败红名",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "雾隐阁圆形齿轮室场景和攻略一致；300秒玩家距点约0.8。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV19kNu6AEVR/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0280.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0290.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0300.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png"
+        ]
+      },
+      "pointId": "1526600365212684288",
+      "stateId": 8,
+      "typeId": "cx_03",
+      "name": "潮汐之遗·金",
+      "rawPosition": [
+        -605500.0,
+        -27100.0
+      ],
+      "guide": {
+        "description": "先做完“雾锁机伶”，然后再来一遍这里，就能刷新怪物。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=cx_03&pointId=1526600365212684288",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/f621de6b44394ff8a9c088fd83b5f62a20260714.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV19kNu6AEVR:p1:箱2",
+      "sourceLabel": "箱2",
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "segmentSecondsApprox": [
+        305,
+        377
+      ],
+      "source": {
+        "bvid": "BV19kNu6AEVR",
+        "part": 1,
+        "segmentSecondsApprox": [
+          305,
+          377
+        ],
+        "url": "https://www.bilibili.com/video/BV19kNu6AEVR/?p=1&t=305"
+      },
+      "mechanism": "进入引歧帘后开启扫描，到侧面平台开箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "370/373秒平台金色栏杆、地板纹路、岩柱和正面箱与攻略第一图完全相合；排除高层双旗露台候选。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV19kNu6AEVR/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0340.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0355.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0370.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0373.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-1.png"
+        ]
+      },
+      "pointId": "1526608470311550976",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -635300.0,
+        -29000.0
+      ],
+      "guide": {
+        "description": "雾隐阁系列任务得最后，在中央区域会开放两个电梯，也就是第三张图的位置，下电梯，之后就会来到第二张图的位置，进入那个引歧帘，然后开扫描。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1526608470311550976",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/278680f7644843b2a7f2b1576d7684b120260714.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/922c089810144d0ba0bd8ca2e027935420260714.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/c79828eceff349b7a5a9ceda8068a2c120260714.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV19kNu6AEVR:p1:箱3",
+      "sourceLabel": "箱3",
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "segmentSecondsApprox": [
+        378,
+        397
+      ],
+      "source": {
+        "bvid": "BV19kNu6AEVR",
+        "part": 1,
+        "segmentSecondsApprox": [
+          378,
+          397
+        ],
+        "url": "https://www.bilibili.com/video/BV19kNu6AEVR/?p=1&t=378"
+      },
+      "mechanism": "按任务指引点亮灯后出现基准箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "basis": "巨树下大型狐形雕像和两侧小雕像、灯与箱布局一致；攻略明确点灯后出现。",
+      "unresolvedReason": null,
+      "localEvidence": {
+        "video": "out/detectability-collection/BV19kNu6AEVR/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0380.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0390.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/yellow-all.json",
+        "guideJson": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-1.png"
+        ]
+      },
+      "pointId": "1526609257964093440",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        -633600.0,
+        -27100.0
+      ],
+      "guide": {
+        "description": "雾隐阁系列任务得最后，在中央区域会开放两个电梯，也就是第三张图的位置，下电梯，之后就会来到第二张图的位置，进入那个水帘洞；进到这里之后，会看到一个任务指引，需要点灯，之后这个基准宝箱就出现了。",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1526609257964093440",
+        "apiEndpoint": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/2daaf8215c64409a8eedf04744c83f2e20260714.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/8362fcb9755644d5aba383cfe6b0ae7e20260714.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/859cb730910146cfb2e6ea98164a439a20260714.png"
+        ]
+      }
+    },
+    {
+      "targetKey": "BV19kNu6AEVR:p1:箱4",
+      "sourceLabel": "箱4",
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "segmentSecondsApprox": [
+        398,
+        425
+      ],
+      "source": {
+        "bvid": "BV19kNu6AEVR",
+        "part": 1,
+        "segmentSecondsApprox": [
+          398,
+          425
+        ],
+        "url": "https://www.bilibili.com/video/BV19kNu6AEVR/?p=1&t=398"
+      },
+      "mechanism": "完成紫色任务指引及露台NPC对话后收取目标",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "basis": null,
+      "unresolvedReason": "露台对话已查看；候选为双旗露台朴素箱，但源视频对话后目标是否等同该箱及具体位置尚不足确认。",
+      "localEvidence": {
+        "video": "out/detectability-collection/BV19kNu6AEVR/p01/video.mp4",
+        "frames": [
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0400.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0405.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0415.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0420.00.jpg",
+          "out/detectability-collection/BV19kNu6AEVR/p01/frame-0423.00.jpg"
+        ],
+        "mapGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/geometry-extra.json",
+        "playerCandidateGeometry": "out/detectability-collection/BV19kNu6AEVR/p01/yellow-all.json",
+        "candidateGuides": [
+          "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016.json"
+        ]
+      },
+      "candidatePointIds": [
+        "1526609969292886016"
+      ]
+    }
+  ]
+}

@@ -20,6 +20,10 @@ public sealed record RoutePlanningState
     /// <c>AutoRoute::Plan::farmMode</c>），运行状态随导航结束而关：所以载入一条刷怪路线
     /// 会自动把它打开，而它不会跨导航留到别的路线上。
     /// </summary>
+    public bool GapFillModeEnabled { get; init; }
+    public bool GapFillCatalogAvailable { get; init; }
+    public int GapFillVisibleCount { get; init; }
+    public string GapFillCatalogError { get; init; } = "";
     public bool FarmMode { get; init; }
     public ulong OrderRevision { get; init; }
     public RouteStop? PreviousTarget { get; init; }

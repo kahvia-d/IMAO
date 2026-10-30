@@ -1,0 +1,1027 @@
+{
+  "policy": "集合身份确定即可全部标记；无需逐成员对应，位置/组别仍不确定的不得导出。",
+  "groups": [
+    {
+      "groupId": "BV13ZvrBtEde:p1:e011:set1",
+      "status": "confirmed-set",
+      "members": [
+        1,
+        2,
+        3
+      ],
+      "points": [
+        {
+          "stateId": "906",
+          "pointId": "1452382463822458880"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1452382463721795584"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1452382463621132288"
+        }
+      ],
+      "detectability": "undetectable",
+      "analysis": "四箱营地的地点、显像机械及奖励组已核实；其中基准箱已有独立绑定，剩余三个朴素ID整体对应三个未决成员。 按用户新口径整组标记不可探测，不声明成员顺序与ID一一对应。",
+      "policy": "user-authorized-set-level-labels",
+      "videoEvidence": [
+        {
+          "source": "BV13ZvrBtEde:p1",
+          "locator": "out/detectability-v2/group-review/group-0-source.jpg",
+          "reason": "四箱营地的地点、显像机械及奖励组已核实；其中基准箱已有独立绑定，剩余三个朴素ID整体对应三个未决成员。",
+          "role": "support",
+          "start": 384,
+          "end": 441
+        }
+      ],
+      "positionEvidence": [
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e11.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/roy-e11-map-open.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/roy-e11-new-anchor.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/group-review/group-0.jpg",
+          "reason": "四箱营地的地点、显像机械及奖励组已核实；其中基准箱已有独立绑定，剩余三个朴素ID整体对应三个未决成员。",
+          "role": "support"
+        }
+      ],
+      "guideEvidence": [
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463822458880.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463822458880-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463822458880-2.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463721795584.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463721795584-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463721795584-2.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463621132288.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463621132288-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452382463621132288-2.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        }
+      ]
+    },
+    {
+      "groupId": "BV13ZvrBtEde:p1:e014:set1",
+      "status": "confirmed-set",
+      "members": [
+        1,
+        2,
+        3
+      ],
+      "points": [
+        {
+          "stateId": "906",
+          "pointId": "1454160397155495936"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1454159815621423104"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1454159713108439040"
+        }
+      ],
+      "detectability": "undetectable",
+      "analysis": "用户确认护送机械后的三箱为同一组，一蓝两白，以攻略为主；原视频箱型识别错误不影响组身份。",
+      "videoEvidence": [
+        {
+          "source": "BV13ZvrBtEde:p1",
+          "locator": "out/detectability-v2/BV13ZvrBtEde/p01/visual/frame-00583.00.jpg",
+          "reason": "本事件奖励过程原帧；组身份按路线和攻略核对。",
+          "role": "support",
+          "start": 515,
+          "end": 584
+        }
+      ],
+      "positionEvidence": [
+        {
+          "source": "user-followup",
+          "locator": "tools/MarkerDetectabilityV2/user-review-20261030.json",
+          "reason": "用户确认护送机械后的三箱为同一组，一蓝两白，以攻略为主；原视频箱型识别错误不影响组身份。",
+          "role": "support"
+        },
+        {
+          "source": "continuous-route-visual-review",
+          "locator": "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e14.jpg",
+          "reason": "用户确认护送机械后的三箱为同一组，一蓝两白，以攻略为主；原视频箱型识别错误不影响组身份。",
+          "role": "support"
+        }
+      ],
+      "guideEvidence": [
+        {
+          "source": "KuroMap:906:1454160397155495936",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454160397155495936.json",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:906:1454160397155495936",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454160397155495936-1.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:906:1454160397155495936",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454160397155495936-2.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:906:1454160397155495936",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454160397155495936-3.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:906:1454159815621423104",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454159815621423104.json",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:906:1454159815621423104",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454159815621423104-1.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:906:1454159815621423104",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454159815621423104-2.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:906:1454159815621423104",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454159815621423104-3.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:906:1454159713108439040",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454159713108439040.json",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:906:1454159713108439040",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454159713108439040-1.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:906:1454159713108439040",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454159713108439040-2.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:906:1454159713108439040",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454159713108439040-3.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        }
+      ],
+      "reviewedBy": "user"
+    },
+    {
+      "groupId": "BV13ZvrBtEde:p1:e019:set1",
+      "status": "confirmed-set",
+      "members": [
+        1,
+        2
+      ],
+      "points": [
+        {
+          "stateId": "906",
+          "pointId": "1454557442936729600"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1454557443037392896"
+        }
+      ],
+      "detectability": "undetectable",
+      "analysis": "显像岩蛛后同时出现两个朴素箱和日灵；路线、地理位置和原攻略一致，两ID仅2单位间隔，无须再分左右。 按用户新口径整组标记不可探测，不声明成员顺序与ID一一对应。",
+      "policy": "user-authorized-set-level-labels",
+      "videoEvidence": [
+        {
+          "source": "BV13ZvrBtEde:p1",
+          "locator": "out/detectability-v2/group-review/group-1-source.jpg",
+          "reason": "显像岩蛛后同时出现两个朴素箱和日灵；路线、地理位置和原攻略一致，两ID仅2单位间隔，无须再分左右。",
+          "role": "support",
+          "start": 746,
+          "end": 790
+        }
+      ],
+      "positionEvidence": [
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e19.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/roy-e19-map-open.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/roy-e19-new-anchor.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/group-review/group-1.jpg",
+          "reason": "显像岩蛛后同时出现两个朴素箱和日灵；路线、地理位置和原攻略一致，两ID仅2单位间隔，无须再分左右。",
+          "role": "support"
+        }
+      ],
+      "guideEvidence": [
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454557442936729600.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454557442936729600-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454557443037392896.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454557443037392896-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        }
+      ]
+    },
+    {
+      "groupId": "BV1Aeh2zvEko:p1:e009:set1",
+      "status": "confirmed-set",
+      "members": [
+        2,
+        4,
+        5
+      ],
+      "points": [
+        {
+          "stateId": "8",
+          "pointId": "1410300673196429312"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1410300673292898304"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1410300673389367296"
+        }
+      ],
+      "detectability": "undetectable",
+      "analysis": "蟹形岛祭坛供奉五次的五箱组已核实，朴素/基准已有独立绑定；三个精密ID整体对应三个紫箱。 按用户新口径整组标记不可探测，不声明成员顺序与ID一一对应。",
+      "policy": "user-authorized-set-level-labels",
+      "videoEvidence": [
+        {
+          "source": "BV1Aeh2zvEko:p1",
+          "locator": "out/detectability-v2/group-review/group-2-source.jpg",
+          "reason": "蟹形岛祭坛供奉五次的五箱组已核实，朴素/基准已有独立绑定；三个精密ID整体对应三个紫箱。",
+          "role": "support",
+          "start": 396,
+          "end": 474
+        }
+      ],
+      "positionEvidence": [
+        {
+          "source": "group-review",
+          "locator": "tools/MarkerDetectabilityV2/route-review-rinascita.json",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-rinascita/route-BV1Aeh2zvEko-p01-e009-0.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-rinascita/remaining-manual-observations.json",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-rinascita/sang-group-routes.png",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/group-review/group-2.jpg",
+          "reason": "蟹形岛祭坛供奉五次的五箱组已核实，朴素/基准已有独立绑定；三个精密ID整体对应三个紫箱。",
+          "role": "support"
+        }
+      ],
+      "guideEvidence": [
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300673196429312.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300673196429312-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300673292898304.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300673292898304-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300673389367296.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300673389367296-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        }
+      ]
+    },
+    {
+      "groupId": "BV1Aeh2zvEko:p3:e001:set1",
+      "status": "confirmed-set",
+      "members": [
+        1,
+        2
+      ],
+      "points": [
+        {
+          "stateId": "8",
+          "pointId": "1411099204107186176"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1411099204195266560"
+        }
+      ],
+      "detectability": "undetectable",
+      "analysis": "用户确认这两个奖励与页面候选是同一组；不死的角斗士任务结束后的双箱，箱型外观差异不再用于否定同组身份。",
+      "videoEvidence": [
+        {
+          "source": "BV1Aeh2zvEko:p3",
+          "locator": "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00320.50.jpg",
+          "reason": "本成员领取/出现邻近原帧，不把其它成员截图作为其独有身份证明。",
+          "role": "support",
+          "start": 8.76,
+          "end": 322.033
+        }
+      ],
+      "positionEvidence": [
+        {
+          "source": "user-followup",
+          "locator": "tools/MarkerDetectabilityV2/user-review-20261030.json",
+          "reason": "用户确认这两个奖励与页面候选是同一组；不死的角斗士任务结束后的双箱，箱型外观差异不再用于否定同组身份。",
+          "role": "support"
+        }
+      ],
+      "guideEvidence": [
+        {
+          "source": "KuroMap:8:1411099204107186176",
+          "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176.json",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1411099204107186176",
+          "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176-1.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1411099204107186176",
+          "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204107186176-2.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1411099204195266560",
+          "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204195266560.json",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1411099204195266560",
+          "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204195266560-1.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1411099204195266560",
+          "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1411099204195266560-2.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        }
+      ],
+      "reviewedBy": "user"
+    },
+    {
+      "groupId": "BV1F3A3zxEDQ:p1:e004:set1",
+      "status": "confirmed-set",
+      "members": [
+        1,
+        2,
+        3
+      ],
+      "points": [
+        {
+          "stateId": "8",
+          "pointId": "1469150333640495104"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1469149723331514368"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1469151068226895872"
+        }
+      ],
+      "detectability": "undetectable",
+      "analysis": "地下-1/45矿晶池显像后同时出现朴素/基准/辉光三箱，入洞路线、紫色晶池地形和三份原攻略共同确认整组。 按用户新口径整组标记不可探测，不声明成员顺序与ID一一对应。",
+      "policy": "user-authorized-set-level-labels",
+      "videoEvidence": [
+        {
+          "source": "BV1F3A3zxEDQ:p1",
+          "locator": "out/detectability-v2/group-review/group-3-source.jpg",
+          "reason": "地下-1/45矿晶池显像后同时出现朴素/基准/辉光三箱，入洞路线、紫色晶池地形和三份原攻略共同确认整组。",
+          "role": "support",
+          "start": 140,
+          "end": 201
+        }
+      ],
+      "positionEvidence": [
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e04.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-201.0s.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e4-surface-anchor.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/group-review/group-3.jpg",
+          "reason": "地下-1/45矿晶池显像后同时出现朴素/基准/辉光三箱，入洞路线、紫色晶池地形和三份原攻略共同确认整组。",
+          "role": "support"
+        }
+      ],
+      "guideEvidence": [
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469150333640495104.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469150333640495104-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469150333640495104-2.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469150333640495104-3.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469149723331514368.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469149723331514368-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469149723331514368-2.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469149723331514368-3.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469151068226895872.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469151068226895872-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469151068226895872-2.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469151068226895872-3.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        }
+      ]
+    },
+    {
+      "groupId": "BV1F3A3zxEDQ:p1:e013:set1",
+      "status": "confirmed-set",
+      "members": [
+        1,
+        2,
+        3
+      ],
+      "points": [
+        {
+          "stateId": "8",
+          "pointId": "1469341771443589120"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1469342014524477440"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1469342233760747520"
+        }
+      ],
+      "detectability": "undetectable",
+      "analysis": "从前一挑战向南跳下，沿空间站外缘到三簇冰晶前显像，出现三箱。攻略三图的空间站东侧路线、坡口与三簇冰晶布局吻合；整组三ID确认，不分领取顺序。",
+      "videoEvidence": [
+        {
+          "source": "BV1F3A3zxEDQ:p1",
+          "locator": "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-00601.00.jpg",
+          "reason": "本事件奖励过程原帧；组身份按路线和攻略核对。",
+          "role": "support",
+          "start": 571,
+          "end": 603
+        }
+      ],
+      "positionEvidence": [
+        {
+          "source": "user-followup",
+          "locator": "tools/MarkerDetectabilityV2/user-review-20261030.json",
+          "reason": "从前一挑战向南跳下，沿空间站外缘到三簇冰晶前显像，出现三箱。攻略三图的空间站东侧路线、坡口与三簇冰晶布局吻合；整组三ID确认，不分领取顺序。",
+          "role": "support"
+        },
+        {
+          "source": "continuous-route-visual-review",
+          "locator": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e13.jpg",
+          "reason": "从前一挑战向南跳下，沿空间站外缘到三簇冰晶前显像，出现三箱。攻略三图的空间站东侧路线、坡口与三簇冰晶布局吻合；整组三ID确认，不分领取顺序。",
+          "role": "support"
+        }
+      ],
+      "guideEvidence": [
+        {
+          "source": "KuroMap:8:1469341771443589120",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469341771443589120.json",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469341771443589120",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469341771443589120-1.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469341771443589120",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469341771443589120-2.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469342014524477440",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342014524477440.json",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469342014524477440",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342014524477440-1.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469342014524477440",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342014524477440-2.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469342233760747520",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342233760747520.json",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469342233760747520",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342233760747520-1.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469342233760747520",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342233760747520-2.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469342233760747520",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469342233760747520-3.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        }
+      ],
+      "reviewedBy": "visual"
+    },
+    {
+      "groupId": "BV1F3A3zxEDQ:p1:e016:set1",
+      "status": "confirmed-set",
+      "members": [
+        1,
+        2,
+        3
+      ],
+      "points": [
+        {
+          "stateId": "8",
+          "pointId": "1469406626221703168"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1469406943696961536"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1469407226372079616"
+        }
+      ],
+      "detectability": "undetectable",
+      "analysis": "从前一挑战向西南沿紫色大环外缘下行至岩隙三簇冰晶；视频和攻略同两侧蓝晶、朝外尖岩缺口与三箱分布。该组可由连续路线和独特地形确认，不要求区分箱顺序或额外地下层。",
+      "videoEvidence": [
+        {
+          "source": "BV1F3A3zxEDQ:p1",
+          "locator": "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-00702.00.jpg",
+          "reason": "本事件奖励过程原帧；组身份按路线和攻略核对。",
+          "role": "support",
+          "start": 664,
+          "end": 704
+        }
+      ],
+      "positionEvidence": [
+        {
+          "source": "user-followup",
+          "locator": "tools/MarkerDetectabilityV2/user-review-20261030.json",
+          "reason": "从前一挑战向西南沿紫色大环外缘下行至岩隙三簇冰晶；视频和攻略同两侧蓝晶、朝外尖岩缺口与三箱分布。该组可由连续路线和独特地形确认，不要求区分箱顺序或额外地下层。",
+          "role": "support"
+        },
+        {
+          "source": "continuous-route-visual-review",
+          "locator": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e16.jpg",
+          "reason": "从前一挑战向西南沿紫色大环外缘下行至岩隙三簇冰晶；视频和攻略同两侧蓝晶、朝外尖岩缺口与三箱分布。该组可由连续路线和独特地形确认，不要求区分箱顺序或额外地下层。",
+          "role": "support"
+        }
+      ],
+      "guideEvidence": [
+        {
+          "source": "KuroMap:8:1469406626221703168",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469406626221703168.json",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469406626221703168",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469406626221703168-1.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469406626221703168",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469406626221703168-2.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469406943696961536",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469406943696961536.json",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469406943696961536",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469406943696961536-1.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469406943696961536",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469406943696961536-2.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469407226372079616",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469407226372079616.json",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469407226372079616",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469407226372079616-1.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        },
+        {
+          "source": "KuroMap:8:1469407226372079616",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469407226372079616-2.png",
+          "reason": "此ID原始攻略；与视频路线、触发机制及场景交叉核对。",
+          "role": "support"
+        }
+      ],
+      "reviewedBy": "visual"
+    },
+    {
+      "groupId": "BV1F3A3zxEDQ:p1:e026:set1",
+      "status": "confirmed-set",
+      "members": [
+        1,
+        2
+      ],
+      "points": [
+        {
+          "stateId": "8",
+          "pointId": "1477786265842372608"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1477786512450670592"
+        }
+      ],
+      "detectability": "undetectable",
+      "analysis": "地下-1/48第四次与艾尔玛对话后的两个基准箱，分层锚和紫色瀑布/岩台场景共同确认整组。 按用户新口径整组标记不可探测，不声明成员顺序与ID一一对应。",
+      "policy": "user-authorized-set-level-labels",
+      "videoEvidence": [
+        {
+          "source": "BV1F3A3zxEDQ:p1",
+          "locator": "out/detectability-v2/group-review/group-4-source.jpg",
+          "reason": "地下-1/48第四次与艾尔玛对话后的两个基准箱，分层锚和紫色瀑布/岩台场景共同确认整组。",
+          "role": "support",
+          "start": 1063,
+          "end": 1124
+        }
+      ],
+      "positionEvidence": [
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e26.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-1124.0s.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e26-L48_F-1-48-anchor.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/group-review/group-4.jpg",
+          "reason": "地下-1/48第四次与艾尔玛对话后的两个基准箱，分层锚和紫色瀑布/岩台场景共同确认整组。",
+          "role": "support"
+        }
+      ],
+      "guideEvidence": [
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477786265842372608.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477786265842372608-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477786512450670592.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477786512450670592-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        }
+      ]
+    },
+    {
+      "groupId": "BV1pa9RBtEPA:p1:e006:set1",
+      "status": "confirmed-set",
+      "members": [
+        1,
+        2
+      ],
+      "points": [
+        {
+          "stateId": "909",
+          "pointId": "1500200422475800576"
+        },
+        {
+          "stateId": "909",
+          "pointId": "1500200454327345152"
+        }
+      ],
+      "detectability": "undetectable",
+      "analysis": "触摸石碑变身日灵交互后，石碑两侧出现两个基准箱；地点、石碑、草坡灌木及两份原攻略均一致。 按用户新口径整组标记不可探测，不声明成员顺序与ID一一对应。",
+      "policy": "user-authorized-set-level-labels",
+      "videoEvidence": [
+        {
+          "source": "BV1pa9RBtEPA:p1",
+          "locator": "out/detectability-v2/group-review/group-5-source.jpg",
+          "reason": "触摸石碑变身日灵交互后，石碑两侧出现两个基准箱；地点、石碑、草坡灌木及两份原攻略均一致。",
+          "role": "support",
+          "start": 381,
+          "end": 461
+        }
+      ],
+      "positionEvidence": [
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/BV1pa9RBtEPA-p1-e06.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/route-roy/dark-route-map.jpg",
+          "reason": "沿用已核实的整组路线/地理证据。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-v2/group-review/group-5.jpg",
+          "reason": "触摸石碑变身日灵交互后，石碑两侧出现两个基准箱；地点、石碑、草坡灌木及两份原攻略均一致。",
+          "role": "support"
+        }
+      ],
+      "guideEvidence": [
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200422475800576.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200422475800576-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200454327345152.json",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        },
+        {
+          "source": "group-review",
+          "locator": "out/detectability-collection/BV1pa9RBtEPA/guides/guide-909-1500200454327345152-1.png",
+          "reason": "此ID原始攻略描述同一个奖励组。",
+          "role": "support"
+        }
+      ]
+    }
+  ]
+}

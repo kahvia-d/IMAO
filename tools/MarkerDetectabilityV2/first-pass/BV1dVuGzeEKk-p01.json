@@ -1,0 +1,827 @@
+{
+  "bvid": "BV1dVuGzeEKk",
+  "part": 1,
+  "duration": 129.20075,
+  "reviewStatus": "reviewed",
+  "audioReviewStatus": "reviewed",
+  "audioReviewMethod": "local-ASR-text-and-visual; no-direct-listening",
+  "progressBarReviewStatus": "reviewed",
+  "events": [
+    {
+      "eventId": "BV1dVuGzeEKk:p1:e001",
+      "ordinal": 1,
+      "start": 7.66,
+      "end": 88.6,
+      "progressBarMark": {
+        "label": null,
+        "authorNumber": null,
+        "approximateSeconds": 89,
+        "basis": "底部宝箱图标，无文字标签",
+        "evidenceFrame": "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00115.00.jpg"
+      },
+      "observedMechanism": "清岛上布偶；站在底座前把三根柱子拉到位（先打碎其中一柱旁木箱）；从书本变为兔子，站三柱中间长按技能吸收，生成宝箱。",
+      "route": "贝奥海沟北侧信标→东南高点起飞→向东越过小遗迹到小岛；书本旁西南第一柱、北侧破箱后向西第二柱、南侧第三柱。",
+      "transcriptRefs": [
+        {
+          "start": 7.66,
+          "end": 10.1,
+          "text": "我们打开地图来到贝奥海域"
+        },
+        {
+          "start": 10.1,
+          "end": 12.26,
+          "text": "贝奥海沟上方的一个小银星标"
+        },
+        {
+          "start": 12.7,
+          "end": 14.26,
+          "text": "翻过来之后我们转小地图"
+        },
+        {
+          "start": 14.26,
+          "end": 15.34,
+          "text": "右下方东南方向"
+        },
+        {
+          "start": 16.08,
+          "end": 17.96,
+          "text": "我们找一个比较高点的地方"
+        },
+        {
+          "start": 17.96,
+          "end": 19.0,
+          "text": "然后直接起飞"
+        },
+        {
+          "start": 20.16,
+          "end": 22.46,
+          "text": "就朝小地图右边东方向飞过去"
+        },
+        {
+          "start": 26.31,
+          "end": 28.11,
+          "text": "这里能看到一个小遗迹"
+        },
+        {
+          "start": 28.57,
+          "end": 29.77,
+          "text": "我们飞过这个遗迹"
+        },
+        {
+          "start": 29.77,
+          "end": 31.51,
+          "text": "再往前走前方有一个小岛"
+        },
+        {
+          "start": 32.09,
+          "end": 33.07,
+          "text": "飞到这个小岛上"
+        },
+        {
+          "start": 34.53,
+          "end": 37.35,
+          "text": "然后把岛上的这个布偶给它清了"
+        },
+        {
+          "start": 38.87,
+          "end": 39.87,
+          "text": "清完怪之后"
+        },
+        {
+          "start": 39.87,
+          "end": 41.43,
+          "text": "我们站在这一个书本这里"
+        },
+        {
+          "start": 41.43,
+          "end": 43.03,
+          "text": "然后转向小地图"
+        },
+        {
+          "start": 43.03,
+          "end": 44.23,
+          "text": "左下方西南方向"
+        },
+        {
+          "start": 44.87,
+          "end": 46.15,
+          "text": "看到这里有根柱子"
+        },
+        {
+          "start": 46.55,
+          "end": 48.07,
+          "text": "然后我们面朝这根柱子"
+        },
+        {
+          "start": 48.49,
+          "end": 49.57,
+          "text": "来到这个底座这里"
+        },
+        {
+          "start": 49.57,
+          "end": 50.25,
+          "text": "给它拉过来"
+        },
+        {
+          "start": 50.85,
+          "end": 51.61,
+          "text": "拉过来之后"
+        },
+        {
+          "start": 51.61,
+          "end": 52.57,
+          "text": "我们再转向小地图"
+        },
+        {
+          "start": 52.57,
+          "end": 54.05,
+          "text": "上方北方向朝前方走"
+        },
+        {
+          "start": 54.83,
+          "end": 57.61,
+          "text": "前方把这个柱子旁边的箱子给它打破"
+        },
+        {
+          "start": 57.61,
+          "end": 58.47,
+          "text": "打破完之后"
+        },
+        {
+          "start": 58.47,
+          "end": 59.45,
+          "text": "我们转向小地图"
+        },
+        {
+          "start": 59.45,
+          "end": 60.67,
+          "text": "左边西方向"
+        },
+        {
+          "start": 60.67,
+          "end": 61.65,
+          "text": "找到底座"
+        },
+        {
+          "start": 61.65,
+          "end": 62.55,
+          "text": "然后给它拉过来"
+        },
+        {
+          "start": 63.63,
+          "end": 64.45,
+          "text": "拉过来之后"
+        },
+        {
+          "start": 64.45,
+          "end": 65.51,
+          "text": "我们再转小地图"
+        },
+        {
+          "start": 65.51,
+          "end": 66.61,
+          "text": "下方南方向"
+        },
+        {
+          "start": 66.61,
+          "end": 67.37,
+          "text": "往前方走"
+        },
+        {
+          "start": 67.37,
+          "end": 68.33,
+          "text": "这里还有个底座"
+        },
+        {
+          "start": 69.11,
+          "end": 70.37,
+          "text": "这里再靠近一点"
+        },
+        {
+          "start": 70.37,
+          "end": 71.05,
+          "text": "把它拉过来"
+        },
+        {
+          "start": 71.61,
+          "end": 73.31,
+          "text": "然后再面朝这个书本"
+        },
+        {
+          "start": 73.31,
+          "end": 74.29,
+          "text": "给它变成这个"
+        },
+        {
+          "start": 75.77,
+          "end": 76.61,
+          "text": "这个兔子"
+        },
+        {
+          "start": 76.61,
+          "end": 78.63,
+          "text": "然后站在这三根柱子的中间"
+        },
+        {
+          "start": 78.63,
+          "end": 79.97,
+          "text": "这里长按一技能"
+        },
+        {
+          "start": 84.9,
+          "end": 85.62,
+          "text": "吸收完"
+        },
+        {
+          "start": 85.62,
+          "end": 86.96,
+          "text": "我们就能拿到这个宝箱了"
+        },
+        {
+          "start": 87.42,
+          "end": 88.6,
+          "text": "拿完这个宝箱之后"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00015.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00030.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00037.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00039.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00047.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00049.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00057.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00058.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00063.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00066.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00070.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00074.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00075.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00078.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00081.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00083.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00085.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00086.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00087.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "精密奇藏（紫光外观）",
+          "triggerSeconds": 81,
+          "appearanceSeconds": 85,
+          "collectionSeconds": 87,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "stateId": "8",
+          "pointId": "1357337517870112768",
+          "matchingReview": {
+            "analysis": "成员1（精密奇藏（紫光外观），领取87秒）首轮核对：海岛书本、三根立柱和兔形声骸吸收后的紫箱，与guide岛屿地貌及柱位一致；85/87秒独立帧实定位靠近候选。 已做半幅地图参考、scale1局部参考和邻帧补查；本事件合格小地图结果2条，大地图配准2条；按同事件或上游地图视窗中心作粗检索，再按视频机制关键词/箱型筛选；视窗中心不是箱坐标，距离不作身份证明。身份三证共同支持此成员；属性另行审阅。",
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1357337517870112768",
+                "status": "confirmed-for-this-member",
+                "name": "精密奇藏箱",
+                "analysis": "在标点附近使用钩锁拖曳石柱，按照图2拉动石柱，完成后找书本互动变身寂寞小姐吸收乌云获得宝箱（标点由玩家零零林提供）",
+                "evidence": [],
+                "distanceGameUnits": 2.18,
+                "distanceBasis": "到通过配准的玩家位置，不是到箱中心",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1357337517870112768.json",
+                "guideImages": [
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1357337517870112768-1.png",
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1357337517870112768-2.png"
+                ],
+                "imageReview": "已核对本成员指定图像"
+              },
+              {
+                "stateId": "8",
+                "pointId": "1357737617122729984",
+                "status": "candidate-not-confirmed",
+                "name": "精密奇藏箱",
+                "analysis": "在标点附近完成刀伶挑战后获得（标点由玩家零零林提供）",
+                "evidence": [],
+                "distanceGameUnits": 261.42,
+                "distanceBasis": "到通过配准的玩家位置，不是到箱中心",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1357737617122729984.json",
+                "guideImages": [],
+                "imageReview": "尚未逐图消歧，保留文本与位置候选"
+              },
+              {
+                "stateId": "8",
+                "pointId": "1350600038359924736",
+                "status": "candidate-not-confirmed",
+                "name": "基准奇藏箱",
+                "analysis": "宝箱在遗迹的后方，靠近悬崖的一侧",
+                "evidence": [],
+                "distanceGameUnits": 293.28,
+                "distanceBasis": "到通过配准的玩家位置，不是到箱中心",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1350600038359924736.json",
+                "guideImages": [],
+                "imageReview": "尚未逐图消歧，保留文本与位置候选"
+              },
+              {
+                "stateId": "8",
+                "pointId": "1350599259851251712",
+                "status": "candidate-not-confirmed",
+                "name": "基准奇藏箱",
+                "analysis": "传送到标点，然后朝着标点位置走，之后跳下来。宝箱位置在第三张图，正对着那个正门左转。",
+                "evidence": [],
+                "distanceGameUnits": 307.64,
+                "distanceBasis": "到通过配准的玩家位置，不是到箱中心",
+                "guideCache": null,
+                "guideImages": [],
+                "imageReview": "尚未逐图消歧，保留文本与位置候选"
+              },
+              {
+                "stateId": "8",
+                "pointId": "1350600504196104192",
+                "status": "candidate-not-confirmed",
+                "name": "基准奇藏箱",
+                "analysis": "宝箱在遗迹二层。\n位置在地图标记的右边点，属于藏宝地宝箱，被一堆箱子挡着，旁边你有个布偶之跃的点",
+                "evidence": [],
+                "distanceGameUnits": 317.83,
+                "distanceBasis": "到通过配准的玩家位置，不是到箱中心",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1350600504196104192.json",
+                "guideImages": [],
+                "imageReview": "尚未逐图消歧，保留文本与位置候选"
+              },
+              {
+                "stateId": "8",
+                "pointId": "1357738176923901952",
+                "status": "candidate-not-confirmed",
+                "name": "精密奇藏箱",
+                "analysis": "在圆形废墟内，与中间的石柱互动开启挑战【全息战略·刀伶之舞】（标点由玩家零零林提供）",
+                "evidence": [],
+                "distanceGameUnits": 622.58,
+                "distanceBasis": "到通过配准的玩家位置，不是到箱中心",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1357738176923901952.json",
+                "guideImages": [],
+                "imageReview": "尚未逐图消歧，保留文本与位置候选"
+              },
+              {
+                "stateId": "8",
+                "pointId": "1325877399265644544",
+                "status": "candidate-not-confirmed",
+                "name": "基准奇藏箱",
+                "analysis": "在标点附近变身兔子根据球的数量123依次互动，完成后挪动立柱再用寂寞小姐吸收红色迷雾可获得宝箱（标点由玩家silent提供）（可能出现立柱拉不了的情况，这时候出去转一圈就行了）",
+                "evidence": [],
+                "distanceGameUnits": 834.21,
+                "distanceBasis": "到通过配准的玩家位置，不是到箱中心",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1325877399265644544.json",
+                "guideImages": [
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1325877399265644544-1.png"
+                ],
+                "imageReview": "尚未逐图消歧，保留文本与位置候选"
+              },
+              {
+                "stateId": "8",
+                "pointId": "1325779725971525632",
+                "status": "candidate-not-confirmed",
+                "name": "基准奇藏箱",
+                "analysis": "1.击碎楼梯旁石头   2.将倒下石柱向西拉2下   3.将楼梯口石柱向西拉1下   4.将倒下石柱拉到楼梯口处   5.将螃蟹左前方石柱拉到左后方  6.螃蟹左方楼梯下为最后一个石柱，依次将其拉上后完成(使用E技能)。",
+                "evidence": [],
+                "distanceGameUnits": 1647.61,
+                "distanceBasis": "到通过配准的玩家位置，不是到箱中心",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1325779725971525632.json",
+                "guideImages": [
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1325779725971525632-1.png",
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1325779725971525632-2.png"
+                ],
+                "imageReview": "尚未逐图消歧，保留文本与位置候选"
+              },
+              {
+                "stateId": "8",
+                "pointId": "1325785775599542272",
+                "status": "candidate-not-confirmed",
+                "name": "基准奇藏箱",
+                "analysis": "将石块打碎后，使四根石柱位于螃蟹四方即可。（使用小技能）",
+                "evidence": [],
+                "distanceGameUnits": 1766.39,
+                "distanceBasis": "到通过配准的玩家位置，不是到箱中心",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1325785775599542272.json",
+                "guideImages": [
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1325785775599542272-1.png"
+                ],
+                "imageReview": "尚未逐图消歧，保留文本与位置候选"
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "localize:SIFT-RANSAC",
+                "locator": "out/detectability-v2/matching-rinascita/fullscale-minimap.json#12",
+                "reason": "冻结LIMITS全部通过，85.0秒 15/16内点，玩家游戏坐标(9852.46,7385.09)。参考图scale=1，裁剪先验只限制搜索而不赋身份；图层未由surface标签推定。距所选点位约8.11游戏单位；另以画面/guide确定箱成员。",
+                "role": "support"
+              },
+              {
+                "source": "localize:SIFT-RANSAC",
+                "locator": "out/detectability-v2/matching-rinascita/fullscale-minimap.json#13",
+                "reason": "冻结LIMITS全部通过，87.0秒 17/20内点，玩家游戏坐标(9848.70,7378.93)。参考图scale=1，裁剪先验只限制搜索而不赋身份；图层未由surface标签推定。距所选点位约2.18游戏单位；另以画面/guide确定箱成员。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV1dVuGzeEKk:p1",
+                "locator": "7.66–88.60s",
+                "reason": "成员1：精密奇藏（紫光外观）；触发81，出现85，领取87。清岛上布偶；站在底座前把三根柱子拉到位（先打碎其中一柱旁木箱）；从书本变为兔子，站三柱中间长按技能吸收，生成宝箱。 路线：贝奥海沟北侧信标→东南高点起飞→向东越过小遗迹到小岛；书本旁西南第一柱、北侧破箱后向西第二柱、南侧第三柱。",
+                "role": "support",
+                "start": 7.66,
+                "end": 88.6
+              },
+              {
+                "source": "BV1dVuGzeEKk:p1",
+                "locator": "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00087.00.jpg",
+                "reason": "本成员领取/出现邻近原帧，不把其它成员截图作为其独有身份证明。",
+                "role": "support",
+                "start": 7.66,
+                "end": 88.6
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "KuroMap:8:1357337517870112768",
+                "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1357337517870112768.json",
+                "reason": "官方点位原始API记录，ID及类型保持原字符串；在标点附近使用钩锁拖曳石柱，按照图2拉动石柱，完成后找书本互动变身寂寞小姐吸收乌云获得宝箱（标点由玩家零零林提供）",
+                "role": "support"
+              },
+              {
+                "source": "KuroMap:8:1357337517870112768",
+                "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1357337517870112768-1.png",
+                "reason": "海岛书本、三根立柱和兔形声骸吸收后的紫箱，与guide岛屿地貌及柱位一致；85/87秒独立帧实定位靠近候选。 原攻略图片，可能引用作者游戏截图，未宣称独立实机复测。",
+                "role": "support"
+              },
+              {
+                "source": "KuroMap:8:1357337517870112768",
+                "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1357337517870112768-2.png",
+                "reason": "海岛书本、三根立柱和兔形声骸吸收后的紫箱，与guide岛屿地貌及柱位一致；85/87秒独立帧实定位靠近候选。 原攻略图片，可能引用作者游戏截图，未宣称独立实机复测。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "本片作者明确限定探测仪无法发现的收集范围，本成员有实际隐藏触发/奖励过程及guide对应，作为离线作者证言候选正例；不是仅标题或“需要解锁”推断，不宣称独立扫描对照测试。",
+              "evidence": [
+                {
+                  "source": "BV1dVuGzeEKk:p1",
+                  "locator": "ASR 5.36–7.66s",
+                  "reason": "原ASR“其他弹机已扫不到的宝箱全收集”；时间轴已有“奇藏探测仪”单独纠正，未改原文。依据原ASR及独立校正，不是本轮直接听音。",
+                  "role": "support",
+                  "start": 5.36,
+                  "end": 7.66
+                },
+                {
+                  "source": "BV1dVuGzeEKk:p1",
+                  "locator": "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00087.00.jpg",
+                  "reason": "本成员实际奖励过程已核对；该图单独不证明探测仪属性。",
+                  "role": "support",
+                  "start": 7.66,
+                  "end": 88.6
+                }
+              ],
+              "confidenceBasis": "local-ASR-scoped-author-testimony-plus-reward-and-guide; not-independent-scanner-test"
+            },
+            "localizationAttempts": [
+              {
+                "locator": "out/detectability-v2/matching-rinascita/fullscale-minimap.json#12",
+                "accepted": true,
+                "reasons": [],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/fullscale-minimap.json#13",
+                "accepted": true,
+                "reasons": [],
+                "error": null
+              }
+            ],
+            "reviewedBy": "offline-v2-rinascita-first-pass",
+            "sourceEventPreserved": true
+          }
+        }
+      ],
+      "uncertainties": []
+    },
+    {
+      "eventId": "BV1dVuGzeEKk:p1:e002",
+      "ordinal": 2,
+      "start": 88.6,
+      "end": 129.20075,
+      "progressBarMark": {
+        "label": null,
+        "authorNumber": null,
+        "approximateSeconds": 121.5,
+        "basis": "底部宝箱图标，无文字标签",
+        "evidenceFrame": "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00115.00.jpg"
+      },
+      "observedMechanism": "半山腰辉光外观假箱交互后变为拟态怪，击败后生成真正基准奇藏并开启。",
+      "route": "阿维纽林旧址东北信标→朝东北飞到前方半山腰蓝草与白骨处。",
+      "transcriptRefs": [
+        {
+          "start": 88.6,
+          "end": 89.48,
+          "text": "我们打开地图"
+        },
+        {
+          "start": 89.48,
+          "end": 90.52,
+          "text": "朝下方看"
+        },
+        {
+          "start": 91.68,
+          "end": 94.44,
+          "text": "这里我们来到这一个描述呢"
+        },
+        {
+          "start": 94.44,
+          "end": 96.2,
+          "text": "阿维纽林地上旧址"
+        },
+        {
+          "start": 96.2,
+          "end": 97.48,
+          "text": "右上方这个小银杏苗"
+        },
+        {
+          "start": 102.62,
+          "end": 103.62,
+          "text": "好传过来之后"
+        },
+        {
+          "start": 103.62,
+          "end": 104.9,
+          "text": "我们转向小地图"
+        },
+        {
+          "start": 104.9,
+          "end": 106.46,
+          "text": "右上方东北方向"
+        },
+        {
+          "start": 106.46,
+          "end": 107.78,
+          "text": "我们直接飞"
+        },
+        {
+          "start": 107.78,
+          "end": 109.16,
+          "text": "我们不落在下面"
+        },
+        {
+          "start": 109.16,
+          "end": 110.92,
+          "text": "我们落在面前这个半山腰"
+        },
+        {
+          "start": 110.92,
+          "end": 112.74,
+          "text": "能看到一个辉光奇藏箱"
+        },
+        {
+          "start": 113.22,
+          "end": 114.4,
+          "text": "这里是一个假宝箱"
+        },
+        {
+          "start": 114.4,
+          "end": 115.4,
+          "text": "我们把这个怪给清了"
+        },
+        {
+          "start": 120.95,
+          "end": 122.21,
+          "text": "清完怪就会给我们"
+        },
+        {
+          "start": 123.19,
+          "end": 124.93,
+          "text": "一个隐藏的基准奇藏箱"
+        },
+        {
+          "start": 124.93,
+          "end": 125.93,
+          "text": "好开完这个宝箱"
+        },
+        {
+          "start": 125.93,
+          "end": 127.21,
+          "text": "那我们的两个宝箱"
+        },
+        {
+          "start": 127.21,
+          "end": 128.39,
+          "text": "就已经全部收集齐了"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00090.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00095.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00105.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00111.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00113.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00115.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00116.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00118.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00120.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00121.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00122.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00123.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00124.00.jpg",
+        "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00129.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "基准奇藏",
+          "triggerSeconds": 116,
+          "appearanceSeconds": 121,
+          "collectionSeconds": 124,
+          "identityStatus": "pending",
+          "detectability": "unknown",
+          "firstPassStatus": "reviewed-unresolved",
+          "matchingReview": {
+            "analysis": "成员1（基准奇藏，领取124秒）首轮核对：蓝草与白色骨骼所在半山腰青箱和guide一致，拟态怪触发过程一致；地图配准仅证明区域，缺奖励处合格位置结果。 已做半幅地图参考、scale1局部参考和邻帧补查；本事件合格小地图结果0条，大地图配准2条；人工机制关键词与state描述交叉检索；候选而非身份结论。本轮已实际检索候选并核对来源/攻略，以上歧义未消除，保留reviewed-unresolved，不把算法失败当作点位不存在。",
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1357738947969900544",
+                "status": "candidate-not-confirmed",
+                "name": "基准奇藏箱",
+                "analysis": "在标点附近击败宝箱怪获得（标点由玩家kirsly提供）",
+                "evidence": [],
+                "distanceFromViewportCenterGameUnits": 273.2,
+                "distanceBasis": "仅粗检索视窗中心，不能作箱位置证明",
+                "guideCache": "out/detectability-v2/matching-rinascita/guides/guide-8-1357738947969900544.json",
+                "guideImages": [
+                  "out/detectability-v2/matching-rinascita/guides/guide-8-1357738947969900544-1.png"
+                ],
+                "imageReview": "已核对本成员指定图像"
+              }
+            ],
+            "positionEvidence": [
+              {
+                "source": "localize:full-map-registration",
+                "locator": "out/detectability-v2/matching-rinascita/BV1dVuGzeEKk-localization.json#3",
+                "reason": "本事件大地图90.0秒配准122内点，只确认地图区域/视窗，配置中心不是玩家或奖励位置，不足以确认身份。",
+                "role": "support"
+              },
+              {
+                "source": "localize:full-map-registration",
+                "locator": "out/detectability-v2/matching-rinascita/BV1dVuGzeEKk-localization.json#4",
+                "reason": "本事件大地图95.0秒配准171内点，只确认地图区域/视窗，配置中心不是玩家或奖励位置，不足以确认身份。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV1dVuGzeEKk:p1",
+                "locator": "88.60–129.20s",
+                "reason": "成员1：基准奇藏；触发116，出现121，领取124。半山腰辉光外观假箱交互后变为拟态怪，击败后生成真正基准奇藏并开启。 路线：阿维纽林旧址东北信标→朝东北飞到前方半山腰蓝草与白骨处。",
+                "role": "support",
+                "start": 88.6,
+                "end": 129.20075
+              },
+              {
+                "source": "BV1dVuGzeEKk:p1",
+                "locator": "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00124.00.jpg",
+                "reason": "本成员领取/出现邻近原帧，不把其它成员截图作为其独有身份证明。",
+                "role": "support",
+                "start": 88.6,
+                "end": 129.20075
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "KuroMap:8:1357738947969900544",
+                "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1357738947969900544.json",
+                "reason": "官方点位原始API记录，ID及类型保持原字符串；在标点附近击败宝箱怪获得（标点由玩家kirsly提供）",
+                "role": "support"
+              },
+              {
+                "source": "KuroMap:8:1357738947969900544",
+                "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1357738947969900544-1.png",
+                "reason": "蓝草与白色骨骼所在半山腰青箱和guide一致，拟态怪触发过程一致；地图配准仅证明区域，缺奖励处合格位置结果。 原攻略图片，可能引用作者游戏截图，未宣称独立实机复测。",
+                "role": "support"
+              }
+            ],
+            "exclusionEvidence": [],
+            "missingEvidence": [
+              "尚无位置、视频过程及同一ID攻略三证共同唯一绑定本成员。",
+              "奖励处小地图没有通过全部冻结门禁；地图视窗配准和路线只能提供区域先验，不能当箱坐标。"
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "本成员身份尚未唯一绑定点位。存在本片作者的探测仪范围说明，但不能把未定身份升级为地图点位正例。",
+              "evidence": [
+                {
+                  "source": "BV1dVuGzeEKk:p1",
+                  "locator": "ASR 5.36–7.66s",
+                  "reason": "原ASR“其他弹机已扫不到的宝箱全收集”；时间轴已有“奇藏探测仪”单独纠正，未改原文。依据原ASR及独立校正，不是本轮直接听音。",
+                  "role": "support",
+                  "start": 5.36,
+                  "end": 7.66
+                },
+                {
+                  "source": "BV1dVuGzeEKk:p1",
+                  "locator": "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00124.00.jpg",
+                  "reason": "本成员实际奖励过程已核对；该图单独不证明探测仪属性。",
+                  "role": "support",
+                  "start": 88.6,
+                  "end": 129.20075
+                }
+              ],
+              "confidenceBasis": "local-ASR-scoped-author-testimony-plus-reward-and-guide; not-independent-scanner-test"
+            },
+            "localizationAttempts": [
+              {
+                "locator": "out/detectability-v2/matching-rinascita/fullscale-minimap.json#14",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/fullscale-minimap.json#15",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#6",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#7",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              },
+              {
+                "locator": "out/detectability-v2/matching-rinascita/single-tile-followup.json#8",
+                "accepted": false,
+                "reasons": [
+                  "insufficient-ratio-matches"
+                ],
+                "error": null
+              }
+            ],
+            "reviewedBy": "offline-v2-rinascita-first-pass",
+            "sourceEventPreserved": true
+          }
+        }
+      ],
+      "uncertainties": []
+    }
+  ],
+  "nonEventIntervals": [
+    [
+      0,
+      7.66,
+      "视频前言；未用于地图定位"
+    ]
+  ],
+  "reviewedEvidence": [
+    "out/detectability-v2/BV1dVuGzeEKk/p01/transcript.txt",
+    "out/detectability-v2/BV1dVuGzeEKk/p01/visual/progress-1s-00000.00.jpg",
+    "out/detectability-v2/BV1dVuGzeEKk/p01/visual/progress-5s-00110.00.jpg",
+    "out/detectability-v2/BV1dVuGzeEKk/p01/visual/scenes-5s-00010.00.jpg",
+    "out/detectability-v2/BV1dVuGzeEKk/p01/visual/scenes-5s-00070.00.jpg",
+    "out/detectability-v2/BV1dVuGzeEKk/p01/visual/scenes-1s-00036.00.jpg",
+    "out/detectability-v2/BV1dVuGzeEKk/p01/visual/scenes-1s-00048.00.jpg",
+    "out/detectability-v2/BV1dVuGzeEKk/p01/visual/scenes-1s-00060.00.jpg",
+    "out/detectability-v2/BV1dVuGzeEKk/p01/visual/scenes-1s-00072.00.jpg",
+    "out/detectability-v2/BV1dVuGzeEKk/p01/visual/scenes-1s-00084.00.jpg",
+    "out/detectability-v2/BV1dVuGzeEKk/p01/visual/scenes-1s-00111.00.jpg",
+    "out/detectability-v2/BV1dVuGzeEKk/p01/visual/scenes-1s-00123.00.jpg"
+  ],
+  "transcriptCorrections": [
+    {
+      "start": 5.36,
+      "end": 7.66,
+      "raw": "其他弹机已",
+      "corrected": "奇藏探测仪",
+      "basis": "标题及上下文明确指道具，不改原ASR"
+    }
+  ],
+  "coverageNotes": [
+    "视频顺序两事件；39–84秒各柱与兔子是同一解谜过程，破木箱不另算奇藏。",
+    "5秒路线表及36–88、111–129秒逐秒关键帧已实际审阅。",
+    "进度条两处无文字宝箱标记，时刻按横向位置近似，不当作准确领取时间。",
+    "事件与前言覆盖真实时长；原始转写保留；文本+画面对照而非直接听音频。",
+    "未读旧候选、未匹配ID；等级以画面/末段文本交叉，identityStatus始终pending。"
+  ]
+}

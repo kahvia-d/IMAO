@@ -1,0 +1,4986 @@
+{
+  "schemaVersion": 2,
+  "status": "reviewed",
+  "stage": "after-all-independent-first-pass",
+  "firstPassSnapshot": "tools/MarkerDetectabilityV2/first-pass/snapshot.json",
+  "parts": [
+    {
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "首0–30s为日灵现场和显像说明，33–75s为游戏地图/购买五松塔；中段为实际引路和显像，尾861–879s领取最后箱，882–891.4s为牙列石窟游戏地图和下P衔接。未找到作者空间编号总览；底部箱号条仅章节索引。",
+      "evidence": [
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p1/survey-000.jpg",
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p1/survey-024.jpg",
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p1/survey-048.jpg",
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p1/last-frame.jpg"
+      ],
+      "associations": [],
+      "unresolved": [
+        "No author overview found to supplement unmatched members. Existing footage and raw guides remain authoritative; no new ID assignment."
+      ],
+      "overviewOnly": [],
+      "inspectionMethod": "New extraction from cached raw source: first90s every3s, interior every30s, last30s every3s plus actual final frame. Human visual review of all survey panels; no v1 decisions read. not-found is bounded to inspected frames, not a proof against a sub-second insert."
+    },
+    {
+      "bvid": "BV13ZvrBtEde",
+      "part": 2,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "首0–12s为牙列石窟原生地图/机兵导航；中间为三条摩托赛道，尾263–290s赛道及结算，末293.2s普通地表地图。没有作者编号落点总览。不能以进度条箱28–36顺序分配每组的三个数据库ID。",
+      "evidence": [
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p2/survey-000.jpg",
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p2/survey-024.jpg",
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p2/last-frame.jpg"
+      ],
+      "associations": [],
+      "unresolved": [
+        "No author overview found to supplement unmatched members. Existing footage and raw guides remain authoritative; no new ID assignment."
+      ],
+      "overviewOnly": [],
+      "inspectionMethod": "New extraction from cached raw source: first90s every3s, interior every30s, last30s every3s plus actual final frame. Human visual review of all survey panels; no v1 decisions read. not-found is bounded to inspected frames, not a proof against a sub-second insert."
+    },
+    {
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "首0–12s为游戏地图及信标选择，中段为红名战斗和秘境探索；尾395–422s为秘境对白，最后425.2s打开秘境层地图。未找到作者编号总览，底部潮1–7/箱1–4是章节条。最后实际地下地图是新可用定位线索，但它不是作者总览，也不能拿地表仿射投射。",
+      "evidence": [
+        "out/detectability-v2/overview-new-regions/BV19kNu6AEVR-p1/survey-000.jpg",
+        "out/detectability-v2/overview-new-regions/BV19kNu6AEVR-p1/survey-024.jpg",
+        "out/detectability-v2/overview-new-regions/BV19kNu6AEVR-p1/survey-048.jpg",
+        "out/detectability-v2/overview-new-regions/BV19kNu6AEVR-p1/last-frame.jpg",
+        "out/detectability-v2/overview-new-regions/meng-layer-results.json",
+        "out/detectability-v2/overview-new-regions/meng-layer-proposal.json",
+        "out/detectability-v2/overview-new-regions/meng-projected-points.jpg"
+      ],
+      "associations": [],
+      "unresolved": [
+        {
+          "eventId": "BV19kNu6AEVR:p1:e009",
+          "members": [
+            1,
+            2,
+            3
+          ],
+          "newSource": "out/detectability-v2/overview-new-regions/BV19kNu6AEVR-p1/last-frame.jpg",
+          "analysis": "425.2s actual map shows the secret chamber floor with water, bridge/rooms and real player arrow. This is a better floor outline seed than surface maps; needs matching against a correctly registered underground reference before upgrading the three visually associated raw guide IDs. No identity change made.",
+          "followup": "Completed bounded dedicated-layer matching; see followupAttempt. Correct layer no longer missing. Direct reward-frame geometry still fails; three identity proposals handed to parent rather than silently changing frozen timeline."
+        }
+      ],
+      "overviewOnly": [],
+      "inspectionMethod": "New extraction from cached raw source: first90s every3s, interior every30s, last30s every3s plus actual final frame. Human visual review of all survey panels; no v1 decisions read. not-found is bounded to inspected frames, not a proof against a sub-second insert.",
+      "followupAttempt": {
+        "status": "bounded-attempt-complete",
+        "correctReference": {
+          "stateId": "8",
+          "layerId": 57,
+          "floorId": "-1/57",
+          "name": "雾隐帘洞",
+          "source": "map-regions/layers/B50F4135DCCC4D8DA87ED33CE95EA31D/8/57/-1/-7_1.png",
+          "metadata": "Assets/FeaturesDatas/KuroTilePacks/mengzhou/layered-floors/floor-index.json",
+          "coordinateTransform": "localize.tile_transform([-7,-7,1,1],scale); raw state coordinates = game*100; app origin/scale not applied"
+        },
+        "registeredFrame": "out/detectability-v2/overview-new-regions/BV19kNu6AEVR-p1/last-frame.jpg",
+        "acceptedFullMapFits": [
+          {
+            "inliers": 36,
+            "medianError": 0.16004480534222448,
+            "p90Error": 0.4177950586578234,
+            "scale": 0.7225607152367666,
+            "hullFraction": 0.14227549661264396,
+            "layer": "-1/57",
+            "visualization": "out/detectability-v2/overview-new-regions/meng-425.2--1_57-0.5-match.jpg"
+          },
+          {
+            "inliers": 39,
+            "medianError": 0.5103677475837854,
+            "p90Error": 0.9946681083163966,
+            "scale": 1.4450681861136532,
+            "hullFraction": 0.14932530594969923,
+            "layer": "-1/57",
+            "visualization": "out/detectability-v2/overview-new-regions/meng-425.2--1_57-1-match.jpg"
+          }
+        ],
+        "rewardFrameFits": "0/36 trials passed (6 reward frames x 3 correct-domain floors x 2 reference scales); limits unchanged",
+        "proposals": [
+          {
+            "eventId": "BV19kNu6AEVR:p1:e009",
+            "member": 1,
+            "stateId": "8",
+            "pointId": "1526608470311550976",
+            "recommendation": "confirm-after-parent-review",
+            "analysis": "首轮唯一明确缺口是正确层的独立定位；本轮末帧确定雾隐帘洞-1/57，三候选原始坐标均落在这张洞层对应建筑群。北侧沿水栏杆平台朴素箱；源372s箱背后为水平金色栏杆、岩壁和方形平台，原始攻略图1相同平台地砖/灯柱/栏杆组合。不是按编号顺序分配。 不把425.2s玩家位置倒推至本次领取，不声称奖励帧SIFT通过。",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/overview-new-regions/meng-layer-results.json",
+                "locator": "425.2s; layer -1/57; half/full resolution",
+                "reason": "Correct dedicated underground map aligns with 36/39 inliers; alternative -1/58 and -2/58 fail frozen gate. Raw marker projected onto this registered floor, not surface.",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-v2/overview-new-regions/meng-projected-points.json",
+                "locator": "pointId 1526608470311550976",
+                "reason": "Raw point [-635300.0, -29000.0] projects to source floor-map pixel [393.42666477540934, 212.6245008473066]; bounds establish correct cave domain; no earlier player coordinate inferred.",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "369–373s member 1",
+                "start": 369,
+                "end": 373,
+                "reason": "北侧沿水栏杆平台朴素箱；源372s箱背后为水平金色栏杆、岩壁和方形平台，原始攻略图1相同平台地砖/灯柱/栏杆组合。不是按编号顺序分配。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976.json",
+                "locator": "content.description and image1",
+                "reason": "北侧沿水栏杆平台朴素箱；源372s箱背后为水平金色栏杆、岩壁和方形平台，原始攻略图1相同平台地砖/灯柱/栏杆组合。不是按编号顺序分配。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-1.png",
+                "locator": "full screenshot",
+                "reason": "北侧沿水栏杆平台朴素箱；源372s箱背后为水平金色栏杆、岩壁和方形平台，原始攻略图1相同平台地砖/灯柱/栏杆组合。不是按编号顺序分配。",
+                "role": "support"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "352.22–355.14s local ASR explicitly scopes the scanner claim to the three boxes in this secret chamber, independently supported by three visible pickups; not based on title or lamp-unlock assumption.",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "352.22–355.14s",
+                  "start": 352.22,
+                  "end": 355.14,
+                  "role": "support",
+                  "reason": "Explicit three-box scanner statement; visible three member pickups 369–390s"
+                }
+              ]
+            },
+            "limitations": [
+              "No accepted direct reward-frame geometry: 369/372/380/381/387/389s remained below fixed minMatches16.",
+              "Position support is correct floor registration + guide-specific architecture, not metric per-reward coordinates. Parent may retain unresolved if exact reward geometry is mandatory."
+            ]
+          },
+          {
+            "eventId": "BV19kNu6AEVR:p1:e009",
+            "member": 2,
+            "stateId": "8",
+            "pointId": "1526609969292886016",
+            "recommendation": "confirm-after-parent-review",
+            "analysis": "首轮唯一明确缺口是正确层的独立定位；本轮末帧确定雾隐帘洞-1/57，三候选原始坐标均落在这张洞层对应建筑群。屋顶朴素箱；源380–381s箱体位于两根悬旗之间，前方栏杆开口和右侧陶罐可见，原始攻略图1显示同样旗柱、栏杆和陶罐。用独特屋顶构造区别北侧朴素箱。 不把425.2s玩家位置倒推至本次领取，不声称奖励帧SIFT通过。",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/overview-new-regions/meng-layer-results.json",
+                "locator": "425.2s; layer -1/57; half/full resolution",
+                "reason": "Correct dedicated underground map aligns with 36/39 inliers; alternative -1/58 and -2/58 fail frozen gate. Raw marker projected onto this registered floor, not surface.",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-v2/overview-new-regions/meng-projected-points.json",
+                "locator": "pointId 1526609969292886016",
+                "reason": "Raw point [-630800.0, -28900.0] projects to source floor-map pixel [430.94206058912914, 213.37496223046355]; bounds establish correct cave domain; no earlier player coordinate inferred.",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "380–382s member 2",
+                "start": 380,
+                "end": 382,
+                "reason": "屋顶朴素箱；源380–381s箱体位于两根悬旗之间，前方栏杆开口和右侧陶罐可见，原始攻略图1显示同样旗柱、栏杆和陶罐。用独特屋顶构造区别北侧朴素箱。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016.json",
+                "locator": "content.description and image1",
+                "reason": "屋顶朴素箱；源380–381s箱体位于两根悬旗之间，前方栏杆开口和右侧陶罐可见，原始攻略图1显示同样旗柱、栏杆和陶罐。用独特屋顶构造区别北侧朴素箱。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016-1.png",
+                "locator": "full screenshot",
+                "reason": "屋顶朴素箱；源380–381s箱体位于两根悬旗之间，前方栏杆开口和右侧陶罐可见，原始攻略图1显示同样旗柱、栏杆和陶罐。用独特屋顶构造区别北侧朴素箱。",
+                "role": "support"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "352.22–355.14s local ASR explicitly scopes the scanner claim to the three boxes in this secret chamber, independently supported by three visible pickups; not based on title or lamp-unlock assumption.",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "352.22–355.14s",
+                  "start": 352.22,
+                  "end": 355.14,
+                  "role": "support",
+                  "reason": "Explicit three-box scanner statement; visible three member pickups 369–390s"
+                }
+              ]
+            },
+            "limitations": [
+              "No accepted direct reward-frame geometry: 369/372/380/381/387/389s remained below fixed minMatches16.",
+              "Position support is correct floor registration + guide-specific architecture, not metric per-reward coordinates. Parent may retain unresolved if exact reward geometry is mandatory."
+            ]
+          },
+          {
+            "eventId": "BV19kNu6AEVR:p1:e009",
+            "member": 3,
+            "stateId": "8",
+            "pointId": "1526609257964093440",
+            "recommendation": "confirm-after-parent-review",
+            "analysis": "首轮唯一明确缺口是正确层的独立定位；本轮末帧确定雾隐帘洞-1/57，三候选原始坐标均落在这张洞层对应建筑群。狐像前基准箱；源387–390s经过平台至狐像前开基准箱，原始攻略图1显示狐像、正前箱位、对称阶梯/水池。和两个朴素箱类别、场景均不同。 不把425.2s玩家位置倒推至本次领取，不声称奖励帧SIFT通过。",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/overview-new-regions/meng-layer-results.json",
+                "locator": "425.2s; layer -1/57; half/full resolution",
+                "reason": "Correct dedicated underground map aligns with 36/39 inliers; alternative -1/58 and -2/58 fail frozen gate. Raw marker projected onto this registered floor, not surface.",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-v2/overview-new-regions/meng-projected-points.json",
+                "locator": "pointId 1526609257964093440",
+                "reason": "Raw point [-633600.0, -27100.0] projects to source floor-map pixel [407.63356688738895, 228.43213333313705]; bounds establish correct cave domain; no earlier player coordinate inferred.",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "387–390s member 3",
+                "start": 387,
+                "end": 390,
+                "reason": "狐像前基准箱；源387–390s经过平台至狐像前开基准箱，原始攻略图1显示狐像、正前箱位、对称阶梯/水池。和两个朴素箱类别、场景均不同。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440.json",
+                "locator": "content.description and image1",
+                "reason": "狐像前基准箱；源387–390s经过平台至狐像前开基准箱，原始攻略图1显示狐像、正前箱位、对称阶梯/水池。和两个朴素箱类别、场景均不同。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-1.png",
+                "locator": "full screenshot",
+                "reason": "狐像前基准箱；源387–390s经过平台至狐像前开基准箱，原始攻略图1显示狐像、正前箱位、对称阶梯/水池。和两个朴素箱类别、场景均不同。",
+                "role": "support"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "352.22–355.14s local ASR explicitly scopes the scanner claim to the three boxes in this secret chamber, independently supported by three visible pickups; not based on title or lamp-unlock assumption.",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "352.22–355.14s",
+                  "start": 352.22,
+                  "end": 355.14,
+                  "role": "support",
+                  "reason": "Explicit three-box scanner statement; visible three member pickups 369–390s"
+                }
+              ]
+            },
+            "limitations": [
+              "No accepted direct reward-frame geometry: 369/372/380/381/387/389s remained below fixed minMatches16.",
+              "Position support is correct floor registration + guide-specific architecture, not metric per-reward coordinates. Parent may retain unresolved if exact reward geometry is mandatory."
+            ]
+          }
+        ],
+        "timelineMutations": false,
+        "summary": "Correct cached layer and transform are available and verified. Three scene-specific identities now have independent correct-floor evidence; propose confirmation for parent review, explicitly without claiming direct reward-frame localization."
+      }
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–3秒为大地图加右下插图的路线总览，标注箱等级而无顺序数字；5秒后现场前言，15/30秒为范围说明使用的普通地图。右下插图与底部进度条发生裁切，不能按可见图钉数强制核成九个事件。东侧蟹形岛明确写3精密、1基准、1朴素，与末段五箱逐个领取一致；其他祭坛、两处辉光拟态箱仍须依视频分段。末尾465.07–474.07秒是交付后的五箱及普通结束地图，未见额外总览奖励。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p1-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p1-00003.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p1-00005.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p1-00465.07.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p1-00470.07.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p1-00474.07.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "3精密1基准1朴素",
+          "eventIds": [
+            "BV1Aeh2zvEko:p1:e009"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e009",
+              "members": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "一组总览图钉对应同一祭坛多轮交付后的五个奖励成员；不拆成五个虚构事件，不凭箱等级分配五个数据库ID。",
+          "evidence": [
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00472.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "两处辉光",
+          "eventIds": [
+            "BV1Aeh2zvEko:p1:e001",
+            "BV1Aeh2zvEko:p1:e005"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e001",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e005",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "总览有两处辉光标注，视频中两段假箱变拟态怪后最终真辉光箱；假箱动画与怪物波次不重复记奖励。",
+          "evidence": [
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00144.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00264.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "朴素祭坛路线",
+          "eventIds": [
+            "BV1Aeh2zvEko:p1:e002",
+            "BV1Aeh2zvEko:p1:e003",
+            "BV1Aeh2zvEko:p1:e004",
+            "BV1Aeh2zvEko:p1:e006",
+            "BV1Aeh2zvEko:p1:e007",
+            "BV1Aeh2zvEko:p1:e008"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e002",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e003",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e004",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e006",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e007",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p1:e008",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "六段祭坛过程仍以实际触发顺序为准；插图与大图可见朴素图钉不能无歧义逐一分配，不强行一一配对。",
+          "evidence": [
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00177.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00202.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00223.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00296.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00350.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p01/visual/frame-00393.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "overview-association-unclear",
+          "analysis": "右下插图裁切且无独立数字编号；可见单箱图钉与六段朴素祭坛尚不能全部逐一关联。保留为总览关联未决，不假定缺失视频事件，也不据数量调整时间线。"
+        },
+        {
+          "kind": "identity-remains-unresolved",
+          "eventIds": [
+            "BV1Aeh2zvEko:p1:e009"
+          ],
+          "analysis": "总览确认多箱组合，仅此不足以区分同场五个奖励各自数据库点ID。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–3秒展示桑古伊斯南部一屏多处白色自定义标记；5秒打开自定义标记菜单，7秒选信标进入实际路线。它是位置总览，但没有可读顺序数字，白色图案也不能直接等同箱子。底部十二个箱进度图钉与十二次石碑交互奖励作覆盖检查；需保留五个基准和七个朴素各自时间顺序，不把地图自定义标记直接当数据库ID。298.90–307.90秒返回初始NPC并出现成就，不是第十三个箱子。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00003.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00005.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00007.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00298.90.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00303.90.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p2-00307.90.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "十二个箱形进度图钉/无数字自定义地图标记",
+          "eventIds": [
+            "BV1Aeh2zvEko:p2:e001",
+            "BV1Aeh2zvEko:p2:e002",
+            "BV1Aeh2zvEko:p2:e003",
+            "BV1Aeh2zvEko:p2:e004",
+            "BV1Aeh2zvEko:p2:e005",
+            "BV1Aeh2zvEko:p2:e006",
+            "BV1Aeh2zvEko:p2:e007",
+            "BV1Aeh2zvEko:p2:e008",
+            "BV1Aeh2zvEko:p2:e009",
+            "BV1Aeh2zvEko:p2:e010",
+            "BV1Aeh2zvEko:p2:e011",
+            "BV1Aeh2zvEko:p2:e012"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e001",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e002",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e003",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e004",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e005",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e006",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e007",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e008",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e009",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e010",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e011",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1Aeh2zvEko:p2:e012",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "十二个石碑奖励在视频各自出现，地图标记只能给地点提示；末尾返交NPC成就不增加箱成员。",
+          "evidence": [
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00063.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00077.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00094.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00107.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00129.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00151.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00171.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00191.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00208.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00236.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00255.00.jpg",
+            "out/detectability-v2/BV1Aeh2zvEko/p02/visual/frame-00272.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "overview-association-unclear",
+          "analysis": "地图中自定义标记没有顺序标签且部分位于边缘，不能据单帧逐一匹配十二块石碑或升级未决身份。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 3,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "0–9秒为现场站立及隐藏任务说明，没有静态位置总览。底部条带是第一处、第二处等前置/成就步骤，其中并非每处给宝箱。15秒是一次普通任务定位地图，30秒为途中；312.03–321.03秒为最终战斗、转场及两箱。仍是一条隐藏任务的一个奖励事件、两个成员；不按前置问号或成就数拆事件。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00007.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00009.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00015.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00030.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00312.03.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00317.03.jpg",
+        "out/detectability-v2/overview-rinascita/BV1Aeh2zvEko-p3-00321.03.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "第一处等任务步骤与末尾两箱",
+          "eventIds": [
+            "BV1Aeh2zvEko:p3:e001"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1Aeh2zvEko:p3:e001",
+              "members": [
+                1,
+                2
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "六处前置线索、途中问号NPC、战斗与最终两箱属于同一任务链，步骤条带不是宝箱编号总览。",
+          "evidence": [
+            "out/detectability-v2/BV1Aeh2zvEko/p03/visual/frame-00322.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "identity-remains-unresolved",
+          "eventIds": [
+            "BV1Aeh2zvEko:p3:e001"
+          ],
+          "analysis": "首尾无独立地图总览补足两箱身份；不能从两箱外观或步骤标题直接确认ID。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "首0–约10s确有作者编号总览：地表大图叠加箱1–24、第二幅箱25–32及多个地下局部拼贴；12s后转普通地图。检查中段及末尾未再找到编号总览。0s和6s主体地图在固定SIFT门限下分别81/163内点通过，只可把作者标记作区域候选，不能把章节号当ID。拼贴子图不是同一坐标变换，左侧箱31的主图投影已明确作废。第二幅右侧标成箱32的位置接近王座任务，视频末段章节为箱33，编号冲突须保留。",
+      "evidence": [
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/survey-000.jpg",
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/survey-024.jpg",
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/survey-048.jpg",
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/survey-072.jpg",
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/last-frame.jpg",
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/frame-0000.jpg",
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/frame-0006.jpg",
+        "out/detectability-v2/overview-new-regions/overview-geometry.json"
+      ],
+      "associations": [
+        {
+          "eventId": "BV1F3A3zxEDQ:p1:e001",
+          "member": 1,
+          "overviewLabel": "箱1",
+          "candidateStateId": "8",
+          "candidatePointId": "1469743197810446336",
+          "status": "candidate-rechecked-not-promoted",
+          "analysis": "总览圈点到候选约75.61游戏单位，仅粗定位。回看65s朴素箱、同一右侧尖石/黑岩壁，与攻略图吻合；显像破冰后NPC对话机制与原始文字一致。建议作为补强身份候选交主审核，属性仍不能由总览决定。",
+          "videoEvidence": [
+            "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-00065.00.jpg"
+          ],
+          "guideEvidence": [
+            "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469743197810446336.json",
+            "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469743197810446336-1.png"
+          ]
+        },
+        {
+          "eventId": "BV1F3A3zxEDQ:p1:e024",
+          "member": 1,
+          "overviewLabel": "箱29",
+          "candidateStateId": "8",
+          "candidatePointId": "1477785036769918976",
+          "status": "candidate-rechecked-not-promoted",
+          "analysis": "总览区域候选49.68单位，与首轮1025s层图平面候选一致；新取原始攻略明确第三次营救艾尔玛，1017s回看岩壁脚下朴素箱与图相容。但阴影/视角差异及目标层归属仍缺独立验证，建议保持未确认。",
+          "videoEvidence": [
+            "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-01017.00.jpg"
+          ],
+          "guideEvidence": [
+            "out/detectability-v2/overview-new-regions/guides/guide-8-1477785036769918976.json",
+            "out/detectability-v2/overview-new-regions/guides/guide-8-1477785036769918976-1.png"
+          ]
+        },
+        {
+          "eventId": "BV1F3A3zxEDQ:p1:e028",
+          "member": 1,
+          "overviewLabel": "总览箱32 / 视频章节箱33",
+          "candidateStateId": "8",
+          "candidatePointId": "1477783180906614784",
+          "status": "candidate-rechecked-not-promoted",
+          "analysis": "主体图标离原始王只是一个位置候选23.70单位；回看1240–1244s为金色辉光箱及冰晶岩壁，攻略图显示同型箱和岩壁，任务首领/王座机制一致。总览标号与章节冲突，不按编号映射。作为强候选报告，不直接改变冻结首轮。",
+          "videoEvidence": [
+            "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-01240.00.jpg"
+          ],
+          "guideEvidence": [
+            "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477783180906614784.json",
+            "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477783180906614784-1.png"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "overviewLabel": "箱4-6",
+          "eventId": "BV1F3A3zxEDQ:p1:e004",
+          "members": [
+            1,
+            2,
+            3
+          ],
+          "analysis": "总览三箱聚合标记给出候选组1469149723331514368/1469150333640495104/1469151068226895872，但位置约108–119单位且原片经坑道/地下黑池；未取得成员对应图证据，不能按ID数组或箱号顺序分配。"
+        },
+        {
+          "overviewLabel": "箱15-17 / 箱20-22",
+          "eventIds": [
+            "BV1F3A3zxEDQ:p1:e013",
+            "BV1F3A3zxEDQ:p1:e016"
+          ],
+          "analysis": "总览只聚合三箱位置，既不代表三成员各自坐标也不解决地下/地表层。保留已执行的区域搜索结果，不升级。"
+        },
+        {
+          "overviewLabel": "箱31",
+          "eventId": "BV1F3A3zxEDQ:p1:e026",
+          "analysis": "左下为独立地下拼贴；主地图仿射投影错误，已经在geometry中标记rejected。未把两箱按31/32顺序分ID。"
+        },
+        {
+          "overviewLabel": "箱10",
+          "eventId": "BV1F3A3zxEDQ:p1:e008",
+          "analysis": "仅提示已领取的冰原往事任务箱。候选1469344326655721472具对应任务描述，但该段无本次领取；总览不得补造可见奖励或变成目击确认。"
+        },
+        {
+          "overviewLabel": "箱32 / 箱33",
+          "eventId": "BV1F3A3zxEDQ:p1:e028",
+          "analysis": "总览右侧标签看作箱32，视频尾部章节为箱33。仅通过位置+任务内容形成候选，不强行统一或改既有时间线。"
+        }
+      ],
+      "overviewOnly": [],
+      "inspectionMethod": "New extraction from cached raw source: first90s every3s, interior every30s, last30s every3s plus actual final frame. Human visual review of all survey panels; no v1 decisions read. not-found is bounded to inspected frames, not a proof against a sub-second insert."
+    },
+    {
+      "bvid": "BV1JB3Fz2EqG",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "实际检查0/1/2/3秒双栏地图总览以及5–30秒准备过程、541.67–550.67秒片尾。总览使用箱等级文字及连线，无独立可读数字编号。五个任务地点并非五个奖励：左上明确3宝箱，其余精密/基准地点分别在巨石原及荣耀之巅两侧。购买材料为问号准备标记，不计奖励。片尾是雕像下开箱，无第二总览或额外领取线索。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1JB3Fz2EqG-p1-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1JB3Fz2EqG-p1-00003.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1JB3Fz2EqG-p1-00005.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1JB3Fz2EqG-p1-00541.67.jpg",
+        "out/detectability-v2/overview-rinascita/BV1JB3Fz2EqG-p1-00550.67.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "3宝箱",
+          "eventIds": [
+            "BV1JB3Fz2EqG:p1:e001"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1JB3Fz2EqG:p1:e001",
+              "members": [
+                1,
+                2,
+                3
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "门前魔术挑战只是一事件，回门口连续领取三箱，与3宝箱组标对应，不拆成三次路线。",
+          "evidence": [
+            "out/detectability-v2/BV1JB3Fz2EqG/p01/visual/frame-00184.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "精密/基准四处地点",
+          "eventIds": [
+            "BV1JB3Fz2EqG:p1:e002",
+            "BV1JB3Fz2EqG:p1:e003",
+            "BV1JB3Fz2EqG:p1:e004",
+            "BV1JB3Fz2EqG:p1:e005"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1JB3Fz2EqG:p1:e002",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1JB3Fz2EqG:p1:e003",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1JB3Fz2EqG:p1:e004",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1JB3Fz2EqG:p1:e005",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "两栏地图分别展示狮像藏宝地、营地、荣耀之巅雕像两侧；与四段实际路线和末段投喂开暗室相容。只核总览覆盖，不据图钉升级e3/e5身份。",
+          "evidence": [
+            "out/detectability-v2/BV1JB3Fz2EqG/p01/visual/frame-00283.00.jpg",
+            "out/detectability-v2/BV1JB3Fz2EqG/p01/visual/frame-00383.00.jpg",
+            "out/detectability-v2/BV1JB3Fz2EqG/p01/visual/frame-00494.00.jpg",
+            "out/detectability-v2/BV1JB3Fz2EqG/p01/visual/frame-00548.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "identity-remains-unresolved",
+          "eventIds": [
+            "BV1JB3Fz2EqG:p1:e003",
+            "BV1JB3Fz2EqG:p1:e005"
+          ],
+          "analysis": "总览仅给大致地点和等级；营地三剑与投喂暗室仍需独立攻略/定位证据，不能由总览图钉直接确认数据库ID。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1dVuGzeEKk",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "0–2秒为现场站立；3–9秒为普通可拖动游戏地图和黄色玩家箭头，未见作者多点标注/路线总览。15/30秒进入操作，119.20–128.20秒为第二项拟态怪后的真实开箱。底部只有两个无编号箱形进度图钉，符合两段事件；假辉光箱变怪不增加第三奖励。检查的首尾未发现独立总览。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00003.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00007.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00015.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00119.20.jpg",
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00124.20.jpg",
+        "out/detectability-v2/overview-rinascita/BV1dVuGzeEKk-p1-00128.20.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "底部两个无编号进度图钉",
+          "eventIds": [
+            "BV1dVuGzeEKk:p1:e001",
+            "BV1dVuGzeEKk:p1:e002"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1dVuGzeEKk:p1:e001",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1dVuGzeEKk:p1:e002",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "柱共鸣精密箱和拟态怪后的基准箱为两个事件；起始普通地图不作为全片总览。",
+          "evidence": [
+            "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00087.00.jpg",
+            "out/detectability-v2/BV1dVuGzeEKk/p01/visual/frame-00129.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "identity-remains-unresolved",
+          "eventIds": [
+            "BV1dVuGzeEKk:p1:e002"
+          ],
+          "analysis": "普通定位地图没有增加独立攻略证据；第二奖励身份仍按首轮未决保留。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1evKmzxE34",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "首段0–5秒为角色在建筑前口播，尾段为第三个箱子领取；全片已按三个进度条事件审阅，没有作者标点总览。途中普通游戏开图是路线定位，不当作作者总览。3事件/3奖励在首轮已独立匹配，无需总览新增。",
+      "evidence": [
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00000.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00003.00.jpg",
+        "out/detectability-v2/BV1evKmzxE34/p01/visual/frame-00113.00.jpg"
+      ],
+      "associations": [],
+      "unresolved": []
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–3秒是岛屿地表路线总览，5–9秒切到金库/列车区域的双栏地下路线总览；图钉标朴素/基准，无可读数字编号。表面明确需买44个锵锵蟹，是材料需求而非44个奖励。地表多个祭坛、橄榄与初始沉船秘匣不能只按朴素标注倒推出类型。地下总览可见八个朴素和一个基准提示，视频实际为三次乘车射击2+4+2成员及一次四NPC答题奖励。704.37–713.37秒是最后射击自动领取，无新事件。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00003.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00005.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00007.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00009.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00704.37.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00709.37.jpg",
+        "out/detectability-v2/overview-rinascita/BV1hHuGzFEZG-p1-00713.37.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "地下八个朴素图钉",
+          "eventIds": [
+            "BV1hHuGzFEZG:p1:e013",
+            "BV1hHuGzFEZG:p1:e015",
+            "BV1hHuGzFEZG:p1:e016"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1hHuGzFEZG:p1:e013",
+              "members": [
+                1,
+                2
+              ]
+            },
+            {
+              "eventId": "BV1hHuGzFEZG:p1:e015",
+              "members": [
+                1,
+                2,
+                3,
+                4
+              ]
+            },
+            {
+              "eventId": "BV1hHuGzFEZG:p1:e016",
+              "members": [
+                1,
+                2
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "三段乘车的奖励成员数为2、4、2，总览八处是空间点组，不是八次上车；仍保留每次实际射击出现的成员顺序。",
+          "evidence": [
+            "out/detectability-v2/BV1hHuGzFEZG/p01/visual/scenes-1s-00470.00.jpg",
+            "out/detectability-v2/BV1hHuGzFEZG/p01/visual/scenes-1s-00631.00.jpg",
+            "out/detectability-v2/BV1hHuGzFEZG/p01/visual/scenes-1s-00708.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "地下基准图钉",
+          "eventIds": [
+            "BV1hHuGzFEZG:p1:e014"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1hHuGzFEZG:p1:e014",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "四位逆究声骸答题属于一个事件最终一箱，不能把四个NPC当四个奖励。",
+          "evidence": [
+            "out/detectability-v2/BV1hHuGzFEZG/p01/visual/scenes-1s-00568.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "地表祭坛线路",
+          "eventIds": [
+            "BV1hHuGzFEZG:p1:e010"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1hHuGzFEZG:p1:e010",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "视频上层祭坛产出大型特殊箱，首轮明确名称未核；总览总体朴素字样不能替换实际箱体/领取证据。",
+          "evidence": [
+            "out/detectability-v2/BV1hHuGzFEZG/p01/visual/scenes-1s-00320.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "overview-type-ambiguity",
+          "eventIds": [
+            "BV1hHuGzFEZG:p1:e010"
+          ],
+          "analysis": "总览地表多标朴素，但上层祭坛实拍为大型特殊箱；需独立核对具体图钉与奖励类别，不能依总览纠正或确认。"
+        },
+        {
+          "kind": "identity-remains-unresolved",
+          "eventIds": [
+            "BV1hHuGzFEZG:p1:e013",
+            "BV1hHuGzFEZG:p1:e015",
+            "BV1hHuGzFEZG:p1:e016"
+          ],
+          "analysis": "地下总览给大致射击位置，不给数据库ID；两箱/四箱/两箱必须逐成员回到射击帧与攻略验证，保持首轮未决。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "0–16秒为北落野草地站立说明，17秒末尾切到无作者图钉/白箭头的普通实机地图。逐秒查看整个0–17.1秒前言，没有作者路线总览、奖励触发或领奖，不能从角色附近装置补造事件。",
+      "checkedIntervals": [
+        [
+          0,
+          17.1
+        ]
+      ],
+      "overviewInterval": null,
+      "evidence": [
+        "out/detectability-v2/overview-huanglong/p01-opening.jpg",
+        "out/detectability-v2/overview-huanglong/p01-000.jpg",
+        "out/detectability-v2/overview-huanglong/p01-005.jpg",
+        "out/detectability-v2/overview-huanglong/p01-017.jpg"
+      ],
+      "associations": [],
+      "unresolved": [],
+      "overviewOnly": [],
+      "timelineSha256AtReview": "209342cb1e789ab5838c8e7066bac8c0189694f3b16f56f7d2d9e5e3cd1993eb"
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 2,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–4秒为北落野/悬浮废墟作者路线总览，5秒已切为无作者图钉的普通地图。十个箱型图钉沿悬浮废墟北部、东岸及西南北落峡谷三组分布，与时间轴十事件的传送分组相容；图钉标的是箱型，不是数字。跑酷图钉有起点含义，不能按终箱位置数第二个事件。",
+      "checkedIntervals": [
+        [
+          0,
+          17
+        ]
+      ],
+      "overviewInterval": [
+        0,
+        4
+      ],
+      "evidence": [
+        "out/detectability-v2/overview-huanglong/p02-opening.jpg",
+        "out/detectability-v2/overview-huanglong/p02-000.jpg",
+        "out/detectability-v2/overview-huanglong/p02-005.jpg",
+        "out/detectability-v2/overview-huanglong/p02-projected.jpg"
+      ],
+      "associations": [
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "悬浮废墟北部四图钉",
+          "eventIds": [
+            "BV1iMTXzVE8J:p2:e001",
+            "BV1iMTXzVE8J:p2:e002",
+            "BV1iMTXzVE8J:p2:e003",
+            "BV1iMTXzVE8J:p2:e004"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "北岸精密挑战→北侧基准飞檐起点→东侧尖端基准射击→西侧朴素破石；起点/终点须依攻略图区分。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p02-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p02.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "东岸相邻精密/朴素",
+          "eventIds": [
+            "BV1iMTXzVE8J:p2:e005",
+            "BV1iMTXzVE8J:p2:e006"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "音障仪与三石奖励邻接，原视频206/217秒分两箱，不能合并。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p02-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p02.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "西南两条路线",
+          "eventIds": [
+            "BV1iMTXzVE8J:p2:e007",
+            "BV1iMTXzVE8J:p2:e008",
+            "BV1iMTXzVE8J:p2:e009",
+            "BV1iMTXzVE8J:p2:e010"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "西岸裂石基准及南侧精密、北落峡谷上下两个基准；仅与现有路线交叉印证。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p02-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p02.json"
+          ]
+        }
+      ],
+      "unresolved": [],
+      "overviewOnly": [],
+      "timelineSha256AtReview": "5e039b5520f1d504ff4c03254d908cb6d231a618922149955f195dba18cbad4d",
+      "geometryReview": {
+        "source": "out/detectability-v2/overview-huanglong/overview-geometry.json",
+        "inliers": 156,
+        "acceptedGeometry": true,
+        "note": "固定LIMITS未放宽；与已配准的源实机地图建立图像变换。ROI anchor仅为地图内任意有效匹配像素，不是玩家；红e标签为审阅者现有候选投影，不是作者编号或确认。"
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 3,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–4秒显示荒石高地上半部总览，5秒为远望营地普通实机图。北部六箱簇、跨河两精密、凋零防线西南两点和东南地板/强击/射击簇均可作为原路线线索。底部两图钉部分被播放器进度条遮挡，不按可见图钉数强行匹配十八奖励。候选投影支持位置线索，不直接升级未决身份。",
+      "checkedIntervals": [
+        [
+          0,
+          17
+        ]
+      ],
+      "overviewInterval": [
+        0,
+        4
+      ],
+      "evidence": [
+        "out/detectability-v2/overview-huanglong/p03-opening.jpg",
+        "out/detectability-v2/overview-huanglong/p03-000.jpg",
+        "out/detectability-v2/overview-huanglong/p03-005.jpg",
+        "out/detectability-v2/overview-huanglong/p03-projected.jpg"
+      ],
+      "associations": [
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "远望营地至北缘基准簇",
+          "eventIds": [
+            "BV1iMTXzVE8J:p3:e001",
+            "BV1iMTXzVE8J:p3:e002",
+            "BV1iMTXzVE8J:p3:e003",
+            "BV1iMTXzVE8J:p3:e004",
+            "BV1iMTXzVE8J:p3:e005",
+            "BV1iMTXzVE8J:p3:e006",
+            "BV1iMTXzVE8J:p3:e007"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "原视频从域旁破石后转向北部山尖射击/跑酷/地板路线，图中多同型基准，未赋作者数字。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p03-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p03.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "河两岸两精密",
+          "eventIds": [
+            "BV1iMTXzVE8J:p3:e008",
+            "BV1iMTXzVE8J:p3:e009"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "音障仪与跨河推箱是两地点，两类机制；地图箭头只表示路线，不表示重复开同一箱。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p03-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p03.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "凋零防线西南",
+          "eventIds": [
+            "BV1iMTXzVE8J:p3:e010",
+            "BV1iMTXzVE8J:p3:e011",
+            "BV1iMTXzVE8J:p3:e012"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "地板、速射终点与朴素裂石分开；图钉不能替代速射终点攻略。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p03-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p03.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "东南基准簇",
+          "eventIds": [
+            "BV1iMTXzVE8J:p3:e013",
+            "BV1iMTXzVE8J:p3:e014",
+            "BV1iMTXzVE8J:p3:e015",
+            "BV1iMTXzVE8J:p3:e016",
+            "BV1iMTXzVE8J:p3:e017",
+            "BV1iMTXzVE8J:p3:e018"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "音障仪→推箱→地板→蝶序柱→桥头射击→音障仪；同型图钉近邻，仍需各自有效位置。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p03-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p03.json"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e001",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "远望营地东侧上层山坡未有终点配准；需把57秒第二块石头而非第一处普通掉落定位到候选。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e001",
+            "member": 1,
+            "pointId": "1251346038554099712",
+            "pixel": [
+              296.10475896742315,
+              305.62729938434154
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e002",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需补105秒尖端的小地图配准，排除相邻128秒射击点；254秒锚点距离此处跨三个事件。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e002",
+            "member": 1,
+            "pointId": "1275206043661885440",
+            "pixel": [
+              362.2819526655429,
+              193.75966653290794
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e003",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需将128秒下层山尖与105秒前一尖端分别定位，不能只因两条攻略都写射击而确认。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e003",
+            "member": 1,
+            "pointId": "1275206899442794496",
+            "pixel": [
+              416.80602043044456,
+              188.57097545283835
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e004",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需147秒终点锚点或连续路线长度，当前254秒锚点只能限定北段区域。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e004",
+            "member": 1,
+            "pointId": "1276922898202378240",
+            "pixel": [
+              384.9976044474786,
+              228.16319769948933
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e005",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "缺少起点到196秒终点的攻略终点坐标；不可把起点raw坐标当奖励位置。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e005",
+            "member": 1,
+            "pointId": "1273395457423740928",
+            "pixel": [
+              386.3009343661407,
+              158.71050729883075
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e006",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "虽在252秒已确认拼图平台东南约47米，仍需222秒到252秒的完整空间换算，避免邻近另一射击装置。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e006",
+            "member": 1,
+            "pointId": "1275207506543132672",
+            "pixel": [
+              418.75709493644916,
+              137.29289413594063
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e008",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "369秒是之后跨河推箱终点；370/371秒地图过渡产生不一致raw坐标，不能据此替296秒音障仪定位。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e008",
+            "member": 1,
+            "pointId": "1276922034972672000",
+            "pixel": [
+              442.1129391780927,
+              291.77839417281257
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e013",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "504/506秒地图箭头仍在前一破石点；需核对最终选择的止戈关峡西北信标到532秒仪器的定位。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e013",
+            "member": 1,
+            "pointId": "1273393774387957760",
+            "pixel": [
+              538.1742908551765,
+              348.25647070986986
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e014",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "缺少563秒平台端点坐标；需要从新传送信标独立落点再推算东南跨桥路线。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e014",
+            "member": 1,
+            "pointId": "1273394782959689728",
+            "pixel": [
+              579.7143647253384,
+              372.2759334377056
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e015",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需602秒小地图配准或实测从563秒高台向东下层的位移，不能只靠重复拼图机制。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e015",
+            "member": 1,
+            "pointId": "1273028065116938240",
+            "pixel": [
+              614.7656404792623,
+              367.7348907395308
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e016",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需625秒四桩草地定位及蝶序前态对照，当前仅奖励帧无法排除区域其它强击阵列。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e016",
+            "member": 1,
+            "pointId": "1270794393618784256",
+            "pixel": [
+              622.0807766880752,
+              369.4165797479738
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e017",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需655秒桥头玩家定位；前一确认点在495秒且中间发生传送，不能外推该锚点。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e017",
+            "member": 1,
+            "pointId": "1278115230679719936",
+            "pixel": [
+              645.269187256405,
+              418.36628572900935
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p3:e018",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需683秒道路仪器的独立玩家锚点；同区域有多处音障仪，现有桥梁视角不足唯一定位。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p3:e018",
+            "member": 1,
+            "pointId": "1273032064897507328",
+            "pixel": [
+              662.1529250269646,
+              319.0565424677321
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        }
+      ],
+      "overviewOnly": [],
+      "timelineSha256AtReview": "3343f170a0c2027fd347471e90a31954d1ac9af0b6588874de2d5c6d1f4d3f4e",
+      "geometryReview": {
+        "source": "out/detectability-v2/overview-huanglong/overview-geometry.json",
+        "inliers": 184,
+        "acceptedGeometry": true,
+        "note": "固定LIMITS未放宽；与已配准的源实机地图建立图像变换。ROI anchor仅为地图内任意有效匹配像素，不是玩家；红e标签为审阅者现有候选投影，不是作者编号或确认。"
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 4,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–4秒为荒石高地下半部总览，5秒切入西侧信标实机图。西南双朴素与桥面基准链、中枢信标东部多层营地链、上央谷东岸射击/罐子链、东北无音区跑酷链清晰。e7登塔解锁射击是一个复合过程的一箱，e18/e22挑战坐标和领奖坐标不同，总览不能额外拆箱。",
+      "checkedIntervals": [
+        [
+          0,
+          17
+        ]
+      ],
+      "overviewInterval": [
+        0,
+        4
+      ],
+      "evidence": [
+        "out/detectability-v2/overview-huanglong/p04-opening.jpg",
+        "out/detectability-v2/overview-huanglong/p04-000.jpg",
+        "out/detectability-v2/overview-huanglong/p04-005.jpg",
+        "out/detectability-v2/overview-huanglong/p04-projected.jpg"
+      ],
+      "associations": [
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "西南双朴素与桥面基准",
+          "eventIds": [
+            "BV1iMTXzVE8J:p4:e001",
+            "BV1iMTXzVE8J:p4:e002",
+            "BV1iMTXzVE8J:p4:e003"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "两破石和桥面拼图与图钉链相容，图上起点不能直接作箱坐标。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p04-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p04.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "凋零防线南/东路线",
+          "eventIds": [
+            "BV1iMTXzVE8J:p4:e004",
+            "BV1iMTXzVE8J:p4:e005",
+            "BV1iMTXzVE8J:p4:e006"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "桥上飞檐、熊旁挖掘、营地东尖端射击；e4缺终点图的首轮问题仍存在。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p04-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p04.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "中枢信标东南多层营地和海岸",
+          "eventIds": [
+            "BV1iMTXzVE8J:p4:e007",
+            "BV1iMTXzVE8J:p4:e008",
+            "BV1iMTXzVE8J:p4:e009",
+            "BV1iMTXzVE8J:p4:e010",
+            "BV1iMTXzVE8J:p4:e011",
+            "BV1iMTXzVE8J:p4:e012"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "登塔射击复合一箱；后续破石、推箱、射击、河豚、音障仪分别独立。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p04-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p04.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "止戈关峡东南沿海",
+          "eventIds": [
+            "BV1iMTXzVE8J:p4:e013",
+            "BV1iMTXzVE8J:p4:e014",
+            "BV1iMTXzVE8J:p4:e015",
+            "BV1iMTXzVE8J:p4:e016",
+            "BV1iMTXzVE8J:p4:e017"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "山尖射击、四柱屋顶、水边两射击及罐群，三项有效小地图锚点仍是身份依据。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p04-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p04.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "无音区2东北至海岸",
+          "eventIds": [
+            "BV1iMTXzVE8J:p4:e018",
+            "BV1iMTXzVE8J:p4:e019",
+            "BV1iMTXzVE8J:p4:e020",
+            "BV1iMTXzVE8J:p4:e021",
+            "BV1iMTXzVE8J:p4:e022"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "跑酷精密、地板、双尖端、岸边音障仪与南侧飞檐；尾段奖励不因图钉箭头合并。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p04-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p04.json"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e001",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "候选raw是投掷物起点；39秒箱在更高石台，需确立两者位移，不将晶体坐标当箱坐标。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e001",
+            "member": 1,
+            "pointId": "1275214558501945344",
+            "pixel": [
+              86.35173565701996,
+              342.872170862673
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e004",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "208秒双黄组件相距约16米且开图在缩放中；攻略仅起点，无终箱图，需206秒终点锚点与起点路线闭合。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e004",
+            "member": 1,
+            "pointId": "1278112971451424768",
+            "pixel": [
+              388.64038171719534,
+              158.34764363987213
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e005",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需252秒熊旁岩石坐标；其与291秒射击点隔长段营地路线，不能用描述独特代替定位。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e005",
+            "member": 1,
+            "pointId": "1275216117105025024",
+            "pixel": [
+              336.7942139041061,
+              222.39234266241408
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e007",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "攻略图为射击装置而非395秒终箱；需分别给出塔顶、射击点与终点三处玩家位置。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e007",
+            "member": 1,
+            "pointId": "1278105121682141184",
+            "pixel": [
+              311.13861290099203,
+              343.5142926823227
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e008",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需433秒岔路右支落点，不可从291秒锚点跨过传送与塔顶挑战外推。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e008",
+            "member": 1,
+            "pointId": "1278106371121487872",
+            "pixel": [
+              391.5169799489919,
+              290.54182795398646
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e009",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需467秒营地平台定位，并与附近桥上地板谜题分别排除。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e009",
+            "member": 1,
+            "pointId": "1267885301815492608",
+            "pixel": [
+              436.6555957519214,
+              309.89366956260983
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e010",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需489秒山尖坐标；583/585秒混合过渡地图不提供可靠下游锚点。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e010",
+            "member": 1,
+            "pointId": "1278114443575435264",
+            "pixel": [
+              446.2454754338679,
+              337.14436975471176
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e011",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "攻略标的是河豚起点，奖励在路线另一岸；需终点位置或路线重建，不能套起点raw。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e011",
+            "member": 1,
+            "pointId": "1276680409515048960",
+            "pixel": [
+              498.0781713204938,
+              323.7641054268642
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e012",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "583/585秒地图尚有小地图叠影，自动raw在短时间漂移约95米，未达到可信终点定位。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e012",
+            "member": 1,
+            "pointId": "1276681052719955968",
+            "pixel": [
+              503.2943889307428,
+              417.5238207508179
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e015",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需714秒山尖定位，与上一个屋顶点间虽近，仍不能按同类挑战最近点确认。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e015",
+            "member": 1,
+            "pointId": "1287458705422741504",
+            "pixel": [
+              551.6628718706935,
+              291.7491112777427
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e016",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需743秒浅水装置独立定位，避免把沿海另一射击平台匹配到同一机制。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e016",
+            "member": 1,
+            "pointId": "1273393217427619840",
+            "pixel": [
+              598.2545741903564,
+              277.78510347825306
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e019",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需944秒上下层平台定位；900秒是上一竞速终点，之后重新传送，不能直接传播坐标。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e019",
+            "member": 1,
+            "pointId": "1280658618548232192",
+            "pixel": [
+              694.3783751500175,
+              142.1231446736858
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e020",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需974秒右侧山尖玩家定位，不能混淆两相邻突出尖端。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e020",
+            "member": 1,
+            "pointId": "1278117257468751872",
+            "pixel": [
+              766.0046162163517,
+              152.6244880237948
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e021",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需1007秒岸边锚点及与上层射击点的下降位移，当前无有效小地图几何。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e021",
+            "member": 1,
+            "pointId": "1273036809942982656",
+            "pixel": [
+              710.0764250444631,
+              237.63269676500065
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p4:e022",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需把视频末尾小地图岸线与攻略图3终点地图配准，候选raw目前是跑酷起点。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p4:e022",
+            "member": 1,
+            "pointId": "1273039381390069760",
+            "pixel": [
+              710.064346765565,
+              283.0559830430025
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        }
+      ],
+      "overviewOnly": [],
+      "timelineSha256AtReview": "7b0a0d8c9a2d909ee49103b40b95e45bc3edb40a68ccfc5ecc69426a13e260a0",
+      "geometryReview": {
+        "source": "out/detectability-v2/overview-huanglong/overview-geometry.json",
+        "inliers": 316,
+        "acceptedGeometry": true,
+        "note": "固定LIMITS未放宽；与已配准的源实机地图建立图像变换。ROI anchor仅为地图内任意有效匹配像素，不是玩家；红e标签为审阅者现有候选投影，不是作者编号或确认。"
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 5,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–4秒为云陵谷总览，5秒普通实机图。桃源乡西北三点与玉龙台屋顶/草坡/瀑布链可见。发现西北基准图钉的位置更接近高能黑石箱1268598761294036992，而首轮e4的132/134秒玩家锚点及四柱攻略明确指向1251558531892547584；这项不一致保留，不用总览覆盖实机结论，也不伪造新增事件。",
+      "checkedIntervals": [
+        [
+          0,
+          17
+        ]
+      ],
+      "overviewInterval": [
+        0,
+        4
+      ],
+      "evidence": [
+        "out/detectability-v2/overview-huanglong/p05-opening.jpg",
+        "out/detectability-v2/overview-huanglong/p05-000.jpg",
+        "out/detectability-v2/overview-huanglong/p05-005.jpg",
+        "out/detectability-v2/overview-huanglong/p05-projected.jpg"
+      ],
+      "associations": [
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "桃源乡西北朴素/基准/朴素链",
+          "eventIds": [
+            "BV1iMTXzVE8J:p5:e001",
+            "BV1iMTXzVE8J:p5:e002",
+            "BV1iMTXzVE8J:p5:e003"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "图钉辅助区分草坡木箱、飞檐起点、枯木；飞檐终点仍需证明。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p05-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p05.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "西北基准图钉不一致",
+          "eventIds": [
+            "BV1iMTXzVE8J:p5:e004"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "原四柱实机点与总览西北基准不同，单列overview-only线索，不改配。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p05-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p05.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "玉龙台多层营地向南",
+          "eventIds": [
+            "BV1iMTXzVE8J:p5:e005",
+            "BV1iMTXzVE8J:p5:e006",
+            "BV1iMTXzVE8J:p5:e007",
+            "BV1iMTXzVE8J:p5:e008",
+            "BV1iMTXzVE8J:p5:e009",
+            "BV1iMTXzVE8J:p5:e010",
+            "BV1iMTXzVE8J:p5:e011"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "调查屋顶、两射击、蓝墙箱、三石、山尖射击、旁木箱；e8/e11已通过源攻略排除互换候选，总览不作新确认。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p05-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p05.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "瀑布至西南山壁",
+          "eventIds": [
+            "BV1iMTXzVE8J:p5:e012",
+            "BV1iMTXzVE8J:p5:e013",
+            "BV1iMTXzVE8J:p5:e014"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "钩索终点、音障仪与墙角裂石；总览箭头是区域路线，位置未知项仍未决。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p05-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p05.json"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "eventId": "BV1iMTXzVE8J:p5:e002",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "缺少攻略终点图与72秒山顶玩家配准；39秒旧点在传送前，不能作为新路线终点。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p5:e002",
+            "member": 1,
+            "pointId": "1276663196972236800",
+            "pixel": [
+              519.9998296146863,
+              168.137009669122
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p5:e003",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需82秒枯木点坐标，并区分37秒木箱和82秒枯木两处朴素箱。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p5:e003",
+            "member": 1,
+            "pointId": "1277747809087959040",
+            "pixel": [
+              495.9074589019675,
+              118.54654841811981
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p5:e005",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "132秒锚点是传送前四桩点；需新中枢信标到154秒屋顶的独立坐标链。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p5:e005",
+            "member": 1,
+            "pointId": "1272675138737774592",
+            "pixel": [
+              434.4494708371185,
+              210.44879372429426
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p5:e006",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需163秒屋顶位置，且与154秒调查箱为两独立奖励，不能仅用同屋顶推定ID。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p5:e006",
+            "member": 1,
+            "pointId": "1273040761853960192",
+            "pixel": [
+              444.0182889078177,
+              207.47993866591776
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p5:e007",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需195秒高屋顶坐标，排除163秒下层射击器；现有小地图全未通过阈值。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p5:e007",
+            "member": 1,
+            "pointId": "1276664442291347456",
+            "pixel": [
+              364.7943494722715,
+              221.21323477494707
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p5:e008",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需208秒此蓝墙的独立地理锚点以完成ID确认；已具强视觉支持但未把新传送路线量化。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p5:e008",
+            "member": 1,
+            "pointId": "1277747045768417280",
+            "pixel": [
+              393.675534202785,
+              261.9910367113767
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p5:e009",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需226秒草台坐标；攻略写同时采集物，视频当前摘要只记三石，需检查花是否也被采集。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p5:e009",
+            "member": 1,
+            "pointId": "1252725747315646464",
+            "pixel": [
+              398.39658979997967,
+              296.32335823280704
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p5:e010",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需243秒山尖坐标，将其与195秒屋顶射击点明确分离。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p5:e010",
+            "member": 1,
+            "pointId": "1276665954420822016",
+            "pixel": [
+              436.96372184104075,
+              301.9455636986503
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p5:e011",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "攻略称裸露在外/打掉旁边箱子，视频248秒已是碎箱后状态；需定位及破坏前箱是否被遮住的连续帧，属性不先定。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p5:e011",
+            "member": 1,
+            "pointId": "1276664886366584832",
+            "pixel": [
+              440.9710892907357,
+              305.141063939477
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p5:e012",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需283秒瀑布岩壁终点定位，不能把对岸启动点坐标当箱位置。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p5:e012",
+            "member": 1,
+            "pointId": "1287092658610061312",
+            "pixel": [
+              460.27844856575575,
+              365.94556291079175
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p5:e013",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需314秒仪器坐标；当前唯一可靠132秒锚点在传送前，无法直接外推至此。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p5:e013",
+            "member": 1,
+            "pointId": "1276667480296144896",
+            "pixel": [
+              346.58024833322474,
+              345.3136055189224
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p5:e014",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需332秒墙角定位与邻近314秒仪器距离验证，灰墙裂石不是全图唯一外观。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p5:e014",
+            "member": 1,
+            "pointId": "1277749076604276736",
+            "pixel": [
+              323.36819127110243,
+              346.1508232617639
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        }
+      ],
+      "overviewOnly": [
+        {
+          "authorNumber": null,
+          "pixel": [
+            393,
+            100
+          ],
+          "label": "基准",
+          "candidatePointId": "1268598761294036992",
+          "status": "unresolved-overview-only",
+          "analysis": "总览图钉尖端raw约(-131652,33663)，近高能黑石候选12.7米；该原攻略为崖壁青箱，和e4四柱视频不符。e4实机锚点支持另一ID，不能以此新造事件/替换e4；可能作者总览误标或覆盖未展示点，尚不可判定。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p05-000.jpg",
+            "out/detectability-collection/BV1iMTXzVE8J/p05/guides/guide-8-1268598761294036992-1.png",
+            "out/detectability-v2/BV1iMTXzVE8J/p05/visual/frame-00130.00.jpg"
+          ]
+        }
+      ],
+      "timelineSha256AtReview": "d628c766c752f2ac41cbec1c6197b47c272ec9f4ad6f2d895ff5a1ae2953e9b9",
+      "geometryReview": {
+        "source": "out/detectability-v2/overview-huanglong/overview-geometry.json",
+        "inliers": 87,
+        "acceptedGeometry": true,
+        "note": "固定LIMITS未放宽；与已配准的源实机地图建立图像变换。ROI anchor仅为地图内任意有效匹配像素，不是玩家；红e标签为审阅者现有候选投影，不是作者编号或确认。"
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 6,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–4秒为中曲台地北段总览，5秒普通地图。北部射击/飞檐、谷北地拼图、祈池村西岸两挑战、东北三柱/屋顶/跳台、东海岸与南部挑战簇可见。总览提供e7新候选，已重看三柱源帧与原攻略，另列改配建议；e6仍有箱型及起终点问题。",
+      "checkedIntervals": [
+        [
+          0,
+          17
+        ]
+      ],
+      "overviewInterval": [
+        0,
+        4
+      ],
+      "evidence": [
+        "out/detectability-v2/overview-huanglong/p06-opening.jpg",
+        "out/detectability-v2/overview-huanglong/p06-000.jpg",
+        "out/detectability-v2/overview-huanglong/p06-005.jpg",
+        "out/detectability-v2/overview-huanglong/p06-projected.jpg"
+      ],
+      "associations": [
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "北岸两基准",
+          "eventIds": [
+            "BV1iMTXzVE8J:p6:e001",
+            "BV1iMTXzVE8J:p6:e002"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "断桥射击与向西飞檐的起点分开；飞檐终点见源攻略图2/3。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p06-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p06.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "谷北地与祈池村西岸",
+          "eventIds": [
+            "BV1iMTXzVE8J:p6:e003",
+            "BV1iMTXzVE8J:p6:e004",
+            "BV1iMTXzVE8J:p6:e005",
+            "BV1iMTXzVE8J:p6:e006"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "音障仪、三拼块、NPC挖掘、风场；风场与球状装置候选仍待核，不能凭精密标记升级。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p06-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p06.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "祈池村东北基准链",
+          "eventIds": [
+            "BV1iMTXzVE8J:p6:e007",
+            "BV1iMTXzVE8J:p6:e008",
+            "BV1iMTXzVE8J:p6:e009"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "三柱、哨塔射击、蓝平台飞檐的三处图钉，e7新候选需源图三柱对应，单独proposal。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p06-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p06.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "东岸及南侧路线",
+          "eventIds": [
+            "BV1iMTXzVE8J:p6:e010",
+            "BV1iMTXzVE8J:p6:e011",
+            "BV1iMTXzVE8J:p6:e012",
+            "BV1iMTXzVE8J:p6:e013",
+            "BV1iMTXzVE8J:p6:e014",
+            "BV1iMTXzVE8J:p6:e015",
+            "BV1iMTXzVE8J:p6:e016",
+            "BV1iMTXzVE8J:p6:e017"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "河豚、致爆、音障仪、速攻、基地屋顶、道路飞檐、战斗与爆炸果平台；部分图钉在画边，保留未决。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p06-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p06.json"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "eventId": "BV1iMTXzVE8J:p6:e001",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需51秒断桥头坐标；113秒是后续跑酷终点，不能把它当射击点。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p6:e001",
+            "member": 1,
+            "pointId": "1278105638451597312",
+            "pixel": [
+              569.5336786466319,
+              77.50622605178076
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p6:e003",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需140秒独立坐标；113秒上一个跑酷终点后已传送，不能外推。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p6:e003",
+            "member": 1,
+            "pointId": "1282807805496680448",
+            "pixel": [
+              132.8714072237018,
+              253.88952958223535
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p6:e006",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "尚缺起点操作帧与攻略装置一致性；候选为精密箱而视频终箱青色，且指南无终点，需排除错误挑战。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p6:e006",
+            "member": 1,
+            "pointId": "1279903105480445952",
+            "pixel": [
+              266.15893560603035,
+              304.8534596182961
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p6:e007",
+          "member": 1,
+          "analysis": "首轮未决记录保留作审计；总览新候选已获root独立复核后采纳。",
+          "firstPassMissingEvidence": [
+            "已排除该候选：机制和装置形态均不符；需在祈池村东北信标东侧重新找三柱台座原始ID及坐标。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p6:e007",
+            "member": 1,
+            "pointId": "1287867456390754304",
+            "pixel": [
+              583.9010309316591,
+              205.37003306135506
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "resolved-by-root-after-overview;identity-confirmed;detectability-unknown"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p6:e008",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需332秒哨塔屋顶坐标；365秒下游飞檐点约64米以东南，只能限定区域不能确认上层屋顶。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p6:e008",
+            "member": 1,
+            "pointId": "1287868509784510464",
+            "pixel": [
+              547.2973219643746,
+              233.35342158273647
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p6:e010",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需视频442秒小地图与攻略终点地图进行可靠配准；不将起点raw用于返岸奖励。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p6:e010",
+            "member": 1,
+            "pointId": "1287871312784846848",
+            "pixel": [
+              780.4799261511267,
+              228.4301428641438
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p6:e011",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需469秒坡地位置与攻略场地对应；同区域致爆类挑战多，具体对象及玩法尚需排除其它候选。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p6:e011",
+            "member": 1,
+            "pointId": "1287873379048493056",
+            "pixel": [
+              868.4491995159277,
+              403.5683642824481
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p6:e012",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需483秒仪器锚点；529秒另一速攻挑战隔道路长跑，不能拿后者定位本柱。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p6:e012",
+            "member": 1,
+            "pointId": "1287875252396244992",
+            "pixel": [
+              822.094857734388,
+              404.13247351546477
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p6:e015",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需核对起点道路及风场路线、633秒终点位置；攻略仅起点图，无终点图，不能因类型相合确认。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p6:e015",
+            "member": 1,
+            "pointId": "1279902537512964096",
+            "pixel": [
+              357.7737526494701,
+              435.05451624107025
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p6:e016",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需670秒坐标和越过弹跳蘑菇的路线定量，排除周边另一战斗挑战。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p6:e016",
+            "member": 1,
+            "pointId": "1275217189881155584",
+            "pixel": [
+              289.92220170416294,
+              343.551525529815
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p6:e017",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "需699秒平台位置并核对攻略起点视角；不能只按致爆描述匹配。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p6:e017",
+            "member": 1,
+            "pointId": "1287527472542728192",
+            "pixel": [
+              284.0859815746311,
+              416.5746800603412
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        }
+      ],
+      "overviewOnly": [],
+      "timelineSha256AtReview": "700cab49c575cb2edb78149dda0ab2e658db2f0ab93ed1932d1b12942e90135b",
+      "geometryReview": {
+        "source": "out/detectability-v2/overview-huanglong/overview-geometry.json",
+        "inliers": 195,
+        "acceptedGeometry": true,
+        "note": "固定LIMITS未放宽；与已配准的源实机地图建立图像变换。ROI anchor仅为地图内任意有效匹配像素，不是玩家；红e标签为审阅者现有候选投影，不是作者编号或确认。"
+      },
+      "proposals": [
+        {
+          "eventId": "BV1iMTXzVE8J:p6:e007",
+          "member": 1,
+          "stateId": "8",
+          "pointId": "1270795445518282752",
+          "action": "adopted-by-root",
+          "detectability": "unknown",
+          "analysis": "总览东北信标东侧基准图钉尖端约(480,199)变换raw(-45897,30537)，源state8候选距离5.9米；非仅最近点：原攻略明确同时打三桩，图中三短方桩围八角台、背后道路岩壁与302/309秒原视频逐项一致。原音障仪候选已排除。探测属性仍unknown；总览不证明是否可扫描。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p06-000.jpg",
+            "out/detectability-v2/overview-huanglong/overview-geometry.json",
+            "Assets/KuroMap/states/state-8.json",
+            "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1270795445518282752.json",
+            "out/detectability-collection/BV1iMTXzVE8J/p06/guides/guide-8-1270795445518282752-1.png",
+            "out/detectability-v2/BV1iMTXzVE8J/p06/visual/frame-00302.00.jpg",
+            "out/detectability-v2/BV1iMTXzVE8J/p06/visual/frame-00309.00.jpg"
+          ],
+          "adoptionNote": "Root独立复看总览、302/309秒源帧与原攻略后确认1270795445518282752；detectability仍unknown，旧音障仪保留排除证据，first-pass冻结快照未改。"
+        }
+      ],
+      "postReviewUpdate": {
+        "by": "root",
+        "eventId": "BV1iMTXzVE8J:p6:e007",
+        "identity": "confirmed",
+        "pointId": "1270795445518282752",
+        "detectability": "unknown",
+        "timelineSha256AfterAdoption": "ebbd236ab8886fdb4953c412d617f6af8713a1afc59a0825b580409009766d97"
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 7,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–4秒为今州城及西南路线总览，5秒切普通地图。城内仅清楚见精密图钉，但原视频e2有两轮挑战且第一轮青箱未展示领取，不能据总览将两个成员合并；e7救巡卫前置零奖励，e9对话开箱独立保留。西南路线图钉重叠，不按屏幕顺序强指定作者编号。",
+      "checkedIntervals": [
+        [
+          0,
+          17
+        ]
+      ],
+      "overviewInterval": [
+        0,
+        4
+      ],
+      "evidence": [
+        "out/detectability-v2/overview-huanglong/p07-opening.jpg",
+        "out/detectability-v2/overview-huanglong/p07-000.jpg",
+        "out/detectability-v2/overview-huanglong/p07-005.jpg",
+        "out/detectability-v2/overview-huanglong/p07-projected.jpg"
+      ],
+      "associations": [
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "今州东北朴素",
+          "eventIds": [
+            "BV1iMTXzVE8J:p7:e001"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "狗旁挖掘由原视频与攻略确认，总览只作区域一致性。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p07-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p07.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "今州城内精密图钉",
+          "eventIds": [
+            "BV1iMTXzVE8J:p7:e002"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "对应两轮建筑挑战的整段位置线索；一图钉不代表只有一奖励，第一轮未领取保持未决。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p07-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p07.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "东南海滩/今州南侧",
+          "eventIds": [
+            "BV1iMTXzVE8J:p7:e003",
+            "BV1iMTXzVE8J:p7:e004"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "海滩柱状挑战与南侧拼图为不同传送段，图钉间白箭头不连成同一事件。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p07-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p07.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "城西营地及北坡",
+          "eventIds": [
+            "BV1iMTXzVE8J:p7:e005",
+            "BV1iMTXzVE8J:p7:e006",
+            "BV1iMTXzVE8J:p7:e007",
+            "BV1iMTXzVE8J:p7:e008",
+            "BV1iMTXzVE8J:p7:e009",
+            "BV1iMTXzVE8J:p7:e010"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "爆炸果、坑底、救巡卫、哨塔与对话箱按原顺序；零奖励前置不由总览生成箱。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p07-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p07.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "西北河谷至撷华庄",
+          "eventIds": [
+            "BV1iMTXzVE8J:p7:e011",
+            "BV1iMTXzVE8J:p7:e012",
+            "BV1iMTXzVE8J:p7:e013",
+            "BV1iMTXzVE8J:p7:e014",
+            "BV1iMTXzVE8J:p7:e015"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "河豚起终点与山尖/拼图/柱挑战的同型图钉未全部唯一对应，保留事件级缺证。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p07-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p07.json"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "eventId": "BV1iMTXzVE8J:p7:e002",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "底部青箱的独立点位和攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p7:e002",
+            "member": 1,
+            "pointId": "1287107914627497984",
+            "pixel": [
+              539.1141915879064,
+              215.1937215232055
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p7:e003",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "平庭山下沙滩音障仪的玩家定位与点位攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p7:e003",
+            "member": 1,
+            "pointId": "1253173215523540992",
+            "pixel": [
+              236.14862229073628,
+              -61.78253649211479
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p7:e005",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "此凸岩挑战的坐标及起点图一致证据。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p7:e005",
+            "member": 1,
+            "pointId": "1287873379048493056",
+            "pixel": [
+              759.6681618103687,
+              23.547349754429888
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p7:e006",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "坑底挑战台精确位置及攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p7:e006",
+            "member": 1,
+            "pointId": "1251512993619648512",
+            "pixel": [
+              442.7822443212397,
+              16.402690797124706
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p7:e008",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "棚顶白箱独立ID及终点攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p7:e008",
+            "member": 1,
+            "pointId": "1287104752935976960",
+            "pixel": [
+              32.24578876829696,
+              -19.69659435779272
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p7:e011",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "本机关最终位置和对应攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p7:e011",
+            "member": 1,
+            "pointId": "1253173215523540992",
+            "pixel": [
+              236.14862229073628,
+              -61.78253649211479
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p7:e012",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "候选也是河豚挑战，攻略首图位于大瀑布脚；视频本段沿河游泳至平缓岸边出紫箱，需核对攻略终点图和起终坐标，不能与p09逆瀑布项混同。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p7:e012",
+            "member": 1,
+            "pointId": "1287922301495734272",
+            "pixel": [
+              221.98462204285426,
+              880.8663247566926
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p7:e013",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "此山尖射击挑战独立点位和排除e5的空间证据。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p7:e013",
+            "member": 1,
+            "pointId": "1287873379048493056",
+            "pixel": [
+              759.6681618103687,
+              23.547349754429888
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p7:e015",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "远端山坡音障仪的定位。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p7:e015",
+            "member": 1,
+            "pointId": "1253173215523540992",
+            "pixel": [
+              236.14862229073628,
+              -61.78253649211479
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        }
+      ],
+      "overviewOnly": [],
+      "timelineSha256AtReview": "6e1be6724144b9303d29e9ce935b1a5253eb853b99e1f965f69904c95557cba0",
+      "geometryReview": {
+        "source": "out/detectability-v2/overview-huanglong/overview-geometry.json",
+        "inliers": 356,
+        "acceptedGeometry": true,
+        "note": "固定LIMITS未放宽；与已配准的源实机地图建立图像变换。ROI anchor仅为地图内任意有效匹配像素，不是玩家；红e标签为审阅者现有候选投影，不是作者编号或确认。"
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–4秒虎口矿场/东麓/无存残所总览，5秒回人物，6–9秒普通传送图。矿场地下与地表可共用平面投影，总览不证明楼层。东部两朴素接基准与e3–e5连贯，顶部基准/精密图钉近状态栏有遮挡，不能把图钉数量当全部机制或箱数。",
+      "checkedIntervals": [
+        [
+          0,
+          17
+        ]
+      ],
+      "overviewInterval": [
+        0,
+        4
+      ],
+      "evidence": [
+        "out/detectability-v2/overview-huanglong/p08-opening.jpg",
+        "out/detectability-v2/overview-huanglong/p08-000.jpg",
+        "out/detectability-v2/overview-huanglong/p08-005.jpg",
+        "out/detectability-v2/overview-huanglong/p08-projected.jpg"
+      ],
+      "associations": [
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "虎口矿场北东平台及地下",
+          "eventIds": [
+            "BV1iMTXzVE8J:p8:e001",
+            "BV1iMTXzVE8J:p8:e002"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "推箱与电路地下解密不是同一箱；总览平面不能证明地下路线。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p08-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p08.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "东侧小岛链",
+          "eventIds": [
+            "BV1iMTXzVE8J:p8:e003",
+            "BV1iMTXzVE8J:p8:e004",
+            "BV1iMTXzVE8J:p8:e005"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "两朴素和一基准，破石两次及战斗一次分别保留。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p08-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p08.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "东南与西南花圈/蘑菇点",
+          "eventIds": [
+            "BV1iMTXzVE8J:p8:e006",
+            "BV1iMTXzVE8J:p8:e007",
+            "BV1iMTXzVE8J:p8:e008"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "机制由源视频区分，图上朴素/精密本身不证明触发。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p08-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p08.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "矿场北段四点",
+          "eventIds": [
+            "BV1iMTXzVE8J:p8:e009",
+            "BV1iMTXzVE8J:p8:e010",
+            "BV1iMTXzVE8J:p8:e011",
+            "BV1iMTXzVE8J:p8:e012"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "柱挑战→跑酷→回草坪破石→山尖挑战；返回路线不等于重复领奖。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p08-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p08.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "西部与荒定岭附近基准",
+          "eventIds": [
+            "BV1iMTXzVE8J:p8:e013",
+            "BV1iMTXzVE8J:p8:e014"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "30秒及60秒致爆分别两段，图钉同型不能合并。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p08-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p08.json"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "eventId": "BV1iMTXzVE8J:p8:e001",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "虎口开段轨道板布局相同的攻略和位置。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p8:e001",
+            "member": 1,
+            "pointId": "1251555895891570688",
+            "pixel": [
+              687.5405277774344,
+              666.2435268899675
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p8:e003",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "石堆处的准确坐标及原始攻略图。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p8:e003",
+            "member": 1,
+            "pointId": "1258926666708074496",
+            "pixel": [
+              771.1454179242155,
+              533.3207641488044
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p8:e004",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "独立岛形和破石箱攻略对应。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p8:e004",
+            "member": 1,
+            "pointId": "1259103633852497920",
+            "pixel": [
+              367.73180040711657,
+              -490.72170447247095
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p8:e009",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "传送后草坡机关坐标。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p8:e009",
+            "member": 1,
+            "pointId": "1251555895891570688",
+            "pixel": [
+              687.5405277774344,
+              666.2435268899675
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p8:e010",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "平台形状、起终点与点ID连线。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p8:e010",
+            "member": 1,
+            "pointId": "1285624536032034816",
+            "pixel": [
+              775.5507491048467,
+              682.8963484646614
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p8:e011",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "草坪碎石箱独立点位。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p8:e011",
+            "member": 1,
+            "pointId": "1280647760398823424",
+            "pixel": [
+              167.93968681650665,
+              199.58790264289166
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p8:e013",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "这处树下30秒挑战攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p8:e013",
+            "member": 1,
+            "pointId": "1273024217174368256",
+            "pixel": [
+              401.7799184898845,
+              477.69117656692003
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p8:e014",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "可用玩家坐标及相同终点地形。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p8:e014",
+            "member": 1,
+            "pointId": "1275210928456482816",
+            "pixel": [
+              -173.72166875433334,
+              403.1145583581505
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        }
+      ],
+      "overviewOnly": [],
+      "timelineSha256AtReview": "d1d517923079651198f792664bde659e70134ab740c4f0b6cc8d249c2728f405",
+      "geometryReview": {
+        "source": "out/detectability-v2/overview-huanglong/overview-geometry.json",
+        "inliers": 200,
+        "acceptedGeometry": true,
+        "note": "固定LIMITS未放宽；与已配准的源实机地图建立图像变换。ROI anchor仅为地图内任意有效匹配像素，不是玩家；红e标签为审阅者现有候选投影，不是作者编号或确认。"
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–4秒归墟港市/东麓研究站总览，5秒实机普通地图。东麓研究站的南北挑战链、焚焰海废墟内部两朴素及北缘辉光/精密簇可见。e9多电池开门、排水、四柱是复合一箱；e10花圈椅子与e9记录有前置关系但领奖不同，保留两事件。",
+      "checkedIntervals": [
+        [
+          0,
+          17
+        ]
+      ],
+      "overviewInterval": [
+        0,
+        4
+      ],
+      "evidence": [
+        "out/detectability-v2/overview-huanglong/p09-opening.jpg",
+        "out/detectability-v2/overview-huanglong/p09-000.jpg",
+        "out/detectability-v2/overview-huanglong/p09-005.jpg",
+        "out/detectability-v2/overview-huanglong/p09-projected.jpg"
+      ],
+      "associations": [
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "东麓研究站周边",
+          "eventIds": [
+            "BV1iMTXzVE8J:p9:e001",
+            "BV1iMTXzVE8J:p9:e002",
+            "BV1iMTXzVE8J:p9:e003",
+            "BV1iMTXzVE8J:p9:e004",
+            "BV1iMTXzVE8J:p9:e005"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "射击、战斗、跑酷、蘑菇、河豚五段与北南环线相容，但未独立确认图钉顺序。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p09-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p09.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "南部河流三角链",
+          "eventIds": [
+            "BV1iMTXzVE8J:p9:e006",
+            "BV1iMTXzVE8J:p9:e007",
+            "BV1iMTXzVE8J:p9:e008"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "致爆、山顶射击、逆瀑河豚，起终点差异不补造额外奖励。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p09-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p09.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "焚焰海北侧废墟与坡",
+          "eventIds": [
+            "BV1iMTXzVE8J:p9:e009",
+            "BV1iMTXzVE8J:p9:e010",
+            "BV1iMTXzVE8J:p9:e011"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "电池复合谜题、花圈椅子及90秒跑酷独立，记录前置不与椅子领奖合并。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p09-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p09.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "北部两朴素与树桩/登山",
+          "eventIds": [
+            "BV1iMTXzVE8J:p9:e012",
+            "BV1iMTXzVE8J:p9:e013",
+            "BV1iMTXzVE8J:p9:e014",
+            "BV1iMTXzVE8J:p9:e015"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "两处岩石、两树桩同一箱、登山跑酷；图钉类型相同尚不足改配。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p09-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p09.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "废墟楼顶链",
+          "eventIds": [
+            "BV1iMTXzVE8J:p9:e016",
+            "BV1iMTXzVE8J:p9:e017"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "120秒跑酷终箱与另一楼顶破石箱分两事件。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p09-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p09.json"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e001",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "紫台三轮挑战点位。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e001",
+            "member": 1,
+            "pointId": "1251558433231581184",
+            "pixel": [
+              647.447691369645,
+              81.08407314609121
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e002",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "此剪辑战斗前后同地点与数据库挑战点的连接。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e002",
+            "member": 1,
+            "pointId": "1258885751805231104",
+            "pixel": [
+              807.8162313067602,
+              -361.14006180168917
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e003",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "平台终点下方水域/山壁的精确定位。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e003",
+            "member": 1,
+            "pointId": "1280911464501399552",
+            "pixel": [
+              402.8282887949142,
+              -233.20826014965917
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e004",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "本限时路线的独立挑战ID。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e004",
+            "member": 1,
+            "pointId": "1280660552790466560",
+            "pixel": [
+              999.027193866496,
+              373.6084528090847
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e005",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "河道起终点及箱位置对照。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e005",
+            "member": 1,
+            "pointId": "1287505166411821056",
+            "pixel": [
+              739.8504658390088,
+              468.5579984179518
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e006",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "两者不同地点的排除证据。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e006",
+            "member": 1,
+            "pointId": "1275210928456482816",
+            "pixel": [
+              333.0035263789291,
+              367.4659959021027
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e007",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "候选攻略三机关解锁负载块再压感台；视频是山顶蓝色三目标射击装置，机关过程不同。另1251558433231581184的蓝装置图更相近，仍需目标数/山顶地貌定位。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e007",
+            "member": 1,
+            "pointId": "1251997301757190144",
+            "pixel": [
+              514.5865137111871,
+              -550.6473007676987
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e008",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "候选终点与407秒岸边木架的对应；同候选也召回p07e12，需分开路线。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e008",
+            "member": 1,
+            "pointId": "1287922301495734272",
+            "pixel": [
+              468.0779999368133,
+              349.9165052428931
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e009",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "四柱最后生成紫箱的独立点位及完整攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e009",
+            "member": 1,
+            "pointId": "1251357223122145280",
+            "pixel": [
+              437.08878760045104,
+              383.1412503779562
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e011",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "终点归属证据。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e011",
+            "member": 1,
+            "pointId": "1280924798644957184",
+            "pixel": [
+              254.5218308651871,
+              136.2944899669725
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e012",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "坐标及场景一致证据。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e012",
+            "member": 1,
+            "pointId": "1259113510760910848",
+            "pixel": [
+              436.77610908977977,
+              -331.53637292520773
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e013",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "中层崖岸碎石箱攻略和玩家坐标。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e013",
+            "member": 1,
+            "pointId": "1275210928456482816",
+            "pixel": [
+              333.0035263789291,
+              367.4659959021027
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e015",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "核对原图。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e015",
+            "member": 1,
+            "pointId": "1287120187177779200",
+            "pixel": [
+              899.7178243582476,
+              -98.05990004119792
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e016",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "起终点分层关系及独立奖励ID。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e016",
+            "member": 1,
+            "pointId": "1258890026926272512",
+            "pixel": [
+              723.410068727442,
+              -165.0025091151806
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p9:e017",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "屋顶层高、石堆和点ID对应。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p9:e017",
+            "member": 1,
+            "pointId": "1287899171947606016",
+            "pixel": [
+              318.2253798154213,
+              63.82677509013695
+            ],
+            "identityStatus": "unresolved"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        }
+      ],
+      "overviewOnly": [],
+      "timelineSha256AtReview": "f6a231ff15045479263eefd7d1355cdbe4c40eb5e425f4547be409136e59d660",
+      "geometryReview": {
+        "source": "out/detectability-v2/overview-huanglong/overview-geometry.json",
+        "inliers": 169,
+        "acceptedGeometry": true,
+        "note": "固定LIMITS未放宽；与已配准的源实机地图建立图像变换。ROI anchor仅为地图内任意有效匹配像素，不是玩家；红e标签为审阅者现有候选投影，不是作者编号或确认。"
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 10,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–4秒无光之森总览，5秒普通地图。图上明确混合普通箱型和蓝色/紫色/金色潮汐图标，不能统一算宝箱。中央巨榕附近上下层与最南方图钉受到地图范围/进度条限制；e15仅口述已完成的跑酷，不能被一枚精密图钉升级为本片可见领取。",
+      "checkedIntervals": [
+        [
+          0,
+          17
+        ]
+      ],
+      "overviewInterval": [
+        0,
+        4
+      ],
+      "evidence": [
+        "out/detectability-v2/overview-huanglong/p10-opening.jpg",
+        "out/detectability-v2/overview-huanglong/p10-000.jpg",
+        "out/detectability-v2/overview-huanglong/p10-005.jpg",
+        "out/detectability-v2/overview-huanglong/p10-projected.jpg"
+      ],
+      "associations": [
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "西北悬崖/蘑菇路线",
+          "eventIds": [
+            "BV1iMTXzVE8J:p10:e001",
+            "BV1iMTXzVE8J:p10:e002",
+            "BV1iMTXzVE8J:p10:e003",
+            "BV1iMTXzVE8J:p10:e004"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "朴素→基准挑战→基准战斗→朴素，原时间顺序保留。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p10-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p10.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "紫月榕两侧潮汐/朴素链",
+          "eventIds": [
+            "BV1iMTXzVE8J:p10:e005",
+            "BV1iMTXzVE8J:p10:e006",
+            "BV1iMTXzVE8J:p10:e007",
+            "BV1iMTXzVE8J:p10:e008",
+            "BV1iMTXzVE8J:p10:e009"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "总览标蓝/金/紫潮汐，为不同资源类型，不能机械要求每图钉一个宝箱。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p10-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p10.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "丛棘步道及洞口/瀑布",
+          "eventIds": [
+            "BV1iMTXzVE8J:p10:e010",
+            "BV1iMTXzVE8J:p10:e011",
+            "BV1iMTXzVE8J:p10:e012",
+            "BV1iMTXzVE8J:p10:e013",
+            "BV1iMTXzVE8J:p10:e014"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "小狗、连爆柱、洞射击、蝴蝶潮汐、压板投果各有原视频机制，图钉不覆盖。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p10-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p10.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "中央巨榕西侧上下层",
+          "eventIds": [
+            "BV1iMTXzVE8J:p10:e015",
+            "BV1iMTXzVE8J:p10:e016",
+            "BV1iMTXzVE8J:p10:e017",
+            "BV1iMTXzVE8J:p10:e018",
+            "BV1iMTXzVE8J:p10:e019"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "已完成跑酷仅口述；两破石、压板蓝台和洞口石堆分别保留，不凭总览补领取。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p10-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p10.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "巨榕东侧与东南",
+          "eventIds": [
+            "BV1iMTXzVE8J:p10:e020",
+            "BV1iMTXzVE8J:p10:e021",
+            "BV1iMTXzVE8J:p10:e022",
+            "BV1iMTXzVE8J:p10:e023",
+            "BV1iMTXzVE8J:p10:e024",
+            "BV1iMTXzVE8J:p10:e025"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "蝴蝶潮汐、黑石、蘑菇跑酷、河豚、采花战斗、拼图；尾部图钉截边，不能强求图数一致。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p10-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p10.json"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e001",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "西向崖下碎石后还需清怪；本段小地图没有通过冻结几何门槛，后续134秒开图已经跨传送，不能回推到此箱。描述检索的普通怪物锁箱缺少碎石机制，不能用相似清怪文字选ID。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e001",
+            "member": 1,
+            "pointId": "1252374628288692224",
+            "pixel": [
+              671.9361651525547,
+              277.29562019287914
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e002",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "30秒蘑菇跑酷第二蘑菇右转到树枝；新查候选1251624058141462528图1为另一树根挑战，图2奖励位于临海树旁。当前源领取帧树根/岩台不足以证明是该终点，且候选标点只代表起点；暂不绑定。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e002",
+            "member": 1,
+            "pointId": "1251624058141462528",
+            "pixel": [
+              167.39536103635157,
+              102.03383477675061
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e003",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "沿西北小路右侧战斗柱开启，战斗主体被剪去。自动文本首选游弋蝶2200分与战斗挑战不同，排除按关键词归类；缺可投影的本段玩家箭头及战斗柱攻略近景。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e003",
+            "member": 1,
+            "pointId": "1258925663828058112",
+            "pixel": [
+              978.6329550506019,
+              103.80458392932087
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e004",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "西向崖边下降后破石，随后134秒开图黄箭头靠近1252712945804910592但尚需单独稳定帧核实；相邻飞檐挑战不是石堆。保留定位线索，不仅凭近邻/打石头短描述确认。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e004",
+            "member": 1,
+            "pointId": "1252723526655315968",
+            "pixel": [
+              491.5136372701768,
+              346.4339924136816
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e005",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "过高石右侧小路罐群生成青色潮汐；候选1252777761631461376图示五罐和潮汐机制相似，但源中长岩墙与攻略开阔矮石区尚不能建立同视角对应；134秒为传送前旧位置，不能沿用。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e005",
+            "member": 1,
+            "pointId": "1252777761631461376",
+            "pixel": [
+              278.9543725999477,
+              259.6273278889132
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e006",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "从罐群回小路向北再东北岩壁投黑石；SIFT未通过，候选文本含使命必达长枪机制并非本段裂岩，不能由投掷词相同确认。需要本段山壁与黑石起点定位。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e006",
+            "member": 1,
+            "pointId": "1287893534694129664",
+            "pixel": [
+              136.00189612866643,
+              -65.12245305946954
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e007",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "东北三岔路中央大型敌人后金潮汐；金色光效不等同辉光宝箱。检索候选1252778607336280064要求罐群，而本事件未显示罐群触发，应与后续罐群事件分别处理。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e007",
+            "member": 1,
+            "pointId": "1252778607336280064",
+            "pixel": [
+              625.1082934508356,
+              178.74155019772866
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e008",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "蘑菇、荆棘和树枝三蝶送归，奖励实为紫潮汐；新查1288245572837634048图中三蝶与草地巨根相似，但图文称宝箱且缺本事件小地图锚点。图片2是库街区攻略位置示意，可作为候选，不是作者总览；需核准奖励类型和最终石柱坐标。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e008",
+            "member": 1,
+            "pointId": "1288245572837634048",
+            "pixel": [
+              374.24445277482863,
+              136.1737426942068
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e009",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "帐篷后下层罐群清怪出金潮汐，1252778607336280064图示蓝花间散罐，与视频325/352秒草地蓝花部分一致；没有合格玩家定位，照片视角尚不能唯一排除其它罐群潮汐。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e009",
+            "member": 1,
+            "pointId": "1252778607336280064",
+            "pixel": [
+              625.1082934508356,
+              178.74155019772866
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e015",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "696/698秒开图指向1288228421542363136附近，作者只展示已完成底座并口述奖励；攻略图2是木平台上的精密箱，视频没有重演终点/领取。即使可识别挑战，也不能把未展示的奖励自动算已视觉确认。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e015",
+            "member": 1,
+            "pointId": "1288228421542363136",
+            "pixel": [
+              511.38618806173474,
+              315.2423107998404
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e016",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "西南小路裂岩朴素箱，位于巨大蘑菇路线后；起点开图和领取处间有下行偏移，不能直接使用696/698秒旧位置。缺该裂岩近景攻略及终点小地图。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e016",
+            "member": 1,
+            "pointId": "1287893534694129664",
+            "pixel": [
+              136.00189612866643,
+              -65.12245305946954
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e018",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "两块魔方加人物压三板启动移动蓝台，候选1282074825211928576在后续洞内开图附近并描述压块机关，但可能记录起点或另一高度层；未把25单位近邻当作精密箱坐标，需平台终点与攻略逐一对应。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e018",
+            "member": 1,
+            "pointId": "1252725910625112064",
+            "pixel": [
+              393.5965898898921,
+              252.2150232816009
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e020",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "三个蝴蝶分别在石怪、树后、木箱，领取紫潮汐。新查1251558983059951616攻略展示三蝶柱与坡后岩台，但文字不足以区分不同三蝶组；841秒之后重新传送，不能沿用洞内旧锚点。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e020",
+            "member": 1,
+            "pointId": "1251558983059951616",
+            "pixel": [
+              620.5861342403911,
+              374.76990823827873
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e021",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "炸药苞烧荆棘取黑石，西南两次砸裂岩；文本候选1251279506112548864为倒树荆棘，1252725969008570368为连续炸药苞路线，均不足以证明同一黑石奖励。缺独立终点定位。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e021",
+            "member": 1,
+            "pointId": "1251279506112548864",
+            "pixel": [
+              819.4069317764381,
+              -237.39214687090237
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e022",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "先绕过河豚，再完成30秒蘑菇风场跑酷。不能把河豚候选当本奖励；没有合格小地图或起点-终点攻略链，保留跑酷独立事件。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e022",
+            "member": 1,
+            "pointId": "1285624536032034816",
+            "pixel": [
+              1010.2851452708016,
+              199.9100495304217
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e023",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "回到先前略过的河豚装置，沿多瀑布至木桥；1065/1067秒奖励后开图附近候选主要是普通敌人箱，不符机制。文本1287922301495734272可作河豚路线候选，需起点与终点攻略对比，不能选最近。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e023",
+            "member": 1,
+            "pointId": "1287922301495734272",
+            "pixel": [
+              297.46931322942584,
+              -64.53444622342886
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e024",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "东南花圈摘花后出怪并获箱，文本1287499787732840448要求把圈外炸药苞扔进空花圈，和本段采花动作不一致；1252726314193948672四幼猿仅部分相似。缺传送后独立位置与花圈攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e024",
+            "member": 1,
+            "pointId": "1287499787732840448",
+            "pixel": [
+              857.3263300012228,
+              -370.7118115829147
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p10:e025",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "三块拼图完成后箱在远处丘顶，新查1252722121181585408攻略也有三块拼图，但图中箱在近侧且拼图方阵不同角度难以对应；缺终点锚点，不能只用拼图文字确认。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p10:e025",
+            "member": 1,
+            "pointId": "1252722121181585408",
+            "pixel": [
+              761.9905865772221,
+              354.0231468157863
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        }
+      ],
+      "overviewOnly": [],
+      "timelineSha256AtReview": "8c828037293fad8b63739b60aed0f4113e7befc538c4f330e164bcf409c06448",
+      "geometryReview": {
+        "source": "out/detectability-v2/overview-huanglong/overview-geometry.json",
+        "inliers": 88,
+        "acceptedGeometry": true,
+        "note": "固定LIMITS未放宽；与已配准的源实机地图建立图像变换。ROI anchor仅为地图内任意有效匹配像素，不是玩家；红e标签为审阅者现有候选投影，不是作者编号或确认。"
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 11,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–4秒怨鸟泽北方/悬空岛总览，5秒普通地图。悬岛中心辉光和周围基准簇是平面投影，必须保留楼层；e21先岛上基准再中心辉光的两个成员已由原视频支持，不能合并。e11引导晶核及屋内明确排除的紫箱不因图上辉光/精密符号改成奖励箱。",
+      "checkedIntervals": [
+        [
+          0,
+          17
+        ]
+      ],
+      "overviewInterval": [
+        0,
+        4
+      ],
+      "evidence": [
+        "out/detectability-v2/overview-huanglong/p11-opening.jpg",
+        "out/detectability-v2/overview-huanglong/p11-000.jpg",
+        "out/detectability-v2/overview-huanglong/p11-005.jpg",
+        "out/detectability-v2/overview-huanglong/p11-projected.jpg"
+      ],
+      "associations": [
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "西部至城上旧址",
+          "eventIds": [
+            "BV1iMTXzVE8J:p11:e001",
+            "BV1iMTXzVE8J:p11:e002",
+            "BV1iMTXzVE8J:p11:e003",
+            "BV1iMTXzVE8J:p11:e004",
+            "BV1iMTXzVE8J:p11:e005",
+            "BV1iMTXzVE8J:p11:e006",
+            "BV1iMTXzVE8J:p11:e007"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "射击/破石/飞檐图钉交错，e7路途击柱不是三柱解密箱，首轮排除继续有效。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p11-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p11.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "城上旧址南侧与房屋",
+          "eventIds": [
+            "BV1iMTXzVE8J:p11:e008",
+            "BV1iMTXzVE8J:p11:e009",
+            "BV1iMTXzVE8J:p11:e010",
+            "BV1iMTXzVE8J:p11:e011",
+            "BV1iMTXzVE8J:p11:e012",
+            "BV1iMTXzVE8J:p11:e013",
+            "BV1iMTXzVE8J:p11:e014"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "瀑布石、依序柱、致爆、晶核房、花阵箱、河豚、射击均不同；晶核不映射宝箱ID。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p11-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p11.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "悬空岛中心与四周",
+          "eventIds": [
+            "BV1iMTXzVE8J:p11:e015",
+            "BV1iMTXzVE8J:p11:e016",
+            "BV1iMTXzVE8J:p11:e017",
+            "BV1iMTXzVE8J:p11:e018",
+            "BV1iMTXzVE8J:p11:e019",
+            "BV1iMTXzVE8J:p11:e020",
+            "BV1iMTXzVE8J:p11:e021"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "平面基准簇与中央辉光只辅助区域；e21两个成员分别保留，不能因同事件合并。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p11-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p11.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "无音区及海边路线",
+          "eventIds": [
+            "BV1iMTXzVE8J:p11:e022",
+            "BV1iMTXzVE8J:p11:e023",
+            "BV1iMTXzVE8J:p11:e024",
+            "BV1iMTXzVE8J:p11:e025"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "黑石箱、战斗、代币跑酷、最低崖沿长跑酷，图钉仅线索不补确认。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p11-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p11.json"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "eventId": "BV1iMTXzVE8J:p11:e001",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "东方营地右坡山尖射击，文本最佳候选为炸药苞三阵列而非靶组；无合格小地图，需此山尖射击起点和近景攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p11:e001",
+            "member": 1,
+            "pointId": "1273024217174368256",
+            "pixel": [
+              -185.6517479290037,
+              106.38386959950685
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p11:e003",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "72秒地图之后传送，东北跳崖再右转碎石；不能用传送前海岸箱位置。通用碎石描述覆盖多点，缺新的岩壁锚点。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p11:e003",
+            "member": 1,
+            "pointId": "1282806504977227776",
+            "pixel": [
+              145.3048479329588,
+              443.6111274607397
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p11:e004",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "从前石堆爬回崖壁再向东南射击，文字检索误召回三阵列；需同一高地靶组与终点照片，不能因辅助射击技能相同认作阵列。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p11:e004",
+            "member": 1,
+            "pointId": "1273024217174368256",
+            "pixel": [
+              -185.6517479290037,
+              106.38386959950685
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p11:e005",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "西南大石上限时跑酷，终点163秒开图靠近裸露箱及射击挑战；两个近邻机制均不符。挑战标点可能在起点，奖励终点漂移不能靠最近箱解决。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p11:e005",
+            "member": 1,
+            "pointId": "1285624536032034816",
+            "pixel": [
+              273.4761274138574,
+              358.35392316221964
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p11:e006",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "163秒开图后传送，东面栏杆处东南下跳碎石；新的低层与旧高地断开。无有效小地图，普通碎石描述无法唯一确定。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p11:e006",
+            "member": 1,
+            "pointId": "1282806504977227776",
+            "pixel": [
+              145.3048479329588,
+              443.6111274607397
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p11:e007",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "249秒SIFT17内点raw(51088,273570)，254/256秒大地图相近，玩家位置可信。最近1255985231231295488为三阵列池塘箱，攻略图与视频跑酷终点树坡并不一致。明确排除该近邻；仍需找到蓝平台/魔方/代币挑战的起点ID与终点攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p11:e007",
+            "member": 1,
+            "pointId": "1255985231231295488",
+            "pixel": [
+              324.8284072287778,
+              325.8042388005915
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p11:e008",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "传送后西南落到右侧瀑布前破碎石，文字检索只命中瀑布声匣，类型和操作不符；不能把同瀑布的声匣替代朴素箱。待核实碎石在瀑布哪一层。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p11:e008",
+            "member": 1,
+            "pointId": "1258934512261115904",
+            "pixel": [
+              283.61768113258677,
+              415.5943611100181
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p11:e010",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "南爬山到东南60秒炸药苞多轮木箱射击；候选烧荆棘是不同机制。无本段通过的小地图，缺挑战装置位置及木箱轮次攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p11:e010",
+            "member": 1,
+            "pointId": "1251279506112548864",
+            "pixel": [
+              8.056803156478693,
+              -248.54905708783758
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p11:e011",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "448/449秒界面是引导晶核；1288287493370998784攻略图1/2说明房门前置及紫箱、图3说明外部辉光箱。当前成员是晶核，不绑定任何宝箱ID，室内紫箱明确不属于此次领取；需要独立晶核点位类别。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p11:e011",
+            "member": 1,
+            "pointId": "1288287493370998784",
+            "pixel": [
+              573.5598555057803,
+              398.38066446271887
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p11:e013",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "从477秒地图后传送至东北河边，河豚环路线领取精密箱；候选1288583124337618944属于后续P12水域，1287505166411821056要求先送蝶。缺新水域起点/终点地图链，不能复用P12身份。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p11:e013",
+            "member": 1,
+            "pointId": "1287505166411821056",
+            "pixel": [
+              -361.81790328741033,
+              146.5352183185896
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p11:e014",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "538秒开图未提取可靠黄箭头，传送后西北经蘑菇到射击；1282457638774849536描述固定5靶但视频多轮空中靶，缺近景证据，不因射击通用机制确认。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p11:e014",
+            "member": 1,
+            "pointId": "1273024217174368256",
+            "pixel": [
+              -185.6517479290037,
+              106.38386959950685
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p11:e025",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "上一遗迹终点918/920秒开图后，西北跳至最低崖沿开始新跑酷并延伸海面蓝平台；明确不同于事件24。没有新终点SIFT/对应攻略，不能重复使用1288283699782414336。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p11:e025",
+            "member": 1,
+            "pointId": "1258915112415576064",
+            "pixel": [
+              133.2324700816755,
+              -13.42091528163769
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        }
+      ],
+      "overviewOnly": [],
+      "timelineSha256AtReview": "09a4822b8df386cbabc38322b4530f9d3175e7cc18a0be7f604a184e438cc66d",
+      "geometryReview": {
+        "source": "out/detectability-v2/overview-huanglong/overview-geometry.json",
+        "inliers": 220,
+        "acceptedGeometry": true,
+        "note": "固定LIMITS未放宽；与已配准的源实机地图建立图像变换。ROI anchor仅为地图内任意有效匹配像素，不是玩家；红e标签为审阅者现有候选投影，不是作者编号或确认。"
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 12,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0–4秒羽鹭湿地/稷廷遗址总览，5秒普通地图。湿地西部精密、南部拼图精密、东南挑战精密及遗址北部基准/朴素/辉光链可见。P11 e11与本P e7提供两晶核，最终e9双插座只生成一辉光箱，不能将晶核或总览图钉重复算成三箱。",
+      "checkedIntervals": [
+        [
+          0,
+          17
+        ]
+      ],
+      "overviewInterval": [
+        0,
+        4
+      ],
+      "evidence": [
+        "out/detectability-v2/overview-huanglong/p12-opening.jpg",
+        "out/detectability-v2/overview-huanglong/p12-000.jpg",
+        "out/detectability-v2/overview-huanglong/p12-005.jpg",
+        "out/detectability-v2/overview-huanglong/p12-projected.jpg"
+      ],
+      "associations": [
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "湿地西侧/南部/东南精密",
+          "eventIds": [
+            "BV1iMTXzVE8J:p12:e001",
+            "BV1iMTXzVE8J:p12:e002",
+            "BV1iMTXzVE8J:p12:e003"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "收光点、地板拼块、最高山尖跑酷分别独立；图钉跨大距离，不按最近点改配。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p12-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p12.json"
+          ]
+        },
+        {
+          "authorNumber": null,
+          "authorLabel": "箱型/资源类型标签；未见作者事件数字",
+          "overviewLocation": "稷廷遗址北侧链",
+          "eventIds": [
+            "BV1iMTXzVE8J:p12:e004",
+            "BV1iMTXzVE8J:p12:e005",
+            "BV1iMTXzVE8J:p12:e006",
+            "BV1iMTXzVE8J:p12:e007",
+            "BV1iMTXzVE8J:p12:e008",
+            "BV1iMTXzVE8J:p12:e009"
+          ],
+          "status": "route-level-association-not-identity-confirmation",
+          "analysis": "射击与河豚基准、东部朴素破石、晶核前置、战斗箱及双晶核辉光终奖；晶核不另算箱。",
+          "evidence": [
+            "out/detectability-v2/overview-huanglong/p12-000.jpg",
+            "tools/MarkerDetectabilityV2/timelines/BV1iMTXzVE8J-p12.json"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "eventId": "BV1iMTXzVE8J:p12:e001",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "60秒光点跑酷跨帐篷河道、小岛和坡顶；87秒开图最近声匣不是箱，候选点位可能在远处起点。未用终点最近声匣绑定精密箱。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p12:e001",
+            "member": 1,
+            "pointId": "1285624536032034816",
+            "pixel": [
+              260.92652492528225,
+              6.434375838036431
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p12:e003",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "由高山尖开始沿蓝平台下降到海岸；294秒地图附近为石桥声匣和四阵列箱，均非60秒跑酷。已明确起终点分离但缺对应挑战攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p12:e003",
+            "member": 1,
+            "pointId": "1285624536032034816",
+            "pixel": [
+              260.92652492528225,
+              6.434375838036431
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p12:e006",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "从380秒开图后传送向东绕山，左拐小道破石；旧箭头在河豚终点不能延续。通用碎石文字不唯一，缺领取附近定位和岩缝攻略。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p12:e006",
+            "member": 1,
+            "pointId": "1282806504977227776",
+            "pixel": [
+              132.7982036766286,
+              91.59564587886439
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p12:e007",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "房屋四块拼图开门领取第二引导晶核；最终1288578802371588096是登塔交付两核的辉光箱，不是当前晶核。保留跨段前置联系，当前未找到独立晶核ID，不能用室内精密箱代替。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p12:e007",
+            "member": 1,
+            "pointId": "1288287493370998784",
+            "pixel": [
+              560.8223680828127,
+              46.547332142862615
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        },
+        {
+          "eventId": "BV1iMTXzVE8J:p12:e008",
+          "member": 1,
+          "analysis": "总览已提供上述区域路线，但类型图钉不能替代原视频玩家位置、起终点/楼层及原攻略细节；原首轮缺证不因图钉自动消失。",
+          "firstPassMissingEvidence": [
+            "向东小路右拐空地120秒战斗挑战，终点无合格小地图；文本候选普通镇守箱/压板机关与战斗计时不符。511秒地图是下一次传送选择，不自动提供当前奖励位置。"
+          ],
+          "candidateProjection": {
+            "eventId": "BV1iMTXzVE8J:p12:e008",
+            "member": 1,
+            "pointId": "1251249962676686848",
+            "pixel": [
+              271.2320215903871,
+              456.85105118851493
+            ],
+            "identityStatus": "pending"
+          },
+          "disposition": "retain-unresolved;no-timeline-edit"
+        }
+      ],
+      "overviewOnly": [],
+      "timelineSha256AtReview": "599ee668929eafa2bb2d7a76f6e5376ed042a09f566bdf13221edb35a3063f17",
+      "geometryReview": {
+        "source": "out/detectability-v2/overview-huanglong/overview-geometry.json",
+        "inliers": 226,
+        "acceptedGeometry": true,
+        "note": "固定LIMITS未放宽；与已配准的源实机地图建立图像变换。ROI anchor仅为地图内任意有效匹配像素，不是玩家；红e标签为审阅者现有候选投影，不是作者编号或确认。"
+      }
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "实际查看0–2秒北侧叹息长阶/微河谷总览、3–5秒船葬祭地总览、7秒白翎堤/埃格拉镇及插图、9秒双子塔附近总览，均为箱等级文字+路线箭头，无独立顺序数字。四个画面有插图与边缘裁切，不以每帧图钉总和强制等于22。时间线二十二段各一奖励；变布偶破石、移柱变兔、假箱变怪等多步骤不增加奖励数。1083.37–1092.37秒为断桥终点清怪开精密箱与普通结束地图，无独立片尾总览。",
+      "evidence": [
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-00000.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-00003.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-00005.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-00007.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-00009.00.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-01083.37.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-01088.37.jpg",
+        "out/detectability-v2/overview-rinascita/BV1k438ziEoG-p1-01092.37.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "北侧辉光图钉",
+          "eventIds": [
+            "BV1k438ziEoG:p1:e007"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1k438ziEoG:p1:e007",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "北侧总览一处辉光只作路线覆盖提示；视频两轮拟态怪后第三次调查才生成真箱，仍计单奖励。",
+          "evidence": [
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-00214.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "移柱/变兔地点等级图钉",
+          "eventIds": [
+            "BV1k438ziEoG:p1:e014",
+            "BV1k438ziEoG:p1:e017",
+            "BV1k438ziEoG:p1:e018",
+            "BV1k438ziEoG:p1:e019",
+            "BV1k438ziEoG:p1:e020"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1k438ziEoG:p1:e014",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1k438ziEoG:p1:e017",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1k438ziEoG:p1:e018",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1k438ziEoG:p1:e019",
+              "members": [
+                1
+              ]
+            },
+            {
+              "eventId": "BV1k438ziEoG:p1:e020",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "地图图钉不能代表机关步骤数；每处多个柱/石块/球的前置动作仍归同一奖励事件。",
+          "evidence": [
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-00585.00.jpg",
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-00764.00.jpg",
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-00853.00.jpg",
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-00935.00.jpg",
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-00985.00.jpg"
+          ]
+        },
+        {
+          "overviewLabel": "南侧精密图钉",
+          "eventIds": [
+            "BV1k438ziEoG:p1:e022"
+          ],
+          "rewardMembers": [
+            {
+              "eventId": "BV1k438ziEoG:p1:e022",
+              "members": [
+                1
+              ]
+            }
+          ],
+          "status": "cross-check-only-no-identity-upgrade",
+          "analysis": "片尾断桥终点精密箱与总览南侧精密提示相容，但不能只凭该图钉升级身份。",
+          "evidence": [
+            "out/detectability-v2/BV1k438ziEoG/p01/visual/scenes-1s-01082.00.jpg"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "kind": "overview-association-unclear",
+          "analysis": "无数字编号、区域轮换及插图裁切，未逐点恢复总览与二十二事件的全映射；不依据图钉接近度确认ID或补造顺序。"
+        }
+      ]
+    },
+    {
+      "bvid": "BV1p9K1zvE5E",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "0秒作者标点总览共17个图标位置；其中两处3宝箱对应两个滑雪事件各3成员，其余15单奖励，合计与独立时间轴17事件21奖励对应。原图没有数字编号，E编号仅本轮视频事件序号，不继承旧版总览16。总览东侧辉光对应事件10跑酷，东南辉光对应事件17机关兽；西南海岛精密对应事件7，位置、视频和攻略分别核对，三者不可混用。首轮唯一未决事件10经总览补坐标并返回355/358秒和攻略起点说明后确认。没有只在总览而无视频的新增目标。",
+      "evidence": [
+        "out/detectability-v2/BV1p9K1zvE5E/p01/visual/frame-00000.00.jpg",
+        "out/detectability-v2/overview-root/firmament-overview-sift.json",
+        "out/detectability-v2/overview-root/firmament-overview-events.jpg",
+        "out/detectability-v2/BV1p9K1zvE5E/p01/visual/frame-00355.00.jpg",
+        "out/detectability-v2/BV1p9K1zvE5E/p01/visual/frame-00358.00.jpg"
+      ],
+      "associations": [
+        {
+          "overviewLabel": "基准",
+          "screenIconCenter": [
+            145,
+            43
+          ],
+          "approxTipPixel": [
+            145,
+            62
+          ],
+          "approxRawPosition": [
+            158520.17062886478,
+            275987.8425224787
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e002",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "基准",
+          "screenIconCenter": [
+            201,
+            64
+          ],
+          "approxTipPixel": [
+            201,
+            83
+          ],
+          "approxRawPosition": [
+            171376.17308981201,
+            280811.9515148014
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e001",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "基准",
+          "screenIconCenter": [
+            402,
+            118
+          ],
+          "approxTipPixel": [
+            402,
+            137
+          ],
+          "approxRawPosition": [
+            217521.07914375284,
+            293219.576750788
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e004",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "基准",
+          "screenIconCenter": [
+            362,
+            135
+          ],
+          "approxTipPixel": [
+            362,
+            154
+          ],
+          "approxRawPosition": [
+            208336.66316717863,
+            297120.6556374175
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e003",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "精密",
+          "screenIconCenter": [
+            392,
+            176
+          ],
+          "approxTipPixel": [
+            392,
+            195
+          ],
+          "approxRawPosition": [
+            215222.35974868754,
+            306535.2938955752
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e005",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "3宝箱",
+          "screenIconCenter": [
+            464,
+            88
+          ],
+          "approxTipPixel": [
+            464,
+            107
+          ],
+          "approxRawPosition": [
+            231757.1015114123,
+            286334.9020003369
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e011",
+          "rewardMembers": [
+            1,
+            2,
+            3
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "精密",
+          "screenIconCenter": [
+            477,
+            73
+          ],
+          "approxTipPixel": [
+            477,
+            92
+          ],
+          "approxRawPosition": [
+            234742.49774424048,
+            282891.688769919
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e012",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "精密",
+          "screenIconCenter": [
+            493,
+            57
+          ],
+          "approxTipPixel": [
+            493,
+            76
+          ],
+          "approxRawPosition": [
+            238416.71179419072,
+            279219.0317958663
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e013",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "基准",
+          "screenIconCenter": [
+            502,
+            154
+          ],
+          "approxTipPixel": [
+            502,
+            173
+          ],
+          "approxRawPosition": [
+            240478.2993833769,
+            301489.67251497123
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e009",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "朴素",
+          "screenIconCenter": [
+            562,
+            217
+          ],
+          "approxTipPixel": [
+            562,
+            236
+          ],
+          "approxRawPosition": [
+            254250.61706020887,
+            315956.7443607848
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e008",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "辉光",
+          "screenIconCenter": [
+            699,
+            248
+          ],
+          "approxTipPixel": [
+            699,
+            267
+          ],
+          "approxRawPosition": [
+            285702.90021444537,
+            323080.69189647416
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e010",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "精密",
+          "screenIconCenter": [
+            739,
+            235
+          ],
+          "approxTipPixel": [
+            739,
+            254
+          ],
+          "approxRawPosition": [
+            294887.12155653234,
+            320097.971887845
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e014",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "基准",
+          "screenIconCenter": [
+            678,
+            343
+          ],
+          "approxTipPixel": [
+            678,
+            362
+          ],
+          "approxRawPosition": [
+            280876.89353587246,
+            344890.69341792486
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e015",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "辉光",
+          "screenIconCenter": [
+            645,
+            362
+          ],
+          "approxTipPixel": [
+            645,
+            381
+          ],
+          "approxRawPosition": [
+            273299.50827855535,
+            349251.2923539072
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e017",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "3宝箱",
+          "screenIconCenter": [
+            549,
+            438
+          ],
+          "approxTipPixel": [
+            549,
+            457
+          ],
+          "approxRawPosition": [
+            251255.19715129,
+            366695.4398082212
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e016",
+          "rewardMembers": [
+            1,
+            2,
+            3
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "精密",
+          "screenIconCenter": [
+            409,
+            338
+          ],
+          "approxTipPixel": [
+            409,
+            357
+          ],
+          "approxRawPosition": [
+            219117.50228345746,
+            343729.6556511603
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e006",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        },
+        {
+          "overviewLabel": "精密",
+          "screenIconCenter": [
+            351,
+            409
+          ],
+          "approxTipPixel": [
+            351,
+            428
+          ],
+          "approxRawPosition": [
+            205797.84379030447,
+            360027.70353560225
+          ],
+          "eventId": "BV1p9K1zvE5E:p1:e007",
+          "rewardMembers": [
+            1
+          ],
+          "basis": "总览地形位置、标签、视频独立路线及奖励类型交叉核对；图标中心不是地图落点，尖端人工约读有误差"
+        }
+      ],
+      "unresolved": [
+        "总览标签位置人工读数有像素误差；事件10攻略无终点实景图，该限制保留。"
+      ]
+    },
+    {
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "首0–15s为游戏区域地图，无作者箱号落点/路线叠加；21–48s为任务与显像准备。中段抽查为收集/传送/对白，尾639–669.8s为长椅对话、领取和普通区域地图。未找到作者点位总览；底部箱1–10章节条不是空间总览。611–615s旧录像断点仍不继承610s或后续地图位置。",
+      "evidence": [
+        "out/detectability-v2/overview-new-regions/BV1pa9RBtEPA-p1/survey-000.jpg",
+        "out/detectability-v2/overview-new-regions/BV1pa9RBtEPA-p1/survey-024.jpg",
+        "out/detectability-v2/overview-new-regions/BV1pa9RBtEPA-p1/survey-048.jpg",
+        "out/detectability-v2/overview-new-regions/BV1pa9RBtEPA-p1/last-frame.jpg"
+      ],
+      "associations": [],
+      "unresolved": [
+        "No new overview evidence resolves e006 member-to-ID ambiguity or e009 inserted footage localization; frozen first-pass preserved."
+      ],
+      "overviewOnly": [],
+      "inspectionMethod": "New extraction from cached raw source: first90s every3s, interior every30s, last30s every3s plus actual final frame. Human visual review of all survey panels; no v1 decisions read. not-found is bounded to inspected frames, not a proof against a sub-second insert."
+    }
+  ],
+  "limitations": [
+    "not-found overview assessments are bounded to inspected frames and chronological review; no claim of subframe exhaustive detection.",
+    "Overview hints do not automatically confirm identities; upgrades retain independent video and guide checks."
+  ],
+  "postOverviewFollowup": "穗波市正确地下层定位追加确认三个独立奖励，领取帧SIFT失败限制保留。"
+}

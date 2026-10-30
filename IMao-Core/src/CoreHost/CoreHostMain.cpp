@@ -467,6 +467,7 @@ bool ApplyConfigure(const json& command) {
     const auto mapBar = boolean("mapStatusBarEnabled");
     const auto ball = boolean("statusBallEnabled");
     const auto autoReplan = boolean("autoReplanEnabled");
+    const auto gapFill = boolean("gapFillModeEnabled");
     const auto completionRange = integer("completionRangePixels", NearbySelection::MinimumRangePixels, NearbySelection::MaximumRangePixels);
     const auto guideRange = integer("guideRangePixels", NearbySelection::MinimumRangePixels, NearbySelection::MaximumRangePixels);
     const auto farmRange = integer("farmRangePixels", FarmMode::MinimumRangePixels, FarmMode::MaximumRangePixels);
@@ -483,6 +484,7 @@ bool ApplyConfigure(const json& command) {
     if (mapBar) RuntimeStatus::SetMapStatusBarEnabled(*mapBar);
     if (ball) RuntimeStatus::SetStatusBallEnabled(*ball);
     if (autoReplan) RoutePlanningService::SetAutoReplanEnabled(*autoReplan);
+    if (gapFill) { RoutePlanningService::SetGapFillModeEnabled(*gapFill); DrawItemBase::ClearMarkerCandidates(true); }
     if (completionRange || guideRange)
         NearbySelection::Ranges::Apply(completionRange.value_or(NearbySelection::Ranges::Completion()),
             guideRange.value_or(NearbySelection::Ranges::Guide()));

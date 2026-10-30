@@ -1,0 +1,1329 @@
+{
+  "schemaVersion": 1,
+  "reviewer": "huanglong_first independent image cross-check",
+  "date": "2026-10-29",
+  "policy": "pin索引从0开始；frameSeconds是已读关键帧而非精确剪辑边界。最终修正以本文件为准；不修改root-review-notes.json。未匹配段身份及探测标签均不自动推断。",
+  "p08PinReview": [
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 0,
+      "candidatePointId": "1287496258842587136",
+      "pointId": "1287496258842587136",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        120,
+        135,
+        145,
+        150,
+        154
+      ],
+      "basis": "倾斜车厢、洞内楼梯、骇入多个端点与攻略图一致。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0120.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0135.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0145.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0150.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0154.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1287496258842587136",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1287496258842587136.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1287496258842587136-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1287496258842587136-2.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1287496258842587136-3.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/9a773d649e744d33a911bc45a25bfb5d20240922.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/10b848ef97c04d50ac92f895fdf13c3820240922.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/af53c5e5202048bbb0c2a0618354cf7920240922.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 1,
+      "candidatePointId": "1277733330260598784",
+      "pointId": "1277733330260598784",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        15,
+        30,
+        32
+      ],
+      "basis": "石板广场横向机关、压力板及最终精密箱对应。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0015.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0030.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0032.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1277733330260598784",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1277733330260598784.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1277733330260598784-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/facaa97692c64957b506f9137459c1fc20240826.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 2,
+      "candidatePointId": "1287499787732840448",
+      "pointId": "1287499787732840448",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        326,
+        330,
+        332,
+        334,
+        336
+      ],
+      "basis": "白花圈投掷炸药苞；285–324为赶路，326–334解谜，336开箱。原165属于别的路线。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0326.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0330.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0332.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0334.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0336.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1287499787732840448",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1287499787732840448.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1287499787732840448-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1287499787732840448-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/8bfedd8033df4e9dbec0d7c3dc37a7cc20240922.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/35c77b70f8514cf09f4b9ec5e15e549f20240922.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 3,
+      "candidatePointId": "1280662800573181952",
+      "pointId": "1280662800573181952",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        405,
+        415,
+        425,
+        430
+      ],
+      "basis": "山顶四处火种/爆炸果实、枯树白花草地对应。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0405.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0415.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0425.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0430.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1280662800573181952",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1280662800573181952.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1280662800573181952-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/73d87d88da9e46beb883e54eba3e8c7c20240903.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 4,
+      "candidatePointId": "1273403497468301312",
+      "pointId": "1273403497468301312",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        175,
+        180,
+        185
+      ],
+      "basis": "草坡岩壁碎石前后与树木对应。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0175.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0180.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0185.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1273403497468301312",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1273403497468301312.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1273403497468301312-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1273403497468301312-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/56899e5650b44d4692207a121d0fc7de20240814.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/fe37056c4da5425eb47d73adeca665f120240814.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 5,
+      "candidatePointId": "1273402033967587328",
+      "pointId": "1273402033967587328",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        213,
+        215,
+        220
+      ],
+      "basis": "沙地岸边碎石与远处建筑对应；225已离开。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0213.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0215.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0220.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1273402033967587328",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1273402033967587328.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1273402033967587328-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1273402033967587328-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/7faed19207b349249e092b015be793b120240814.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/aecfd9859a1043bc85d1670e578b9d0d20240814.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 6,
+      "candidatePointId": "1279212876960899072",
+      "pointId": "1279212876960899072",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        229,
+        230,
+        232,
+        235
+      ],
+      "basis": "岸边紫色剑形限时战斗与奖励；255已进入蘑菇路线。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0229.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0230.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0232.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0235.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1279212876960899072",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1279212876960899072.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1279212876960899072-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/1befe615067d4259a79fcbb6a91db13120240830.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 7,
+      "candidatePointId": "1280660552790466560",
+      "pointId": "1280660552790466560",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        260,
+        265,
+        270
+      ],
+      "basis": "树旁连续蘑菇路径、石墙及朴素箱对应。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0260.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0265.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0270.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1280660552790466560",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1280660552790466560.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1280660552790466560-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1280660552790466560-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/e0dfb5190d7b4fe3b1171e0e5b58659120240903.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/39955801d23f4912ad42492905dac1c720240908.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 8,
+      "candidatePointId": "1280647352137179136",
+      "pointId": "1280647352137179136",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        585,
+        590,
+        595,
+        600,
+        605
+      ],
+      "basis": "山坡射击/致爆挑战，火种和背后城墙对应。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0585.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0590.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0595.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0600.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0605.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1280647352137179136",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1280647352137179136.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1280647352137179136-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/6c18e33473b14bc3832cc63c03562bb320240903.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 9,
+      "candidatePointId": "1287914041372000256",
+      "pointId": "1287914041372000256",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        625,
+        630,
+        645,
+        670,
+        675
+      ],
+      "basis": "无音区上方致爆挑战，火种营地及结束奖励对应。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0625.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0630.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0645.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0670.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0675.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1287914041372000256",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1287914041372000256.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1287914041372000256-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1287914041372000256-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/9e0c8417bc814f869b4262af7342392d20240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/ef43e9d583a34571934b11f2d7c8e75a20240923.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 10,
+      "candidatePointId": "1281003221087997952",
+      "pointId": "1281003221087997952",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        465,
+        470
+      ],
+      "basis": "草地音障仪与废墟对应；480为离开后赶路。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0465.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0470.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1281003221087997952",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1281003221087997952.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1281003221087997952-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/f86908362d134b07a5875ec8672c143e20240904.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 11,
+      "candidatePointId": "1281002291128590336",
+      "pointId": "1281002291128590336",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        490,
+        495,
+        500,
+        505,
+        510
+      ],
+      "basis": "草地蓝色平台竞速起点、路径与基准箱对应。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0490.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0495.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0500.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0505.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0510.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1281002291128590336",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1281002291128590336.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1281002291128590336-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/00cae9a477bf4c248cea46ea0deff81320240904.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 12,
+      "candidatePointId": "1281002762420363264",
+      "pointId": "1281002762420363264",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        525,
+        530,
+        540,
+        545
+      ],
+      "basis": "草地符文石堆、树和圆顶建筑对应。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0525.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0530.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0540.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0545.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1281002762420363264",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1281002762420363264.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1281002762420363264-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/d3e8dafa490e48cda5e18f9ccfbff9db20240904.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 8,
+      "pinIndexZeroBased": 13,
+      "candidatePointId": "1280647760398823424",
+      "pointId": "1280647760398823424",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        555,
+        560
+      ],
+      "basis": "双层音障仪及精密箱对应；450尚未到此。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0555.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/frame-0560.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1280647760398823424",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1280647760398823424.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1280647760398823424-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/58a6059c4d1f4070b3f7924fa55925ec20240903.png"
+        ]
+      }
+    }
+  ],
+  "p08TimelineOrder": [
+    1,
+    0,
+    4,
+    5,
+    6,
+    7,
+    2,
+    3,
+    10,
+    11,
+    12,
+    13,
+    8,
+    9
+  ],
+  "p08CoverageConclusion": {
+    "overviewPins": 14,
+    "matchedSegments": 14,
+    "extraRewardAt285To336": false,
+    "basis": "285–324赶路后是总览pin2白花圈，336开箱，不是第15个目标。",
+    "contactEvidence": [
+      "out/detectability-collection/BV1iMTXzVE8J/p08/contact-3s-0282.jpg",
+      "out/detectability-collection/BV1iMTXzVE8J/p08/contact-2s-0326.jpg"
+    ]
+  },
+  "p09PinReview": [
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 0,
+      "candidatePointId": "1287899171947606016",
+      "pointId": "1287899171947606016",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        753,
+        756,
+        759
+      ],
+      "basis": "交叉木桩、紫花、远处废墟逐项对应；756击碎、759开朴素箱。690不属于本目标。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0753.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0756.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0759.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1287899171947606016",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287899171947606016.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287899171947606016-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287899171947606016-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/27dd381b47814eeca87c15efcc70007820240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/1b04a13b2f1d49d68ae807b3676cf9a220240923.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 1,
+      "candidatePointId": "1279922414305193984",
+      "pointId": "1279922414305193984",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        798,
+        801,
+        813,
+        816
+      ],
+      "basis": "白吊帐篷及河岸破柱启动，爬崖后枯树、红莓丛、破路边开基准箱，与两张攻略图一致。900是声匣路线。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0798.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0801.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0813.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0816.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1279922414305193984",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1279922414305193984.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1279922414305193984-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1279922414305193984-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/8ba0e2060e654f898b3ba5af3ab9804420240901.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/5e4ae407db1a40bdbd5b9a331bb5163820240916.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 2,
+      "candidatePointId": "1287859583950581760",
+      "pointId": "1287859583950581760",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        201,
+        210,
+        243,
+        246,
+        249
+      ],
+      "basis": "河豚起点水岸残桥；终点浅水草岛、岩壁、灯拱及红衣敌人与图3一致；249地图和攻略图2位置相同。89.2总览偏差不妨碍独立场景核验。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0201.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0210.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0243.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0246.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0249.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1287859583950581760",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287859583950581760.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287859583950581760-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287859583950581760-2.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287859583950581760-3.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/9d9e6c1281db449287d55fe14de9422820240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/fc1b2a33d17a47eaa84ba2ebcf35035920240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/a506dd2de44240d39efc8b1cc3c9165920240923.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 3,
+      "candidatePointId": "1287907069216178176",
+      "pointId": null,
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "unresolved",
+      "frameSeconds": [
+        144,
+        150,
+        162,
+        165
+      ],
+      "basis": "该段为蘑菇平台收集18浮标，奖励基准箱；候选图示草坡飞檐起点及悬崖终点，存在相似白花环境。",
+      "unresolvedReason": "尚未将该段的起点、终点地形与候选建立唯一对应；这些帧只是待核段，不是已确认身份。",
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0144.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0150.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0162.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0165.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1287907069216178176",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287907069216178176.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287907069216178176-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287907069216178176-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/74b5271c99814d39a5e0c1af8220cfc020240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/e6edd3d450254d71a5adc77bb4ec087b20240923.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 4,
+      "candidatePointId": "1280910632148316160",
+      "pointId": "1280910632148316160",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        717,
+        720,
+        723
+      ],
+      "basis": "河岸多处碎石与守卫营地；清理后朴素箱对应攻略。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0717.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0720.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0723.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1280910632148316160",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280910632148316160.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280910632148316160-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/73d3123ccd2d4b0a9139ab3ef66733d720240904.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 5,
+      "candidatePointId": "1287900228575170560",
+      "pointId": "1287900228575170560",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        732,
+        735,
+        738,
+        741
+      ],
+      "basis": "河岸中层崖壁碎石及旁树对应攻略前后图，741开箱。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0732.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0735.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0738.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0741.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1287900228575170560",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287900228575170560.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287900228575170560-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287900228575170560-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/cd6cfb2c1b7346c9942531c85b8d42e620240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/2e25609c3dda4506a69181bbebe7d00920240923.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 6,
+      "candidatePointId": "1280924798644957184",
+      "pointId": null,
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "unresolved",
+      "frameSeconds": [
+        780,
+        795,
+        798
+      ],
+      "basis": "780仅在河岸移动；随后798启动的是pin1白帐篷路线，不能绑定本候选。",
+      "unresolvedReason": "候选攻略为河边路灯、敌人、锁箱与远处巨大断桥的飞檐起点；尚未在本片唯一定位。撤回原780确认。",
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0780.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0795.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0798.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1280924798644957184",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280924798644957184.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280924798644957184-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/99a0fb7d270c40d0aaa4ef71e83d877120240904.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 7,
+      "candidatePointId": "1280909251335430144",
+      "pointId": "1280909251335430144",
+      "stateId": 8,
+      "typeId": "qzx_04",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        609,
+        612,
+        615
+      ],
+      "basis": "破旧简笔画前置后，小椅子金光互动出现辉光箱，河岸地形对应。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0609.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0612.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0615.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1280909251335430144",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280909251335430144.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280909251335430144-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280909251335430144-2.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280909251335430144-3.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/ab0d83e3c956457ca999631c2dd0c08820240904.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/94e7a9022c2f419ebbd7b993f4ead7d020240905.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/4f54263aa4814e97830bf3a0e6c2007a20240905.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 8,
+      "candidatePointId": "1280906831672684544",
+      "pointId": "1280906831672684544",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        546,
+        570,
+        585,
+        588,
+        591,
+        594
+      ],
+      "basis": "电池解锁及排水后，击打四个强击阵列、烧荆棘；588取简笔画，591–594开声匣同室精密箱。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0546.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0570.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0585.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0588.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0591.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0594.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1280906831672684544",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280906831672684544.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280906831672684544-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/01296305a33b4189ab21b1887c62e87f20240904.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 9,
+      "candidatePointId": "1267550834168176640",
+      "pointId": "1267550834168176640",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        921,
+        924,
+        928,
+        929
+      ],
+      "basis": "片尾屋顶碎石，921–926打碎、928开朴素箱；残缺斜墙、圆弧公路、倾斜蓝幕墙与攻略一致。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0921.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0924.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0928.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0929.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1267550834168176640",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1267550834168176640.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1267550834168176640-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/2396dfd6354349f3bc7b8b6d911fe9bf20240729.jpg"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 10,
+      "candidatePointId": "1287924142610792448",
+      "pointId": "1287924142610792448",
+      "stateId": 8,
+      "typeId": "qzx_01",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        828,
+        831,
+        840,
+        852,
+        855
+      ],
+      "basis": "废车和白灌木旁浮城道路起点、限时攀爬、道路终点朴素箱与攻略图一致。原645是另一条轨道竞速，不属于本点。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0828.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0831.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0840.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0852.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0855.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1287924142610792448",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287924142610792448.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287924142610792448-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287924142610792448-2.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287924142610792448-3.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/c81cd8f04f754f09abd6222446521a4a20240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/eb3232617105488bb6e1f03d03c56d5b20240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/6840033710f240e5bf12dea03908fd3420240923.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 11,
+      "candidatePointId": "1287908999877160960",
+      "pointId": "1287908999877160960",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        30,
+        45
+      ],
+      "basis": "草地火种与废墙前致爆挑战，结束出现基准箱，对应攻略图。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0030.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0045.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1287908999877160960",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287908999877160960.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287908999877160960-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287908999877160960-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/370025fdc6b64878a9f4e3e688a4e11a20240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/783354d281534d17a223d186560d487220240923.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 12,
+      "candidatePointId": "1287910748334198784",
+      "pointId": "1287910748334198784",
+      "stateId": 8,
+      "typeId": "qzx_03",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        60,
+        70
+      ],
+      "basis": "岩石树边速攻挑战、草坡精密箱对应攻略图。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0060.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0070.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1287910748334198784",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287910748334198784.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287910748334198784-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287910748334198784-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/b62b91abcb9047a990a67f8d8d1ab3c020240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/f8fc9402586a495aa63fd2f0c929e29120240923.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 13,
+      "candidatePointId": "1287909721897234432",
+      "pointId": "1287909721897234432",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        78,
+        90,
+        96
+      ],
+      "basis": "悬浮黑车与破桥旁起点，蓝色平台路线，斜混凝土公路上基准箱；攻略起终点两图皆匹配。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0078.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0090.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0096.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1287909721897234432",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287909721897234432.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287909721897234432-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287909721897234432-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/852b960be92b4b8ab7f826a04e0f65a320240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/9a9b0003d73b4602b44e280a776b205d20240923.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 14,
+      "candidatePointId": "1275210928456482816",
+      "pointId": "1275210928456482816",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        285,
+        300
+      ],
+      "basis": "草地幻影木箱挑战，石柱、破屋及基准箱对应攻略图。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0285.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0300.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1275210928456482816",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1275210928456482816.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1275210928456482816-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1275210928456482816-2.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/2ca222f3b39c42d79b515ced81856e0b20240819.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/85745c0ef3064c338451c6ce73d3ce0420250125.jpg"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 15,
+      "candidatePointId": "1275209287842783232",
+      "pointId": "1275209287842783232",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        330,
+        339
+      ],
+      "basis": "山丘射击装置与远处悬空建筑对应攻略图。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0330.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0339.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1275209287842783232",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1275209287842783232.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1275209287842783232-1.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/0d46b5af80534660943d423b97e5ee1020240819.png"
+        ]
+      }
+    },
+    {
+      "bvid": "BV1iMTXzVE8J",
+      "part": 9,
+      "pinIndexZeroBased": 16,
+      "candidatePointId": "1287922301495734272",
+      "pointId": "1287922301495734272",
+      "stateId": 8,
+      "typeId": "qzx_02",
+      "reviewStatus": "confirmed",
+      "frameSeconds": [
+        375,
+        378,
+        384,
+        396,
+        402,
+        408
+      ],
+      "basis": "瀑布底河豚起点，沿瀑布向上进入湖面，岸边精密箱；起点地形及终点地图对应。原210是pin2另一河豚。",
+      "unresolvedReason": null,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0375.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0378.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0384.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0396.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0402.00.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0408.00.jpg"
+      ],
+      "guide": {
+        "source": "https://api.kurobbs.com/map/core/position/getDetailOnline",
+        "request": {
+          "id": "1287922301495734272",
+          "state_id": 8
+        },
+        "localJson": "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287922301495734272.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287922301495734272-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287922301495734272-2.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287922301495734272-3.png"
+        ],
+        "imageUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/8d53b03a90a1448e89a28ebfa3897e0420240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/73e6f08027174833a2f7ec0f03f6299b20240923.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/2331058f670d4cfbbc46d372d85c3ba120240923.png"
+        ]
+      }
+    }
+  ],
+  "p09RuinGroup": {
+    "timeRangeSeconds": [
+      440,
+      615
+    ],
+    "pointIds": [
+      "1280906831672684544",
+      "1280909251335430144"
+    ],
+    "observation": "440–444碎石揭露电池；446–532运送/转换电池并解门；534–543排水；546–588四强击阵列与荆棘是精密箱前置，不是额外奖励。588简笔画、591–594精密箱、612–615椅子旁辉光箱。",
+    "countIndependentRewards": 2,
+    "contactEvidence": [
+      "out/detectability-collection/BV1iMTXzVE8J/p09/contact-2s-0420.jpg",
+      "out/detectability-collection/BV1iMTXzVE8J/p09/contact-3s-0450.jpg",
+      "out/detectability-collection/BV1iMTXzVE8J/p09/contact-3s-0510.jpg",
+      "out/detectability-collection/BV1iMTXzVE8J/p09/contact-1s-0530.jpg",
+      "out/detectability-collection/BV1iMTXzVE8J/p09/contact-1s-0550.jpg",
+      "out/detectability-collection/BV1iMTXzVE8J/p09/contact-3s-0570.jpg"
+    ]
+  },
+  "incidentalObservations": [
+    {
+      "part": 9,
+      "timeRangeSeconds": [
+        460,
+        462
+      ],
+      "pointId": null,
+      "reviewStatus": "incidental-unknown",
+      "detectability": "unknown",
+      "countAsNonDetectable": false,
+      "observation": "首个电池房右侧已有白色/朴素箱，视频没有开启。黄色漂浮矩形物为电池，不是箱子。",
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/frame-0462.00.jpg"
+      ]
+    },
+    {
+      "part": 9,
+      "timeRangeSeconds": [
+        858,
+        918
+      ],
+      "observation": "跑酷之后飞往高处收集声匣，再降落至屋顶石堆；不将声匣另计宝箱。",
+      "countAsChest": false,
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/contact-3s-0858.jpg"
+      ]
+    }
+  ],
+  "unresolvedVideoSegments": [
+    {
+      "part": 9,
+      "timeRangeSeconds": [
+        144,
+        165
+      ],
+      "observedMechanism": "限时60秒蘑菇平台收18浮标，162出现基准箱。",
+      "candidatePin": 3,
+      "candidatePointId": "1287907069216178176",
+      "pointId": null,
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "unresolvedReason": "与pin3相似但未证明唯一场景对应；避免把此段另计为已确认点。",
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/contact-3s-0135.jpg"
+      ]
+    },
+    {
+      "part": 9,
+      "timeRangeSeconds": [
+        624,
+        678
+      ],
+      "observedMechanism": "断轨桥边630启动，90秒内经过所有光点，穿过高架废墟、列车和轨道，675–678基准箱。",
+      "pointId": null,
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "unresolvedReason": "本段不是pin10：pin10是828–855浮城道路朴素箱。未找到足以唯一绑定的攻略候选。",
+      "localEvidence": [
+        "out/detectability-collection/BV1iMTXzVE8J/p09/contact-3s-0624.jpg"
+      ]
+    }
+  ],
+  "counts": {
+    "p08ConfirmedPins": 14,
+    "p09ConfirmedPins": 15,
+    "p09UnresolvedPins": 2,
+    "p09UnresolvedVideoSegments": 2
+  }
+}

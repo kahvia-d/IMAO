@@ -761,3 +761,8 @@ foreach(_repro_target IN ITEMS IMaoOptimizationTests IMaoOcrDependencyTests
     target_sources(${_repro_target} PRIVATE IMao-Core/src/Diagnostics/ReproCapture.cpp)
 endforeach()
 add_subdirectory(IMao-Core/tools/ReproCaptureTests)
+
+add_executable(IMaoGapFillFilterTests IMao-Core/tests/GapFillFilterTests.cpp)
+target_include_directories(IMaoGapFillFilterTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
+set_target_properties(IMaoGapFillFilterTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoGapFillFilterTests COMMAND IMaoGapFillFilterTests)

@@ -1,0 +1,4490 @@
+{
+  "schemaVersion": 1,
+  "experimentOnly": true,
+  "runtimeIntegration": false,
+  "date": "2026-10-29",
+  "definition": "触发前扫不到、触发后才出现或可探测的目标计入；未匹配保持未知。",
+  "reviewMethod": "按5/10秒接触表检查全视频，关键帧与库街区攻略文字及实景图人工视觉对照；候选坐标只辅助，不单独确认。",
+  "records": [
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        110,
+        150
+      ],
+      "observedMechanism": "连续开假箱并击败两轮宝箱怪",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410647080185405440",
+        "name": "辉光奇藏箱",
+        "typeId": "qzx_04",
+        "rawPosition": [
+          1175439.0,
+          1274846.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=110",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0125.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0135.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0145.00.jpg"
+        ]
+      },
+      "basis": "断柱、草地石阶、上方木板桥与三图一致。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_04&pointId=1410647080185405440",
+        "description": "该宝箱需先击败两次宝箱怪后才可开启（开假宝箱-打宝箱怪-开假宝箱-打宝箱怪-开宝箱）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/d83e0656a57c49bc8e84648bde34a6b820250828.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/dcc65d28d15142e595faab16718bddcc20250828.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/35f0f227aabb4b50aa410852d3472ea920250828.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410647080185405440.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410647080185405440-1.png",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410647080185405440-2.png",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410647080185405440-3.png"
+        ]
+      },
+      "recordId": "rinascita-001"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        150,
+        185
+      ],
+      "observedMechanism": "触摸岩岛上的三只白色螃蟹灵体",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410289491433623552",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          1202500.0,
+          1268900.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=150",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0165.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0175.00.jpg"
+        ]
+      },
+      "basis": "倾斜枯树和岛岸石凹处对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1410289491433623552",
+        "description": "触碰白色螃蟹虚影（如图2所示），需要连续碰三个都在这个小岛上，全部触碰完之后就可以获得。",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/fefa11d48c7b48e691d07b9556848b8b20250827.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/5216cabf4c634ae7b9a15de04668d57e20250828.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410289491433623552.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410289491433623552-1.png",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410289491433623552-2.png"
+        ]
+      },
+      "recordId": "rinascita-002"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        185,
+        210
+      ],
+      "observedMechanism": "击碎祭坛前杂物罐子",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410289000427638784",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          1212700.0,
+          1282500.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=185",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0195.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0205.00.jpg"
+        ]
+      },
+      "basis": "红树后景、祭坛与罐子布置对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1410289000427638784",
+        "description": "把周围杂物清理就可以出现宝箱。（感谢反馈此点位玩家）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/ca20d77d643a4b0a9f6524bfaf7c03c020250827.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410289000427638784.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410289000427638784-1.png"
+        ]
+      },
+      "recordId": "rinascita-003"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        210,
+        228
+      ],
+      "observedMechanism": "向祭坛献三只铛铛蟹",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410290739738185728",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          1199600.0,
+          1304900.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=210",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0220.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0225.00.jpg"
+        ]
+      },
+      "basis": "山坡红叶、祭坛金白色双耳瓶对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1410290739738185728",
+        "description": "供奉三个铛铛蟹就可以啦。",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/4f081de406e145f6ae360574cd38cb1920250827.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410290739738185728.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410290739738185728-1.png"
+        ]
+      },
+      "recordId": "rinascita-004"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        228,
+        275
+      ],
+      "observedMechanism": "白色巨像脚下蓝菱形墙壁房间内击败宝箱怪",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410647833725710336",
+        "name": "辉光奇藏箱",
+        "typeId": "qzx_04",
+        "rawPosition": [
+          1162802.0,
+          1320433.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=228",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0250.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0255.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0265.00.jpg"
+        ]
+      },
+      "basis": "巨像脚、房内蓝菱形墙面与三图相同。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_04&pointId=1410647833725710336",
+        "description": "从图一处进入小房间即可（也可通过感知查找宝箱位置 会显示为宝箱怪），该宝箱需先击败一次宝箱怪后才可开启（开宝箱-打怪-开宝箱），可获得一个成就【Don't Panic】找到皮索的秘密藏身处里的“宝藏”。",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/0ae1668350524e2a9215c1ade4ab1dee20250828.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/51fdab6b8eb7447997da0cddc6a3bd8220250828.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/7df87f4c78dd4a79a5618b5c8e48cfb920250829.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410647833725710336.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410647833725710336-1.png",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410647833725710336-2.png",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410647833725710336-3.png"
+        ]
+      },
+      "recordId": "rinascita-005"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        275,
+        303
+      ],
+      "observedMechanism": "在祭坛旁击败三狼并与探险家菲利普交互",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410291497426620416",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          1143200.0,
+          1282000.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=275",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0285.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0295.00.jpg"
+        ]
+      },
+      "basis": "斜岩、灌木及两摞螃蟹对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1410291497426620416",
+        "description": "击败石像周围的敌人（区区3只狼而已），然后会进入和探险家菲利普的对话，就可以获得宝箱。",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/ac422cd1cb004787a0474be893bbe4cd20250827.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/b328085a5406442fae75b0b962a5d3e620250829.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410291497426620416.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410291497426620416-1.png",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410291497426620416-2.png"
+        ]
+      },
+      "recordId": "rinascita-006"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        303,
+        355
+      ],
+      "observedMechanism": "按菲利普要求在小岛找到虾米后返回",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410293339757875200",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          1125000.0,
+          1326600.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=303",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0315.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0335.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0350.00.jpg"
+        ]
+      },
+      "basis": "不规则石阶、祭坛双耳瓶和岸边搜索场景对应三图。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1410293339757875200",
+        "description": "和NPC探险家菲利普（见图2）对话，在这座小岛上寻找虾米（图3的金色亮光处就是虾米），完成对话后获得宝箱。",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/d5c33cff09e44baa932b5f0ed8c56aab20250827.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/6c33969ebd78435d922bc6c994edab3b20250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/27b5b20300154f4fb843011afc2a0da020250829.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410293339757875200.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410293339757875200-1.png",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410293339757875200-2.png",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410293339757875200-3.png"
+        ]
+      },
+      "recordId": "rinascita-007"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        355,
+        398
+      ],
+      "observedMechanism": "旋转螃蟹雕像面对烛台祭坛",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410294394671468544",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          1085800.0,
+          1343900.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=355",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0380.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0390.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0395.00.jpg"
+        ]
+      },
+      "basis": "平坦潮间岩面、螃蟹像与烛台布置对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1410294394671468544",
+        "description": "摆正石像，使螃蟹石像的眼睛朝向点着蜡烛的祭坛，第二张图，总督面对方向为正，左右两边距离最近的石像，旋转一下就可以了。",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/fb9056ec6ad14a738c6bf91a25926d9f20250827.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/1cdb177084414fcf9ae7e6c39670c06e20250827.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/9ee00ec8c8c145f397f071f145ef09c920250829.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410294394671468544.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410294394671468544-1.png",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410294394671468544-2.png",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410294394671468544-3.png"
+        ]
+      },
+      "recordId": "rinascita-008"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        398,
+        476
+      ],
+      "observedMechanism": "六处螃蟹祭坛完成后向最终祭坛分五次奉上42只铛铛蟹，出现五箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410299785455210496",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          1218400.0,
+          1301700.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=398",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0405.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0430.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0455.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0470.00.jpg"
+        ]
+      },
+      "basis": "五份攻略显示同组五箱：低石墙、前景小蟹、箱型数量一致；不推断三只精密箱的开启顺序。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "sangu-crab-final",
+        "rewardCount": 5,
+        "identityGranularity": "group-membership",
+        "individualOpeningOrderResolved": false
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1410299785455210496",
+        "description": "该宝箱需先完成地图其它6处螃蟹祭坛（其中需准备3个铛铛蟹）后才可来此处供奉，准备42个铛铛蟹并供奉5次后可获得所有宝箱。顺便解锁成就【在永恒的宅邸，候汝入梦】（推荐查找相关攻略辅助获得）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/da17d3c7a93b4183a3fd4e8640c92c2d20250827.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410299785455210496.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410299785455210496-1.png"
+        ]
+      },
+      "recordId": "rinascita-009"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        398,
+        476
+      ],
+      "observedMechanism": "六处螃蟹祭坛完成后向最终祭坛分五次奉上42只铛铛蟹，出现五箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410300279124791296",
+        "name": "基准奇藏箱",
+        "typeId": "qzx_02",
+        "rawPosition": [
+          1218100.0,
+          1301700.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=398",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0405.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0430.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0455.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0470.00.jpg"
+        ]
+      },
+      "basis": "五份攻略显示同组五箱：低石墙、前景小蟹、箱型数量一致；不推断三只精密箱的开启顺序。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "sangu-crab-final",
+        "rewardCount": 5,
+        "identityGranularity": "group-membership",
+        "individualOpeningOrderResolved": false
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1410300279124791296",
+        "description": "该宝箱需先完成地图其它6处螃蟹祭坛（其中需准备3个铛铛蟹）后才可来此处供奉，准备42个铛铛蟹并供奉5次后可获得所有宝箱。顺便解锁成就【在永恒的宅邸，候汝入梦】（推荐查找相关攻略辅助获得）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/f56afd56e13640e4a3c7a534228749f620250827.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300279124791296.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300279124791296-1.png"
+        ]
+      },
+      "recordId": "rinascita-010"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        398,
+        476
+      ],
+      "observedMechanism": "六处螃蟹祭坛完成后向最终祭坛分五次奉上42只铛铛蟹，出现五箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410300673196429312",
+        "name": "精密奇藏箱",
+        "typeId": "qzx_03",
+        "rawPosition": [
+          1218200.0,
+          1302000.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=398",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0405.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0430.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0455.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0470.00.jpg"
+        ]
+      },
+      "basis": "五份攻略显示同组五箱：低石墙、前景小蟹、箱型数量一致；不推断三只精密箱的开启顺序。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "sangu-crab-final",
+        "rewardCount": 5,
+        "identityGranularity": "group-membership",
+        "individualOpeningOrderResolved": false
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1410300673196429312",
+        "description": "该宝箱需先完成地图其它6处螃蟹祭坛（其中需准备3个铛铛蟹）后才可来此处供奉，准备42个铛铛蟹并供奉5次后可获得所有宝箱。顺便解锁成就【在永恒的宅邸，候汝入梦】（推荐查找相关攻略辅助获得）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/10da15e2fb6a4e68af68ebb338ccda3e20250827.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300673196429312.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300673196429312-1.png"
+        ]
+      },
+      "recordId": "rinascita-011"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        398,
+        476
+      ],
+      "observedMechanism": "六处螃蟹祭坛完成后向最终祭坛分五次奉上42只铛铛蟹，出现五箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410300673292898304",
+        "name": "精密奇藏箱",
+        "typeId": "qzx_03",
+        "rawPosition": [
+          1218200.0,
+          1301400.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=398",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0405.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0430.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0455.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0470.00.jpg"
+        ]
+      },
+      "basis": "五份攻略显示同组五箱：低石墙、前景小蟹、箱型数量一致；不推断三只精密箱的开启顺序。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "sangu-crab-final",
+        "rewardCount": 5,
+        "identityGranularity": "group-membership",
+        "individualOpeningOrderResolved": false
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1410300673292898304",
+        "description": "该宝箱需先完成地图其它6处螃蟹祭坛（其中需准备3个铛铛蟹）后才可来此处供奉，准备42个铛铛蟹并供奉5次后可获得所有宝箱。顺便解锁成就【在永恒的宅邸，候汝入梦】（推荐查找相关攻略辅助获得）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/36bba7032bb045789c20899570eba6b320250827.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300673292898304.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300673292898304-1.png"
+        ]
+      },
+      "recordId": "rinascita-012"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "timeRangeSeconds": [
+        398,
+        476
+      ],
+      "observedMechanism": "六处螃蟹祭坛完成后向最终祭坛分五次奉上42只铛铛蟹，出现五箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1410300673389367296",
+        "name": "精密奇藏箱",
+        "typeId": "qzx_03",
+        "rawPosition": [
+          1217900.0,
+          1301700.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=1&t=398",
+        "cid": "32007523906"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0405.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0430.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0455.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/frame-0470.00.jpg"
+        ]
+      },
+      "basis": "五份攻略显示同组五箱：低石墙、前景小蟹、箱型数量一致；不推断三只精密箱的开启顺序。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "sangu-crab-final",
+        "rewardCount": 5,
+        "identityGranularity": "group-membership",
+        "individualOpeningOrderResolved": false
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1410300673389367296",
+        "description": "该宝箱需先完成地图其它6处螃蟹祭坛（其中需准备3个铛铛蟹）后才可来此处供奉，准备42个铛铛蟹并供奉5次后可获得所有宝箱。顺便解锁成就【在永恒的宅邸，候汝入梦】（推荐查找相关攻略辅助获得）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/bbe0a86a38a849ed9e25832b0528d7fe20250827.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300673389367296.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1410300673389367296-1.png"
+        ]
+      },
+      "recordId": "rinascita-013"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "timeRangeSeconds": [
+        50,
+        65
+      ],
+      "observedMechanism": "呜獭獭任务：调查坟墓后出现该处奖励箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1411088154771103744",
+        "name": "基准奇藏箱",
+        "typeId": "qzx_02",
+        "rawPosition": [
+          1181800.0,
+          1396700.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=2&t=50",
+        "cid": "32007587274"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0060.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0064.00.jpg"
+        ]
+      },
+      "basis": "河边突出的石台、分离的小平台及蓝标记绿色箱均吻合。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "sangu-otter-graves",
+        "rewardCount": 12,
+        "individualOrdinal": 1
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1411088154771103744",
+        "description": "在标点附近调查后出现宝箱（需先在P2处接取乌塔塔隐藏任务后才可交互！P3是游戏内接任务的地方）完成系列任务可获得成就【找到你了哦，呜獭獭】",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/dd3acc68c26a437d863cadf32880087120250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/db223f25233f434c9aa4502487b3114720250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/0bdd4c324782437d918c3d750ecf573620250829.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p02/guide-8-1411088154771103744.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-8-1411088154771103744-1.png"
+        ]
+      },
+      "recordId": "rinascita-014"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "timeRangeSeconds": [
+        65,
+        80
+      ],
+      "observedMechanism": "呜獭獭任务：调查坟墓后出现该处奖励箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=2&t=65",
+        "cid": "32007587274"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0075.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0079.00.jpg"
+        ],
+        "candidateGuideReviewAtlases": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-06.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-12.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-18.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-24.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-30.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-36.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已看该墓触发及奖励过程，也对照12处坟墓攻略首图；重复墓形与相似洞壁不足以唯一确定该目标，不采用候选顺序或最近距离强行映射。",
+      "group": {
+        "id": "sangu-otter-graves",
+        "rewardCount": 12,
+        "individualOrdinal": 2
+      },
+      "candidatePointIds": [
+        "1411075231017414656",
+        "1411076229953826816",
+        "1411076681722273792",
+        "1411077656260456448",
+        "1411078276967116800",
+        "1411078277055197184",
+        "1411079360989143040",
+        "1411083320647036928",
+        "1411085877746376704",
+        "1411086100463919104",
+        "1411087810410393600",
+        "1411088154771103744"
+      ],
+      "recordId": "rinascita-015"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "timeRangeSeconds": [
+        80,
+        98
+      ],
+      "observedMechanism": "呜獭獭任务：调查坟墓后出现该处奖励箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=2&t=80",
+        "cid": "32007587274"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0090.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0095.00.jpg"
+        ],
+        "candidateGuideReviewAtlases": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-06.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-12.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-18.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-24.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-30.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-36.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已看该墓触发及奖励过程，也对照12处坟墓攻略首图；重复墓形与相似洞壁不足以唯一确定该目标，不采用候选顺序或最近距离强行映射。",
+      "group": {
+        "id": "sangu-otter-graves",
+        "rewardCount": 12,
+        "individualOrdinal": 3
+      },
+      "candidatePointIds": [
+        "1411075231017414656",
+        "1411076229953826816",
+        "1411076681722273792",
+        "1411077656260456448",
+        "1411078276967116800",
+        "1411078277055197184",
+        "1411079360989143040",
+        "1411083320647036928",
+        "1411085877746376704",
+        "1411086100463919104",
+        "1411087810410393600",
+        "1411088154771103744"
+      ],
+      "recordId": "rinascita-016"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "timeRangeSeconds": [
+        98,
+        113
+      ],
+      "observedMechanism": "呜獭獭任务：调查坟墓后出现该处奖励箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=2&t=98",
+        "cid": "32007587274"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0105.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0110.00.jpg"
+        ],
+        "candidateGuideReviewAtlases": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-06.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-12.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-18.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-24.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-30.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-36.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已看该墓触发及奖励过程，也对照12处坟墓攻略首图；重复墓形与相似洞壁不足以唯一确定该目标，不采用候选顺序或最近距离强行映射。",
+      "group": {
+        "id": "sangu-otter-graves",
+        "rewardCount": 12,
+        "individualOrdinal": 4
+      },
+      "candidatePointIds": [
+        "1411075231017414656",
+        "1411076229953826816",
+        "1411076681722273792",
+        "1411077656260456448",
+        "1411078276967116800",
+        "1411078277055197184",
+        "1411079360989143040",
+        "1411083320647036928",
+        "1411085877746376704",
+        "1411086100463919104",
+        "1411087810410393600",
+        "1411088154771103744"
+      ],
+      "recordId": "rinascita-017"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "timeRangeSeconds": [
+        113,
+        135
+      ],
+      "observedMechanism": "呜獭獭任务：调查坟墓后出现该处奖励箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=2&t=113",
+        "cid": "32007587274"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0120.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0125.00.jpg"
+        ],
+        "candidateGuideReviewAtlases": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-06.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-12.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-18.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-24.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-30.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-36.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已看该墓触发及奖励过程，也对照12处坟墓攻略首图；重复墓形与相似洞壁不足以唯一确定该目标，不采用候选顺序或最近距离强行映射。",
+      "group": {
+        "id": "sangu-otter-graves",
+        "rewardCount": 12,
+        "individualOrdinal": 5
+      },
+      "candidatePointIds": [
+        "1411075231017414656",
+        "1411076229953826816",
+        "1411076681722273792",
+        "1411077656260456448",
+        "1411078276967116800",
+        "1411078277055197184",
+        "1411079360989143040",
+        "1411083320647036928",
+        "1411085877746376704",
+        "1411086100463919104",
+        "1411087810410393600",
+        "1411088154771103744"
+      ],
+      "recordId": "rinascita-018"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "timeRangeSeconds": [
+        135,
+        155
+      ],
+      "observedMechanism": "呜獭獭任务：调查坟墓后出现该处奖励箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1411078276967116800",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          1188100.0,
+          1367100.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=2&t=135",
+        "cid": "32007587274"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0145.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0150.00.jpg"
+        ]
+      },
+      "basis": "墓右高柱背后有狭窄水缝，箱位于墓左石缝；145/150秒及攻略图地形吻合。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "sangu-otter-graves",
+        "rewardCount": 12,
+        "individualOrdinal": 6
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1411078276967116800",
+        "description": "在标点附近调查后出现宝箱 位置在下方区域不要搞错咯（需先在P2处接取乌塔塔隐藏任务后才可交互！P3是游戏内接任务的地方）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/515656ea27fd4bc29150a99aadc47f9920250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/a6532a0d9df84db1b45087d3edeb82e720250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/619c23ff413844648cb54b9d250e070420250829.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p02/guide-8-1411078276967116800.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-8-1411078276967116800-1.png"
+        ]
+      },
+      "recordId": "rinascita-019"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "timeRangeSeconds": [
+        155,
+        175
+      ],
+      "observedMechanism": "呜獭獭任务：调查坟墓后出现该处奖励箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1411077656260456448",
+        "name": "基准奇藏箱",
+        "typeId": "qzx_02",
+        "rawPosition": [
+          1181500.0,
+          1346600.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=2&t=155",
+        "cid": "32007587274"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0165.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0170.00.jpg"
+        ]
+      },
+      "basis": "墓右与圆弧纹岩墙角对应；170秒左侧绿色箱位置与攻略吻合。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "sangu-otter-graves",
+        "rewardCount": 12,
+        "individualOrdinal": 7
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1411077656260456448",
+        "description": "在标点附近调查后出现宝箱 位置在下方区域不要搞错咯（需先在P2处接取乌塔塔隐藏任务后才可交互！P3是游戏内接任务的地方）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/6b3c49b1e50c4fcab05a55497638dd7f20250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/e15c108630654a139e4a6122f635500620250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/23f8a0b3b62f4737a009c434d381077a20250829.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p02/guide-8-1411077656260456448.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-8-1411077656260456448-1.png"
+        ]
+      },
+      "recordId": "rinascita-020"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "timeRangeSeconds": [
+        175,
+        195
+      ],
+      "observedMechanism": "呜獭獭任务：调查坟墓后出现该处奖励箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1411078277055197184",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          1173100.0,
+          1353100.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=2&t=175",
+        "cid": "32007587274"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0180.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0185.00.jpg"
+        ]
+      },
+      "basis": "墓前斜坡与远左窄裂缝对应，190秒进入同一裂缝开朴素箱。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "sangu-otter-graves",
+        "rewardCount": 12,
+        "individualOrdinal": 8
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1411078277055197184",
+        "description": "在标点附近调查后出现宝箱 位置在下方区域不要搞错咯（需先在P2处接取乌塔塔隐藏任务后才可交互！P3是游戏内接任务的地方）完成系列任务可获得成就【找到你了哦，呜獭獭】",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/617153ef5c0649d7939cea91d74ff7cf20250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/c93301c52bf647bf87e7da13c9deec7320250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/a81fec936c7e4b47903be0f268b1c24f20250829.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p02/guide-8-1411078277055197184.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-8-1411078277055197184-1.png"
+        ]
+      },
+      "recordId": "rinascita-021"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "timeRangeSeconds": [
+        195,
+        220
+      ],
+      "observedMechanism": "呜獭獭任务：调查坟墓后出现该处奖励箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=2&t=195",
+        "cid": "32007587274"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0205.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0210.00.jpg"
+        ],
+        "candidateGuideReviewAtlases": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-06.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-12.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-18.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-24.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-30.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-36.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已看该墓触发及奖励过程，也对照12处坟墓攻略首图；重复墓形与相似洞壁不足以唯一确定该目标，不采用候选顺序或最近距离强行映射。",
+      "group": {
+        "id": "sangu-otter-graves",
+        "rewardCount": 12,
+        "individualOrdinal": 9
+      },
+      "candidatePointIds": [
+        "1411075231017414656",
+        "1411076229953826816",
+        "1411076681722273792",
+        "1411077656260456448",
+        "1411078276967116800",
+        "1411078277055197184",
+        "1411079360989143040",
+        "1411083320647036928",
+        "1411085877746376704",
+        "1411086100463919104",
+        "1411087810410393600",
+        "1411088154771103744"
+      ],
+      "recordId": "rinascita-022"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "timeRangeSeconds": [
+        220,
+        240
+      ],
+      "observedMechanism": "呜獭獭任务：调查坟墓后出现该处奖励箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1411079360989143040",
+        "name": "基准奇藏箱",
+        "typeId": "qzx_02",
+        "rawPosition": [
+          1167300.0,
+          1364500.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=2&t=220",
+        "cid": "32007587274"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0230.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0235.00.jpg"
+        ]
+      },
+      "basis": "墓左、右侧绿色箱与密集蓝草及岩壁纹路一致。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "sangu-otter-graves",
+        "rewardCount": 12,
+        "individualOrdinal": 10
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1411079360989143040",
+        "description": "在标点附近调查后出现宝箱 位置在下方区域不要搞错咯（需先在P2处接取乌塔塔隐藏任务后才可交互！P3是游戏内接任务的地方）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/8556d4dab1dd4fd2bb68615a7a4f386920250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/4ad9d761561841638c229f55eb22203620250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/e93ba1f423ad4293b8c9d0e426be262120250829.png"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p02/guide-8-1411079360989143040.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-8-1411079360989143040-1.png"
+        ]
+      },
+      "recordId": "rinascita-023"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "timeRangeSeconds": [
+        240,
+        260
+      ],
+      "observedMechanism": "呜獭獭任务：调查坟墓后出现该处奖励箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=2&t=240",
+        "cid": "32007587274"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0250.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0255.00.jpg"
+        ],
+        "candidateGuideReviewAtlases": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-06.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-12.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-18.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-24.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-30.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-36.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已看该墓触发及奖励过程，也对照12处坟墓攻略首图；重复墓形与相似洞壁不足以唯一确定该目标，不采用候选顺序或最近距离强行映射。",
+      "group": {
+        "id": "sangu-otter-graves",
+        "rewardCount": 12,
+        "individualOrdinal": 11
+      },
+      "candidatePointIds": [
+        "1411075231017414656",
+        "1411076229953826816",
+        "1411076681722273792",
+        "1411077656260456448",
+        "1411078276967116800",
+        "1411078277055197184",
+        "1411079360989143040",
+        "1411083320647036928",
+        "1411085877746376704",
+        "1411086100463919104",
+        "1411087810410393600",
+        "1411088154771103744"
+      ],
+      "recordId": "rinascita-024"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "timeRangeSeconds": [
+        260,
+        280
+      ],
+      "observedMechanism": "呜獭獭任务：调查坟墓后出现该处奖励箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=2&t=260",
+        "cid": "32007587274"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0270.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/frame-0275.00.jpg"
+        ],
+        "candidateGuideReviewAtlases": [
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-06.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-12.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-18.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-24.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-30.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p02/guide-atlas-36.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已看该墓触发及奖励过程，也对照12处坟墓攻略首图；重复墓形与相似洞壁不足以唯一确定该目标，不采用候选顺序或最近距离强行映射。",
+      "group": {
+        "id": "sangu-otter-graves",
+        "rewardCount": 12,
+        "individualOrdinal": 12
+      },
+      "candidatePointIds": [
+        "1411075231017414656",
+        "1411076229953826816",
+        "1411076681722273792",
+        "1411077656260456448",
+        "1411078276967116800",
+        "1411078277055197184",
+        "1411079360989143040",
+        "1411083320647036928",
+        "1411085877746376704",
+        "1411086100463919104",
+        "1411087810410393600",
+        "1411088154771103744"
+      ],
+      "recordId": "rinascita-025"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 3,
+      "timeRangeSeconds": [
+        0,
+        323
+      ],
+      "observedMechanism": "六处线索完成后击败不死角斗士，出现两辉光箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1411099204107186176",
+        "name": "辉光奇藏箱",
+        "typeId": "qzx_04",
+        "rawPosition": [
+          1195500.0,
+          1375100.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=3&t=0",
+        "cid": "32009031526"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p03/frame-0240.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p03/frame-0280.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p03/frame-0310.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p03/frame-0320.00.jpg"
+        ]
+      },
+      "basis": "任务路线攻略图与线索过程一致，最终紫草与蓝岩旁两金箱场景一致。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "sangu-undying-gladiator",
+        "rewardCount": 2,
+        "identityGranularity": "group-membership",
+        "individualOpeningOrderResolved": false
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_04&pointId=1411099204107186176",
+        "description": "完成隐藏任务不死的角斗士后可获得（P2为任务一图流，由攻略作者Lee小坏制作）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/7a872d5d25c24cf6a79638bb3eabcb5120250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/dd1c60da61884ef3b08b7f1c4ee4092420250829.jpeg"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1411099204107186176.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1411099204107186176-1.png",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1411099204107186176-2.png"
+        ]
+      },
+      "recordId": "rinascita-026"
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 3,
+      "timeRangeSeconds": [
+        0,
+        323
+      ],
+      "observedMechanism": "六处线索完成后击败不死角斗士，出现两辉光箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1411099204195266560",
+        "name": "辉光奇藏箱",
+        "typeId": "qzx_04",
+        "rawPosition": [
+          1195400.0,
+          1375600.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1Aeh2zvEko/?p=3&t=0",
+        "cid": "32009031526"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1Aeh2zvEko/p03/frame-0240.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p03/frame-0280.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p03/frame-0310.00.jpg",
+          "out/detectability-collection/BV1Aeh2zvEko/p03/frame-0320.00.jpg"
+        ]
+      },
+      "basis": "任务路线攻略图与线索过程一致，最终紫草与蓝岩旁两金箱场景一致。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "sangu-undying-gladiator",
+        "rewardCount": 2,
+        "identityGranularity": "group-membership",
+        "individualOpeningOrderResolved": false
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_04&pointId=1411099204195266560",
+        "description": "完成隐藏任务不死的角斗士后可获得（P2为任务一图流，由攻略作者Lee小坏制作）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/6b9ffd615bfb40029836a684d9f19ff920250829.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/b120a4301e864a24900326f7ecc1bb4520250829.jpeg"
+        ],
+        "localJson": "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1411099204195266560.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1411099204195266560-1.png",
+          "out/detectability-collection/BV1Aeh2zvEko/p01/guide-8-1411099204195266560-2.png"
+        ]
+      },
+      "recordId": "rinascita-027"
+    },
+    {
+      "bvid": "BV1JB3Fz2EqG",
+      "part": 1,
+      "timeRangeSeconds": [
+        85,
+        188
+      ],
+      "observedMechanism": "装备魔术先生并完成菲佛的隐藏任务飞行魔术后出现三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1383038295105503232",
+        "name": "基准奇藏箱",
+        "typeId": "qzx_02",
+        "rawPosition": [
+          1129700.0,
+          1056200.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1JB3Fz2EqG/?p=1&t=85",
+        "cid": "30761880358"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0090.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0170.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0180.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0185.00.jpg"
+        ]
+      },
+      "basis": "攻略三点均为同组，红门/红地毯前右基准、中精密、左朴素与视频同场。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "qiqiu-flight-magic",
+        "rewardCount": 3,
+        "identityGranularity": "group-membership"
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1383038295105503232",
+        "description": "完成隐藏任务《飞行魔术》后可获得（可查看对应攻略完成 标点由玩家改文件用提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/ecc6a02d36a94d2b8c91f6c79e0e85b820250613.png"
+        ],
+        "localJson": "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383038295105503232.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383038295105503232-1.png"
+        ]
+      },
+      "recordId": "rinascita-028"
+    },
+    {
+      "bvid": "BV1JB3Fz2EqG",
+      "part": 1,
+      "timeRangeSeconds": [
+        85,
+        188
+      ],
+      "observedMechanism": "装备魔术先生并完成菲佛的隐藏任务飞行魔术后出现三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1383038916441309184",
+        "name": "精密奇藏箱",
+        "typeId": "qzx_03",
+        "rawPosition": [
+          1129165.0,
+          1056170.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1JB3Fz2EqG/?p=1&t=85",
+        "cid": "30761880358"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0090.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0170.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0180.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0185.00.jpg"
+        ]
+      },
+      "basis": "攻略三点均为同组，红门/红地毯前右基准、中精密、左朴素与视频同场。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "qiqiu-flight-magic",
+        "rewardCount": 3,
+        "identityGranularity": "group-membership"
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1383038916441309184",
+        "description": "完成隐藏任务《飞行魔术》后可获得（可查看对应攻略完成 标点由玩家改文件用提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/8567be8b3179448c88b0ff1dbb39ee9c20250613.png"
+        ],
+        "localJson": "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383038916441309184.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383038916441309184-1.png"
+        ]
+      },
+      "recordId": "rinascita-029"
+    },
+    {
+      "bvid": "BV1JB3Fz2EqG",
+      "part": 1,
+      "timeRangeSeconds": [
+        85,
+        188
+      ],
+      "observedMechanism": "装备魔术先生并完成菲佛的隐藏任务飞行魔术后出现三箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1383039082518970368",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          1128914.0,
+          1056439.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1JB3Fz2EqG/?p=1&t=85",
+        "cid": "30761880358"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0090.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0170.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0180.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0185.00.jpg"
+        ]
+      },
+      "basis": "攻略三点均为同组，红门/红地毯前右基准、中精密、左朴素与视频同场。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "qiqiu-flight-magic",
+        "rewardCount": 3,
+        "identityGranularity": "group-membership"
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1383039082518970368",
+        "description": "完成隐藏任务《飞行魔术》后可获得（可查看对应攻略完成 标点由玩家改文件用提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/6f51e4ca908f4fef839ec4a77142c81420250613.png"
+        ],
+        "localJson": "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383039082518970368.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383039082518970368-1.png"
+        ]
+      },
+      "recordId": "rinascita-030"
+    },
+    {
+      "bvid": "BV1JB3Fz2EqG",
+      "part": 1,
+      "timeRangeSeconds": [
+        215,
+        285
+      ],
+      "observedMechanism": "在狮像纪念碑显示荣耀狮像、荣光节使后出现宝箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1383086793950969856",
+        "name": "精密奇藏箱",
+        "typeId": "qzx_03",
+        "rawPosition": [
+          1159000.0,
+          1098700.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1JB3Fz2EqG/?p=1&t=215",
+        "cid": "30761880358"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0225.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0250.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0280.00.jpg"
+        ]
+      },
+      "basis": "狮像双足、凹台宝箱与前景石碑和显像操作对应两张攻略图。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1383086793950969856",
+        "description": "藏宝地的狮鹫石像前，先显像荣耀狮像声骸，然后显像荣光节使声骸，就会有这个宝箱。（可能会出现没反应的情况，这个时候就换个人放就好了）用轮盘显象",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/8bc28ea0815344eea93fbd6db4808cfb20250613.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/e3926b87bc6744ba952c7f2872907f6e20250626.png"
+        ],
+        "localJson": "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383086793950969856.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383086793950969856-1.png",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383086793950969856-2.png"
+        ]
+      },
+      "recordId": "rinascita-031"
+    },
+    {
+      "bvid": "BV1JB3Fz2EqG",
+      "part": 1,
+      "timeRangeSeconds": [
+        285,
+        385
+      ],
+      "observedMechanism": "与帐篷旁NPC/孩子交互，寻找三把金色剑并返回交任务",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1JB3Fz2EqG/?p=1&t=285",
+        "cid": "30761880358"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0300.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0330.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0365.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0380.00.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已看完整任务路线；现有候选文字和场景尚不能唯一对应库街区点位。",
+      "recordId": "rinascita-032"
+    },
+    {
+      "bvid": "BV1JB3Fz2EqG",
+      "part": 1,
+      "timeRangeSeconds": [
+        385,
+        500
+      ],
+      "observedMechanism": "雕像背部地面开启挑战，爬至头顶后获得宝箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1383037326744829952",
+        "name": "基准奇藏箱",
+        "typeId": "qzx_02",
+        "rawPosition": [
+          1289700.0,
+          1109300.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1JB3Fz2EqG/?p=1&t=385",
+        "cid": "30761880358"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0395.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0440.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0495.00.jpg"
+        ]
+      },
+      "basis": "攻略挑战起点台阶和雕像头顶石凹槽与视频匹配。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1383037326744829952",
+        "description": "开启挑战在雕像后背地下，挑战结束在雕像头顶获得宝箱（标点由玩家改文件用提供），并获得成就“迷上山峰无法回头”",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/d2c5b66485dc4f3186dfc779219c21c920250613.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/d126f046f944482496106eaaefab348c20250614.png"
+        ],
+        "localJson": "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383037326744829952.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383037326744829952-1.png",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383037326744829952-2.png"
+        ]
+      },
+      "recordId": "rinascita-033"
+    },
+    {
+      "bvid": "BV1JB3Fz2EqG",
+      "part": 1,
+      "timeRangeSeconds": [
+        500,
+        552
+      ],
+      "observedMechanism": "在狮像脚边向三个小声骸喂禽肉、兽肉、菠萝披萨",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1383035993976111104",
+        "name": "精密奇藏箱",
+        "typeId": "qzx_03",
+        "rawPosition": [
+          1250500.0,
+          1108400.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1JB3Fz2EqG/?p=1&t=500",
+        "cid": "30761880358"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0515.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0530.00.jpg",
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/frame-0550.00.jpg"
+        ]
+      },
+      "basis": "三食盆、狮像脚下凹位及宝箱位置对应攻略图。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1383035993976111104",
+        "description": "在标点附近对图中小动物完成投喂后获得（可查看对应攻略获得，标点由玩家改文件用提供）\n一个禽肉，一个兽肉，还有一个菠萝披萨（如图3所示），那个披萨可以去黎那汐塔的埃格拉镇的，布拉塔烘焙坊购买",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/951ebbd7277a456b826015157c8f01ea20250613.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/16867837e9b94fd083b41be42860ff0420250614.jpg",
+          "https://prod-alicdn-community.kurobbs.com/forum/1c8e5a535d4d4a98990fc4b263654ba420250614.png"
+        ],
+        "localJson": "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383035993976111104.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1JB3Fz2EqG/p01/guide-8-1383035993976111104-1.png"
+        ]
+      },
+      "recordId": "rinascita-034"
+    },
+    {
+      "bvid": "BV1dVuGzeEKk",
+      "part": 1,
+      "timeRangeSeconds": [
+        0,
+        90
+      ],
+      "observedMechanism": "钩锁拖曳石柱，变身寂寞小姐吸收乌云后出现宝箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1357337517870112768",
+        "name": "精密奇藏箱",
+        "typeId": "qzx_03",
+        "rawPosition": [
+          985015.0,
+          737731.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1dVuGzeEKk/?p=1&t=0",
+        "cid": "30984113196"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1dVuGzeEKk/p01/frame-0040.00.jpg",
+          "out/detectability-collection/BV1dVuGzeEKk/p01/frame-0065.00.jpg",
+          "out/detectability-collection/BV1dVuGzeEKk/p01/frame-0085.00.jpg"
+        ]
+      },
+      "basis": "石柱数量与摆放、潮湿草地、木栈道和背后废墟拱门逐一对应攻略两图。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1357337517870112768",
+        "description": "在标点附近使用钩锁拖曳石柱，按照图2拉动石柱，完成后找书本互动变身寂寞小姐吸收乌云获得宝箱（标点由玩家零零林提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/121d5712698f4f258200ff6a1061369a20250403.jpg",
+          "https://prod-alicdn-community.kurobbs.com/forum/dc8e0e9fa76d4b8a861ef515a9acc98820250405.png"
+        ],
+        "localJson": "out/detectability-collection/BV1dVuGzeEKk/p01/guide-8-1357337517870112768.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1dVuGzeEKk/p01/guide-8-1357337517870112768-1.png",
+          "out/detectability-collection/BV1dVuGzeEKk/p01/guide-8-1357337517870112768-2.png"
+        ]
+      },
+      "recordId": "rinascita-035"
+    },
+    {
+      "bvid": "BV1dVuGzeEKk",
+      "part": 1,
+      "timeRangeSeconds": [
+        90,
+        130
+      ],
+      "observedMechanism": "击败蓝花地内的宝箱怪后出现奖励箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1357738947969900544",
+        "name": "基准奇藏箱",
+        "typeId": "qzx_02",
+        "rawPosition": [
+          1038100.0,
+          812400.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1dVuGzeEKk/?p=1&t=90",
+        "cid": "30984113196"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1dVuGzeEKk/p01/frame-0110.00.jpg",
+          "out/detectability-collection/BV1dVuGzeEKk/p01/frame-0120.00.jpg",
+          "out/detectability-collection/BV1dVuGzeEKk/p01/frame-0125.00.jpg"
+        ]
+      },
+      "basis": "蓝花、巨大肋骨与斜置浅色石板对应攻略图。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1357738947969900544",
+        "description": "在标点附近击败宝箱怪获得（标点由玩家kirsly提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/830ad82d41a440d9b4fd5e71b654efc120250404.png"
+        ],
+        "localJson": "out/detectability-collection/BV1dVuGzeEKk/p01/guide-8-1357738947969900544.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1dVuGzeEKk/p01/guide-8-1357738947969900544-1.png"
+        ]
+      },
+      "recordId": "rinascita-036"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        50,
+        80
+      ],
+      "observedMechanism": "破船甲板上开启海墟秘匣",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=50",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0065.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0070.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0075.00.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "视频交互名称为海墟秘匣，不能将其强套普通奇藏箱；现有目录查询未找到可独立复核的该秘匣标记。",
+      "recordId": "rinascita-037"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        80,
+        115
+      ],
+      "observedMechanism": "螃蟹祭坛交付铛铛蟹后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1343632032590700544",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          731200.0,
+          403700.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=80",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0100.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0105.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0110.00.jpg"
+        ]
+      },
+      "basis": "岸边草台、树桩、小树、三层蟹像与散蟹石一一对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1343632032590700544",
+        "description": "螃蟹祭坛交付任务物品后解锁。（标点由玩家临渊处的光芒提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/e81cda2b36d84675bec29821812b664f20250224.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1343632032590700544.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1343632032590700544-1.png"
+        ]
+      },
+      "recordId": "rinascita-038"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        115,
+        140
+      ],
+      "observedMechanism": "螃蟹祭坛交付铛铛蟹后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1344663479527120896",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          724200.0,
+          352800.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=115",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0125.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0130.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0135.00.jpg"
+        ]
+      },
+      "basis": "木台、鱼筐与上方蓝色渔浮球对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1344663479527120896",
+        "description": "交付三个铛铛蟹即可获得",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/dc7b8b4bc46f40759cacb400369601f320250227.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344663479527120896.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344663479527120896-1.png"
+        ]
+      },
+      "recordId": "rinascita-039"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        140,
+        168
+      ],
+      "observedMechanism": "螃蟹祭坛交付铛铛蟹后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1344664011070038016",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          740000.0,
+          355100.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=140",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0155.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0160.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0165.00.jpg"
+        ]
+      },
+      "basis": "峭壁狭台两侧鱼篮和左前烛台对应；此坛供奉十只。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1344664011070038016",
+        "description": "交付十个铛铛蟹即可获得",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/6d17954141504dcfa4cfb3a012396adf20250227.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344664011070038016.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344664011070038016-1.png"
+        ]
+      },
+      "recordId": "rinascita-040"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        168,
+        187
+      ],
+      "observedMechanism": "螃蟹祭坛交付铛铛蟹后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1344664494687100928",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          739000.0,
+          347800.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=168",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0175.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0180.00.jpg"
+        ]
+      },
+      "basis": "木板桥面、右侧双耳瓶和左侧单瓶对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1344664494687100928",
+        "description": "交付三个铛铛蟹即可",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/f9efd389bc174af3bfb0f0edad72488b20250227.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344664494687100928.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344664494687100928-1.png"
+        ]
+      },
+      "recordId": "rinascita-041"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        187,
+        213
+      ],
+      "observedMechanism": "螃蟹祭坛交付铛铛蟹后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1343634231349714944",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          683100.0,
+          327400.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=187",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0195.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0200.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0205.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0210.00.jpg"
+        ]
+      },
+      "basis": "巨花跳到石砌门楼下，石墙脚蟹坛与旁边双耳瓶匹配攻略。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1343634231349714944",
+        "description": "螃蟹祭坛交付任务物品后解锁。（标点由玩家临渊处的光芒提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/a2af01925e704c69a056624511752f4620250224.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1343634231349714944.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1343634231349714944-1.png"
+        ]
+      },
+      "recordId": "rinascita-042"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        213,
+        233
+      ],
+      "observedMechanism": "螃蟹祭坛交付铛铛蟹后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1344431893422514176",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          676800.0,
+          324600.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=213",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0220.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0225.00.jpg"
+        ]
+      },
+      "basis": "背后三块苔岩、上方树枝及左右散蟹石对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1344431893422514176",
+        "description": "在标点附近交互提交螃蟹后获得宝箱（标点由玩家DXRB提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/20635e6ec570415cabae52bef8bc7fbf20250226.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344431893422514176.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344431893422514176-1.png"
+        ]
+      },
+      "recordId": "rinascita-043"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        233,
+        265
+      ],
+      "observedMechanism": "螃蟹祭坛交付铛铛蟹后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1344432685607870464",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          691800.0,
+          292300.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=233",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0250.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0255.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0260.00.jpg"
+        ]
+      },
+      "basis": "海边小艇与木板、树后斜岩及蟹坛两边散石对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1344432685607870464",
+        "description": "在海边，在标点附近交互提交三只铛铛蟹后获得宝箱（标点由玩家DXRB提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/9e4cee86ee5647c2b32447d90bdde20320250226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/494328692ea34d219f3d246a65778bc420250309.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344432685607870464.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344432685607870464-1.png"
+        ]
+      },
+      "recordId": "rinascita-044"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        265,
+        290
+      ],
+      "observedMechanism": "螃蟹祭坛交付铛铛蟹后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1343630847515271168",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          709800.0,
+          276200.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=265",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0275.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0280.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0285.00.jpg"
+        ]
+      },
+      "basis": "崖壁树叶旁大金瓶、箱下圆蟹石与高蟹坛对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1343630847515271168",
+        "description": "螃蟹祭坛交付任务物品后解锁.。（标点由玩家临渊处的光芒提供，图片由玩家遥行千里提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/31bcc319d9354924945ba064ccd85b2820250310.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1343630847515271168.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1343630847515271168-1.png"
+        ]
+      },
+      "recordId": "rinascita-045"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        290,
+        332
+      ],
+      "observedMechanism": "登上高岛，向最终蟹坛交付十只铛铛蟹，出现一只辉光箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1342170544779616256",
+        "name": "辉光奇藏箱",
+        "typeId": "qzx_04",
+        "rawPosition": [
+          727100.0,
+          281100.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=290",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0318.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0320.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0322.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0326.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0329.00.jpg"
+        ]
+      },
+      "basis": "巨型蟹石、前方分层草台、左后树和右后小蟹坛同攻略；逐秒核对为一个辉光箱，不把时间轴近邻图标误数为三箱。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_04&pointId=1342170544779616256",
+        "description": "在标点附近交互调查点供奉后获得（需完成老人鱼海剧情任务解锁该区域）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/9fbad7a440cb431785348fb20d0542cb20250220.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1342170544779616256.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1342170544779616256-1.png"
+        ]
+      },
+      "recordId": "rinascita-046"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        332,
+        348
+      ],
+      "observedMechanism": "岛半山腰采集三株植物后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1344430949975515136",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          730500.0,
+          281500.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=332",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0335.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0338.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0340.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0345.00.jpg"
+        ]
+      },
+      "basis": "海岸边凸起草台、三株发光植物的三角位置及夕阳侧坡与攻略首图一致。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1344430949975515136",
+        "description": "在山的半山腰，在标点附近悬崖上采集3个物品后出现宝箱（标点由玩家DXRB提供，可查看相关攻略获得）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/87e109106ab249589332000c29e6671020250226.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/25834670db074fe38fcd82424a5729d420250309.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344430949975515136.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344430949975515136-1.png"
+        ]
+      },
+      "recordId": "rinascita-047"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        348,
+        367
+      ],
+      "observedMechanism": "螃蟹祭坛交付铛铛蟹后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1344430297941598208",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          736300.0,
+          283800.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=348",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0350.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0355.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0360.00.jpg"
+        ]
+      },
+      "basis": "岛底破碎雕花石门、斜落石板及坛前散石对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1344430297941598208",
+        "description": "在最下方海边处，在标点处交互提交螃蟹后获得（标点由玩家DXRB提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/d143093ad7fe4632871ae67fb48b2db020250226.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344430297941598208.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-8-1344430297941598208-1.png"
+        ]
+      },
+      "recordId": "rinascita-048"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        405,
+        442
+      ],
+      "observedMechanism": "列车行进中瞄准并射击沿途箱子，奖励自动入账",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 902,
+        "pointId": "1348742913708236800",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          203000.0,
+          57000.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=405",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0430.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0435.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0440.00.jpg"
+        ]
+      },
+      "basis": "瀑布旁亮蓝洞口、向右弯轨与左侧低石台上的目标相同。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "vault-train-route-1",
+        "rewardCount": 2,
+        "individualOrdinal": 1,
+        "identityGranularity": "individual-reviewed-scene"
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=902&typeId=qzx_01&pointId=1348742913708236800",
+        "description": "列车轨道沿途的奇藏，直接在列车上射击即可。（标点由玩家遥行千里提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/3b587350494042d09b88f1c17d5d085020250310.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348742913708236800.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348742913708236800-1.png"
+        ]
+      },
+      "recordId": "rinascita-049"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        442,
+        497
+      ],
+      "observedMechanism": "列车行进中瞄准并射击沿途箱子，奖励自动入账",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 902,
+        "pointId": "1348743501854515200",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          218300.0,
+          73300.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=442",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0465.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0470.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0475.00.jpg"
+        ]
+      },
+      "basis": "窄洞穿出后右上蓝花石台、垂落发光藤与左下延伸轨道对应。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "vault-train-route-1",
+        "rewardCount": 2,
+        "individualOrdinal": 2,
+        "identityGranularity": "individual-reviewed-scene"
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=902&typeId=qzx_01&pointId=1348743501854515200",
+        "description": "列车轨道沿途的奇藏，直接在列车上射击即可。（标点由玩家遥行千里提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/11968eb7d0084157bfaeaeb1d0c0b49020250310.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348743501854515200.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348743501854515200-1.png"
+        ]
+      },
+      "recordId": "rinascita-050"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        497,
+        580
+      ],
+      "observedMechanism": "依次与四台迎宾声骸交互、处理战斗，完成后出现奖励箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 902,
+        "pointId": "1342158556839256064",
+        "name": "基准奇藏箱",
+        "typeId": "qzx_02",
+        "rawPosition": [
+          230100.0,
+          80900.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=497",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0520.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0530.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0540.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0550.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0555.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0565.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0570.00.jpg"
+        ]
+      },
+      "basis": "贵金属与艺术品藏区二楼棋盘地面、金色木墙、四台机器人和圆门布局同攻略图1；文字的四台交互链吻合。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=902&typeId=qzx_02&pointId=1342158556839256064",
+        "description": "二楼，从进门依次跟4个机器人对话，第一个要对话两次，每个机器人都选第一个选项即可获得隐藏宝箱",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/46cb9a58bac94b99b51b6ceef91d4f8120250220.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/6d33db597bb74bf5afea3906ec78d03a20250220.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/594e181ef57a4c689e985ae198c963da20250220.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1342158556839256064.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1342158556839256064-1.png"
+        ]
+      },
+      "recordId": "rinascita-051"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        585,
+        601
+      ],
+      "observedMechanism": "列车行进中瞄准并射击沿途箱子，奖励自动入账",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 902,
+        "pointId": "1348744011855486976",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          238800.0,
+          70300.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=585",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0590.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0595.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0600.00.jpg"
+        ]
+      },
+      "basis": "出站转入左侧黑岩目标，右侧留有亮蓝缺口与发光藤，和攻略一致。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "vault-train-route-2",
+        "rewardCount": 4,
+        "individualOrdinal": 1,
+        "identityGranularity": "individual-reviewed-scene"
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=902&typeId=qzx_01&pointId=1348744011855486976",
+        "description": "列车轨道沿途的奇藏，直接在列车上射击即可。（标点由玩家遥行千里提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/9fbac20b02dc4e729b4d5168fea564e620250310.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348744011855486976.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348744011855486976-1.png"
+        ]
+      },
+      "recordId": "rinascita-052"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        601,
+        614
+      ],
+      "observedMechanism": "列车行进中瞄准并射击沿途箱子，奖励自动入账",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 902,
+        "pointId": "1348744237174726656",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          251200.0,
+          65600.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=601",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0605.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0610.00.jpg"
+        ]
+      },
+      "basis": "左弯轨旁孤立小平台及圆形钟面/装置立面、台底目标相同。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "vault-train-route-2",
+        "rewardCount": 4,
+        "individualOrdinal": 2,
+        "identityGranularity": "individual-reviewed-scene"
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=902&typeId=qzx_01&pointId=1348744237174726656",
+        "description": "列车轨道沿途的奇藏，直接在列车上射击即可。（标点由玩家遥行千里提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/60b0acf974f54fd9bb2f68209f04336120250310.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348744237174726656.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348744237174726656-1.png"
+        ]
+      },
+      "recordId": "rinascita-053"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        614,
+        627
+      ],
+      "observedMechanism": "列车行进中瞄准并射击沿途箱子，奖励自动入账",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 902,
+        "pointId": "1348744470741704704",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          234600.0,
+          65900.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=614",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0615.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0620.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0625.00.jpg"
+        ]
+      },
+      "basis": "轨旁双层小塔楼穹顶与音符、背后垂藤匹配。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "vault-train-route-2",
+        "rewardCount": 4,
+        "individualOrdinal": 3,
+        "identityGranularity": "individual-reviewed-scene"
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=902&typeId=qzx_01&pointId=1348744470741704704",
+        "description": "列车轨道沿途的奇藏，直接在列车上射击即可。（标点由玩家遥行千里提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/f8367a2302c44d0b898938b69868427620250310.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348744470741704704.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348744470741704704-1.png"
+        ]
+      },
+      "recordId": "rinascita-054"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        627,
+        651
+      ],
+      "observedMechanism": "列车行进中瞄准并射击沿途箱子，奖励自动入账",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 902,
+        "pointId": "1348744738540855296",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          216900.0,
+          52400.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=627",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0630.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0635.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0640.00.jpg"
+        ]
+      },
+      "basis": "蓝花石阶沿线、目标落在左侧阶台边，与攻略匹配。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "vault-train-route-2",
+        "rewardCount": 4,
+        "individualOrdinal": 4,
+        "identityGranularity": "individual-reviewed-scene"
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=902&typeId=qzx_01&pointId=1348744738540855296",
+        "description": "列车轨道沿途的奇藏，直接在列车上射击即可。（标点由玩家遥行千里提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/e6a1541b0ba6457a9f1f6cb88fae897920250310.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348744738540855296.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348744738540855296-1.png"
+        ]
+      },
+      "recordId": "rinascita-055"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        665,
+        699
+      ],
+      "observedMechanism": "列车行进中瞄准并射击沿途箱子，奖励自动入账",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 902,
+        "pointId": "1348744932149927936",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          227400.0,
+          -22000.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=665",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0675.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0680.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0685.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0690.00.jpg"
+        ]
+      },
+      "basis": "穿过粗根形成的洞拱，左下树根旁目标和上方蓝色垂藤对应。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "vault-train-route-3",
+        "rewardCount": 2,
+        "individualOrdinal": 1,
+        "identityGranularity": "individual-reviewed-scene"
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=902&typeId=qzx_01&pointId=1348744932149927936",
+        "description": "列车轨道沿途的奇藏，直接在列车上射击即可。（标点由玩家遥行千里提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/7d580f6f56914017ba1409e312b50d3f20250310.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348744932149927936.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348744932149927936-1.png"
+        ]
+      },
+      "recordId": "rinascita-056"
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "timeRangeSeconds": [
+        699,
+        715
+      ],
+      "observedMechanism": "列车行进中瞄准并射击沿途箱子，奖励自动入账",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 902,
+        "pointId": "1348745360908460032",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          226000.0,
+          15300.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1hHuGzFEZG/?p=1&t=699",
+        "cid": "30984111286"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0705.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0708.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0710.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0711.00.jpg",
+          "out/detectability-collection/BV1hHuGzFEZG/p01/frame-0714.00.jpg"
+        ]
+      },
+      "basis": "金色裂隙空间、左侧层叠浮岩与右侧发光塔对应，711秒奖励可见。",
+      "unresolvedReason": null,
+      "group": {
+        "id": "vault-train-route-3",
+        "rewardCount": 2,
+        "individualOrdinal": 2,
+        "identityGranularity": "individual-reviewed-scene"
+      },
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=902&typeId=qzx_01&pointId=1348745360908460032",
+        "description": "列车轨道沿途的奇藏，直接在列车上射击即可。（标点由玩家遥行千里提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/7dec58a602d7453593e5fcb46cf983b320250310.png"
+        ],
+        "localJson": "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348745360908460032.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1hHuGzFEZG/p01/guide-902-1348745360908460032-1.png"
+        ]
+      },
+      "recordId": "rinascita-057"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        0,
+        40
+      ],
+      "observedMechanism": "在草地布偶群中心调查光点后出现朴素箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=0",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0025.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0030.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0035.00.jpg"
+        ],
+        "candidateGuidesInspected": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325723376857276416-1.png"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已对照三张攻略图，怪物组合与调查机制相符，但草坡远景未建立足够唯一对应；不凭常见布偶组合确认。",
+      "candidatePointIds": [
+        "1325723376857276416"
+      ],
+      "recordId": "rinascita-058"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        40,
+        78
+      ],
+      "observedMechanism": "海边废墟营地破坏/调查后开启草丛内宝箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=40",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0055.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0065.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0070.00.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已检查目标触发与开启帧；未获得能唯一对应建筑墙脚草丛位置的攻略图。",
+      "recordId": "rinascita-059"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        78,
+        100
+      ],
+      "observedMechanism": "变身巨布偶摧毁海边灌木周围全部蓝石块后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1325906036316606464",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          827200.0,
+          534500.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=78",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0084.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0086.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0090.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0094.00.jpg"
+        ]
+      },
+      "basis": "海边巨崖、中央灌木与左右两摞蓝石块，对应攻略图2；清除后箱位置对应图1。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1325906036316606464",
+        "description": "在海边，变身布偶熊摧毁周围的石块后出现宝箱（标点由玩家Seyra提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/f53eb49237f444748858b297bcdc5c3720250106.jpeg",
+          "https://prod-alicdn-community.kurobbs.com/forum/3b42758b972b4ca58dc18ed59adf61e020250203.png"
+        ],
+        "localJson": "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325906036316606464.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325906036316606464-1.png",
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325906036316606464-2.png"
+        ]
+      },
+      "recordId": "rinascita-060"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        100,
+        138
+      ],
+      "observedMechanism": "变身巨布偶打碎山脚散布石块后出现基准箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=100",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0115.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0120.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0125.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0130.00.jpg"
+        ],
+        "candidateGuidesInspected": []
+      },
+      "basis": "",
+      "unresolvedReason": "小地图产生距离约6米的候选且描述吻合，但攻略端点多轮重试仍SSL EOF/remote disconnect，未实际取得图片，不确认。",
+      "candidatePointIds": [
+        "1327045111214792704"
+      ],
+      "recordId": "rinascita-061"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        138,
+        160
+      ],
+      "observedMechanism": "在废墟内布偶挖掘点调查后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1325764785251311616",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          837600.0,
+          552400.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=138",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0145.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0150.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0155.00.jpg"
+        ]
+      },
+      "basis": "倒塌雕花墙、灌木、石头小祭坛、周围布偶排列与攻略实景图一致。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1325764785251311616",
+        "description": "于怪物挖掘点位调查后出现。",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/ae3824251ad84ba6aa21c0150d71c8ac20250106.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/10b979614afd4f259fc24e64f12dd1c920250106.png"
+        ],
+        "localJson": "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325764785251311616.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325764785251311616-1.png"
+        ]
+      },
+      "recordId": "rinascita-062"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        160,
+        190
+      ],
+      "observedMechanism": "树下布偶群中心调查后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1325767571611738112",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          858521.0,
+          572288.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=160",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0170.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0175.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0180.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0185.00.jpg"
+        ]
+      },
+      "basis": "树下草地、后方带水平接缝的白色崖壁、旁边石缘与两张攻略图对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1325767571611738112",
+        "description": "于怪物中心调查出现。",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/67a5b5e5c8a94017a68fb4c313441d2e20250106.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/6dfb4600a5d84542b55a78e1e2ef574b20250106.png"
+        ],
+        "localJson": "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325767571611738112.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325767571611738112-1.png",
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325767571611738112-2.png"
+        ]
+      },
+      "recordId": "rinascita-063"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        190,
+        225
+      ],
+      "observedMechanism": "调查树下地面后连续出现欺诈奇藏，战斗与再次调查后获得辉光箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=190",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0200.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0205.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0215.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0220.00.jpg"
+        ],
+        "candidateGuidesInspected": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1326595575887847424-1.png"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "候选文字描述连续欺诈奇藏吻合，但攻略图片下载多轮SSL EOF/timeout，未看见可复核图，保持未知。",
+      "candidatePointIds": [
+        "1326595575887847424"
+      ],
+      "recordId": "rinascita-064"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        225,
+        278
+      ],
+      "observedMechanism": "墓岛坡地布偶挖地处调查出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1325908242352738304",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          817300.0,
+          511800.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=225",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0260.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0265.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0270.00.jpg"
+        ]
+      },
+      "basis": "布偶挖地机制、蓝色小花平坡与近侧枯黑树/巨骨后景同攻略首图。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1325908242352738304",
+        "description": "一只巨布偶和两只工头布偶在挖地，中间的闪光点过去互动一下宝箱就出现了，可以不打拿了走（标点由玩家silent提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/c51f6689457346f6b78d6412701ef71e20250106.jpeg",
+          "https://prod-alicdn-community.kurobbs.com/forum/4e7d50e51d874bc7b4b06a587397280320250124.png"
+        ],
+        "localJson": "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325908242352738304.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325908242352738304-1.png"
+        ]
+      },
+      "recordId": "rinascita-065"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        278,
+        305
+      ],
+      "observedMechanism": "墓岛靠灯柱及巨骨拱附近光点调查后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1325907648958193664",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          799700.0,
+          482300.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=278",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0290.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0295.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0300.00.jpg"
+        ]
+      },
+      "basis": "巨骨拱、右侧崖壁、暖色灯柱与前方蓝叶树构成同一环境。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1325907648958193664",
+        "description": "在标点(闪光处）附近按调查互动获得（标点由玩家silent提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/b508f6c466e54b7099ea136ca0f3538c20250106.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/2c6d150856314098aa9f458ce97e50b420250122.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/e5b0b8ce33bb48f9a99398d4736871c020250122.png"
+        ],
+        "localJson": "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325907648958193664.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325907648958193664-1.png"
+        ]
+      },
+      "recordId": "rinascita-066"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        305,
+        350
+      ],
+      "observedMechanism": "沿海岸经过营地后，在建筑旁布偶群中心调查宝箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=305",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0318.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0328.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0342.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0344.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0346.00.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "318–338秒为通行战斗，不另计箱；342–346秒为实际调查/开箱。现有图未能唯一匹配。",
+      "recordId": "rinascita-067"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        350,
+        387
+      ],
+      "observedMechanism": "在破船与木平台下调查光点出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1325939864963014656",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          884900.0,
+          451955.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=350",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0375.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0380.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0382.00.jpg"
+        ]
+      },
+      "basis": "倾斜船壳、上层木板、左侧帐篷和右侧礁石与攻略首图完全对应。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1325939864963014656",
+        "description": "感知不到，走进去调查才会出现箱子",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/864657bb84084e238802cc4862d9b02b20250106.png"
+        ],
+        "localJson": "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325939864963014656.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325939864963014656-1.png"
+        ]
+      },
+      "recordId": "rinascita-068"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        387,
+        458
+      ],
+      "observedMechanism": "下到浮空金库岛底，变身巨布偶打碎七块石头后出现朴素箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1327366162893266944",
+        "name": "朴素奇藏箱",
+        "typeId": "qzx_01",
+        "rawPosition": [
+          914954.0,
+          646488.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=387",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0420.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0430.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0440.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0445.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0450.00.jpg"
+        ]
+      },
+      "basis": "巨白崖底蓝花地、树旁岩石与攻略实景对应；文字明确七块石头。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_01&pointId=1327366162893266944",
+        "description": "击碎所有石块出现，一共七块石块。【坐标：9130，6480，-40】",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/9b91360342fa4261b26114ee5070f58b20250110.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/8077b558f69f4398b76d42e41f85b45c20250110.png"
+        ],
+        "localJson": "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1327366162893266944.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1327366162893266944-1.png"
+        ]
+      },
+      "recordId": "rinascita-069"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        458,
+        497
+      ],
+      "observedMechanism": "桥下废墟变身巨布偶破除蓝石障碍，出现朴素箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=458",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0475.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0480.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0485.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0490.00.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "触发与开箱过程可见；多处桥下石块箱相似，未取得唯一对应攻略场景。",
+      "recordId": "rinascita-070"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        497,
+        599
+      ],
+      "observedMechanism": "按球数吸收紫球，再移动四根悬浮石碑完成解谜获得精密箱",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1326279660240277504",
+        "name": "精密奇藏箱",
+        "typeId": "qzx_03",
+        "rawPosition": [
+          799200.0,
+          600800.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=497",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0520.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0535.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0550.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0570.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0590.00.jpg"
+        ]
+      },
+      "basis": "粉树露台、中央火盆台、四石柱、木护栏及精密箱落点均匹配攻略实景。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_03&pointId=1326279660240277504",
+        "description": "完成此处悬浮碑列解谜。把图中4个石碑摆放好出现—雲开",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/e0223f486ef54b33a25fa68058d2a0ae20250107.png"
+        ],
+        "localJson": "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1326279660240277504.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1326279660240277504-1.png"
+        ]
+      },
+      "recordId": "rinascita-071"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        599,
+        646
+      ],
+      "observedMechanism": "爬上缠树藤的废墟建筑，在顶部铁栏围合处开启基准箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=599",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0620.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0630.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0640.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0642.00.jpg"
+        ],
+        "candidateGuidesInspected": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325880565664210944-1.png"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已对照候选屋顶箱图片，但候选是开放石屋脊，视频是铁栏围合且长满藤叶的顶部，不能确认同点。",
+      "candidatePointIds": [
+        "1325880565664210944"
+      ],
+      "recordId": "rinascita-072"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        646,
+        690
+      ],
+      "observedMechanism": "海边另一栋窄楼爬到顶层铁栏围合处开启基准箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=646",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0665.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0675.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0680.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0685.00.jpg"
+        ],
+        "candidateGuidesInspected": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325880565664210944-1.png"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已对照候选开放屋脊箱图片，围栏和箱座形态不同；不将相似高处箱硬套该ID。",
+      "candidatePointIds": [
+        "1325880565664210944"
+      ],
+      "recordId": "rinascita-073"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        690,
+        779
+      ],
+      "observedMechanism": "破除蓝石并把四根带红球石柱移至中央书本，变身寂寞小姐吸收",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1326948391330144256",
+        "name": "基准奇藏箱",
+        "typeId": "qzx_02",
+        "rawPosition": [
+          816400.0,
+          652500.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=690",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0710.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0730.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0750.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0770.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0775.00.jpg"
+        ]
+      },
+      "basis": "阶梯平台、四柱、远处尖塔与三角形屋顶、侧边桶箱及中央书本均对应攻略图2，绿色奖励箱对应图1。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1326948391330144256",
+        "description": "将标点周围四个带红球的石柱拉到中间书本位置（如图2所示）后变身兔兔，变身后吸收全部红球出现宝箱（标点由玩家Seyra提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/d414e1af146442b4a8428ccc4750ad2e20250109.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/a3fc12b7b3744ec4a2efc599adba895120250122.png"
+        ],
+        "localJson": "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1326948391330144256.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1326948391330144256-1.png",
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1326948391330144256-2.png"
+        ]
+      },
+      "recordId": "rinascita-074"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        779,
+        867
+      ],
+      "observedMechanism": "清除楼梯旁蓝石，按路径拉动石柱，再变身吸收噩梦乌云",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1325779725971525632",
+        "name": "基准奇藏箱",
+        "typeId": "qzx_02",
+        "rawPosition": [
+          840190.0,
+          659065.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=779",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0795.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0810.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0825.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0840.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0855.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0860.00.jpg"
+        ]
+      },
+      "basis": "楼梯左侧连续蓝石、前方大花瓶、多个石柱基座与攻略图1相同；动作顺序与文字逐项吻合。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1325779725971525632",
+        "description": "1.击碎楼梯旁石头   2.将倒下石柱向西拉2下   3.将楼梯口石柱向西拉1下   4.将倒下石柱拉到楼梯口处   5.将螃蟹左前方石柱拉到左后方  6.螃蟹左方楼梯下为最后一个石柱，依次将其拉上后完成(使用E技能)。",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/baedbdae08da4423b1b4ead9869e191c20250106.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/ec684eec08e142d4bb956ec2749e558020250122.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/9e98d6ba9cc04dec81b6e4778f89688e20250122.png"
+        ],
+        "localJson": "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325779725971525632.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325779725971525632-1.png"
+        ]
+      },
+      "recordId": "rinascita-075"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        867,
+        949
+      ],
+      "observedMechanism": "清除岩壁露台蓝石，把四柱置于书本四方后吸收红球",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1325785775599542272",
+        "name": "基准奇藏箱",
+        "typeId": "qzx_02",
+        "rawPosition": [
+          820214.0,
+          673940.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=867",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0890.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0910.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0930.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0940.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0945.00.jpg"
+        ]
+      },
+      "basis": "岩壁前露台、四柱高度、右后桶箱及中间书本与攻略首图一致。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1325785775599542272",
+        "description": "将石块打碎后，使四根石柱位于螃蟹四方即可。（使用小技能）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/65927ae23ca24e08bd23d71b1690f02e20250106.png"
+        ],
+        "localJson": "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325785775599542272.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325785775599542272-1.png"
+        ]
+      },
+      "recordId": "rinascita-076"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        949,
+        998
+      ],
+      "observedMechanism": "紫色草地四柱按球数1234依次变身互动",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "detectability": "not-detectable-for-normal-sweep",
+      "point": {
+        "stateId": 8,
+        "pointId": "1325876464312541184",
+        "name": "基准奇藏箱",
+        "typeId": "qzx_02",
+        "rawPosition": [
+          862800.0,
+          691000.0
+        ]
+      },
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=949",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0960.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0970.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0980.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0990.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-0995.00.jpg"
+        ]
+      },
+      "basis": "四柱、两棵高树、后方巨桥拱、紫草白花与攻略首图一致；995秒大地图257内点配准仅辅助候选。",
+      "unresolvedReason": null,
+      "guide": {
+        "url": "https://www.kurobbs.com/mc/map/?state=8&typeId=qzx_02&pointId=1325876464312541184",
+        "description": "变兔子根据柱子下方粉色的球的数量由少到多1234依次互动，完成互动后获得（标点由玩家silent提供）",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/1c41f546589546bd83337db3bbd58dc020250106.png"
+        ],
+        "localJson": "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325876464312541184.json",
+        "reviewedImages": [
+          "out/detectability-collection/BV1k438ziEoG/p01/guide-8-1325876464312541184-1.png"
+        ]
+      },
+      "recordId": "rinascita-077"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        998,
+        1025
+      ],
+      "observedMechanism": "变身巨布偶破除建筑旁蓝石进入狭小通道开启朴素箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=998",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-1005.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-1010.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-1015.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-1020.00.jpg"
+        ],
+        "candidateGuidesInspected": []
+      },
+      "basis": "",
+      "unresolvedReason": "小地图候选约3米且文字注明不可探测，但攻略端点多轮重试失败未取得图片，不能仅用距离确认。",
+      "candidatePointIds": [
+        "1325784041004371968"
+      ],
+      "recordId": "rinascita-078"
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "timeRangeSeconds": [
+        1025,
+        1094
+      ],
+      "observedMechanism": "巨桥顶采集多株作物，引出幽灵敌人，战斗后出现精密箱",
+      "reviewStatus": "unresolved",
+      "detectability": "unknown",
+      "point": null,
+      "source": {
+        "url": "https://www.bilibili.com/video/BV1k438ziEoG/?p=1&t=1025",
+        "cid": "30814897159"
+      },
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-1040.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-1050.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-1065.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-1085.00.jpg",
+          "out/detectability-collection/BV1k438ziEoG/p01/frame-1090.00.jpg"
+        ]
+      },
+      "basis": "",
+      "unresolvedReason": "已看完整采集、幽灵出现、战斗及箱体奖励过程；未找到可唯一对应的库街区文字及图片。",
+      "recordId": "rinascita-079"
+    }
+  ],
+  "coverageStatus": "all-assigned-parts-and-target-events-reviewed-with-explicit-unresolved",
+  "coverage": [
+    {
+      "bvid": "BV1JB3Fz2EqG",
+      "part": 1,
+      "durationSeconds": 552,
+      "reviewedFullPart": true,
+      "method": "全段10秒接触表；除桑古P3外另看全段5秒接触表；歧义段2秒/1秒及单帧补查",
+      "contactSheets": [
+        "out/detectability-collection/BV1JB3Fz2EqG/p01/contact-10s-0000.jpg",
+        "out/detectability-collection/BV1JB3Fz2EqG/p01/contact-10s-0200.jpg",
+        "out/detectability-collection/BV1JB3Fz2EqG/p01/contact-10s-0400.jpg",
+        "out/detectability-collection/BV1JB3Fz2EqG/p01/contact-5s-0000.jpg",
+        "out/detectability-collection/BV1JB3Fz2EqG/p01/contact-5s-0100.jpg",
+        "out/detectability-collection/BV1JB3Fz2EqG/p01/contact-5s-0200.jpg",
+        "out/detectability-collection/BV1JB3Fz2EqG/p01/contact-5s-0300.jpg",
+        "out/detectability-collection/BV1JB3Fz2EqG/p01/contact-5s-0400.jpg",
+        "out/detectability-collection/BV1JB3Fz2EqG/p01/contact-5s-0500.jpg"
+      ],
+      "coveredTargetSegments": [
+        {
+          "recordId": "rinascita-028",
+          "seconds": [
+            85,
+            188
+          ]
+        },
+        {
+          "recordId": "rinascita-029",
+          "seconds": [
+            85,
+            188
+          ]
+        },
+        {
+          "recordId": "rinascita-030",
+          "seconds": [
+            85,
+            188
+          ]
+        },
+        {
+          "recordId": "rinascita-031",
+          "seconds": [
+            215,
+            285
+          ]
+        },
+        {
+          "recordId": "rinascita-032",
+          "seconds": [
+            285,
+            385
+          ]
+        },
+        {
+          "recordId": "rinascita-033",
+          "seconds": [
+            385,
+            500
+          ]
+        },
+        {
+          "recordId": "rinascita-034",
+          "seconds": [
+            500,
+            552
+          ]
+        }
+      ],
+      "targetCount": 7,
+      "confirmedCount": 6,
+      "unresolvedCount": 1,
+      "nonTargetPreparationOrReturnSegments": [
+        [
+          0,
+          85,
+          "食材/声骸准备"
+        ],
+        [
+          188,
+          215,
+          "采集声骸和通行"
+        ]
+      ]
+    },
+    {
+      "bvid": "BV1k438ziEoG",
+      "part": 1,
+      "durationSeconds": 1094,
+      "reviewedFullPart": true,
+      "method": "全段10秒接触表；除桑古P3外另看全段5秒接触表；歧义段2秒/1秒及单帧补查",
+      "contactSheets": [
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-10s-0000.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-10s-0200.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-10s-0400.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-10s-0600.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-10s-0800.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-10s-1000.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-2s-0080.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-2s-0220.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-2s-0310.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-2s-0620.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-5s-0000.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-5s-0100.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-5s-0200.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-5s-0300.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-5s-0400.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-5s-0500.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-5s-0600.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-5s-0700.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-5s-0800.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-5s-0900.jpg",
+        "out/detectability-collection/BV1k438ziEoG/p01/contact-5s-1000.jpg"
+      ],
+      "coveredTargetSegments": [
+        {
+          "recordId": "rinascita-058",
+          "seconds": [
+            0,
+            40
+          ]
+        },
+        {
+          "recordId": "rinascita-059",
+          "seconds": [
+            40,
+            78
+          ]
+        },
+        {
+          "recordId": "rinascita-060",
+          "seconds": [
+            78,
+            100
+          ]
+        },
+        {
+          "recordId": "rinascita-061",
+          "seconds": [
+            100,
+            138
+          ]
+        },
+        {
+          "recordId": "rinascita-062",
+          "seconds": [
+            138,
+            160
+          ]
+        },
+        {
+          "recordId": "rinascita-063",
+          "seconds": [
+            160,
+            190
+          ]
+        },
+        {
+          "recordId": "rinascita-064",
+          "seconds": [
+            190,
+            225
+          ]
+        },
+        {
+          "recordId": "rinascita-065",
+          "seconds": [
+            225,
+            278
+          ]
+        },
+        {
+          "recordId": "rinascita-066",
+          "seconds": [
+            278,
+            305
+          ]
+        },
+        {
+          "recordId": "rinascita-067",
+          "seconds": [
+            305,
+            350
+          ]
+        },
+        {
+          "recordId": "rinascita-068",
+          "seconds": [
+            350,
+            387
+          ]
+        },
+        {
+          "recordId": "rinascita-069",
+          "seconds": [
+            387,
+            458
+          ]
+        },
+        {
+          "recordId": "rinascita-070",
+          "seconds": [
+            458,
+            497
+          ]
+        },
+        {
+          "recordId": "rinascita-071",
+          "seconds": [
+            497,
+            599
+          ]
+        },
+        {
+          "recordId": "rinascita-072",
+          "seconds": [
+            599,
+            646
+          ]
+        },
+        {
+          "recordId": "rinascita-073",
+          "seconds": [
+            646,
+            690
+          ]
+        },
+        {
+          "recordId": "rinascita-074",
+          "seconds": [
+            690,
+            779
+          ]
+        },
+        {
+          "recordId": "rinascita-075",
+          "seconds": [
+            779,
+            867
+          ]
+        },
+        {
+          "recordId": "rinascita-076",
+          "seconds": [
+            867,
+            949
+          ]
+        },
+        {
+          "recordId": "rinascita-077",
+          "seconds": [
+            949,
+            998
+          ]
+        },
+        {
+          "recordId": "rinascita-078",
+          "seconds": [
+            998,
+            1025
+          ]
+        },
+        {
+          "recordId": "rinascita-079",
+          "seconds": [
+            1025,
+            1094
+          ]
+        }
+      ],
+      "targetCount": 22,
+      "confirmedCount": 12,
+      "unresolvedCount": 10,
+      "nonTargetPreparationOrReturnSegments": []
+    },
+    {
+      "bvid": "BV1hHuGzFEZG",
+      "part": 1,
+      "durationSeconds": 715,
+      "reviewedFullPart": true,
+      "method": "全段10秒接触表；除桑古P3外另看全段5秒接触表；歧义段2秒/1秒及单帧补查",
+      "contactSheets": [
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-10s-0000.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-10s-0200.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-10s-0400.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-10s-0600.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-1s-0318.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-1s-0700.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-5s-0000.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-5s-0100.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-5s-0200.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-5s-0300.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-5s-0400.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-5s-0500.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-5s-0600.jpg",
+        "out/detectability-collection/BV1hHuGzFEZG/p01/contact-5s-0700.jpg"
+      ],
+      "coveredTargetSegments": [
+        {
+          "recordId": "rinascita-037",
+          "seconds": [
+            50,
+            80
+          ]
+        },
+        {
+          "recordId": "rinascita-038",
+          "seconds": [
+            80,
+            115
+          ]
+        },
+        {
+          "recordId": "rinascita-039",
+          "seconds": [
+            115,
+            140
+          ]
+        },
+        {
+          "recordId": "rinascita-040",
+          "seconds": [
+            140,
+            168
+          ]
+        },
+        {
+          "recordId": "rinascita-041",
+          "seconds": [
+            168,
+            187
+          ]
+        },
+        {
+          "recordId": "rinascita-042",
+          "seconds": [
+            187,
+            213
+          ]
+        },
+        {
+          "recordId": "rinascita-043",
+          "seconds": [
+            213,
+            233
+          ]
+        },
+        {
+          "recordId": "rinascita-044",
+          "seconds": [
+            233,
+            265
+          ]
+        },
+        {
+          "recordId": "rinascita-045",
+          "seconds": [
+            265,
+            290
+          ]
+        },
+        {
+          "recordId": "rinascita-046",
+          "seconds": [
+            290,
+            332
+          ]
+        },
+        {
+          "recordId": "rinascita-047",
+          "seconds": [
+            332,
+            348
+          ]
+        },
+        {
+          "recordId": "rinascita-048",
+          "seconds": [
+            348,
+            367
+          ]
+        },
+        {
+          "recordId": "rinascita-049",
+          "seconds": [
+            405,
+            442
+          ]
+        },
+        {
+          "recordId": "rinascita-050",
+          "seconds": [
+            442,
+            497
+          ]
+        },
+        {
+          "recordId": "rinascita-051",
+          "seconds": [
+            497,
+            580
+          ]
+        },
+        {
+          "recordId": "rinascita-052",
+          "seconds": [
+            585,
+            601
+          ]
+        },
+        {
+          "recordId": "rinascita-053",
+          "seconds": [
+            601,
+            614
+          ]
+        },
+        {
+          "recordId": "rinascita-054",
+          "seconds": [
+            614,
+            627
+          ]
+        },
+        {
+          "recordId": "rinascita-055",
+          "seconds": [
+            627,
+            651
+          ]
+        },
+        {
+          "recordId": "rinascita-056",
+          "seconds": [
+            665,
+            699
+          ]
+        },
+        {
+          "recordId": "rinascita-057",
+          "seconds": [
+            699,
+            715
+          ]
+        }
+      ],
+      "targetCount": 21,
+      "confirmedCount": 20,
+      "unresolvedCount": 1,
+      "nonTargetPreparationOrReturnSegments": [
+        [
+          0,
+          50,
+          "采购44只铛铛蟹"
+        ]
+      ]
+    },
+    {
+      "bvid": "BV1dVuGzeEKk",
+      "part": 1,
+      "durationSeconds": 130,
+      "reviewedFullPart": true,
+      "method": "全段10秒接触表；除桑古P3外另看全段5秒接触表；歧义段2秒/1秒及单帧补查",
+      "contactSheets": [
+        "out/detectability-collection/BV1dVuGzeEKk/p01/contact-10s-0000.jpg",
+        "out/detectability-collection/BV1dVuGzeEKk/p01/contact-5s-0000.jpg",
+        "out/detectability-collection/BV1dVuGzeEKk/p01/contact-5s-0100.jpg"
+      ],
+      "coveredTargetSegments": [
+        {
+          "recordId": "rinascita-035",
+          "seconds": [
+            0,
+            90
+          ]
+        },
+        {
+          "recordId": "rinascita-036",
+          "seconds": [
+            90,
+            130
+          ]
+        }
+      ],
+      "targetCount": 2,
+      "confirmedCount": 2,
+      "unresolvedCount": 0,
+      "nonTargetPreparationOrReturnSegments": []
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 1,
+      "durationSeconds": 476,
+      "reviewedFullPart": true,
+      "method": "全段10秒接触表；除桑古P3外另看全段5秒接触表；歧义段2秒/1秒及单帧补查",
+      "contactSheets": [
+        "out/detectability-collection/BV1Aeh2zvEko/p01/contact-10s-0000.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p01/contact-10s-0200.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p01/contact-10s-0400.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p01/contact-5s-0000.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p01/contact-5s-0100.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p01/contact-5s-0200.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p01/contact-5s-0300.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p01/contact-5s-0400.jpg"
+      ],
+      "coveredTargetSegments": [
+        {
+          "recordId": "rinascita-001",
+          "seconds": [
+            110,
+            150
+          ]
+        },
+        {
+          "recordId": "rinascita-002",
+          "seconds": [
+            150,
+            185
+          ]
+        },
+        {
+          "recordId": "rinascita-003",
+          "seconds": [
+            185,
+            210
+          ]
+        },
+        {
+          "recordId": "rinascita-004",
+          "seconds": [
+            210,
+            228
+          ]
+        },
+        {
+          "recordId": "rinascita-005",
+          "seconds": [
+            228,
+            275
+          ]
+        },
+        {
+          "recordId": "rinascita-006",
+          "seconds": [
+            275,
+            303
+          ]
+        },
+        {
+          "recordId": "rinascita-007",
+          "seconds": [
+            303,
+            355
+          ]
+        },
+        {
+          "recordId": "rinascita-008",
+          "seconds": [
+            355,
+            398
+          ]
+        },
+        {
+          "recordId": "rinascita-009",
+          "seconds": [
+            398,
+            476
+          ]
+        },
+        {
+          "recordId": "rinascita-010",
+          "seconds": [
+            398,
+            476
+          ]
+        },
+        {
+          "recordId": "rinascita-011",
+          "seconds": [
+            398,
+            476
+          ]
+        },
+        {
+          "recordId": "rinascita-012",
+          "seconds": [
+            398,
+            476
+          ]
+        },
+        {
+          "recordId": "rinascita-013",
+          "seconds": [
+            398,
+            476
+          ]
+        }
+      ],
+      "targetCount": 13,
+      "confirmedCount": 13,
+      "unresolvedCount": 0,
+      "nonTargetPreparationOrReturnSegments": [
+        [
+          0,
+          110,
+          "采购铛铛蟹并前往首个目标"
+        ]
+      ]
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 2,
+      "durationSeconds": 309,
+      "reviewedFullPart": true,
+      "method": "全段10秒接触表；除桑古P3外另看全段5秒接触表；歧义段2秒/1秒及单帧补查",
+      "contactSheets": [
+        "out/detectability-collection/BV1Aeh2zvEko/p02/contact-10s-0000.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p02/contact-10s-0200.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p02/contact-5s-0000.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p02/contact-5s-0100.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p02/contact-5s-0200.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p02/contact-5s-0300.jpg"
+      ],
+      "coveredTargetSegments": [
+        {
+          "recordId": "rinascita-014",
+          "seconds": [
+            50,
+            65
+          ]
+        },
+        {
+          "recordId": "rinascita-015",
+          "seconds": [
+            65,
+            80
+          ]
+        },
+        {
+          "recordId": "rinascita-016",
+          "seconds": [
+            80,
+            98
+          ]
+        },
+        {
+          "recordId": "rinascita-017",
+          "seconds": [
+            98,
+            113
+          ]
+        },
+        {
+          "recordId": "rinascita-018",
+          "seconds": [
+            113,
+            135
+          ]
+        },
+        {
+          "recordId": "rinascita-019",
+          "seconds": [
+            135,
+            155
+          ]
+        },
+        {
+          "recordId": "rinascita-020",
+          "seconds": [
+            155,
+            175
+          ]
+        },
+        {
+          "recordId": "rinascita-021",
+          "seconds": [
+            175,
+            195
+          ]
+        },
+        {
+          "recordId": "rinascita-022",
+          "seconds": [
+            195,
+            220
+          ]
+        },
+        {
+          "recordId": "rinascita-023",
+          "seconds": [
+            220,
+            240
+          ]
+        },
+        {
+          "recordId": "rinascita-024",
+          "seconds": [
+            240,
+            260
+          ]
+        },
+        {
+          "recordId": "rinascita-025",
+          "seconds": [
+            260,
+            280
+          ]
+        }
+      ],
+      "targetCount": 12,
+      "confirmedCount": 5,
+      "unresolvedCount": 7,
+      "nonTargetPreparationOrReturnSegments": [
+        [
+          0,
+          50,
+          "接取呜獭獭任务"
+        ],
+        [
+          280,
+          309,
+          "返回任务NPC，不另计箱"
+        ]
+      ]
+    },
+    {
+      "bvid": "BV1Aeh2zvEko",
+      "part": 3,
+      "durationSeconds": 323,
+      "reviewedFullPart": true,
+      "method": "全段10秒接触表；除桑古P3外另看全段5秒接触表；歧义段2秒/1秒及单帧补查",
+      "contactSheets": [
+        "out/detectability-collection/BV1Aeh2zvEko/p03/contact-10s-0000.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p03/contact-10s-0200.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p03/contact-5s-0000.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p03/contact-5s-0100.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p03/contact-5s-0200.jpg",
+        "out/detectability-collection/BV1Aeh2zvEko/p03/contact-5s-0300.jpg"
+      ],
+      "coveredTargetSegments": [
+        {
+          "recordId": "rinascita-026",
+          "seconds": [
+            0,
+            323
+          ]
+        },
+        {
+          "recordId": "rinascita-027",
+          "seconds": [
+            0,
+            323
+          ]
+        }
+      ],
+      "targetCount": 2,
+      "confirmedCount": 2,
+      "unresolvedCount": 0,
+      "nonTargetPreparationOrReturnSegments": []
+    }
+  ],
+  "summary": {
+    "targetCount": 79,
+    "confirmedCount": 60,
+    "unresolvedCount": 19,
+    "partCount": 7
+  },
+  "limitations": [
+    "视频源为852x480；接触表复核不声称连续逐帧完整观看。",
+    "未匹配点位保持unknown；库街区部分图片/API多轮SSL/timeout错误，已在对应条目说明。",
+    "最终5箱与角斗士2箱按组成员确认，未推断同类型箱开启顺序。",
+    "悬浮碑列或高处箱是否在当前游戏版本可探测未进行游戏内实测，分类依据用户给定定义与该专题视频触发过程。"
+  ],
+  "validation": {
+    "catalogIdentityAndCachedGuideIdentity": "passed",
+    "allReferencedVideoFramesAndConfirmedGuidePaths": "passed",
+    "duplicateConfirmedIds": 0,
+    "distinctConfirmedIds": 60,
+    "targetTimeRangesWithinMediaDuration": "passed"
+  }
+}

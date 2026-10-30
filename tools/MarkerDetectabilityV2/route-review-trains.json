@@ -1,0 +1,158 @@
+{
+  "entries": [
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e013",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "902",
+      "pointId": "1348742913708236800",
+      "analysis": "从深海站台出发，过绿色棚顶，轨道右弯；左瀑布、右大岩柱、蓝色竖向洞口和上方横根同形。 已将该段全部目标攻略逐图比较，按特有景物和先后连续关系区分，不按ID数组顺序分配。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e013-0.jpg",
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e013-1.jpg",
+        "out/detectability-v2/route-trains/e13-r1-434s.jpg",
+        "out/detectability-v2/route-trains/e13-r1-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348742913708236800-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348742913708236800.json"
+      ],
+      "limitations": [
+        "列车段小地图为黑色；路线与场景对照确认身份，不声称取得逐帧米制坐标。"
+      ]
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e013",
+      "member": 2,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "902",
+      "pointId": "1348743501854515200",
+      "analysis": "同次列车继续过小站，轨道左弯穿岩洞；目标在右侧岩架，前方洞口上方蓝色垂藤及右侧竖岩与攻略一致。 已将该段全部目标攻略逐图比较，按特有景物和先后连续关系区分，不按ID数组顺序分配。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e013-0.jpg",
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e013-1.jpg",
+        "out/detectability-v2/route-trains/e13-r2-471s.jpg",
+        "out/detectability-v2/route-trains/e13-r2-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348743501854515200-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348743501854515200.json"
+      ],
+      "limitations": [
+        "列车段小地图为黑色；路线与场景对照确认身份，不声称取得逐帧米制坐标。"
+      ]
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e015",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "902",
+      "pointId": "1348744011855486976",
+      "analysis": "贵金属与艺术品藏区578秒信标出发，第一目标为右侧暗岩壁窄平台；岩壁轮廓、右侧亮洞和下方轨道弯道一致。 已将该段全部目标攻略逐图比较，按特有景物和先后连续关系区分，不按ID数组顺序分配。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e015-0.jpg",
+        "out/detectability-v2/route-trains/e15-r1-594s.jpg",
+        "out/detectability-v2/route-trains/e15-r1-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348744011855486976-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348744011855486976.json"
+      ],
+      "limitations": [
+        "列车段小地图为黑色；路线与场景对照确认身份，不声称取得逐帧米制坐标。"
+      ]
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e015",
+      "member": 2,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "902",
+      "pointId": "1348744237174726656",
+      "analysis": "同列车下一目标为右侧圆环遗迹下方石台；遗迹顶部轮廓、蓝圆环、右侧瀑布和左侧紫树一致。 已将该段全部目标攻略逐图比较，按特有景物和先后连续关系区分，不按ID数组顺序分配。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e015-0.jpg",
+        "out/detectability-v2/route-trains/e15-r2-607s.jpg",
+        "out/detectability-v2/route-trains/e15-r2-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348744237174726656-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348744237174726656.json"
+      ],
+      "limitations": [
+        "列车段小地图为黑色；路线与场景对照确认身份，不声称取得逐帧米制坐标。"
+      ]
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e015",
+      "member": 3,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "902",
+      "pointId": "1348744470741704704",
+      "analysis": "随后左侧塔楼顶目标；圆顶、上窄下宽的钟塔及侧面圆盘和后方下垂藤对应。 已将该段全部目标攻略逐图比较，按特有景物和先后连续关系区分，不按ID数组顺序分配。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e015-0.jpg",
+        "out/detectability-v2/route-trains/e15-r3-615s.jpg",
+        "out/detectability-v2/route-trains/e15-r3-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348744470741704704-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348744470741704704.json"
+      ],
+      "limitations": [
+        "列车段小地图为黑色；路线与场景对照确认身份，不声称取得逐帧米制坐标。"
+      ]
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e015",
+      "member": 4,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "902",
+      "pointId": "1348744738540855296",
+      "analysis": "再后方岩根下分层平台目标；大树根、三层岩台、蓝色灌木与右侧轨道对应，视频视角较攻略偏左。 已将该段全部目标攻略逐图比较，按特有景物和先后连续关系区分，不按ID数组顺序分配。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e015-0.jpg",
+        "out/detectability-v2/route-trains/e15-r4-632s.jpg",
+        "out/detectability-v2/route-trains/e15-r4-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348744738540855296-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348744738540855296.json"
+      ],
+      "limitations": [
+        "列车段小地图为黑色；路线与场景对照确认身份，不声称取得逐帧米制坐标。"
+      ]
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e016",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "902",
+      "pointId": "1348744932149927936",
+      "analysis": "艺术品藏区出发进入树洞，第一目标在左侧粗大弯曲树根前；上方树洞、右侧上坡轨道、根部纹理对应。 已将该段全部目标攻略逐图比较，按特有景物和先后连续关系区分，不按ID数组顺序分配。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e016-0.jpg",
+        "out/detectability-v2/route-trains/e16-r1-681s.jpg",
+        "out/detectability-v2/route-trains/e16-r1-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348744932149927936-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348744932149927936.json"
+      ],
+      "limitations": [
+        "列车段小地图为黑色；路线与场景对照确认身份，不声称取得逐帧米制坐标。"
+      ]
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e016",
+      "member": 2,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "902",
+      "pointId": "1348745360908460032",
+      "analysis": "同列车出树洞进入暖色大厅前，左侧悬岩目标；岩石层叠、上方弧形轨道及右侧金色大厅柱子对应。 已将该段全部目标攻略逐图比较，按特有景物和先后连续关系区分，不按ID数组顺序分配。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e016-0.jpg",
+        "out/detectability-v2/route-trains/e16-r2-708s.jpg",
+        "out/detectability-v2/route-trains/e16-r2-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348745360908460032-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-902-1348745360908460032.json"
+      ],
+      "limitations": [
+        "列车段小地图为黑色；路线与场景对照确认身份，不声称取得逐帧米制坐标。"
+      ]
+    }
+  ]
+}

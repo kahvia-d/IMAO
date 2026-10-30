@@ -1,0 +1,2585 @@
+{
+  "schemaVersion": 1,
+  "bvid": "BV1iMTXzVE8J",
+  "parts": [
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+  ],
+  "reviewStatus": "partial",
+  "method": "north-up-terrain-template-plus-continuous-scene-and-transcript-review",
+  "facilities": [
+    {
+      "label": "S1",
+      "stateId": "8",
+      "pointId": "1253821276787363840",
+      "type": "小型信标",
+      "rawPosition": [
+        75220.0,
+        275940.0
+      ],
+      "observedUsed": false
+    },
+    {
+      "label": "S2",
+      "stateId": "8",
+      "pointId": "1255663811008712704",
+      "type": "小型信标",
+      "rawPosition": [
+        54786.59,
+        322866.47
+      ],
+      "observedUsed": false
+    },
+    {
+      "label": "S3",
+      "stateId": "8",
+      "pointId": "1255663811092598784",
+      "type": "小型信标",
+      "rawPosition": [
+        85890.02,
+        319209.06
+      ],
+      "observedUsed": false
+    },
+    {
+      "label": "S4",
+      "stateId": "8",
+      "pointId": "1255956793287491584",
+      "type": "小型信标",
+      "rawPosition": [
+        105536.88,
+        284172.66
+      ],
+      "observedUsed": false
+    },
+    {
+      "label": "S5",
+      "stateId": "8",
+      "pointId": "1255956793342017536",
+      "type": "小型信标",
+      "rawPosition": [
+        85216.82,
+        256184.22
+      ],
+      "observedUsed": false
+    },
+    {
+      "label": "S6",
+      "stateId": "8",
+      "pointId": "1255956793388154880",
+      "type": "小型信标",
+      "rawPosition": [
+        31981.69,
+        310564.81
+      ],
+      "observedUsed": false
+    },
+    {
+      "label": "S7",
+      "stateId": "8",
+      "pointId": "1255956793434292224",
+      "type": "小型信标",
+      "rawPosition": [
+        72018.32,
+        300797.41
+      ],
+      "observedUsed": true
+    },
+    {
+      "label": "S8",
+      "stateId": "8",
+      "pointId": "1255956793480429568",
+      "type": "小型信标",
+      "rawPosition": [
+        52904.31,
+        285457.53
+      ],
+      "observedUsed": false
+    },
+    {
+      "label": "S9",
+      "stateId": "8",
+      "pointId": "1255956793526566912",
+      "type": "小型信标",
+      "rawPosition": [
+        19907.68,
+        290162.09
+      ],
+      "observedUsed": false
+    },
+    {
+      "label": "S10",
+      "stateId": "8",
+      "pointId": "1255956793568509952",
+      "type": "小型信标",
+      "rawPosition": [
+        13434.09,
+        262922.91
+      ],
+      "observedUsed": false
+    },
+    {
+      "label": "N11",
+      "stateId": "8",
+      "pointId": "1255665588319821824",
+      "type": "中枢信标",
+      "rawPosition": [
+        29507.13,
+        276219.81
+      ],
+      "observedUsed": false
+    },
+    {
+      "label": "P7实际传送副本",
+      "stateId": "8",
+      "pointId": "1253802978924298240",
+      "type": "欲燃之森",
+      "rawPosition": [
+        -86615,
+        128286
+      ],
+      "observedUsed": true,
+      "evidence": "out/detectability-v2/route-huanglong-late/p7-216.jpg"
+    }
+  ],
+  "otherTransportFacilities": "P7 216秒实际选择欲燃之森副本；P12审阅段使用小型信标；其他地图副本图标不等于实际使用。",
+  "routeSegments": [
+    {
+      "start": 390,
+      "end": 420,
+      "method": "visually-reviewed-north-up-terrain-correlation",
+      "samples": [
+        {
+          "time": 390,
+          "score": 0.4258159101009369,
+          "pixel": [
+            445,
+            285
+          ],
+          "rawPosition": [
+            73876.953125,
+            302314.453125
+          ]
+        },
+        {
+          "time": 395,
+          "score": 0.4655897915363312,
+          "pixel": [
+            462,
+            296
+          ],
+          "rawPosition": [
+            76699.21875,
+            304140.625
+          ]
+        },
+        {
+          "time": 400,
+          "score": 0.7229851484298706,
+          "pixel": [
+            480,
+            299
+          ],
+          "rawPosition": [
+            79687.5,
+            304638.671875
+          ]
+        },
+        {
+          "time": 405,
+          "score": 0.634109377861023,
+          "pixel": [
+            504,
+            292
+          ],
+          "rawPosition": [
+            83671.875,
+            303476.5625
+          ]
+        },
+        {
+          "time": 410,
+          "score": 0.4708215594291687,
+          "pixel": [
+            515,
+            278
+          ],
+          "rawPosition": [
+            85498.046875,
+            301152.34375
+          ]
+        },
+        {
+          "time": 415,
+          "score": 0.6097950339317322,
+          "pixel": [
+            513,
+            265
+          ],
+          "rawPosition": [
+            85166.015625,
+            298994.140625
+          ]
+        },
+        {
+          "time": 420,
+          "score": 0.6228941082954407,
+          "pixel": [
+            512,
+            264
+          ],
+          "rawPosition": [
+            85000.0,
+            298828.125
+          ]
+        }
+      ]
+    },
+    {
+      "start": 440,
+      "end": 505,
+      "method": "visually-reviewed-north-up-terrain-correlation",
+      "samples": [
+        {
+          "time": 440,
+          "score": 0.533496081829071,
+          "pixel": [
+            533,
+            243
+          ],
+          "rawPosition": [
+            88486.328125,
+            295341.796875
+          ]
+        },
+        {
+          "time": 445,
+          "score": 0.5380175113677979,
+          "pixel": [
+            537,
+            231
+          ],
+          "rawPosition": [
+            89150.390625,
+            293349.609375
+          ]
+        },
+        {
+          "time": 450,
+          "score": 0.5733291506767273,
+          "pixel": [
+            535,
+            230
+          ],
+          "rawPosition": [
+            88818.359375,
+            293183.59375
+          ]
+        },
+        {
+          "time": 455,
+          "score": 0.5328794121742249,
+          "pixel": [
+            535,
+            232
+          ],
+          "rawPosition": [
+            88818.359375,
+            293515.625
+          ]
+        },
+        {
+          "time": 460,
+          "score": 0.5629291534423828,
+          "pixel": [
+            535,
+            229
+          ],
+          "rawPosition": [
+            88818.359375,
+            293017.578125
+          ]
+        },
+        {
+          "time": 465,
+          "score": 0.5199451446533203,
+          "pixel": [
+            532,
+            234
+          ],
+          "rawPosition": [
+            88320.3125,
+            293847.65625
+          ]
+        },
+        {
+          "time": 470,
+          "score": 0.488005667924881,
+          "pixel": [
+            522,
+            244
+          ],
+          "rawPosition": [
+            86660.15625,
+            295507.8125
+          ]
+        },
+        {
+          "time": 475,
+          "score": 0.4513842761516571,
+          "pixel": [
+            522,
+            243
+          ],
+          "rawPosition": [
+            86660.15625,
+            295341.796875
+          ]
+        },
+        {
+          "time": 480,
+          "score": 0.5589221715927124,
+          "pixel": [
+            538,
+            239
+          ],
+          "rawPosition": [
+            89316.40625,
+            294677.734375
+          ]
+        },
+        {
+          "time": 485,
+          "score": 0.625363826751709,
+          "pixel": [
+            558,
+            251
+          ],
+          "rawPosition": [
+            92636.71875,
+            296669.921875
+          ]
+        },
+        {
+          "time": 490,
+          "score": 0.6529502272605896,
+          "pixel": [
+            564,
+            269
+          ],
+          "rawPosition": [
+            93632.8125,
+            299658.203125
+          ]
+        },
+        {
+          "time": 495,
+          "score": 0.5749546885490417,
+          "pixel": [
+            555,
+            278
+          ],
+          "rawPosition": [
+            92138.671875,
+            301152.34375
+          ]
+        },
+        {
+          "time": 500,
+          "score": 0.6105743050575256,
+          "pixel": [
+            557,
+            277
+          ],
+          "rawPosition": [
+            92470.703125,
+            300986.328125
+          ]
+        },
+        {
+          "time": 505,
+          "score": 0.5938211679458618,
+          "pixel": [
+            556,
+            280
+          ],
+          "rawPosition": [
+            92304.6875,
+            301484.375
+          ]
+        }
+      ]
+    }
+  ],
+  "discontinuities": [
+    {
+      "start": 380,
+      "end": 385,
+      "reason": "teleport"
+    },
+    {
+      "start": 425,
+      "end": 435,
+      "reason": "terrain peak contaminated by dungeon icon; no absolute positions accepted"
+    }
+  ],
+  "members": [
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e002",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "45今州城界信标转西北上建筑平台，54–60第一轮封锁青箱在柱右侧，屋外樱花和六角金砖墙；攻略1251345370043998208图正是相同柱/箱/围栏/樱花/墙。69–84爬屋顶、87返回90原柱后再开第二轮，111顶端紫箱与第一箱空间和颜色均不同；115地图屋顶箭头锚为已确认第二箱，因此第一箱不能共享1287107914627497984。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1251345370043998208",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p7-e2-map.png",
+        "out/detectability-v2/route-huanglong-late/p7-e2-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p7-e2-route-1.jpg",
+        "out/detectability-v2/route-huanglong-late/p7-e2-route-2.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1251345370043998208-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e003",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "118地图实际选中屏庭山小型信标1253813533833744384；126–147沿东向花坡，穿两块巨石的夹缝，150–156落到沙滩音障仪旁，159开青箱。攻略中沙滩坡度、左右两巨岩夹缝、岩脚层石及仪器后箱位置完全对应；其原始点[10000,119100]在该山正东海岸，旧1253173215523540992不符。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "中间石缝地图位置仅示意，非模板测量；118传送及156后战斗剪辑明确断开。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1273389507195453440",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p7-e3-map.png",
+        "out/detectability-v2/route-huanglong-late/p7-e3-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p7-e3-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1273389507195453440-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e005",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "216地图选中欲燃之森，配准raw[-86637,128374]与副本点[-86615,128286]吻合；222–238越过树干向东北，固定北向小地图副本图标逐步向左下移动；238射击挑战位于凸石左侧。攻略射击柱旁耸立灰岩、下坡层崖和远处今州建筑对应；238/242/250弱模板峰指向raw约-81000,120200，但仅作辅助不当独立确认。"
+      ],
+      "counterEvidence": [
+        "旧候选与本次欲燃之森东北—西北连续路线及攻略场景不符。"
+      ],
+      "gaps": [
+        "此段小地图右下固定雷达干扰地形相关；多帧最高峰错误已拒绝，未用其拼精确路线；图中只给阶段连结。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1282070799312306176",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p7-e5e6-route-map.png",
+        "out/detectability-v2/route-huanglong-late/p7-216.jpg",
+        "out/detectability-v2/route-huanglong-late/p7-216-facility-fit.json",
+        "out/detectability-v2/route-huanglong-late/p7-e5e6-chain-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p7-e5e6-chain-9.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1282070799312306176-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e006",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "250离开射击柱向西北，254/258同形山脊地形峰raw[-83506,118369]/[-85664,115879]；262跳入地坑，266/270蓝色花丛拱洞、左侧枯树与远处今州建筑和攻略两图一致，270模板raw[-86826,112393]接近候选[-87300,112300]；连续下行把射击点和洞中战斗挑战相连。"
+      ],
+      "counterEvidence": [
+        "旧候选与本次欲燃之森东北—西北连续路线及攻略场景不符。"
+      ],
+      "gaps": [
+        "此段小地图右下固定雷达干扰地形相关；多帧最高峰错误已拒绝，未用其拼精确路线；图中只给阶段连结。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287383082180341760",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p7-e5e6-route-map.png",
+        "out/detectability-v2/route-huanglong-late/p7-216.jpg",
+        "out/detectability-v2/route-huanglong-late/p7-216-facility-fit.json",
+        "out/detectability-v2/route-huanglong-late/p7-e5e6-chain-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p7-e5e6-chain-9.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287383082180341760-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e008",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "接续e6洞口270向东出洞，274右转爬山、278–286翻坡到巡尉任务山顶，294转东滑翔到左侧哨塔；314开启跑酷后穿光点，322落到营地棚顶领白箱。攻略图1是同一临河金属哨塔（今州入城桥及对岸建筑一致），攻略图2棚顶箱旁猫窝/三花猫、身后铁门、右侧哨塔及瀑布与322画面对应。点1282071617490993152标在起点哨塔[-72400,108200]，终点棚顶与已确认e9巡卫小队长[-71000,111800]上下对应。"
+      ],
+      "counterEvidence": [
+        "旧候选1287104752935976960不在这段出洞—山坡—今州临河哨塔的连贯路线。"
+      ],
+      "gaps": [
+        "爬山滑翔段仅按固定北向地图、连续场景与两端已确认地点画阶段虚线，未给逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1282071617490993152",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p7-e8-route-map.png",
+        "out/detectability-v2/route-huanglong-late/p7-e8-chain-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p7-e8-chain-9.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1282071617490993152-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1282071617490993152-2.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e011",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "385选中龙望郊西北信标，现成全图变换下圆心426,240为raw[-100022,93481]，与信标[-100109,93382]一致；391–403西行沿路经过巨大骨架，406离路、409–412翻石，415仪器在紫花草坪。攻略紫花草坪、仪器旁浅崖层、对面立石/黑岩及通向河岸的边沿与视频一致，候选[-116100,89900]位于信标西侧，且下一事件直接从这里西北下河。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1275219716522786816",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p7-e11-map.png",
+        "out/detectability-v2/route-huanglong-late/p7-e11-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p7-e11-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1275219716522786816-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e012",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "421从前一仪器箱西北下跳到河边，427蓝球靠巨岩下岸，433–457变身沿河向西穿蓝晶枯树林，460达成后上南岸463–466领奖。攻略1蓝球在巨岩拱口及岸边，攻略2白草蓝晶、黑枯树/瀑布/河湾对应终点；468地图玩家raw[-140554,84028]为终点，原始点[-119900,86100]明确标挑战起点，不能用终点最近邻替代。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "430变身黑屏是界面切换；沿河中点是示意；终点使用468旧高内点锚，不拿它冒充起点。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287101966419103744",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p7-e12-map.png",
+        "out/detectability-v2/route-huanglong-late/p7-e12-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p7-e12-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1287101966419103744-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e013",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "470返回同一龙望郊西北信标（圆心配准raw[-100045,93447]），476–506西南连续爬过四层山脊，509到峰顶射击柱，512蓝平台木箱和爆炸物，515辅助机射击后521领奖。攻略峰顶柱后的层叠山脊、远处今州高楼/城桥、左方尖塔和右方大骨架与509场景一致，原始点[-105300,107700]位于这条西南上山路线。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1276662462130065408",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p7-e13-map.png",
+        "out/detectability-v2/route-huanglong-late/p7-e13-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p7-e13-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1276662462130065408-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p7:e015",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "566实际选择庄内小型信标（圆心变换raw[-124395,116490]与点[-124390,116480]一致）；572–584向西南绕庄内木屋平台、穿垂藤和木栏，587–596沿坡下到水边高崖脚下音障仪，605紫箱。攻略仪器倚斜坡、背后竖直灰壁、白花草坡和右侧树/水岸的布局对应，原始点[-134400,134900]正是庄南偏西河谷。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "庄南中点只示意绕屋方向，不声称精确路线；600战斗到605完成有剪辑，不作运动连续证明。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1280653990351872000",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p7-e15-map.png",
+        "out/detectability-v2/route-huanglong-late/p7-e15-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p7-e15-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p07/guides/guide-8-1280653990351872000-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p8:e001",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "5小型信标原地出发，北西方向进入13方砖广场；13–34移动轨道方块，37紫箱。攻略同样的方块箭头轨道、背后爬藤灰墙、右方塌墙碎片及紫箱，后续西南绕平台、下吊机进入e2洞窟，155旧全图箭头[-20529,167650]闭合该区域。小型信标1253820199421661184[-8050,169080]位于拼图东南，符合固定北向小地图。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1277733330260598784",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p8-e1-map.png",
+        "out/detectability-v2/route-huanglong-late/p8-e1-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1277733330260598784-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p8:e003",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "158实际选中无明湾中枢1255665587803922432，地图圈心配准[4257,191189]、277内点；163落地后东南黄花坡经过动物，175下岩层，178岩脚凹角碎石，184打破。攻略同样两面垂直灰岩凹角、右侧白花草地及独立绿树，点[9200,196300]与路线一致。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1273403497468301312",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p8-e3-map.png",
+        "out/detectability-v2/route-huanglong-late/p8-e3-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1273403497468301312-1.png",
+        "out/detectability-v2/route-huanglong-late/p8-158.jpg",
+        "out/detectability-v2/route-huanglong-late/p8-158-facility.json"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p8:e004",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "186接上前一碎石，189–195东南下海滩，198过浅水，201登小沙洲，207–213绕最高岩体，216击碎岩体底部碎石。攻略大石底部符文碎石、左方枯木、隔水城楼和电线杆完全对应；随后继续东南到e5，237箭头[32229,213904]为另一个战斗点，不能拿其坐标给e4。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1273402033967587328",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p8-e4-map.png",
+        "out/detectability-v2/route-huanglong-late/p8-e4-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1273402033967587328-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p8:e009",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "437地图实际选中落定岭东南小型信标1253892291150217216，圈心配准[-63841,229903]、158内点；445落地后东北沿坡，448低石与树、454草坡、460绕凹地，463音障仪、469青箱。攻略草坡柱右箱、对面红黑高塔及断崖阶台一致；仪器[-50800,221200]正处该东北路线。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1281003221087997952",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p8-e9-map.png",
+        "out/detectability-v2/route-huanglong-late/p8-e9-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p8-e9-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1281003221087997952-1.png",
+        "out/detectability-v2/route-huanglong-late/p8-437.jpg",
+        "out/detectability-v2/route-huanglong-late/p8-437-facility.json"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p8:e010",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "472从e9向西北跑，478–481经过四个枯树桩，490登坡到跑酷柱，493转南进入蓝平台，499–502弹跳板，508青箱。攻略跑酷柱后绿树、崖下灰平台、远方红黑塔和碎裂悬岩位置对应；原点[-60500,209900]是起点，不以508终点反选。接后续北返碎石链再次交叉核验。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "蓝平台终点未获得独立坐标；图只连接已定位场景，不画虚构精确终点。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1281002291128590336",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p8-e10-map.png",
+        "out/detectability-v2/route-huanglong-late/p8-e10-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p8-e10-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1281002291128590336-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p8:e011",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "511接前一跑酷结束后，514向北沿蓝平台回跑，517下草坡，523右侧矿石、529白花草地巨型碎石，541打破。攻略碎石形状、右后红黑塔、左后高峰建筑及碎石边斜草坡一致；[-62000,205700]在跑酷起点西北，后续北东上峰e12的563箭头[-60901,193621]也与这条链一致。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1281002762420363264",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p8-e11-map.png",
+        "out/detectability-v2/route-huanglong-late/p8-e11-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1281002762420363264-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p8:e013",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "565实际选中东麓研究站南中枢1253326841218895872，圈心配准[-83668,201710]、249内点；571落地574东南过两树、577下坡，586射击柱旁爆炸果，592–595对小坡道路木箱投果，601青箱。攻略射击柱、左爆炸果、坡下道路及灰色方房/右远高楼一致；原点[-73800,204900]为中枢东南。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1280647352137179136",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p8-e13-map.png",
+        "out/detectability-v2/route-huanglong-late/p8-e13-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p8-e13-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1280647352137179136-1.png",
+        "out/detectability-v2/route-huanglong-late/p8-565.jpg",
+        "out/detectability-v2/route-huanglong-late/p8-565-facility.json"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p8:e014",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "602接上一挑战向南，608–614穿长方形前哨建筑群，617沿白花道路南行，620转西南经过堆箱，629到爆炸果射击柱，632–668投果毁箱，671青箱。攻略柱左爆炸果、右后大树与铁皮小棚、后方阶崖以及坡上蓝色信标光柱一致；点[-78100,224400]在前一挑战南偏西，东侧大型怪物营地图标也与视频小地图相符。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "前哨中间点为地标阶段示意，非测量位置；投果战斗内剪辑不作为运动连续证据。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287914041372000256",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p8-e14-map.png",
+        "out/detectability-v2/route-huanglong-late/p8-e14-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p8-e14-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p08/guides/guide-8-1287914041372000256-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e001",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "11东麓研究站南中枢1253326841218895872落地，14西南坡、17跳下、20蓝花地射击柱，23–44连续三轮木箱、47青箱。攻略紫柱、右爆炸果、蓝花坡及远处悬空废城对应；99重传同一中枢独立闭合。旧蓝色三靶候选机制不同被排除。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287908999877160960",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e1-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e1-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e1-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287908999877160960-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e002",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "49从e1东南跑，55跳下小崖，58到白花草坡、61战斗柱，64剪辑后紫箱。攻略白花坡、柱后双层灰崖、左后树与照明塔完全对应[-84600,213000]；下一个68西行到跑酷起点继续闭合。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "61–64战斗剪辑，只以到达前路线和场景核对；不声称战斗连续。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287910748334198784",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e2-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e2-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287910748334198784-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e003",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "68从战斗箱西行，71过路边石与木栏、74沿道路、77绿坡跑酷柱，80启动蓝平台，83向西、86转南、89折东、92下平台到灰色岩台，95青箱。攻略起点柱后爬藤废墙、右侧斜挂残片光柱、蘑菇与断桥相符；原点[-95100,213400]为起点，99地图玩家位于中枢西南终点方向，与顺序一致。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "图末线只表示下一段重传位置，不是步行轨迹；平台奖励终点没有精确坐标。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287909721897234432",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e3-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e3-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287909721897234432-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e004",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "99选中东麓研究站南中枢，107落地后北走，113过圆台、116–122越废屋与绿树，125–137北行经过营地左缘，140左转上白花坡，143–158蘑菇18光点，164青箱。攻略白花倾斜坡、跑酷图标、左上营地框架、右侧大树均对应[-86300,182100]。攻略名飞檐不等于普通蓝平台；视频明确蘑菇光点。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287907069216178176",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e4-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e4-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e4-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287907069216178176-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e005",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "165从蘑菇终点北下两层崖、174爆炸果、177–186过塌房、189–201涉河至蓝球；207–240变身后西行穿河面，经过左侧亭楼/架桥，243–246北岸青箱。攻略1同样蓝球、左右断桥门框与远处大环，攻略终点方向和250旧锚[-120097,154205]相符。原点[-88600,158700]是起点，不能把领奖锚当起点。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "204变身黑屏不作为位移；水面路线仅标起终点，未测量每个绕行。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287859583950581760",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e5-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e5-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e5-route-1.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e5-route-2.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287859583950581760-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e006",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "253实际选中焚焰海东小型信标1253820547887378432，373内点圈心[-116026,213079]与原点相合；261落地转西南，267–279过蜥蜴和营地，285跨小河，288柱开启20秒幻影木箱，291–297近战打碎，300青箱。攻略青箱后照明塔、断楼梯门框及废城高架一致，[-119100,229000]在该西南路径。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1275210928456482816",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e6-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e6-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e6-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1275210928456482816-1.png",
+        "out/detectability-v2/route-huanglong-late/p9-253.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-253-facility.json"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e007",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "302从e6转东南，308跨低崖，314跨水沟，317–326连爬山崖层，329峰顶蓝色三目标射击装置，332–335射靶，338青箱。攻略峰顶同款蓝白装置、箱后浮空废城角度与周围树/断楼对应[-109300,236100]；不能与e1紫柱三轮木箱混淆。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1275209287842783232",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e7-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e7-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e7-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1275209287842783232-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e008",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "341从山头向东北，347废墟草地、350–356攀废墙、359–365穿树到河边，368左转下瀑布、374蓝球，380–401逆瀑布上行穿双枯树门，404–407青箱。攻略1瀑布与左右石壁/岸边枯木相符，起点[-94500,225800]；411地图终点箭头[-91714,235777]是南上游终点，区别起点与领奖位置。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287922301495734272",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e8-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e8-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e8-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287922301495734272-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e009",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "416实际传送熔毁废都，圈心370内点配准[-120983,200820]；425落地、428北攀岩、431东北越怪物、434落入东麓废墟。440破石取电池，446–521三处房门搬运，530击柱排水，545–563外三柱，575转红电池581开最终门，587查看破旧简笔画，590击屋内第四柱，593紫箱。攻略最终房间声匣、右侧柱/紫花、左倒书架、地上散纸及紫箱逐一一致，且紧接e10北西椅子花圈[-124000,189600]前置关系吻合。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "室内搬电池以六页连续场景证据表达，地图仅标院落，不伪造房内精确轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1280906831672684544",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e9-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e9-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e9-route-1.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e9-route-2.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e9-route-3.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e9-route-4.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e9-route-5.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280906831672684544-1.png",
+        "out/detectability-v2/route-huanglong-late/p9-416.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-416-facility.json"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e011",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "615椅子箱后向西北，621过流放者，624–630到断轨坡前白花地跑酷柱；630/633北向地形模板峰分别[-133311,186934]/[-133477,186934]，与点[-133400,186900]吻合，624–645的8个连续有效峰0.40–0.49肉眼同形。攻略柱后湖水、白花草地、照明塔与起点转身视角一致。636–648上断轨，651下层再回上轨，657–672钩索逐层收光，675–678屋顶青箱，681旧玩家锚[-135139,193424]是终点，不能与起点最近邻混淆。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "621最强峰错误已拒绝，仅第二峰近链；624–645连续强峰经图形核验采用；其后以可见轨道/钩索路线和681锚闭合。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1280924798644957184",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e11-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e11-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e11-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280924798644957184-1.png",
+        "out/detectability-v2/route-huanglong-late/p9-probe-621.json",
+        "out/detectability-v2/route-huanglong-late/p9-probe-621-0.jpg"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e012",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "684地图选择潮音海丘小型信标1253820547769937920[-136445,170532]，692到达；695–704东南下两层岩台经过狼，707–713沿岸小路，716流放者身旁一圈碎石，719击破、722白箱。攻略同一草岸，对岸大矩形废墙、矮石岛和岸坡对应[-125400,181600]，与下一东向崖中层碎石连续相接。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1280910632148316160",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e12-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e12-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e12-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1280910632148316160-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e013",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "722从多石白箱东行沿河，728上灰崖、731再上一层，734中层树旁石堆贴壁，737击破740白箱。攻略同样巨型灰壁、中间草阶及右边树，原描述明确不是最底河岸一阶，符合视频连续爬一层后停在中阶；点[-118200,179200]为前一箱东北。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287900228575170560",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e13-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e13-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287900228575170560-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e015",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "761从前一已确认树桩白箱东北走长草路，779矿石旁下崖，782–797向东过河，798开30秒登山，800折西钩索过河，806–812连爬并拾体力，815树旁青箱。攻略起点白花草岸、右后倒塌灰墙及斜板对应[-100700,171300]；源视频对岸上墙明确显示挑战起点与奖励点不同，不以815奖励位置改写起点。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "上一中层区域只表示前序来源方位，实际经e14树桩；攀墙终点无独立坐标，不伪造终点位置。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1279922414305193984",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e15-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e15-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e15-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1279922414305193984-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e016",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "819实际选中焚焰海小型信标1253820547807686656，284内点配准[-134583,211508]；826落地后829对面桥头旧车旁柱，832–850沿高架道路通过钩索/风场/光圈，853白箱。攻略1同一旧车、白灌木、破裂桥缘和坡道上流放者，原点[-137100,211600]为起点，场景前置已在源视频完成，无需把终点箱当起点。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287924142610792448",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e16-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e16-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e16-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1287924142610792448-1.png",
+        "out/detectability-v2/route-huanglong-late/p9-819.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-819-facility.json"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p9:e017",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "854接跑酷白箱，857激活箱旁钩索860进楼，866弹跳板869钩索到上层，875–881环形道路向北，884风场并889–902连续攀蓝墙，905残破楼口、908向西南跳出，911–920滑翔到圆弧残楼顶，923–926打石堆。攻略同样弧形房顶碎墙、中央竖直水泥背板、旁边倾斜蓝玻璃高楼和细灯杆；原始描述明确头顶损毁房屋石头堆，坐标[-155055,212418]在跑酷起点西侧高层，与小地图路线一致。旧草坡树桩候选1287899171947606016实际e14，明确排除。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "地图为高层路线平面投影，层高用来源帧的弹跳板/风场/破口记录表达；不把地面最短连线当实际走法。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1267550834168176640",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p9-e17-map.png",
+        "out/detectability-v2/route-huanglong-late/p9-e17-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e17-route-1.jpg",
+        "out/detectability-v2/route-huanglong-late/p9-e17-route-2.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p09/guides/guide-8-1267550834168176640-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e001",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "6实际玩家位于怨鸟泽北侧小型信标1255663811499446272[-92980,255830]，427内点地图配准[-92988,255940]；11–23西行经过流放者，26–32沿高岩脚草坡，35可见符文碎石，38–41破石清怪44白箱。攻略同样向海斜坡、白花带、大树及灰岩脚符文碎石，点[-110095,258264]在信标西侧。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1252712945804910592",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e1-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e1-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1252712945804910592-1.png",
+        "out/detectability-v2/route-huanglong-late/p10-6.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-6-facility.json"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e002",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "46从e1西北下草坡、52朝西下路，58到柱、61开30秒跑酷；64第一蘑菇，67右转第二蘑菇，70–73树根间连跳、76钩索上树枝79–82青箱。攻略1同样小路柱/巨大横根与蘑菇，原点[-119700,258100]是起点；奖励在东南树枝，不能用领奖帧直接否定起点。后续83西北返回道路而非传送。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "树枝终点未测量独立坐标；图只到起点，连续跳跃详见两页来源帧。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1251624058141462528",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e2-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e2-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-e2-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1251624058141462528-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1251624058141462528-2.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e003",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "83由e2树枝西北落回小路，86–92沿路，95右转北、98路右柱，101开启战斗，104青箱。攻略白花草坡、柱后照明塔、对面大树与道路旁石块组合相符，原点[-118400,250400]正位于蘑菇起点北侧。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "101–104战斗有剪辑，不作为运动连贯证明。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1280999510571798528",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e3-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e3-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1280999510571798528-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e004",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "106从战斗箱向西，112翻低石、115–118西行到海崖，121降至崖下，124大符文石堆贴灰壁，127击破130白箱。攻略1同样灰岩壁与巨岩下洞隙/草地，点[-129600,252100]正位于e3西偏南海崖。134旧黄箭头贴屏幕上缘且被放大小地图裁切，只是离屏提示，禁止把其[-115879,261472]当玩家终点；本次采用连续西行和攻略，不采用该假锚。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "134上缘黄箭头投影明确拒绝；局部模板受雷达图标干扰，不作为确认依据。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1281001816703152128",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e4-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e4-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1281001816703152128-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1281001816703152128-2.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e005",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "134选中猢思崖中枢1255665587892002816，154内点圈心[-78438,291355]；143落地后西行，149高灰石右缘、155小路、158过矮台，161绕树、167–170罐群，173怪物后176青色潮汐。攻略2五罐平地、低石花台与树桩，攻略1右侧灰壁、远处山峰对应；点[-98061,288639]在中枢西侧。这不是e9蓝花草坡的金色罐群。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1252777761631461376",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e5-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e5-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-e5-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1252777761631461376-1.png",
+        "out/detectability-v2/route-huanglong-late/p10-134.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-134-facility.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1252777761631461376-2.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e006",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "178从罐群回小路，181向北转，184–187岔路向右，190取得路旁黑石，193转东北，196投掷裂纹岩壁、199白箱。补取官方攻略图：右侧黑石架旁粉花、对面斜草坡白花带和上层长灰壁黄色裂纹，全部与190/196一致。原点[-88200,280800]为前一罐群东北，下一冥渊守卫也在其东北。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1282073893420445696",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e6-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e6-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/guides/guide-8-1282073893420445696-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e007",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "201从裂岩白箱东北走，204进入蓝色发光草坪，207–216冥渊守卫战斗，219金色潮汐。攻略同样蓝光草坡、中央巨大树干、左横生树根拱口以及坡上小路，对应[-87279,275379]。原描述靠近出现冥渊守卫、击败生成金潮汐与视频完全一致；原错候选1252778607336280064是另一罐群事件e9。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1252778607176896512",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e7-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e7-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1252778607176896512-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e008",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "220从守卫东北爬灰崖，229–238到被巨大横根包围的白花空地；241–253西北蘑菇旁第一蝶，262–274爆炸果烧荆棘第二蝶，280蘑菇283钩索上树枝取第三蝶，295送回石柱298紫潮汐。攻略1同样两条巨根拱口、白花地和三石柱紫潮汐；原始分组明确潮汐之遗·紫，不能因通用文案称宝箱而误判类型。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1288245572837634048",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e8-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e8-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-e8-route-1.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-e8-route-2.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1288245572837634048-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1288245572837634048-2.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e009",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "303选择丛棘步道小型信标1255663811583332352，选中圈实际在445,248，179内点配准[-14003,278937]；312落地后西北，315–324下营地坡，327–330翻帐篷，333降一层，336–345逐个击破紫蓝花间散罐，348清怪351金色潮汐。攻略同样紫蓝花弧带、散落罐群、北侧道路与层叠灰石，原点[-30967,272930]在信标西北。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1252778607336280064",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e9-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e9-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-e9-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1252778607336280064-1.png",
+        "out/detectability-v2/route-huanglong-late/p10-303.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-303-facility.json"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e015",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "671实际选中中央巨榕西北小型信标1255663811172290560，105内点圈心[-49442,294522]；677落地后680西南上巨大横根，683–689连续爬根，692向南到树干边，695–704地图内侧玩家锚[-53259,299215]，707木屋坡道旁710空挑战台。攻略1同样树干贴壁和大蘑菇，点[-53000,299400]距地图锚约300raw；攻略2/3明确奖励在树顶木板桥，不能把空台当已展示奖励。身份可由起点地图及场景确认，奖励机制仍只沿原始资料不升级可探测。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "作者说已经完成；源视频没有挑战重演、奖励生成或领奖，因此只提议点位身份，不宣称视频直接证明奖励可探测性。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1288228421542363136",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e15-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e15-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-e15-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1288228421542363136-1.png",
+        "out/detectability-v2/route-huanglong-late/p10-671.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-671-facility.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1288228421542363136-2.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1288228421542363136-3.png",
+        "out/detectability-v2/review-root/BV1iMTXzVE8J-p10/map-anchors.json"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e016",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "711由空台西南下跳、714滑翔、717过浅水，720走向横生巨根拱，723岸边捡黑石，726砸开巨根下灰壁裂岩，729白箱。攻略1黑石在近岸、对面树根横拱下黄色裂纹和后方层叠灰岩完全对应；点[-62000,304700]位于e15西南。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1282074537826607104",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e16-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e16-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1282074537826607104-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e018",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "765实际选中央巨榕东南小型信标1253820752153657344，90内点[-33187,313766]；771落地，774–780西南爬低灰阶，783–786经过游弋蝶端点，789转南792到三压板跑酷。795开启，798/801搬两块方块压板，804本人压第三，807–816沿海上移动蓝平台到紫箱。攻略1柱后白花、坡上巨根/树枝以及攻略2/3海上折线平台紫箱完全一致。原点[-42300,324200]是挑战一带，不能当精确起点测量；其北侧游弋蝶[-41633,319622]和后续洞穴[-42930,321544]给出连贯空间夹证。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "候选标点在挑战区域，源视频起点/平台终点未各自单独配准；图仅表达区域顺序。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1282074825211928576",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e18-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e18-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-e18-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1282074825211928576-1.png",
+        "out/detectability-v2/route-huanglong-late/p10-765.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-765-facility.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1282074825211928576-2.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1282074825211928576-3.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e020",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "844重传同一巨榕东南小型信标，177内点[-33137,313749]；850落地，853东北下坡、856打石头怪取首蝶，859–862回石柱；865西北池边树根871背后第二蝶，874–883返回，886东北灰石动物旁木箱892第三蝶，895–901向南回柱904紫潮汐。攻略三石柱位于低灰岩前草坡、后面巨根剪影，位置[-31827,310930]为信标北偏东，与小地图绕行对应。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1251558983059951616",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e20-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e20-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-e20-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1251558983059951616-1.png",
+        "out/detectability-v2/route-huanglong-late/p10-844.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-844-facility.json"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e021",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "906从紫潮汐东北走，915越白花坡，918从树根边向东北落下，921荆棘包石，924转爆炸果，927–933炸掉荆棘，936黑石对岸裂岩，939取石942投掷945青箱。攻略同时框出前方黑石与对面黄色裂纹灰壁，侧面树根以及紫花坡匹配；点[-26100,300400]在三蝶东北。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1282075343061671936",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e21-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e21-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-e21-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1282075343061671936-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e022",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "947由裂岩箱向东南，956路下看到蓝色河豚球但不停，962–968过瀑布上空，971–977东南至小屋旁跑酷柱，980开30秒；983蘑菇弹起986风场、989崖边粉蘑菇、992钩索995风场998青箱。攻略起点同样青蘑菇、巨大树根包裹的灰色小屋与门前白花，原点[-14500,318900]确在前一裂岩东南；后续1001折西返回河豚，不能把先经过未开球误算成挑战先后。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "领奖终点未单独定位；图止于攻略起点。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1282455168761909248",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e22-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e22-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-e22-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1282455168761909248-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e023",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "1001从跑酷奖箱转西，1004–1013西向滑回水岸，1016见瀑布前蓝球，1019变身界面后1022–1055沿水道向北穿多级瀑布，1058挑战达成，1061木桥紫箱。攻略1水岸球背后同瀑布灰崖、攻略2同破木板桥紫箱；1065/1067地图内部玩家锚[-17260,289998]/[-17208,290072]也在攻略终点桥区，点[-21000,314100]是起点。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "1019黑屏是变身界面，非可观察运动；路线中间河道为阶段连结，不假造逐帧定位。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1288235081514106880",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e23-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e23-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-e23-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1288235081514106880-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1288235081514106880-2.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1288235081514106880-3.png",
+        "out/detectability-v2/review-root/BV1iMTXzVE8J-p10/map-anchors.json"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e024",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "1067实际选择间野滩小型信标1253820751998468096，125内点圈心[-7707,295892]，与传送前木桥玩家不同；1073落地东南，1076越倒木、1082沿白花坡，1088–1097拾取圆环六株鸳鸯花，1100战斗后青箱，1103领奖。攻略草坡花圈、上坡蓝色拼图及三株细树在同一画面，完全对应；点[3500,303900]是信标东南。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "1097–1100清怪段有剪辑；不把其当连续移动。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1273404229777113088",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e24-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e24-route-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-e24-route-1.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1273404229777113088-1.png",
+        "out/detectability-v2/route-huanglong-late/p10-1067.jpg",
+        "out/detectability-v2/route-huanglong-late/p10-1067-facility.json"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p10:e025",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "1104自花圈青箱向东偏南上坡，1107–1113蓝色拼图，1116–1128拾三块拼成4行形状，1131东向再上花坡，1134青箱。攻略1三块的形状与最终拼法相同，周围三细树/白花坡以及攻略2背板后上坡箱完全对应；点[11400,307800]在花圈东南，不是巨榕东南远处另一个拼图1252722121181585408。"
+      ],
+      "counterEvidence": [
+        "旧泛化机制候选不符合这次连续路线及已核对攻略场景；不可沿用。"
+      ],
+      "gaps": [
+        "路线图为场景阶段连结，未把时间抽样包装为逐帧测量轨迹。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1280666861558878208",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p10-e25-map.png",
+        "out/detectability-v2/route-huanglong-late/p10-e25-route-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1280666861558878208-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1280666861558878208-2.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e001",
+      "member": 1,
+      "reviewStatus": "not-reviewed-this-pass",
+      "proposal": "retain-unresolved",
+      "support": [],
+      "counterEvidence": [],
+      "gaps": [
+        "本轮尚未连续跟跑审阅；不把候选提取或旧审阅算完成。"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e003",
+      "member": 1,
+      "reviewStatus": "not-reviewed-this-pass",
+      "proposal": "retain-unresolved",
+      "support": [],
+      "counterEvidence": [],
+      "gaps": [
+        "本轮尚未连续跟跑审阅；不把候选提取或旧审阅算完成。"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e004",
+      "member": 1,
+      "reviewStatus": "not-reviewed-this-pass",
+      "proposal": "retain-unresolved",
+      "support": [],
+      "counterEvidence": [],
+      "gaps": [
+        "本轮尚未连续跟跑审阅；不把候选提取或旧审阅算完成。"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e005",
+      "member": 1,
+      "reviewStatus": "not-reviewed-this-pass",
+      "proposal": "retain-unresolved",
+      "support": [],
+      "counterEvidence": [],
+      "gaps": [
+        "本轮尚未连续跟跑审阅；不把候选提取或旧审阅算完成。"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e006",
+      "member": 1,
+      "reviewStatus": "not-reviewed-this-pass",
+      "proposal": "retain-unresolved",
+      "support": [],
+      "counterEvidence": [],
+      "gaps": [
+        "本轮尚未连续跟跑审阅；不把候选提取或旧审阅算完成。"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e007",
+      "member": 1,
+      "reviewStatus": "not-reviewed-this-pass",
+      "proposal": "retain-unresolved",
+      "support": [],
+      "counterEvidence": [],
+      "gaps": [
+        "本轮尚未连续跟跑审阅；不把候选提取或旧审阅算完成。"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e008",
+      "member": 1,
+      "reviewStatus": "not-reviewed-this-pass",
+      "proposal": "retain-unresolved",
+      "support": [],
+      "counterEvidence": [],
+      "gaps": [
+        "本轮尚未连续跟跑审阅；不把候选提取或旧审阅算完成。"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e010",
+      "member": 1,
+      "reviewStatus": "not-reviewed-this-pass",
+      "proposal": "retain-unresolved",
+      "support": [],
+      "counterEvidence": [],
+      "gaps": [
+        "本轮尚未连续跟跑审阅；不把候选提取或旧审阅算完成。"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e011",
+      "member": 1,
+      "reviewStatus": "not-reviewed-this-pass",
+      "proposal": "retain-unresolved",
+      "support": [],
+      "counterEvidence": [],
+      "gaps": [
+        "本轮尚未连续跟跑审阅；不把候选提取或旧审阅算完成。"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e013",
+      "member": 1,
+      "reviewStatus": "not-reviewed-this-pass",
+      "proposal": "retain-unresolved",
+      "support": [],
+      "counterEvidence": [],
+      "gaps": [
+        "本轮尚未连续跟跑审阅；不把候选提取或旧审阅算完成。"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e014",
+      "member": 1,
+      "reviewStatus": "not-reviewed-this-pass",
+      "proposal": "retain-unresolved",
+      "support": [],
+      "counterEvidence": [],
+      "gaps": [
+        "本轮尚未连续跟跑审阅；不把候选提取或旧审阅算完成。"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p11:e025",
+      "member": 1,
+      "reviewStatus": "not-reviewed-this-pass",
+      "proposal": "retain-unresolved",
+      "support": [],
+      "counterEvidence": [],
+      "gaps": [
+        "本轮尚未连续跟跑审阅；不把候选提取或旧审阅算完成。"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p12:e001",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "10秒小地图道路与海岸模板得分.60，raw32207,310615，对应小型信标1255956793388154880；西南经过帐篷，26/30秒raw22744,319580及20088,320908沿崖下到水边；34–42过水到独立小岛北端挑战柱，柱后倒木、草坡层崖与针叶树分布对应攻略图1；46–82收集光点沿岛缘到南端，紫花坡和紫箱对应攻略图2；87地图玩家位于该岛南端raw18786.7,335613.3。点位标在挑战起点16300,325100，不是领奖终点，不能仅依终点最近邻排除。"
+      ],
+      "counterEvidence": [
+        "旧候选1285624536032034816/1258931888181538816不在此次信标—小岛路线。"
+      ],
+      "gaps": [
+        "34–82多数模板最高峰为错误海岸，未采用；路线中间只作场景阶段连结，精确绕岛轨迹未测量。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1282456677512798208",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p12-e1-route-map.png",
+        "out/detectability-v2/route-huanglong-late/p12-e1-chain-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p12-e1-chain-9.jpg",
+        "out/detectability-v2/route-huanglong-late/p12-e1-chain-18.jpg",
+        "out/detectability-v2/review-root/BV1iMTXzVE8J-p12/map-anchors.json",
+        "out/detectability-collection/BV1iMTXzVE8J/p12/guides/guide-8-1282456677512798208-1.png",
+        "out/detectability-collection/BV1iMTXzVE8J/p12/guides/guide-8-1282456677512798208-2.png"
+      ],
+      "transcriptRefs": [
+        {
+          "start": 9.04,
+          "end": 9.68,
+          "text": "穿过来之后"
+        },
+        {
+          "start": 9.68,
+          "end": 10.22,
+          "text": "我们转向小地图"
+        },
+        {
+          "start": 10.22,
+          "end": 11.2,
+          "text": "左下方西南方向"
+        },
+        {
+          "start": 12.76,
+          "end": 15.06,
+          "text": "朝着远处跑过去"
+        },
+        {
+          "start": 18.87,
+          "end": 19.93,
+          "text": "走过这个帐篷"
+        },
+        {
+          "start": 23.44,
+          "end": 23.92,
+          "text": "继续走"
+        },
+        {
+          "start": 23.92,
+          "end": 25.14,
+          "text": "看到水中一个小岛上"
+        },
+        {
+          "start": 25.14,
+          "end": 26.92,
+          "text": "然后小岛的最低处"
+        },
+        {
+          "start": 26.92,
+          "end": 28.14,
+          "text": "有一个跑酷挑战"
+        },
+        {
+          "start": 30.24,
+          "end": 31.06,
+          "text": "留点体力"
+        },
+        {
+          "start": 31.06,
+          "end": 31.82,
+          "text": "我们要过河了"
+        },
+        {
+          "start": 38.71,
+          "end": 39.63,
+          "text": "来开启挑战"
+        },
+        {
+          "start": 44.93,
+          "end": 45.61,
+          "text": "这样之后来"
+        },
+        {
+          "start": 45.61,
+          "end": 46.69,
+          "text": "我们收集这个光点"
+        },
+        {
+          "start": 46.69,
+          "end": 47.63,
+          "text": "跟随这个光点走"
+        },
+        {
+          "start": 53.29,
+          "end": 54.51,
+          "text": "这里也是一定要看好"
+        },
+        {
+          "start": 54.51,
+          "end": 55.95,
+          "text": "好不要漏了这里空中有记得"
+        },
+        {
+          "start": 56.53,
+          "end": 57.45,
+          "text": "不要落太快了"
+        },
+        {
+          "start": 74.68,
+          "end": 75.42,
+          "text": "要爬山"
+        },
+        {
+          "start": 82.68,
+          "end": 84.22,
+          "text": "到最后几个来开启宝箱"
+        },
+        {
+          "start": 84.22,
+          "end": 85.62,
+          "text": "开完宝箱之后打开地图"
+        }
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p12:e003",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "171–177明确传送断链；183落地后南行，189小地图峰对应信标南侧raw86992,323730；201–219南下绕怪、在213攀高台，地形相关.53/.68/.69/.67与长条海崖完全同形；225向东到挑战柱，231启动位置raw92305,339170，与1287379692742459392起点几乎一致；237–261蓝平台先向海再绕回崖侧，相关.43–.58，连续地形及视频场景符合；攻略柱旁蓝花草坡、近处立壁松树与两岸峡谷相符。"
+      ],
+      "counterEvidence": [
+        "旧两条泛化跑酷候选与稷廷南端长条海崖位置不符。"
+      ],
+      "gaps": [
+        "267–285模板相关仅.36–.43，本次不连接至终点，不据这些低峰做绝对身份判断；起点地形、长段路线和攻略已独立吻合。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287379692742459392",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p12-e3-route-map.png",
+        "out/detectability-v2/route-huanglong-late/p12-e3-chain-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p12-e3-chain-9.jpg",
+        "out/detectability-v2/route-huanglong-late/p12-e3-chain-18.jpg",
+        "out/detectability-v2/route-huanglong-late/p12-e3-terrain-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p12-e3-terrain-9.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p12/guides/guide-8-1287379692742459392-1.png"
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p12:e006",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "从稷廷遗址小型信标向东绕岩，400空地左拐、405贴山、410北入小道，415/420地形位置raw约85166/85000,298994/298828；碎石破开后紫花与岩缝对应攻略。"
+      ],
+      "counterEvidence": [
+        "旧文字候选位置与本次路线绝对位置不符，不能沿用。"
+      ],
+      "gaps": [],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1288594077072769024",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p12-route-map.png",
+        "out/detectability-v2/route-huanglong-late/p12-chain-0.jpg",
+        "out/detectability-v2/route-huanglong-late/p12-terrain-0.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p12/guides/guide-8-1288594077072769024-1.png"
+      ],
+      "transcriptRefs": [
+        {
+          "start": 379.84,
+          "end": 380.46,
+          "text": "这个小银心庙"
+        },
+        {
+          "start": 385.08,
+          "end": 385.82,
+          "text": "传送过来之后"
+        },
+        {
+          "start": 385.82,
+          "end": 387.38,
+          "text": "我们转向小地图右边东方向"
+        },
+        {
+          "start": 389.0,
+          "end": 389.74,
+          "text": "稍微绕一下"
+        },
+        {
+          "start": 395.0,
+          "end": 396.42,
+          "text": "这里这个小山爬过来"
+        },
+        {
+          "start": 397.16,
+          "end": 397.96,
+          "text": "继续往前走"
+        },
+        {
+          "start": 400.3,
+          "end": 402.36,
+          "text": "走到看到面前是空地的时候"
+        },
+        {
+          "start": 402.36,
+          "end": 404.14,
+          "text": "我们就左拐贴着山边走"
+        },
+        {
+          "start": 407.64,
+          "end": 408.56,
+          "text": "这里有一条小道"
+        },
+        {
+          "start": 408.56,
+          "end": 409.18,
+          "text": "我们走进来"
+        },
+        {
+          "start": 409.18,
+          "end": 410.82,
+          "text": "然后右边有一个大石堆"
+        },
+        {
+          "start": 411.3,
+          "end": 412.36,
+          "text": "这个大石堆给打破"
+        },
+        {
+          "start": 415.42,
+          "end": 416.36,
+          "text": "来开启宝箱"
+        },
+        {
+          "start": 416.36,
+          "end": 417.24,
+          "text": "开完宝箱之后"
+        },
+        {
+          "start": 417.24,
+          "end": 418.62,
+          "text": "我们转向小地图上方北方向"
+        },
+        {
+          "start": 418.62,
+          "end": 419.26,
+          "text": "我们翻过来"
+        }
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p12:e007",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "e6后翻岩北行，440–465围绕同一菱形房屋拼图，470/475进屋位置raw86660,295508/295342；四块拼图/烧荆棘/晶核及室内桌椅斜板对应攻略。"
+      ],
+      "counterEvidence": [
+        "旧文字候选位置与本次路线绝对位置不符，不能沿用。"
+      ],
+      "gaps": [
+        "425–435模板受副本图标污染，明确保留断段；前后地形及房屋本体可分别定位。"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1251555676983664640",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p12-route-map.png",
+        "out/detectability-v2/route-huanglong-late/p12-chain-9.jpg",
+        "out/detectability-v2/route-huanglong-late/p12-terrain-9.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p12/additional-review/guides/guide-8-1251555676983664640-1.png"
+      ],
+      "transcriptRefs": [
+        {
+          "start": 421.83,
+          "end": 422.77,
+          "text": "这是一个屋子"
+        },
+        {
+          "start": 422.77,
+          "end": 424.73,
+          "text": "我们先来到屋子的另外一侧"
+        },
+        {
+          "start": 426.58,
+          "end": 427.78,
+          "text": "这里有一个爆炸果"
+        },
+        {
+          "start": 427.78,
+          "end": 428.46,
+          "text": "我们捡起来"
+        },
+        {
+          "start": 429.26,
+          "end": 430.94,
+          "text": "稍微一下这个房子上面的荆棘"
+        },
+        {
+          "start": 433.41,
+          "end": 434.99,
+          "text": "接着我们来到房子的正门口"
+        },
+        {
+          "start": 434.99,
+          "end": 436.65,
+          "text": "我们来到房子的另外一侧吧"
+        },
+        {
+          "start": 437.63,
+          "end": 439.43,
+          "text": "这里我们把这几只怪都给清了"
+        },
+        {
+          "start": 439.95,
+          "end": 442.07,
+          "text": "捡起这个平四边形的来走过来"
+        },
+        {
+          "start": 444.6,
+          "end": 446.02,
+          "text": "把它放在上方"
+        },
+        {
+          "start": 447.68,
+          "end": 448.32,
+          "text": "这个位置"
+        },
+        {
+          "start": 449.02,
+          "end": 450.34,
+          "text": "再捡起这个L形的"
+        },
+        {
+          "start": 450.34,
+          "end": 451.42,
+          "text": "在这个位置"
+        },
+        {
+          "start": 451.42,
+          "end": 453.24,
+          "text": "捡起这个正方形的"
+        },
+        {
+          "start": 453.24,
+          "end": 454.04,
+          "text": "放在右下角"
+        },
+        {
+          "start": 454.04,
+          "end": 455.2,
+          "text": "接着我们转身"
+        },
+        {
+          "start": 455.2,
+          "end": 456.02,
+          "text": "在这个石头"
+        },
+        {
+          "start": 456.7,
+          "end": 457.46,
+          "text": "里面还有一个"
+        },
+        {
+          "start": 457.46,
+          "end": 458.46,
+          "text": "再捡起最后一个"
+        },
+        {
+          "start": 460.18,
+          "end": 461.08,
+          "text": "放在右边"
+        },
+        {
+          "start": 463.31,
+          "end": 464.27,
+          "text": "就解开了"
+        },
+        {
+          "start": 466.61,
+          "end": 468.33,
+          "text": "走到这个房间里面"
+        },
+        {
+          "start": 468.33,
+          "end": 469.95,
+          "text": "然后捡起这个金壳"
+        },
+        {
+          "start": 471.09,
+          "end": 472.37,
+          "text": "宝箱想开可以开"
+        },
+        {
+          "start": 472.37,
+          "end": 473.57,
+          "text": "拿完之后我们再"
+        },
+        {
+          "start": 474.61,
+          "end": 475.75,
+          "text": "我们先走出来"
+        },
+        {
+          "start": 475.75,
+          "end": 477.17,
+          "text": "然后转向小地图"
+        }
+      ],
+      "detectability": "undetectable"
+    },
+    {
+      "eventId": "BV1iMTXzVE8J:p12:e008",
+      "member": 1,
+      "reviewStatus": "reviewed-route-and-guide",
+      "proposal": "confirm",
+      "support": [
+        "e7出门向东沿小路，485东移后490右转向南到战斗柱，495–505在同一草坪；510开图181内点且目检玩家426,241，raw92641.7,301558.2，距候选3.61游戏单位；攻略挑战柱后方破墙、林木、地形一致。"
+      ],
+      "counterEvidence": [
+        "旧文字候选位置与本次路线绝对位置不符，不能沿用。"
+      ],
+      "gaps": [],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1287380389842522112",
+          "status": "proposed-confirmed"
+        }
+      ],
+      "evidencePaths": [
+        "out/detectability-v2/route-huanglong-late/p12-route-map.png",
+        "out/detectability-v2/route-huanglong-late/p12-chain-18.jpg",
+        "out/detectability-v2/route-huanglong-late/p12-terrain-18.jpg",
+        "out/detectability-collection/BV1iMTXzVE8J/p12/guides/guide-8-1287380389842522112-1.png"
+      ],
+      "transcriptRefs": [
+        {
+          "start": 477.17,
+          "end": 478.21,
+          "text": "右边东方向"
+        },
+        {
+          "start": 480.67,
+          "end": 481.67,
+          "text": "沿着这个小路走"
+        },
+        {
+          "start": 488.04,
+          "end": 489.22,
+          "text": "走到这里我们右转"
+        },
+        {
+          "start": 489.22,
+          "end": 491.72,
+          "text": "右边有一个战斗挑战"
+        },
+        {
+          "start": 491.72,
+          "end": 492.42,
+          "text": "来我们清一下怪"
+        },
+        {
+          "start": 506.44,
+          "end": 507.88,
+          "text": "清完怪来开启宝箱"
+        },
+        {
+          "start": 507.88,
+          "end": 509.5,
+          "text": "开完宝箱之后我们打开地图"
+        },
+        {
+          "start": 509.5,
+          "end": 511.62,
+          "text": "传送到基亭遗址下方"
+        }
+      ],
+      "detectability": "undetectable"
+    }
+  ],
+  "coverage": {
+    "reviewedMembers": 55,
+    "unreviewedMembers": 12
+  }
+}

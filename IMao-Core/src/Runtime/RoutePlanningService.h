@@ -24,6 +24,9 @@ struct RoutePlanningView {
     // by itself. `farmNotice` carries the sentence the toolbar shows and `farmNoticeSerial`
     // changes with every batch, so the interface can tell a new one from the one it is
     // already showing.
+    bool gapFillModeEnabled = false, gapFillCatalogAvailable = false;
+    std::string gapFillCatalogError;
+    std::size_t gapFillVisibleCount = 0;
     bool farmMode = false;
     std::string farmNotice;
     std::uint64_t farmNoticeSerial = 0;
@@ -70,7 +73,7 @@ public:
     static RoutePlanningView View();
     static AutoRoute::DrawVisibility DrawingVisibility();
     static bool PlanningMode();
-    static void ObserveMap(int sceneId, const std::vector<ItemDatas>& visible);
+    static void ObserveMap(int sceneId, const std::vector<ItemDatas>& visible, const std::vector<ItemDatas>* displayed = nullptr);
     static void MapUnavailable();
     static void MapClosed();
     static void SessionStopped();
@@ -78,6 +81,7 @@ public:
     static void UpdatePlayer(const AutoRoute::Start& position);
     static void SetPlayerAvailable(bool available);
     static void SetAutoReplanEnabled(bool enabled);
+    static void SetGapFillModeEnabled(bool enabled);
     static void ObservePlayer(const AutoRoute::PlayerObservation& observation);
     static void ObserveProximity(const AutoRoute::ProximityObservation& observation);
     static void OnMarkerChanged();

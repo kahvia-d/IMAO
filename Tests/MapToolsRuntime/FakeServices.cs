@@ -93,10 +93,10 @@ namespace IMao_WinUI.Services
         public void ReportGamepadDiagnostic(string tag, string message)
         { Diagnostics.Add(tag + ": " + message); File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "diagnostics.log"), tag + ": " + message + "\n"); }
         public Task<bool> SynchronizeFilterAsync(IReadOnlyDictionary<string, bool> values, CancellationToken cancellationToken = default) => Task.FromResult(IsConnected);
-        public Task<bool> ConfigureAsync(bool? autoReplanEnabled = null, string? expectedAutoReplanProfile = null, CancellationToken cancellationToken = default)
+        public Task<bool> ConfigureAsync(bool? autoReplanEnabled = null, string? expectedAutoReplanProfile = null, CancellationToken cancellationToken = default, bool? gapFillModeEnabled = null, bool? expectedGapFillModeEnabled = null)
         {
-            Configuration = Configuration with { AutoReplanEnabled = autoReplanEnabled ?? Configuration.AutoReplanEnabled };
-            RoutePlanning = RoutePlanning with { AutoReplanEnabled = Configuration.AutoReplanEnabled };
+            Configuration = Configuration with { AutoReplanEnabled = autoReplanEnabled ?? Configuration.AutoReplanEnabled, GapFillModeEnabled = gapFillModeEnabled ?? Configuration.GapFillModeEnabled };
+            RoutePlanning = RoutePlanning with { AutoReplanEnabled = Configuration.AutoReplanEnabled, GapFillModeEnabled = Configuration.GapFillModeEnabled };
             PropertyChanged?.Invoke(this, new(nameof(Configuration))); RoutePlanningChanged?.Invoke(this, RoutePlanning); return Task.FromResult(true);
         }
         public async Task<RoutePlanningState> ExecuteRoutePlanningAsync(string action, object arguments, CancellationToken cancellationToken = default)

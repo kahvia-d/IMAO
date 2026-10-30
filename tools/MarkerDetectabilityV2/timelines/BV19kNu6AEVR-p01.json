@@ -1,0 +1,5051 @@
+{
+  "bvid": "BV19kNu6AEVR",
+  "part": 1,
+  "duration": 425.401375,
+  "reviewStatus": "reviewed",
+  "audioReviewStatus": "reviewed",
+  "audioReviewMethod": "local-ASR-text-and-visual; no-direct-listening",
+  "progressBarReviewStatus": "reviewed",
+  "events": [
+    {
+      "eventId": "BV19kNu6AEVR:p1:e001",
+      "ordinal": 1,
+      "start": 4.9,
+      "end": 44,
+      "progressBarMark": {
+        "rawLabel": "潮1",
+        "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "红名怪战斗后出现金色潮汐之遗",
+      "route": "千行坊北侧信标向西，循空中晶体抵达水边红名怪",
+      "transcriptRefs": [
+        {
+          "start": 4.9,
+          "end": 8.22,
+          "text": "好 视频开始间我们来打开地图"
+        },
+        {
+          "start": 8.22,
+          "end": 11.92,
+          "text": "我们准备传送到千行网构建上方的小人信标"
+        },
+        {
+          "start": 11.92,
+          "end": 12.5,
+          "text": "传送过来"
+        },
+        {
+          "start": 15.64,
+          "end": 17.92,
+          "text": "传送过来之后我们转向小地图左边西方向"
+        },
+        {
+          "start": 17.92,
+          "end": 18.6,
+          "text": "骑车往前"
+        },
+        {
+          "start": 19.3,
+          "end": 22.08,
+          "text": "这里前往天空中就能看到一个飘着它这个"
+        },
+        {
+          "start": 22.94,
+          "end": 23.72,
+          "text": "这个晶体"
+        },
+        {
+          "start": 23.72,
+          "end": 25.06,
+          "text": "我们就朝晶体方向走"
+        },
+        {
+          "start": 25.06,
+          "end": 26.92,
+          "text": "这里落过来就是一只红冰怪"
+        },
+        {
+          "start": 27.76,
+          "end": 28.88,
+          "text": "这里大家清一下怪"
+        },
+        {
+          "start": 32.34,
+          "end": 34.76,
+          "text": "清完怪之后这里是会拿到一个成就"
+        },
+        {
+          "start": 34.76,
+          "end": 37.06,
+          "text": "并且会有一个金色的潮汐之翼"
+        },
+        {
+          "start": 37.46,
+          "end": 40.3,
+          "text": "那个潮汐之翼是这个奇藏探这里扫不到的"
+        },
+        {
+          "start": 40.3,
+          "end": 42.32,
+          "text": "它只有打完红冰怪之后才会出现"
+        },
+        {
+          "start": 43.88,
+          "end": 45.12,
+          "text": "接下来我们再打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00010.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00025.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00028.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00030.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00033.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00036.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00039.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00040.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00041.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "潮汐之遗（金色交互奖励）",
+          "triggerSeconds": 30,
+          "appearanceSeconds": 36,
+          "collectionSeconds": 39,
+          "lootVisibleSeconds": 40,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "stateId": "8",
+          "pointId": "1524475488800980992",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "原片36–39s水边金色潮汐之遗，攻略图1的水面、断墙与高耸石柱吻合；原始文字红名怪挑战一致。45s开图玩家箭头距离候选35.12游戏单位，可作为水边区域定位，攻略图2展示另一雪地场景，不用于支持。结合水边独特地貌与路线确认。",
+            "routeReview": "千行坊北侧信标向西，循空中晶体抵达水边红名怪",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00045.00.jpg",
+                "locator": "45s manually verified yellow player arrow; affine raw state plane",
+                "reason": "After reward, before next teleport; rawPosition=[-880944.9256928856, -22888.203981516926]; inliers=168. 原片36–39s水边金色潮汐之遗，攻略图1的水面、断墙与高耸石柱吻合；原始文字红名怪挑战一致。45s开图玩家箭头距离候选35.12游戏单位，可作为水边区域定位，攻略图2展示另一雪地场景，不用于支持。结合水边独特地貌与路线确认。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "4.9–44s member 1",
+                "reason": "红名怪战斗后出现金色潮汐之遗",
+                "role": "support",
+                "start": 4.9,
+                "end": 44
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524475488800980992.json",
+                "locator": "point 1524475488800980992; description and image 1",
+                "reason": "原片36–39s水边金色潮汐之遗，攻略图1的水面、断墙与高耸石柱吻合；原始文字红名怪挑战一致。45s开图玩家箭头距离候选35.12游戏单位，可作为水边区域定位，攻略图2展示另一雪地场景，不用于支持。结合水边独特地貌与路线确认。",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 1,
+                "pointId": "1523072790818045952",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523072790818045952.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523072790818045952-1.png"
+                ],
+                "description": "需要清怪。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 1,
+                "pointId": "1524475488800980992",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524475488800980992.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524475488800980992-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524475488800980992-2.png"
+                ],
+                "description": "红名怪挑战宝箱。"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 6,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 8,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 17,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 19,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 30,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 36,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 39,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 30,
+                    "eventId": "BV19kNu6AEVR:p1:e001",
+                    "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00030.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 1,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "mengzhou-kurotiles",
+                          "scene": "World",
+                          "state": 8,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -11,
+                            -9,
+                            -1,
+                            1
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 2474.0,
+                            "originY": 1957.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 45,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e1.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim",
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "37.46–40.3s局部口述明确指当前潮汐之遗探测仪扫不到，36–39s可见同一奖励实体与领取；只作用本事件，不扩展所有潮汐之遗。",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "local ASR 37.46–40.3s + visible reward sequence",
+                  "reason": "37.46–40.3s局部口述明确指当前潮汐之遗探测仪扫不到，36–39s可见同一奖励实体与领取；只作用本事件，不扩展所有潮汐之遗。",
+                  "role": "support",
+                  "start": 37.46,
+                  "end": 40.3
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "战斗有加速/剪辑；所记时间是源视频实际画面，不等于游戏过程耗时。"
+      ]
+    },
+    {
+      "eventId": "BV19kNu6AEVR:p1:e002",
+      "ordinal": 2,
+      "start": 44,
+      "end": 78,
+      "progressBarMark": {
+        "rawLabel": "潮2",
+        "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "红名怪战斗后出现金色潮汐之遗",
+      "route": "西侧信标向西，摩托跃上山坡，循左侧空中晶体",
+      "transcriptRefs": [
+        {
+          "start": 43.88,
+          "end": 45.12,
+          "text": "接下来我们再打开地图"
+        },
+        {
+          "start": 45.12,
+          "end": 48.52,
+          "text": "我们来传输到千行坊燕须左边这个小银星标"
+        },
+        {
+          "start": 52.72,
+          "end": 55.24,
+          "text": "传过来之后小地图左边西方样朝前方走"
+        },
+        {
+          "start": 58.72,
+          "end": 61.24,
+          "text": "正轮要来到上方的这个山上去"
+        },
+        {
+          "start": 61.24,
+          "end": 64.64,
+          "text": "大家三次摩托车的能量回满之后就跳上来"
+        },
+        {
+          "start": 65.22,
+          "end": 67.08,
+          "text": "然后左边空中能看到这个晶体"
+        },
+        {
+          "start": 67.08,
+          "end": 68.2,
+          "text": "我们就来到这一处"
+        },
+        {
+          "start": 69.18,
+          "end": 70.5,
+          "text": "大家过来再清一下怪"
+        },
+        {
+          "start": 72.18,
+          "end": 73.26,
+          "text": "这里清完怪之后"
+        },
+        {
+          "start": 73.26,
+          "end": 74.76,
+          "text": "来再拿到这个茶叶之遗"
+        },
+        {
+          "start": 74.76,
+          "end": 76.0,
+          "text": "这也是一个成就"
+        },
+        {
+          "start": 76.86,
+          "end": 78.22,
+          "text": "接着我们再打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00045.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00065.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00068.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00071.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00073.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00074.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00075.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00076.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "潮汐之遗（金色交互奖励）",
+          "triggerSeconds": 71,
+          "appearanceSeconds": 74,
+          "collectionSeconds": 75,
+          "lootVisibleSeconds": 76,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "stateId": "8",
+          "pointId": "1524467251682852864",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "原片74–75s山坡战后金色交互奖励；西侧信标向西爬坡路线与攻略的瀑布石壁边平台相容。78s领取后开图玩家箭头距离候选6.84，原始文字为红名怪挑战，非普通清怪奖励；定位和奖励类型共同支持。",
+            "routeReview": "西侧信标向西，摩托跃上山坡，循左侧空中晶体",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00078.00.jpg",
+                "locator": "78s manually verified yellow player arrow; affine raw state plane",
+                "reason": "After reward, before next teleport; rawPosition=[-866353.2052746494, 22198.56107630435]; inliers=183. 原片74–75s山坡战后金色交互奖励；西侧信标向西爬坡路线与攻略的瀑布石壁边平台相容。78s领取后开图玩家箭头距离候选6.84，原始文字为红名怪挑战，非普通清怪奖励；定位和奖励类型共同支持。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "44–78s member 1",
+                "reason": "红名怪战斗后出现金色潮汐之遗",
+                "role": "support",
+                "start": 44,
+                "end": 78
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524467251682852864.json",
+                "locator": "point 1524467251682852864; description and image 1",
+                "reason": "原片74–75s山坡战后金色交互奖励；西侧信标向西爬坡路线与攻略的瀑布石壁边平台相容。78s领取后开图玩家箭头距离候选6.84，原始文字为红名怪挑战，非普通清怪奖励；定位和奖励类型共同支持。",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 2,
+                "pointId": "1524467251682852864",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524467251682852864.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524467251682852864-1.png"
+                ],
+                "description": "红名怪挑战宝箱。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 2,
+                "pointId": "1524475488800980992",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524475488800980992.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524475488800980992-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524475488800980992-2.png"
+                ],
+                "description": "红名怪挑战宝箱。"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 45,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 47,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 54,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 56,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 71,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 74,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": "player arrow ambiguous (0); configure player pixel"
+                  },
+                  {
+                    "time": 75,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": "player arrow ambiguous (0); configure player pixel"
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 71,
+                    "eventId": "BV19kNu6AEVR:p1:e002",
+                    "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00071.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 2,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "mengzhou-kurotiles",
+                          "scene": "World",
+                          "state": 8,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -11,
+                            -9,
+                            -1,
+                            1
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 2474.0,
+                            "originY": 1957.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 78,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e2.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim",
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "44–78s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 44,
+                  "end": 78
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "战斗有加速/剪辑；所记时间是源视频实际画面，不等于游戏过程耗时。"
+      ]
+    },
+    {
+      "eventId": "BV19kNu6AEVR:p1:e003",
+      "ordinal": 3,
+      "start": 78,
+      "end": 119,
+      "progressBarMark": {
+        "rawLabel": "箱1",
+        "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "进入箱子被转移到红名怪旁；清怪后出现基准奇藏",
+      "route": "同一西侧信标向东上层，进入有紫色任务提示的箱子；转移后对战",
+      "transcriptRefs": [
+        {
+          "start": 76.86,
+          "end": 78.22,
+          "text": "接着我们再打开地图"
+        },
+        {
+          "start": 78.22,
+          "end": 79.44,
+          "text": "我们来到千辛坊"
+        },
+        {
+          "start": 79.44,
+          "end": 81.0,
+          "text": "烟区左边这个小银奇妙"
+        },
+        {
+          "start": 84.46,
+          "end": 85.5,
+          "text": "翻过来这个小地图"
+        },
+        {
+          "start": 85.5,
+          "end": 86.7,
+          "text": "右边东方向我们骑车"
+        },
+        {
+          "start": 86.7,
+          "end": 88.28,
+          "text": "然后这里我们往上一层走"
+        },
+        {
+          "start": 88.82,
+          "end": 89.56,
+          "text": "跳起来"
+        },
+        {
+          "start": 89.56,
+          "end": 91.12,
+          "text": "上一层有一个紫色的任务点"
+        },
+        {
+          "start": 91.68,
+          "end": 93.22,
+          "text": "过来我们来到这个"
+        },
+        {
+          "start": 93.94,
+          "end": 94.94,
+          "text": "这个箱子门口"
+        },
+        {
+          "start": 96.06,
+          "end": 97.2,
+          "text": "等他说完话"
+        },
+        {
+          "start": 100.15,
+          "end": 101.33,
+          "text": "来进到箱子里面"
+        },
+        {
+          "start": 103.23,
+          "end": 104.99,
+          "text": "好那这里他把箱子"
+        },
+        {
+          "start": 104.99,
+          "end": 105.89,
+          "text": "给我们扔到了一个"
+        },
+        {
+          "start": 106.37,
+          "end": 107.33,
+          "text": "虎鸣怪的旁边"
+        },
+        {
+          "start": 107.33,
+          "end": 108.35,
+          "text": "然后大家把面前"
+        },
+        {
+          "start": 108.35,
+          "end": 109.83,
+          "text": "这个星葵怒给他清了"
+        },
+        {
+          "start": 111.39,
+          "end": 112.35,
+          "text": "那清完怪之后"
+        },
+        {
+          "start": 112.35,
+          "end": 113.47,
+          "text": "这里也是一个宝箱"
+        },
+        {
+          "start": 113.47,
+          "end": 114.45,
+          "text": "然后也是一个成就"
+        },
+        {
+          "start": 114.45,
+          "end": 115.27,
+          "text": "这里不是这个"
+        },
+        {
+          "start": 115.27,
+          "end": 115.99,
+          "text": "潮渔之遗啊"
+        },
+        {
+          "start": 115.99,
+          "end": 116.67,
+          "text": "给大家说一下"
+        },
+        {
+          "start": 117.53,
+          "end": 119.23,
+          "text": "好然后我们再打开地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00080.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00095.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00100.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00101.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00103.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00106.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00110.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00112.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00113.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00115.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00116.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "基准",
+          "triggerSeconds": 101,
+          "appearanceSeconds": 113,
+          "collectionSeconds": 115,
+          "lootVisibleSeconds": 116,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "stateId": "8",
+          "pointId": "1523293737827287040",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "原片进入玻璃箱传送后战斗、113–115s基准箱，攻略文本明确相同转移机制与并非一般心傀成就；攻略图1红树空地/石台箱、图3玻璃箱分别对应终点和入口。119s玩家箭头距原始候选1.86，确认终点而非入口ID。",
+            "routeReview": "同一西侧信标向东上层，进入有紫色任务提示的箱子；转移后对战",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00119.00.jpg",
+                "locator": "119s manually verified yellow player arrow; affine raw state plane",
+                "reason": "After reward, before next teleport; rawPosition=[-805864.9707225057, -12174.293826134499]; inliers=285. 原片进入玻璃箱传送后战斗、113–115s基准箱，攻略文本明确相同转移机制与并非一般心傀成就；攻略图1红树空地/石台箱、图3玻璃箱分别对应终点和入口。119s玩家箭头距原始候选1.86，确认终点而非入口ID。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "78–119s member 1",
+                "reason": "进入箱子被转移到红名怪旁；清怪后出现基准奇藏",
+                "role": "support",
+                "start": 78,
+                "end": 119
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523293737827287040.json",
+                "locator": "point 1523293737827287040; description and image 1",
+                "reason": "原片进入玻璃箱传送后战斗、113–115s基准箱，攻略文本明确相同转移机制与并非一般心傀成就；攻略图1红树空地/石台箱、图3玻璃箱分别对应终点和入口。119s玩家箭头距原始候选1.86，确认终点而非入口ID。",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 3,
+                "pointId": "1523293737827287040",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523293737827287040.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523293737827287040-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523293737827287040-2.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523293737827287040-3.png"
+                ],
+                "description": "在第二张图的红框位置，有一个紫色的任务指引，会看到一个类似玻璃箱子的东西（抱歉没拍照），进入之后就会扔到第一张图的位置，会有一个红名怪，挺简单的，被我秧秧一下就打没了，然后会有一个基准和成就（并非一般心傀）。"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 78,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 79,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 80,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 81,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 101,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": "player arrow ambiguous (0); configure player pixel"
+                  },
+                  {
+                    "time": 113,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 115,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 101,
+                    "eventId": "BV19kNu6AEVR:p1:e003",
+                    "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00101.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 1,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "mengzhou-kurotiles",
+                          "scene": "World",
+                          "state": 8,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -10,
+                            -8,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 2474.0,
+                            "originY": 1957.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 119,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e3.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim",
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "78–119s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 78,
+                  "end": 119
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "战斗有加速/剪辑；所记时间是源视频实际画面，不等于游戏过程耗时。"
+      ]
+    },
+    {
+      "eventId": "BV19kNu6AEVR:p1:e004",
+      "ordinal": 4,
+      "start": 119,
+      "end": 155,
+      "progressBarMark": {
+        "rawLabel": "潮3",
+        "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "黄色树林红名熊怪战斗后领取潮汐之遗",
+      "route": "东侧信标向东南穿石门进入黄色树林",
+      "transcriptRefs": [
+        {
+          "start": 117.53,
+          "end": 119.23,
+          "text": "好然后我们再打开地图"
+        },
+        {
+          "start": 119.23,
+          "end": 120.43,
+          "text": "这里我们来到右边"
+        },
+        {
+          "start": 120.43,
+          "end": 122.01,
+          "text": "我们穿上到明秋川"
+        },
+        {
+          "start": 122.01,
+          "end": 123.23,
+          "text": "下方的小银犀喵"
+        },
+        {
+          "start": 128.51,
+          "end": 129.15,
+          "text": "过来之后"
+        },
+        {
+          "start": 129.15,
+          "end": 129.77,
+          "text": "我们转向小族"
+        },
+        {
+          "start": 129.77,
+          "end": 130.65,
+          "text": "右下方的南文雅"
+        },
+        {
+          "start": 130.65,
+          "end": 131.35,
+          "text": "骑车往前"
+        },
+        {
+          "start": 133.63,
+          "end": 134.27,
+          "text": "往前走"
+        },
+        {
+          "start": 134.27,
+          "end": 135.29,
+          "text": "这里我们走面前"
+        },
+        {
+          "start": 135.29,
+          "end": 135.97,
+          "text": "这个石门"
+        },
+        {
+          "start": 136.99,
+          "end": 137.83,
+          "text": "走过来"
+        },
+        {
+          "start": 137.83,
+          "end": 138.37,
+          "text": "走到面前"
+        },
+        {
+          "start": 138.37,
+          "end": 139.49,
+          "text": "这个黄色的树林里面"
+        },
+        {
+          "start": 139.49,
+          "end": 140.75,
+          "text": "在树林里面上方"
+        },
+        {
+          "start": 140.75,
+          "end": 141.83,
+          "text": "我们看到一个晶体"
+        },
+        {
+          "start": 142.25,
+          "end": 143.73,
+          "text": "然后这里是这头熊"
+        },
+        {
+          "start": 143.73,
+          "end": 145.29,
+          "text": "大家把这个红冰怪给清了"
+        },
+        {
+          "start": 147.55,
+          "end": 148.31,
+          "text": "清完怪之后"
+        },
+        {
+          "start": 148.31,
+          "end": 149.35,
+          "text": "来我们拿到"
+        },
+        {
+          "start": 150.87,
+          "end": 151.71,
+          "text": "这个成就"
+        },
+        {
+          "start": 151.71,
+          "end": 153.01,
+          "text": "然后拿到这个潮水之一"
+        },
+        {
+          "start": 153.69,
+          "end": 154.91,
+          "text": "接着我们再打开地图"
+        },
+        {
+          "start": 154.91,
+          "end": 156.33,
+          "text": "我们来到右边"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00120.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00135.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00140.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00145.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00146.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00147.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00151.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00152.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00153.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "潮汐之遗（金色交互奖励）",
+          "triggerSeconds": 146,
+          "appearanceSeconds": 147,
+          "collectionSeconds": 152,
+          "lootVisibleSeconds": 153,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "stateId": "8",
+          "pointId": "1524473781098496000",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "原片147–152s黄色树林熊怪后的金色奖励；攻略1524473781098496000图为林间熊怪/金色奖励，穿石门向东南路线一致。156s领取后开图实际玩家箭头距候选8.45。早期视口中心文本候选1523752804572053504/1523755070016307200是另一处，已排除。",
+            "routeReview": "东侧信标向东南穿石门进入黄色树林",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00156.00.jpg",
+                "locator": "156s manually verified yellow player arrow; affine raw state plane",
+                "reason": "After reward, before next teleport; rawPosition=[-705786.5552017987, 21005.27305803662]; inliers=302. 原片147–152s黄色树林熊怪后的金色奖励；攻略1524473781098496000图为林间熊怪/金色奖励，穿石门向东南路线一致。156s领取后开图实际玩家箭头距候选8.45。早期视口中心文本候选1523752804572053504/1523755070016307200是另一处，已排除。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "119–155s member 1",
+                "reason": "黄色树林红名熊怪战斗后领取潮汐之遗",
+                "role": "support",
+                "start": 119,
+                "end": 155
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524473781098496000.json",
+                "locator": "point 1524473781098496000; description and image 1",
+                "reason": "原片147–152s黄色树林熊怪后的金色奖励；攻略1524473781098496000图为林间熊怪/金色奖励，穿石门向东南路线一致。156s领取后开图实际玩家箭头距候选8.45。早期视口中心文本候选1523752804572053504/1523755070016307200是另一处，已排除。",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 4,
+                "pointId": "1523752804572053504",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523752804572053504.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523752804572053504-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523752804572053504-2.png"
+                ],
+                "description": "需要清怪。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 4,
+                "pointId": "1523755070016307200",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523755070016307200.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523755070016307200-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1523755070016307200-2.png"
+                ],
+                "description": "需要清怪。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 4,
+                "pointId": "1524473781098496000",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524473781098496000.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524473781098496000-1.png"
+                ],
+                "description": "红名怪挑战宝箱。"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 119,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 120,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 121,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 122,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 146,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 147,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 152,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 146,
+                    "eventId": "BV19kNu6AEVR:p1:e004",
+                    "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00146.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 0,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "mengzhou-kurotiles",
+                          "scene": "World",
+                          "state": 8,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -8,
+                            -6,
+                            -1,
+                            1
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 2474.0,
+                            "originY": 1957.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 156,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e4.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim",
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "119–155s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 119,
+                  "end": 155
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "战斗有加速/剪辑；所记时间是源视频实际画面，不等于游戏过程耗时。"
+      ]
+    },
+    {
+      "eventId": "BV19kNu6AEVR:p1:e005",
+      "ordinal": 5,
+      "start": 155,
+      "end": 189,
+      "progressBarMark": {
+        "rawLabel": "潮4",
+        "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "平台两只红名怪，共生成一个潮汐之遗",
+      "route": "右侧旧墟西南信标，摩托连续跃上高台",
+      "transcriptRefs": [
+        {
+          "start": 154.91,
+          "end": 156.33,
+          "text": "我们来到右边"
+        },
+        {
+          "start": 157.47,
+          "end": 158.87,
+          "text": "这里我们传送到"
+        },
+        {
+          "start": 158.87,
+          "end": 159.95,
+          "text": "寄渊旧墟"
+        },
+        {
+          "start": 159.95,
+          "end": 161.11,
+          "text": "左下方小银星标"
+        },
+        {
+          "start": 166.29,
+          "end": 166.93,
+          "text": "传过来之后"
+        },
+        {
+          "start": 166.93,
+          "end": 167.71,
+          "text": "小地图左下方"
+        },
+        {
+          "start": 167.71,
+          "end": 168.13,
+          "text": "新的玩意"
+        },
+        {
+          "start": 168.51,
+          "end": 169.69,
+          "text": "然后这里来往前"
+        },
+        {
+          "start": 171.27,
+          "end": 172.07,
+          "text": "我们抬多少人"
+        },
+        {
+          "start": 172.07,
+          "end": 173.65,
+          "text": "然后看这里来到上方这个平台"
+        },
+        {
+          "start": 173.65,
+          "end": 174.91,
+          "text": "大家来跳一次"
+        },
+        {
+          "start": 175.53,
+          "end": 176.41,
+          "text": "再往上跳一次"
+        },
+        {
+          "start": 176.41,
+          "end": 177.85,
+          "text": "就能看到上方这个晶体了"
+        },
+        {
+          "start": 177.85,
+          "end": 178.51,
+          "text": "我们落下来"
+        },
+        {
+          "start": 178.51,
+          "end": 179.97,
+          "text": "这是两只后面怪"
+        },
+        {
+          "start": 179.97,
+          "end": 180.57,
+          "text": "大家清一下"
+        },
+        {
+          "start": 182.05,
+          "end": 183.59,
+          "text": "清完怪之后来拿到这个"
+        },
+        {
+          "start": 185.53,
+          "end": 186.03,
+          "text": "成就"
+        },
+        {
+          "start": 186.03,
+          "end": 187.77,
+          "text": "然后拿到一个潮池之一"
+        },
+        {
+          "start": 188.61,
+          "end": 189.67,
+          "text": "然后我们再打个地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00160.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00175.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00178.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00180.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00181.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00182.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00183.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00184.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00187.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00188.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "潮汐之遗（金色交互奖励）",
+          "triggerSeconds": 180,
+          "appearanceSeconds": 184,
+          "collectionSeconds": 187,
+          "lootVisibleSeconds": 188,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "stateId": "8",
+          "pointId": "1524138997821722624",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "原片184–187s双红名怪共一个金色奖励，攻略1524138997821722624为咎锁遗患挑战，平台、巨大桥梁支撑和树旁金色奖励相符；190s开图实际玩家箭头距候选7.66，附近44.81单位普通清怪候选缺特定红名机制，不能混算两奖励。",
+            "routeReview": "右侧旧墟西南信标，摩托连续跃上高台",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00190.00.jpg",
+                "locator": "190s manually verified yellow player arrow; affine raw state plane",
+                "reason": "After reward, before next teleport; rawPosition=[-655687.3653106764, -46410.09075557399]; inliers=254. 原片184–187s双红名怪共一个金色奖励，攻略1524138997821722624为咎锁遗患挑战，平台、巨大桥梁支撑和树旁金色奖励相符；190s开图实际玩家箭头距候选7.66，附近44.81单位普通清怪候选缺特定红名机制，不能混算两奖励。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "155–189s member 1",
+                "reason": "平台两只红名怪，共生成一个潮汐之遗",
+                "role": "support",
+                "start": 155,
+                "end": 189
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524138997821722624.json",
+                "locator": "point 1524138997821722624; description and image 1",
+                "reason": "原片184–187s双红名怪共一个金色奖励，攻略1524138997821722624为咎锁遗患挑战，平台、巨大桥梁支撑和树旁金色奖励相符；190s开图实际玩家箭头距候选7.66，附近44.81单位普通清怪候选缺特定红名机制，不能混算两奖励。",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 5,
+                "pointId": "1524092564935131136",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524092564935131136.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524092564935131136-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524092564935131136-2.png"
+                ],
+                "description": "需要清怪。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 5,
+                "pointId": "1524473781098496000",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524473781098496000.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524473781098496000-1.png"
+                ],
+                "description": "红名怪挑战宝箱。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 5,
+                "pointId": "1524138997821722624",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524138997821722624.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524138997821722624-1.png"
+                ],
+                "description": "咎锁遗患挑战宝箱，需要打红名怪。"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 156,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 158,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 180,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 184,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 187,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 180,
+                    "eventId": "BV19kNu6AEVR:p1:e005",
+                    "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00180.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 0,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "mengzhou-kurotiles",
+                          "scene": "World",
+                          "state": 8,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -8,
+                            -6,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 2474.0,
+                            "originY": 1957.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 190,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e5.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim",
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "155–189s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 155,
+                  "end": 189
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "战斗有加速/剪辑；所记时间是源视频实际画面，不等于游戏过程耗时。"
+      ]
+    },
+    {
+      "eventId": "BV19kNu6AEVR:p1:e006",
+      "ordinal": 6,
+      "start": 189,
+      "end": 223,
+      "progressBarMark": {
+        "rawLabel": "潮5",
+        "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "道路红名怪，战后潮汐之遗",
+      "route": "阁北侧信标向西北飞至对岸平台，再向前骑车到路面",
+      "transcriptRefs": [
+        {
+          "start": 188.61,
+          "end": 189.67,
+          "text": "然后我们再打个地图"
+        },
+        {
+          "start": 189.67,
+          "end": 190.39,
+          "text": "我们来到右边"
+        },
+        {
+          "start": 190.39,
+          "end": 191.75,
+          "text": "这里我们传上到物影阁"
+        },
+        {
+          "start": 191.75,
+          "end": 192.97,
+          "text": "右上方这个小银七喵"
+        },
+        {
+          "start": 197.77,
+          "end": 198.39,
+          "text": "传过来之后"
+        },
+        {
+          "start": 198.39,
+          "end": 198.99,
+          "text": "我们这样小地图"
+        },
+        {
+          "start": 198.99,
+          "end": 199.87,
+          "text": "左上方西北方向"
+        },
+        {
+          "start": 200.91,
+          "end": 202.39,
+          "text": "我们这里要飞到对岸去"
+        },
+        {
+          "start": 204.32,
+          "end": 205.46,
+          "text": "然后往左边飞"
+        },
+        {
+          "start": 206.02,
+          "end": 207.3,
+          "text": "飞到左边这个平台之后"
+        },
+        {
+          "start": 207.3,
+          "end": 208.28,
+          "text": "我们就往前飞"
+        },
+        {
+          "start": 208.28,
+          "end": 209.24,
+          "text": "不是往前骑摩托"
+        },
+        {
+          "start": 209.24,
+          "end": 209.86,
+          "text": "往前骑"
+        },
+        {
+          "start": 210.6,
+          "end": 211.72,
+          "text": "然后这里落下来"
+        },
+        {
+          "start": 211.72,
+          "end": 213.0,
+          "text": "前方在这个路上面"
+        },
+        {
+          "start": 213.0,
+          "end": 214.0,
+          "text": "就是这个红冰怪"
+        },
+        {
+          "start": 214.0,
+          "end": 215.1,
+          "text": "大家自己清一压怪"
+        },
+        {
+          "start": 215.88,
+          "end": 218.08,
+          "text": "接下来我们拿到这个成就"
+        },
+        {
+          "start": 218.08,
+          "end": 219.34,
+          "text": "然后这里不要忘"
+        },
+        {
+          "start": 219.34,
+          "end": 220.76,
+          "text": "不要忘拿条约之谊"
+        },
+        {
+          "start": 221.94,
+          "end": 223.06,
+          "text": "然后我们再打个地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00190.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00200.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00210.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00214.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00215.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00216.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00219.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00220.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00221.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00222.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "潮汐之遗（金色交互奖励）",
+          "triggerSeconds": 215,
+          "appearanceSeconds": 219,
+          "collectionSeconds": 221,
+          "lootVisibleSeconds": 222,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "用户确认视频与库街区图中的红名怪可以对应，撤销原地貌差异造成的疑虑。",
+            "routeReview": "阁北侧信标向西北飞至对岸平台，再向前骑车到路面",
+            "positionEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "reason": "199s阁北信标→204–209s西北跨断崖与樱树→214s路面敌人→219s金色奖励；223s开图为本处。原有候选1524481633250820096仍与攻略水面地貌不同。 需排除攻略后续替换/多图位置不一致，不能只凭坐标升格",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "reason": "199s阁北信标→204–209s西北跨断崖与樱树→214s路面敌人→219s金色奖励；223s开图为本处。原有候选1524481633250820096仍与攻略水面地貌不同。 需排除攻略后续替换/多图位置不一致，不能只凭坐标升格",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-e06.jpg",
+                "reason": "199s阁北信标→204–209s西北跨断崖与樱树→214s路面敌人→219s金色奖励；223s开图为本处。原有候选1524481633250820096仍与攻略水面地貌不同。 需排除攻略后续替换/多图位置不一致，不能只凭坐标升格",
+                "role": "support"
+              },
+              {
+                "source": "user-final-review",
+                "locator": "tools/MarkerDetectabilityV2/user-review-final-20261030.json",
+                "reason": "用户确认视频与库街区图中的红名怪可以对应，撤销原地貌差异造成的疑虑。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "189–223s member 1",
+                "reason": "道路红名怪，战后潮汐之遗",
+                "role": "support",
+                "start": 189,
+                "end": 223
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "user-final-review",
+                "locator": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096.json",
+                "reason": "用户确认视频与库街区图中的红名怪可以对应，撤销原地貌差异造成的疑虑。",
+                "role": "support"
+              },
+              {
+                "source": "user-final-review",
+                "locator": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096-1.png",
+                "reason": "用户确认视频与库街区图中的红名怪可以对应，撤销原地貌差异造成的疑虑。",
+                "role": "support"
+              },
+              {
+                "source": "user-final-review",
+                "locator": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096-2.png",
+                "reason": "用户确认视频与库街区图中的红名怪可以对应，撤销原地貌差异造成的疑虑。",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 6,
+                "pointId": "1526600365212684288",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png"
+                ],
+                "description": "先做完“雾锁机伶”，然后再来一遍这里，就能刷新怪物。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 6,
+                "pointId": "1524481633250820096",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096-2.png"
+                ],
+                "description": "旁白：“千咲！你到底干了什么！没有主C我等如何抗争湮灭红名怪！”千咲淡淡一笑，语气平淡但充满狂傲：“简单，我当主C不就好了。”说罢，她气息终于不再掩饰，显露而出。六命修为！"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 190,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 192,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 215,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 219,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 221,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 215,
+                    "eventId": "BV19kNu6AEVR:p1:e006",
+                    "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00215.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 1,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "mengzhou-kurotiles",
+                          "scene": "World",
+                          "state": 8,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -7,
+                            -5,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 2474.0,
+                            "originY": 1957.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 224,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e6.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim",
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "189–223s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 189,
+                  "end": 223
+                }
+              ]
+            },
+            "missingEvidence": [],
+            "routeLimitations": [],
+            "routeCounterEvidence": [],
+            "reviewedBy": "user",
+            "reviewBasis": "explicit-user-confirmation",
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1524481633250820096",
+                "status": "confirmed-by-user",
+                "name": "潮汐之遗·金",
+                "analysis": "旁白：“千咲！你到底干了什么！没有主C我等如何抗争湮灭红名怪！”千咲淡淡一笑，语气平淡但充满狂傲：“简单，我当主C不就好了。”说罢，她气息终于不再掩饰，显露而出。六命修为！",
+                "guideCache": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096.json",
+                "guideImages": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096-2.png"
+                ]
+              }
+            ],
+            "knownEvidenceLimitations": []
+          },
+          "routeFollowup": {
+            "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+            "digest": "2aa36a8a7c2b3307ff0ead928cdc79a02f5cc2dbe86ada8776042472fe43c3f6",
+            "decision": "confirmed-by-user",
+            "analysis": "199s阁北信标→204–209s西北跨断崖与樱树→214s路面敌人→219s金色奖励；223s开图为本处。原有候选1524481633250820096仍与攻略水面地貌不同。 需排除攻略后续替换/多图位置不一致，不能只凭坐标升格",
+            "evidence": [
+              "tools/MarkerDetectabilityV2/route-review-roy.json",
+              "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-e06.jpg"
+            ],
+            "reviewRow": {
+              "eventId": "BV19kNu6AEVR:p1:e006",
+              "member": 1,
+              "status": "reviewed-route-and-guide",
+              "decision": "retain-unresolved",
+              "analysis": "199s阁北信标→204–209s西北跨断崖与樱树→214s路面敌人→219s金色奖励；223s开图为本处。原有候选1524481633250820096仍与攻略水面地貌不同。 需排除攻略后续替换/多图位置不一致，不能只凭坐标升格",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-e06.jpg"
+              ],
+              "counterEvidence": [
+                "原攻略水中怪与录像道路终点存在视觉冲突"
+              ],
+              "limitations": [
+                "需排除攻略后续替换/多图位置不一致，不能只凭坐标升格"
+              ],
+              "rejectedPointIds": [],
+              "exclusionReversals": []
+            },
+            "before": {
+              "member": 1,
+              "observedType": "潮汐之遗（金色交互奖励）",
+              "triggerSeconds": 215,
+              "appearanceSeconds": 219,
+              "collectionSeconds": 221,
+              "lootVisibleSeconds": 222,
+              "identityStatus": "unresolved",
+              "detectability": "undetectable",
+              "firstPassStatus": "reviewed-unresolved",
+              "matchingReview": {
+                "analysis": "224s玩家箭头距1524481633250820096约5.10游戏单位，原片219–221s路面紫色战斗边界与金色奖励清楚。该攻略文本是角色叙事而非路线，图片1是水边平原，图片2也是水中怪；与道路终点存在视觉冲突。位置候选保留但不以坐标单证据确认。",
+                "routeReview": "阁北侧信标向西北飞至对岸平台，再向前骑车到路面",
+                "positionEvidence": [],
+                "videoEvidence": [
+                  {
+                    "source": "BV19kNu6AEVR:p1",
+                    "locator": "189–223s member 1",
+                    "reason": "道路红名怪，战后潮汐之遗",
+                    "role": "support",
+                    "start": 189,
+                    "end": 223
+                  }
+                ],
+                "guideEvidence": [
+                  {
+                    "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                    "locator": "point 1526600365212684288; content.description and picturesUrl",
+                    "reason": "先做完“雾锁机伶”，然后再来一遍这里，就能刷新怪物。",
+                    "role": "support"
+                  },
+                  {
+                    "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096.json",
+                    "locator": "point 1524481633250820096; content.description and picturesUrl",
+                    "reason": "旁白：“千咲！你到底干了什么！没有主C我等如何抗争湮灭红名怪！”千咲淡淡一笑，语气平淡但充满狂傲：“简单，我当主C不就好了。”说罢，她气息终于不再掩饰，显露而出。六命修为！",
+                    "role": "support"
+                  }
+                ],
+                "guideComparisons": [
+                  {
+                    "bvid": "BV19kNu6AEVR",
+                    "event": 6,
+                    "pointId": "1526600365212684288",
+                    "stateId": "8",
+                    "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                    "images": [
+                      "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png"
+                    ],
+                    "description": "先做完“雾锁机伶”，然后再来一遍这里，就能刷新怪物。"
+                  },
+                  {
+                    "bvid": "BV19kNu6AEVR",
+                    "event": 6,
+                    "pointId": "1524481633250820096",
+                    "stateId": "8",
+                    "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096.json",
+                    "images": [
+                      "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096-1.png",
+                      "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096-2.png"
+                    ],
+                    "description": "旁白：“千咲！你到底干了什么！没有主C我等如何抗争湮灭红名怪！”千咲淡淡一笑，语气平淡但充满狂傲：“简单，我当主C不就好了。”说罢，她气息终于不再掩饰，显露而出。六命修为！"
+                  }
+                ],
+                "exclusionEvidence": [],
+                "positionAttempts": [
+                  {
+                    "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                    "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                    "frames": [
+                      {
+                        "time": 190,
+                        "kind": "fullmap",
+                        "acceptedGeometry": true,
+                        "reasons": [
+                          []
+                        ]
+                      },
+                      {
+                        "time": 192,
+                        "kind": "fullmap",
+                        "acceptedGeometry": true,
+                        "reasons": [
+                          []
+                        ]
+                      },
+                      {
+                        "time": 215,
+                        "kind": "minimap",
+                        "acceptedGeometry": false,
+                        "reasons": [
+                          [
+                            "insufficient-ratio-matches"
+                          ]
+                        ]
+                      },
+                      {
+                        "time": 219,
+                        "kind": "minimap",
+                        "acceptedGeometry": false,
+                        "reasons": [
+                          [
+                            "insufficient-ratio-matches"
+                          ]
+                        ]
+                      },
+                      {
+                        "time": 221,
+                        "kind": "minimap",
+                        "acceptedGeometry": false,
+                        "reasons": [
+                          [
+                            "insufficient-ratio-matches"
+                          ]
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                    "method": "fullscale local surface tile retry; fixed limits unchanged",
+                    "results": [
+                      {
+                        "time": 215,
+                        "eventId": "BV19kNu6AEVR:p1:e006",
+                        "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00215.00.jpg",
+                        "candidates": [
+                          {
+                            "acceptedGeometry": false,
+                            "goodMatches": 1,
+                            "rejectionReasons": [
+                              "insufficient-ratio-matches"
+                            ],
+                            "reference": {
+                              "region": "mengzhou-kurotiles",
+                              "scene": "World",
+                              "state": 8,
+                              "layer": "surface",
+                              "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                              "bounds": [
+                                -7,
+                                -5,
+                                0,
+                                2
+                              ],
+                              "mosaicScale": 1.0,
+                              "missingTiles": [],
+                              "coordinateTransform": {
+                                "originX": 2474.0,
+                                "originY": 1957.0,
+                                "scale": 1.205
+                              }
+                            }
+                          }
+                        ],
+                        "roi": {
+                          "center": [
+                            107.01119999999999,
+                            108.0
+                          ],
+                          "radius": 104.016,
+                          "player": [
+                            107.01119999999999,
+                            108.0
+                          ],
+                          "playerMethod": "configured-pixel",
+                          "roiMethod": "configured-circle",
+                          "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                        },
+                        "acceptedGeometry": false,
+                        "searchPrior": {
+                          "time": 224,
+                          "role": "viewport geographic prior only; no continuity across cuts"
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "attributeReview": {
+                  "status": "reviewed",
+                  "detectability": "undetectable",
+                  "basis": "user-authorized-video-scope-default",
+                  "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+                  "evidence": [
+                    {
+                      "source": "user-approved-scope",
+                      "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                      "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                      "role": "support"
+                    }
+                  ]
+                },
+                "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e6.jpg",
+                "audioMethod": "local ASR aligned with visible frames; no listening claim",
+                "attributeReviewBeforeVideoScopeDefault": {
+                  "status": "reviewed",
+                  "detectability": "unknown",
+                  "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "evidence": [
+                    {
+                      "source": "BV19kNu6AEVR:p1",
+                      "locator": "189–223s",
+                      "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                      "role": "support",
+                      "start": 189,
+                      "end": 223
+                    }
+                  ]
+                }
+              }
+            },
+            "previousRevision": {
+              "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+              "digest": "63f041bc44471849a56445745fcb11e9472c84ea72d9e92e3666345c97f9268d",
+              "decision": "retain-unresolved",
+              "analysis": "199s阁北信标→204–209s西北跨断崖与樱树→214s路面敌人→219s金色奖励；223s开图为本处。原有候选1524481633250820096仍与攻略水面地貌不同。 需排除攻略后续替换/多图位置不一致，不能只凭坐标升格",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-e06.jpg"
+              ]
+            }
+          },
+          "beforeFinalUserReview": {
+            "analysis": "199s阁北信标→204–209s西北跨断崖与樱树→214s路面敌人→219s金色奖励；223s开图为本处。原有候选1524481633250820096仍与攻略水面地貌不同。 需排除攻略后续替换/多图位置不一致，不能只凭坐标升格",
+            "routeReview": "阁北侧信标向西北飞至对岸平台，再向前骑车到路面",
+            "positionEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "reason": "199s阁北信标→204–209s西北跨断崖与樱树→214s路面敌人→219s金色奖励；223s开图为本处。原有候选1524481633250820096仍与攻略水面地貌不同。 需排除攻略后续替换/多图位置不一致，不能只凭坐标升格",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "reason": "199s阁北信标→204–209s西北跨断崖与樱树→214s路面敌人→219s金色奖励；223s开图为本处。原有候选1524481633250820096仍与攻略水面地貌不同。 需排除攻略后续替换/多图位置不一致，不能只凭坐标升格",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-e06.jpg",
+                "reason": "199s阁北信标→204–209s西北跨断崖与樱树→214s路面敌人→219s金色奖励；223s开图为本处。原有候选1524481633250820096仍与攻略水面地貌不同。 需排除攻略后续替换/多图位置不一致，不能只凭坐标升格",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "189–223s member 1",
+                "reason": "道路红名怪，战后潮汐之遗",
+                "role": "support",
+                "start": 189,
+                "end": 223
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                "locator": "point 1526600365212684288; content.description and picturesUrl",
+                "reason": "先做完“雾锁机伶”，然后再来一遍这里，就能刷新怪物。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096.json",
+                "locator": "point 1524481633250820096; content.description and picturesUrl",
+                "reason": "旁白：“千咲！你到底干了什么！没有主C我等如何抗争湮灭红名怪！”千咲淡淡一笑，语气平淡但充满狂傲：“简单，我当主C不就好了。”说罢，她气息终于不再掩饰，显露而出。六命修为！",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 6,
+                "pointId": "1526600365212684288",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png"
+                ],
+                "description": "先做完“雾锁机伶”，然后再来一遍这里，就能刷新怪物。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 6,
+                "pointId": "1524481633250820096",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096-2.png"
+                ],
+                "description": "旁白：“千咲！你到底干了什么！没有主C我等如何抗争湮灭红名怪！”千咲淡淡一笑，语气平淡但充满狂傲：“简单，我当主C不就好了。”说罢，她气息终于不再掩饰，显露而出。六命修为！"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 190,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 192,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 215,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 219,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 221,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 215,
+                    "eventId": "BV19kNu6AEVR:p1:e006",
+                    "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00215.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 1,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "mengzhou-kurotiles",
+                          "scene": "World",
+                          "state": 8,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -7,
+                            -5,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 2474.0,
+                            "originY": 1957.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 224,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e6.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim",
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "189–223s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 189,
+                  "end": 223
+                }
+              ]
+            },
+            "missingEvidence": [
+              "199s阁北信标→204–209s西北跨断崖与樱树→214s路面敌人→219s金色奖励；223s开图为本处。原有候选1524481633250820096仍与攻略水面地貌不同。 需排除攻略后续替换/多图位置不一致，不能只凭坐标升格"
+            ],
+            "routeLimitations": [
+              "需排除攻略后续替换/多图位置不一致，不能只凭坐标升格"
+            ],
+            "routeCounterEvidence": [
+              "原攻略水中怪与录像道路终点存在视觉冲突"
+            ]
+          },
+          "stateId": "8",
+          "pointId": "1524481633250820096"
+        }
+      ],
+      "uncertainties": [],
+      "uncertaintiesBeforeFinalUserReview": [
+        "战斗有加速/剪辑；所记时间是源视频实际画面，不等于游戏过程耗时。"
+      ]
+    },
+    {
+      "eventId": "BV19kNu6AEVR:p1:e007",
+      "ordinal": 7,
+      "start": 223,
+      "end": 261,
+      "progressBarMark": {
+        "rawLabel": "潮6",
+        "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "桥旁水中红名怪，战后潮汐之遗",
+      "route": "返回同一信标向南，钩锁过崖，见桥后转向东南水中",
+      "transcriptRefs": [
+        {
+          "start": 221.94,
+          "end": 223.06,
+          "text": "然后我们再打个地图"
+        },
+        {
+          "start": 223.06,
+          "end": 224.86,
+          "text": "还是传送到刚刚的这个小银犀喵"
+        },
+        {
+          "start": 228.9,
+          "end": 229.58,
+          "text": "传过来之后"
+        },
+        {
+          "start": 229.58,
+          "end": 230.56,
+          "text": "小地图下方南方样"
+        },
+        {
+          "start": 230.56,
+          "end": 231.22,
+          "text": "往前走"
+        },
+        {
+          "start": 236.36,
+          "end": 237.44,
+          "text": "前方走到悬崖边"
+        },
+        {
+          "start": 237.44,
+          "end": 239.12,
+          "text": "我们记得拉一下上方的勾锁"
+        },
+        {
+          "start": 239.12,
+          "end": 240.52,
+          "text": "拉到对岸这个平台"
+        },
+        {
+          "start": 240.52,
+          "end": 241.56,
+          "text": "我们再继续往前走"
+        },
+        {
+          "start": 245.96,
+          "end": 247.52,
+          "text": "就我们走到面前"
+        },
+        {
+          "start": 247.52,
+          "end": 248.56,
+          "text": "能看到一座桥的时候"
+        },
+        {
+          "start": 248.56,
+          "end": 250.42,
+          "text": "是我们这样小的多右下方都那么样"
+        },
+        {
+          "start": 250.84,
+          "end": 252.84,
+          "text": "这在这个水中是一只红冰怪"
+        },
+        {
+          "start": 255.42,
+          "end": 257.28,
+          "text": "天王怪之后来我们拿到这个"
+        },
+        {
+          "start": 258.26,
+          "end": 258.7,
+          "text": "RG"
+        },
+        {
+          "start": 259.46,
+          "end": 260.8,
+          "text": "然后我们再打个地图"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00225.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00240.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00250.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00251.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00253.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00255.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00256.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00257.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00258.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00259.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "潮汐之遗（金色交互奖励）",
+          "triggerSeconds": 253,
+          "appearanceSeconds": 256,
+          "collectionSeconds": 258,
+          "lootVisibleSeconds": 259,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "stateId": "8",
+          "pointId": "1524472584441942016",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "原片256–258s桥旁水中金色奖励，攻略1524472584441942016显示同一浅水、樱树及高崖环绕的场景；262s开图黄色玩家箭头距候选2.49，明确这是随后切换地下前的地表位置。",
+            "routeReview": "返回同一信标向南，钩锁过崖，见桥后转向东南水中",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00262.00.jpg",
+                "locator": "262s manually verified yellow player arrow; affine raw state plane",
+                "reason": "After reward, before next teleport; rawPosition=[-583046.7152699165, -5837.068662523279]; inliers=260. 原片256–258s桥旁水中金色奖励，攻略1524472584441942016显示同一浅水、樱树及高崖环绕的场景；262s开图黄色玩家箭头距候选2.49，明确这是随后切换地下前的地表位置。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "223–261s member 1",
+                "reason": "桥旁水中红名怪，战后潮汐之遗",
+                "role": "support",
+                "start": 223,
+                "end": 261
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524472584441942016.json",
+                "locator": "point 1524472584441942016; description and image 1",
+                "reason": "原片256–258s桥旁水中金色奖励，攻略1524472584441942016显示同一浅水、樱树及高崖环绕的场景；262s开图黄色玩家箭头距候选2.49，明确这是随后切换地下前的地表位置。",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 7,
+                "pointId": "1524481633250820096",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524481633250820096-2.png"
+                ],
+                "description": "旁白：“千咲！你到底干了什么！没有主C我等如何抗争湮灭红名怪！”千咲淡淡一笑，语气平淡但充满狂傲：“简单，我当主C不就好了。”说罢，她气息终于不再掩饰，显露而出。六命修为！"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 7,
+                "pointId": "1526600365212684288",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png"
+                ],
+                "description": "先做完“雾锁机伶”，然后再来一遍这里，就能刷新怪物。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 7,
+                "pointId": "1524472584441942016",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524472584441942016.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1524472584441942016-1.png"
+                ],
+                "description": "红名怪挑战宝箱。"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 224,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 226,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 253,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 256,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 258,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 253,
+                    "eventId": "BV19kNu6AEVR:p1:e007",
+                    "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00253.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 2,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "mengzhou-kurotiles",
+                          "scene": "World",
+                          "state": 8,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -8,
+                            -6,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 2474.0,
+                            "originY": 1957.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 262,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e7.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim",
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "223–261s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 223,
+                  "end": 261
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "uncertainties": [
+        "战斗有加速/剪辑；所记时间是源视频实际画面，不等于游戏过程耗时。"
+      ]
+    },
+    {
+      "eventId": "BV19kNu6AEVR:p1:e008",
+      "ordinal": 8,
+      "start": 261,
+      "end": 297,
+      "progressBarMark": {
+        "rawLabel": "潮7",
+        "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "地下室红名怪无喜无悲，战后潮汐之遗",
+      "route": "任务完成后切换地下最后一层，中部机巧传送点向前直行至房间",
+      "transcriptRefs": [
+        {
+          "start": 261.26,
+          "end": 263.14,
+          "text": "这里下一个是我们要完成"
+        },
+        {
+          "start": 263.14,
+          "end": 264.56,
+          "text": "物影阁的任务之后"
+        },
+        {
+          "start": 265.32,
+          "end": 266.92,
+          "text": "然后才可以拿到红冰怪"
+        },
+        {
+          "start": 266.92,
+          "end": 268.84,
+          "text": "我们这里打个地图来切换层数"
+        },
+        {
+          "start": 268.84,
+          "end": 269.44,
+          "text": "我们切换到"
+        },
+        {
+          "start": 270.42,
+          "end": 272.1,
+          "text": "最后一层这个物影书"
+        },
+        {
+          "start": 272.1,
+          "end": 274.08,
+          "text": "然后来到中间的这个机巧灵"
+        },
+        {
+          "start": 274.08,
+          "end": 274.68,
+          "text": "传送过来"
+        },
+        {
+          "start": 279.16,
+          "end": 280.82,
+          "text": "传过来之后就传面前直走"
+        },
+        {
+          "start": 283.19,
+          "end": 284.81,
+          "text": "然后前方是红冰怪"
+        },
+        {
+          "start": 284.81,
+          "end": 285.51,
+          "text": "无喜无悲"
+        },
+        {
+          "start": 285.51,
+          "end": 286.79,
+          "text": "来大家清一下怪"
+        },
+        {
+          "start": 287.35,
+          "end": 288.69,
+          "text": "我们拿到一个潮石之翼"
+        },
+        {
+          "start": 289.11,
+          "end": 289.95,
+          "text": "好那我们"
+        },
+        {
+          "start": 290.85,
+          "end": 293.21,
+          "text": "这里八个红冰怪就已经全部收集齐了"
+        },
+        {
+          "start": 294.69,
+          "end": 295.97,
+          "text": "拿完这个潮石之翼之后"
+        },
+        {
+          "start": 295.97,
+          "end": 296.79,
+          "text": "大家打开地图"
+        },
+        {
+          "start": 296.79,
+          "end": 300.49,
+          "text": "我们还是在这个物引书"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00270.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00280.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00283.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00285.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00286.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00287.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00288.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00289.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "潮汐之遗（金色交互奖励）",
+          "triggerSeconds": 286,
+          "appearanceSeconds": 288,
+          "collectionSeconds": 288,
+          "lootVisibleSeconds": 289,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+            "routeReview": "任务完成后切换地下最后一层，中部机巧传送点向前直行至房间",
+            "positionEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+                "reason": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "reason": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-e08.jpg",
+                "reason": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/meng-e8-layer-route.jpg",
+                "reason": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-297.0s.jpg",
+                "reason": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/BV19kNu6AEVR-e8-L56_F-4-56-anchor.jpg",
+                "reason": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "261–297s member 1",
+                "reason": "地下室红名怪无喜无悲，战后潮汐之遗",
+                "role": "support",
+                "start": 261,
+                "end": 297
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                "locator": "point 1526600365212684288; content.description and picturesUrl",
+                "reason": "先做完“雾锁机伶”，然后再来一遍这里，就能刷新怪物。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                "reason": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+                "role": "support"
+              },
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png",
+                "reason": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 8,
+                "pointId": "1526600365212684288",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png"
+                ],
+                "description": "先做完“雾锁机伶”，然后再来一遍这里，就能刷新怪物。"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 262,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 264,
+                    "kind": "fullmap",
+                    "acceptedGeometry": true,
+                    "reasons": [
+                      []
+                    ]
+                  },
+                  {
+                    "time": 286,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 288,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 286,
+                    "eventId": "BV19kNu6AEVR:p1:e008",
+                    "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00286.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 0,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "mengzhou-kurotiles",
+                          "scene": "World",
+                          "state": 8,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -8,
+                            -6,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 2474.0,
+                            "originY": 1957.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 264,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e8.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim",
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "unknown",
+              "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "261–297s",
+                  "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "role": "support",
+                  "start": 261,
+                  "end": 297
+                }
+              ]
+            },
+            "missingEvidence": [],
+            "routeLimitations": [
+              "机巧传送设施在原始点位组无可确认ID；图上仅标视频实际设施，不虚构CS信标。"
+            ],
+            "routeCounterEvidence": [
+              "初始全幅radius300把小房间所有地形判为空间集中；此次按真实小型分层图范围配置ROI，LIMITS未修改。若不接受小图ROI需保留未决，不能声称原大ROI通过。"
+            ],
+            "supersededGuideEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/guide-1526600365212684288.jpg",
+                "reason": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+                "role": "support"
+              }
+            ],
+            "diagnosticEvidence": [
+              {
+                "source": "route-followup",
+                "locator": "out/detectability-v2/route-roy/guide-1526600365212684288.jpg",
+                "reason": "其他候选的对照证据，不支持当前ID。271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+                "role": "diagnostic"
+              }
+            ]
+          },
+          "routeFollowup": {
+            "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+            "digest": "36cfe52831924134ab050b89be0671b1a1b8d6229d14cc4d122686ed189d15dd",
+            "decision": "confirm",
+            "analysis": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+            "evidence": [
+              "tools/MarkerDetectabilityV2/route-review-roy.json",
+              "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-e08.jpg",
+              "out/detectability-v2/route-roy/guide-1526600365212684288.jpg",
+              "out/detectability-v2/route-roy/meng-e8-layer-route.jpg",
+              "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-297.0s.jpg",
+              "out/detectability-v2/route-roy/BV19kNu6AEVR-e8-L56_F-4-56-anchor.jpg",
+              "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+              "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png"
+            ],
+            "reviewRow": {
+              "eventId": "BV19kNu6AEVR:p1:e008",
+              "member": 1,
+              "status": "reviewed-route-and-guide",
+              "decision": "confirm",
+              "analysis": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-e08.jpg",
+                "out/detectability-v2/route-roy/guide-1526600365212684288.jpg",
+                "out/detectability-v2/route-roy/meng-e8-layer-route.jpg",
+                "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-297.0s.jpg",
+                "out/detectability-v2/route-roy/BV19kNu6AEVR-e8-L56_F-4-56-anchor.jpg",
+                "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png"
+              ],
+              "counterEvidence": [
+                "初始全幅radius300把小房间所有地形判为空间集中；此次按真实小型分层图范围配置ROI，LIMITS未修改。若不接受小图ROI需保留未决，不能声称原大ROI通过。"
+              ],
+              "limitations": [
+                "机巧传送设施在原始点位组无可确认ID；图上仅标视频实际设施，不虚构CS信标。"
+              ],
+              "rejectedPointIds": [],
+              "exclusionReversals": [],
+              "stateId": "8",
+              "pointId": "1526600365212684288"
+            },
+            "before": {
+              "member": 1,
+              "observedType": "潮汐之遗（金色交互奖励）",
+              "triggerSeconds": 286,
+              "appearanceSeconds": 288,
+              "collectionSeconds": 288,
+              "lootVisibleSeconds": 289,
+              "identityStatus": "unresolved",
+              "detectability": "undetectable",
+              "firstPassStatus": "reviewed-unresolved",
+              "matchingReview": {
+                "analysis": "候选1526600365212684288攻略巨大圆形门与地面青色能量纹路完全吻合288s金色奖励，文本要求雾锁机伶完成后刷新怪。262s匹配仅是地表图，不能标为地下层；297–300s地下图和奖励小地图均未通过现有参考，缺正确地下层独立定位。",
+                "routeReview": "任务完成后切换地下最后一层，中部机巧传送点向前直行至房间",
+                "positionEvidence": [],
+                "videoEvidence": [
+                  {
+                    "source": "BV19kNu6AEVR:p1",
+                    "locator": "261–297s member 1",
+                    "reason": "地下室红名怪无喜无悲，战后潮汐之遗",
+                    "role": "support",
+                    "start": 261,
+                    "end": 297
+                  }
+                ],
+                "guideEvidence": [
+                  {
+                    "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                    "locator": "point 1526600365212684288; content.description and picturesUrl",
+                    "reason": "先做完“雾锁机伶”，然后再来一遍这里，就能刷新怪物。",
+                    "role": "support"
+                  }
+                ],
+                "guideComparisons": [
+                  {
+                    "bvid": "BV19kNu6AEVR",
+                    "event": 8,
+                    "pointId": "1526600365212684288",
+                    "stateId": "8",
+                    "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                    "images": [
+                      "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png"
+                    ],
+                    "description": "先做完“雾锁机伶”，然后再来一遍这里，就能刷新怪物。"
+                  }
+                ],
+                "exclusionEvidence": [],
+                "positionAttempts": [
+                  {
+                    "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                    "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                    "frames": [
+                      {
+                        "time": 262,
+                        "kind": "fullmap",
+                        "acceptedGeometry": true,
+                        "reasons": [
+                          []
+                        ]
+                      },
+                      {
+                        "time": 264,
+                        "kind": "fullmap",
+                        "acceptedGeometry": true,
+                        "reasons": [
+                          []
+                        ]
+                      },
+                      {
+                        "time": 286,
+                        "kind": "minimap",
+                        "acceptedGeometry": false,
+                        "reasons": [
+                          [
+                            "insufficient-ratio-matches"
+                          ]
+                        ]
+                      },
+                      {
+                        "time": 288,
+                        "kind": "minimap",
+                        "acceptedGeometry": false,
+                        "reasons": [
+                          [
+                            "insufficient-ratio-matches"
+                          ]
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                    "method": "fullscale local surface tile retry; fixed limits unchanged",
+                    "results": [
+                      {
+                        "time": 286,
+                        "eventId": "BV19kNu6AEVR:p1:e008",
+                        "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00286.00.jpg",
+                        "candidates": [
+                          {
+                            "acceptedGeometry": false,
+                            "goodMatches": 0,
+                            "rejectionReasons": [
+                              "insufficient-ratio-matches"
+                            ],
+                            "reference": {
+                              "region": "mengzhou-kurotiles",
+                              "scene": "World",
+                              "state": 8,
+                              "layer": "surface",
+                              "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                              "bounds": [
+                                -8,
+                                -6,
+                                0,
+                                2
+                              ],
+                              "mosaicScale": 1.0,
+                              "missingTiles": [],
+                              "coordinateTransform": {
+                                "originX": 2474.0,
+                                "originY": 1957.0,
+                                "scale": 1.205
+                              }
+                            }
+                          }
+                        ],
+                        "roi": {
+                          "center": [
+                            107.01119999999999,
+                            108.0
+                          ],
+                          "radius": 104.016,
+                          "player": [
+                            107.01119999999999,
+                            108.0
+                          ],
+                          "playerMethod": "configured-pixel",
+                          "roiMethod": "configured-circle",
+                          "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                        },
+                        "acceptedGeometry": false,
+                        "searchPrior": {
+                          "time": 264,
+                          "role": "viewport geographic prior only; no continuity across cuts"
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "attributeReview": {
+                  "status": "reviewed",
+                  "detectability": "undetectable",
+                  "basis": "user-authorized-video-scope-default",
+                  "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+                  "evidence": [
+                    {
+                      "source": "user-approved-scope",
+                      "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                      "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                      "role": "support"
+                    }
+                  ]
+                },
+                "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e8.jpg",
+                "audioMethod": "local ASR aligned with visible frames; no listening claim",
+                "attributeReviewBeforeVideoScopeDefault": {
+                  "status": "reviewed",
+                  "detectability": "unknown",
+                  "analysis": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                  "evidence": [
+                    {
+                      "source": "BV19kNu6AEVR:p1",
+                      "locator": "261–297s",
+                      "reason": "可见触发和领取过程不等于探测能力。本事件没有边界明确的独立探测声明/实测，保持unknown，不借用视频标题。",
+                      "role": "support",
+                      "start": 261,
+                      "end": 297
+                    }
+                  ]
+                }
+              }
+            },
+            "previousRevision": {
+              "report": "tools/MarkerDetectabilityV2/route-followup-reviewed.json",
+              "digest": "56f4d21d8c66b534990755932d333f8d274fe8523bf1b9cbb3c1962b3f717c37",
+              "decision": "confirm",
+              "analysis": "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。",
+              "evidence": [
+                "tools/MarkerDetectabilityV2/route-review-roy.json",
+                "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-e08.jpg",
+                "out/detectability-v2/route-roy/guide-1526600365212684288.jpg",
+                "out/detectability-v2/route-roy/meng-e8-layer-route.jpg",
+                "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-297.0s.jpg",
+                "out/detectability-v2/route-roy/BV19kNu6AEVR-e8-L56_F-4-56-anchor.jpg",
+                "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+                "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png"
+              ]
+            }
+          },
+          "stateId": "8",
+          "pointId": "1526600365212684288"
+        }
+      ],
+      "uncertainties": [
+        "战斗有加速/剪辑；所记时间是源视频实际画面，不等于游戏过程耗时。"
+      ]
+    },
+    {
+      "eventId": "BV19kNu6AEVR:p1:e009",
+      "ordinal": 9,
+      "start": 297,
+      "end": 391,
+      "progressBarMark": {
+        "rawLabels": [
+          "箱2",
+          "箱3",
+          "箱4"
+        ],
+        "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/progress-5s-00000.00.jpg"
+      },
+      "observedMechanism": "进入隐蔽秘境，踩亮三灯，按北侧栏杆→屋顶→狐像前顺序开三箱",
+      "route": "地下机巧节点回身右转至栏杆，用摩托跃到上方桥，进入桥上入口；进入后依次点亮三灯并探索",
+      "transcriptRefs": [
+        {
+          "start": 294.69,
+          "end": 295.97,
+          "text": "拿完这个潮石之翼之后"
+        },
+        {
+          "start": 295.97,
+          "end": 296.79,
+          "text": "大家打开地图"
+        },
+        {
+          "start": 296.79,
+          "end": 300.49,
+          "text": "我们还是在这个物引书"
+        },
+        {
+          "start": 300.49,
+          "end": 302.23,
+          "text": "左下角这里有个机巧灵"
+        },
+        {
+          "start": 302.23,
+          "end": 302.87,
+          "text": "传送过来"
+        },
+        {
+          "start": 303.39,
+          "end": 304.91,
+          "text": "就是他右下角的箭头是绿色的"
+        },
+        {
+          "start": 304.91,
+          "end": 305.69,
+          "text": "不要传送错了"
+        },
+        {
+          "start": 305.69,
+          "end": 306.25,
+          "text": "传送过来"
+        },
+        {
+          "start": 309.74,
+          "end": 310.7,
+          "text": "这里过来之后"
+        },
+        {
+          "start": 310.7,
+          "end": 312.68,
+          "text": "我们转向身后"
+        },
+        {
+          "start": 312.68,
+          "end": 314.06,
+          "text": "先往前走再右转"
+        },
+        {
+          "start": 314.06,
+          "end": 315.56,
+          "text": "我们站到这个栏杆边"
+        },
+        {
+          "start": 316.3,
+          "end": 317.68,
+          "text": "在这里我们使用摩托"
+        },
+        {
+          "start": 318.36,
+          "end": 319.14,
+          "text": "不要掉下去了"
+        },
+        {
+          "start": 320.04,
+          "end": 320.82,
+          "text": "如果掉下去的话"
+        },
+        {
+          "start": 320.82,
+          "end": 321.42,
+          "text": "你们就回来"
+        },
+        {
+          "start": 323.68,
+          "end": 324.5,
+          "text": "重新召唤"
+        },
+        {
+          "start": 327.41,
+          "end": 328.25,
+          "text": "然后在这个地方"
+        },
+        {
+          "start": 328.25,
+          "end": 329.45,
+          "text": "我们转向小刘的左边"
+        },
+        {
+          "start": 329.45,
+          "end": 330.43,
+          "text": "希望要抬头往上看"
+        },
+        {
+          "start": 330.43,
+          "end": 331.95,
+          "text": "上方能看到有一座桥"
+        },
+        {
+          "start": 332.43,
+          "end": 333.83,
+          "text": "我们这里摩托车跳跃好了"
+        },
+        {
+          "start": 333.83,
+          "end": 335.67,
+          "text": "我们就朝桥的方向飞过来"
+        },
+        {
+          "start": 336.53,
+          "end": 337.91,
+          "text": "好来到面前这个桥上"
+        },
+        {
+          "start": 337.91,
+          "end": 338.85,
+          "text": "这里有一个"
+        },
+        {
+          "start": 339.67,
+          "end": 340.33,
+          "text": "引擎连"
+        },
+        {
+          "start": 340.33,
+          "end": 341.45,
+          "text": "我们进到引擎连里面"
+        },
+        {
+          "start": 345.68,
+          "end": 346.28,
+          "text": "进来之后"
+        },
+        {
+          "start": 346.28,
+          "end": 348.14,
+          "text": "这里会拿到一个水连洞天的成就"
+        },
+        {
+          "start": 348.6,
+          "end": 350.62,
+          "text": "然后我们面前三个紫色任务点"
+        },
+        {
+          "start": 350.62,
+          "end": 351.6,
+          "text": "点亮一下"
+        },
+        {
+          "start": 352.22,
+          "end": 353.54,
+          "text": "这里面一共有三个宝箱"
+        },
+        {
+          "start": 353.54,
+          "end": 355.14,
+          "text": "也是奇囊探测仪扫不到的"
+        },
+        {
+          "start": 355.52,
+          "end": 356.42,
+          "text": "就给大家说一下"
+        },
+        {
+          "start": 367.49,
+          "end": 368.79,
+          "text": "三个灯点亮完之后"
+        },
+        {
+          "start": 368.79,
+          "end": 370.25,
+          "text": "我们先转向小蜘蛛上方比方样"
+        },
+        {
+          "start": 370.99,
+          "end": 372.25,
+          "text": "跳过来开宝箱"
+        },
+        {
+          "start": 372.83,
+          "end": 373.61,
+          "text": "拿到宝箱之后"
+        },
+        {
+          "start": 373.61,
+          "end": 374.57,
+          "text": "转向小蜘蛛右边的方向"
+        },
+        {
+          "start": 374.57,
+          "end": 375.41,
+          "text": "我们往上翻"
+        },
+        {
+          "start": 375.83,
+          "end": 377.29,
+          "text": "翻过来之后我们再往上走"
+        },
+        {
+          "start": 377.29,
+          "end": 379.03,
+          "text": "在面前这个房子的房顶"
+        },
+        {
+          "start": 379.03,
+          "end": 379.67,
+          "text": "有一个宝箱"
+        },
+        {
+          "start": 382.13,
+          "end": 383.25,
+          "text": "然后是我们小蜘蛛"
+        },
+        {
+          "start": 383.25,
+          "end": 384.51,
+          "text": "左下方西南方向往前"
+        },
+        {
+          "start": 387.37,
+          "end": 388.33,
+          "text": "过来拿到宝箱"
+        },
+        {
+          "start": 388.97,
+          "end": 390.97,
+          "text": "然后这里有三个紫色任务指引"
+        },
+        {
+          "start": 390.97,
+          "end": 392.05,
+          "text": "你们就自己对一下画"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00300.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00305.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00310.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00320.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00330.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00340.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00345.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00350.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00352.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00359.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00362.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00365.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00368.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00369.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00371.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00372.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00373.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00380.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00381.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00382.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00387.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00388.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00389.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00390.00.jpg"
+      ],
+      "rewards": [
+        {
+          "member": 1,
+          "observedType": "朴素",
+          "triggerSeconds": null,
+          "appearanceSeconds": 369,
+          "collectionSeconds": 372,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "note": "appearanceSeconds为首次清楚可见，不证明箱子在该时刻生成；不能证明三灯是宝箱出现前置。",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "已分别对比原始攻略：1526608470311550976为北侧栏杆朴素箱，1526609969292886016为两旗之间屋顶朴素箱，1526609257964093440为狐像前基准箱，与369/380/387s逐成员场景吻合。三灯与生成因果未证明。当前表面底图不能替代该秘境层，缺层内独立定位，逐成员未确认；攻略的开扫描文字也不是奇藏探测仪能力证明。\n末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员北侧栏杆拐角、方形地板图案和岩壁与原始攻略图逐一核对，确认1526608470311550976。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。",
+            "routeReview": "地下机巧节点回身右转至栏杆，用摩托跃到上方桥，进入桥上入口；进入后依次点亮三灯并探索",
+            "positionEvidence": [
+              {
+                "source": "v2-layer-followup",
+                "locator": "out/detectability-v2/overview-new-regions/meng-layer-results.json",
+                "reason": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员北侧栏杆拐角、方形地板图案和岩壁与原始攻略图逐一核对，确认1526608470311550976。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。",
+                "role": "support"
+              },
+              {
+                "source": "v2-layer-followup",
+                "locator": "out/detectability-v2/overview-new-regions/meng-projected-points.json",
+                "reason": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员北侧栏杆拐角、方形地板图案和岩壁与原始攻略图逐一核对，确认1526608470311550976。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。",
+                "role": "support"
+              },
+              {
+                "source": "v2-layer-followup",
+                "locator": "out/detectability-v2/overview-new-regions/meng-layer-proposal.json",
+                "reason": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员北侧栏杆拐角、方形地板图案和岩壁与原始攻略图逐一核对，确认1526608470311550976。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "297–391s member 1",
+                "reason": "进入隐蔽秘境，踩亮三灯，按北侧栏杆→屋顶→狐像前顺序开三箱",
+                "role": "support",
+                "start": 297,
+                "end": 391
+              },
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00372.00.jpg",
+                "start": 372,
+                "end": 372,
+                "reason": "北侧栏杆拐角、方形地板图案和岩壁和对应攻略图一致；只支持本成员",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-original-guide",
+                "locator": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976.json",
+                "reason": "北侧栏杆拐角、方形地板图案和岩壁；明确与本成员类型及环境一致，其他成员攻略在guideComparisons仅供上下文",
+                "role": "support"
+              },
+              {
+                "source": "kuro-original-guide",
+                "locator": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-1.png",
+                "reason": "北侧栏杆拐角、方形地板图案和岩壁；明确与本成员类型及环境一致，其他成员攻略在guideComparisons仅供上下文",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 9,
+                "pointId": "1526609257964093440",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-2.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-3.png"
+                ],
+                "description": "雾隐阁系列任务得最后，在中央区域会开放两个电梯，也就是第三张图的位置，下电梯，之后就会来到第二张图的位置，进入那个水帘洞；进到这里之后，会看到一个任务指引，需要点灯，之后这个基准宝箱就出现了。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 9,
+                "pointId": "1526608470311550976",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-2.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-3.png"
+                ],
+                "description": "雾隐阁系列任务得最后，在中央区域会开放两个电梯，也就是第三张图的位置，下电梯，之后就会来到第二张图的位置，进入那个引歧帘，然后开扫描。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 9,
+                "pointId": "1526609969292886016",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016-2.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016-3.png"
+                ],
+                "description": "雾隐阁系列任务得最后，在中央区域会开放两个电梯，也就是第三张图的位置，下电梯，之后就会来到第二张图的位置，进入那个引歧帘，然后开扫描。"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 297,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 298,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 299,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 300,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 369,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 372,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 380,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 381,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 387,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 389,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 369,
+                    "eventId": "BV19kNu6AEVR:p1:e009",
+                    "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00369.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 1,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "mengzhou-kurotiles",
+                          "scene": "World",
+                          "state": 8,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -8,
+                            -6,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 2474.0,
+                            "originY": 1957.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 264,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e9.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim",
+            "firstPassAnalysis": "已分别对比原始攻略：1526608470311550976为北侧栏杆朴素箱，1526609969292886016为两旗之间屋顶朴素箱，1526609257964093440为狐像前基准箱，与369/380/387s逐成员场景吻合。三灯与生成因果未证明。当前表面底图不能替代该秘境层，缺层内独立定位，逐成员未确认；攻略的开扫描文字也不是奇藏探测仪能力证明。",
+            "overviewSupplement": {
+              "status": "identity-confirmed-from-post-review-layer-followup",
+              "priorIdentityStatus": "unresolved",
+              "analysis": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员北侧栏杆拐角、方形地板图案和岩壁与原始攻略图逐一核对，确认1526608470311550976。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。"
+            },
+            "missingEvidence": [],
+            "limitations": [
+              "领取帧小地图未通过；正确层定位来自片尾全图，成员区分依靠连续路线和独特场景，非逐奖励精确坐标。",
+              "点亮三灯与宝箱生成的因果关系未证明；未据此推导属性。"
+            ],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1526608470311550976",
+                "status": "confirmed-after-layer-followup",
+                "analysis": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员北侧栏杆拐角、方形地板图案和岩壁与原始攻略图逐一核对，确认1526608470311550976。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。"
+              }
+            ],
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "352.22–355.14s明确说秘境里一共三个宝箱均扫不到；369–389s可见三个对应实体依次领取，覆盖这三成员。不是凭标题，也不把点灯当探测证明。",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "local ASR 352.22–355.14s + visible reward sequence",
+                  "reason": "352.22–355.14s明确说秘境里一共三个宝箱均扫不到；369–389s可见三个对应实体依次领取，覆盖这三成员。不是凭标题，也不把点灯当探测证明。",
+                  "role": "support",
+                  "start": 352.22,
+                  "end": 355.14
+                }
+              ]
+            }
+          },
+          "stateId": "8",
+          "pointId": "1526608470311550976"
+        },
+        {
+          "member": 2,
+          "observedType": "朴素",
+          "triggerSeconds": null,
+          "appearanceSeconds": 380,
+          "collectionSeconds": 381,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "note": "appearanceSeconds为首次清楚可见，不证明箱子在该时刻生成；不能证明三灯是宝箱出现前置。",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "已分别对比原始攻略：1526608470311550976为北侧栏杆朴素箱，1526609969292886016为两旗之间屋顶朴素箱，1526609257964093440为狐像前基准箱，与369/380/387s逐成员场景吻合。三灯与生成因果未证明。当前表面底图不能替代该秘境层，缺层内独立定位，逐成员未确认；攻略的开扫描文字也不是奇藏探测仪能力证明。\n末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员两旗之间屋顶、栏杆与双陶罐与原始攻略图逐一核对，确认1526609969292886016。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。",
+            "routeReview": "地下机巧节点回身右转至栏杆，用摩托跃到上方桥，进入桥上入口；进入后依次点亮三灯并探索",
+            "positionEvidence": [
+              {
+                "source": "v2-layer-followup",
+                "locator": "out/detectability-v2/overview-new-regions/meng-layer-results.json",
+                "reason": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员两旗之间屋顶、栏杆与双陶罐与原始攻略图逐一核对，确认1526609969292886016。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。",
+                "role": "support"
+              },
+              {
+                "source": "v2-layer-followup",
+                "locator": "out/detectability-v2/overview-new-regions/meng-projected-points.json",
+                "reason": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员两旗之间屋顶、栏杆与双陶罐与原始攻略图逐一核对，确认1526609969292886016。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。",
+                "role": "support"
+              },
+              {
+                "source": "v2-layer-followup",
+                "locator": "out/detectability-v2/overview-new-regions/meng-layer-proposal.json",
+                "reason": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员两旗之间屋顶、栏杆与双陶罐与原始攻略图逐一核对，确认1526609969292886016。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "297–391s member 2",
+                "reason": "进入隐蔽秘境，踩亮三灯，按北侧栏杆→屋顶→狐像前顺序开三箱",
+                "role": "support",
+                "start": 297,
+                "end": 391
+              },
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00380.00.jpg",
+                "start": 380,
+                "end": 380,
+                "reason": "两旗之间屋顶、栏杆与双陶罐和对应攻略图一致；只支持本成员",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-original-guide",
+                "locator": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016.json",
+                "reason": "两旗之间屋顶、栏杆与双陶罐；明确与本成员类型及环境一致，其他成员攻略在guideComparisons仅供上下文",
+                "role": "support"
+              },
+              {
+                "source": "kuro-original-guide",
+                "locator": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016-1.png",
+                "reason": "两旗之间屋顶、栏杆与双陶罐；明确与本成员类型及环境一致，其他成员攻略在guideComparisons仅供上下文",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 9,
+                "pointId": "1526609257964093440",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-2.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-3.png"
+                ],
+                "description": "雾隐阁系列任务得最后，在中央区域会开放两个电梯，也就是第三张图的位置，下电梯，之后就会来到第二张图的位置，进入那个水帘洞；进到这里之后，会看到一个任务指引，需要点灯，之后这个基准宝箱就出现了。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 9,
+                "pointId": "1526608470311550976",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-2.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-3.png"
+                ],
+                "description": "雾隐阁系列任务得最后，在中央区域会开放两个电梯，也就是第三张图的位置，下电梯，之后就会来到第二张图的位置，进入那个引歧帘，然后开扫描。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 9,
+                "pointId": "1526609969292886016",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016-2.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016-3.png"
+                ],
+                "description": "雾隐阁系列任务得最后，在中央区域会开放两个电梯，也就是第三张图的位置，下电梯，之后就会来到第二张图的位置，进入那个引歧帘，然后开扫描。"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 297,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 298,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 299,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 300,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 369,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 372,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 380,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 381,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 387,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 389,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 369,
+                    "eventId": "BV19kNu6AEVR:p1:e009",
+                    "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00369.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 1,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "mengzhou-kurotiles",
+                          "scene": "World",
+                          "state": 8,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -8,
+                            -6,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 2474.0,
+                            "originY": 1957.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 264,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e9.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim",
+            "firstPassAnalysis": "已分别对比原始攻略：1526608470311550976为北侧栏杆朴素箱，1526609969292886016为两旗之间屋顶朴素箱，1526609257964093440为狐像前基准箱，与369/380/387s逐成员场景吻合。三灯与生成因果未证明。当前表面底图不能替代该秘境层，缺层内独立定位，逐成员未确认；攻略的开扫描文字也不是奇藏探测仪能力证明。",
+            "overviewSupplement": {
+              "status": "identity-confirmed-from-post-review-layer-followup",
+              "priorIdentityStatus": "unresolved",
+              "analysis": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员两旗之间屋顶、栏杆与双陶罐与原始攻略图逐一核对，确认1526609969292886016。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。"
+            },
+            "missingEvidence": [],
+            "limitations": [
+              "领取帧小地图未通过；正确层定位来自片尾全图，成员区分依靠连续路线和独特场景，非逐奖励精确坐标。",
+              "点亮三灯与宝箱生成的因果关系未证明；未据此推导属性。"
+            ],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1526609969292886016",
+                "status": "confirmed-after-layer-followup",
+                "analysis": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员两旗之间屋顶、栏杆与双陶罐与原始攻略图逐一核对，确认1526609969292886016。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。"
+              }
+            ],
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "352.22–355.14s明确说秘境里一共三个宝箱均扫不到；369–389s可见三个对应实体依次领取，覆盖这三成员。不是凭标题，也不把点灯当探测证明。",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "local ASR 352.22–355.14s + visible reward sequence",
+                  "reason": "352.22–355.14s明确说秘境里一共三个宝箱均扫不到；369–389s可见三个对应实体依次领取，覆盖这三成员。不是凭标题，也不把点灯当探测证明。",
+                  "role": "support",
+                  "start": 352.22,
+                  "end": 355.14
+                }
+              ]
+            }
+          },
+          "stateId": "8",
+          "pointId": "1526609969292886016"
+        },
+        {
+          "member": 3,
+          "observedType": "基准",
+          "triggerSeconds": null,
+          "appearanceSeconds": 387,
+          "collectionSeconds": 389,
+          "identityStatus": "confirmed",
+          "detectability": "undetectable",
+          "note": "appearanceSeconds为首次清楚可见，不证明箱子在该时刻生成；不能证明三灯是宝箱出现前置。",
+          "firstPassStatus": "reviewed-confirmed",
+          "matchingReview": {
+            "analysis": "已分别对比原始攻略：1526608470311550976为北侧栏杆朴素箱，1526609969292886016为两旗之间屋顶朴素箱，1526609257964093440为狐像前基准箱，与369/380/387s逐成员场景吻合。三灯与生成因果未证明。当前表面底图不能替代该秘境层，缺层内独立定位，逐成员未确认；攻略的开扫描文字也不是奇藏探测仪能力证明。\n末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员狐群雕像前中央台阶与基准箱与原始攻略图逐一核对，确认1526609257964093440。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。",
+            "routeReview": "地下机巧节点回身右转至栏杆，用摩托跃到上方桥，进入桥上入口；进入后依次点亮三灯并探索",
+            "positionEvidence": [
+              {
+                "source": "v2-layer-followup",
+                "locator": "out/detectability-v2/overview-new-regions/meng-layer-results.json",
+                "reason": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员狐群雕像前中央台阶与基准箱与原始攻略图逐一核对，确认1526609257964093440。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。",
+                "role": "support"
+              },
+              {
+                "source": "v2-layer-followup",
+                "locator": "out/detectability-v2/overview-new-regions/meng-projected-points.json",
+                "reason": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员狐群雕像前中央台阶与基准箱与原始攻略图逐一核对，确认1526609257964093440。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。",
+                "role": "support"
+              },
+              {
+                "source": "v2-layer-followup",
+                "locator": "out/detectability-v2/overview-new-regions/meng-layer-proposal.json",
+                "reason": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员狐群雕像前中央台阶与基准箱与原始攻略图逐一核对，确认1526609257964093440。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "297–391s member 3",
+                "reason": "进入隐蔽秘境，踩亮三灯，按北侧栏杆→屋顶→狐像前顺序开三箱",
+                "role": "support",
+                "start": 297,
+                "end": 391
+              },
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00387.00.jpg",
+                "start": 387,
+                "end": 387,
+                "reason": "狐群雕像前中央台阶与基准箱和对应攻略图一致；只支持本成员",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "kuro-original-guide",
+                "locator": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440.json",
+                "reason": "狐群雕像前中央台阶与基准箱；明确与本成员类型及环境一致，其他成员攻略在guideComparisons仅供上下文",
+                "role": "support"
+              },
+              {
+                "source": "kuro-original-guide",
+                "locator": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-1.png",
+                "reason": "狐群雕像前中央台阶与基准箱；明确与本成员类型及环境一致，其他成员攻略在guideComparisons仅供上下文",
+                "role": "support"
+              }
+            ],
+            "guideComparisons": [
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 9,
+                "pointId": "1526609257964093440",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-2.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-3.png"
+                ],
+                "description": "雾隐阁系列任务得最后，在中央区域会开放两个电梯，也就是第三张图的位置，下电梯，之后就会来到第二张图的位置，进入那个水帘洞；进到这里之后，会看到一个任务指引，需要点灯，之后这个基准宝箱就出现了。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 9,
+                "pointId": "1526608470311550976",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-2.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-3.png"
+                ],
+                "description": "雾隐阁系列任务得最后，在中央区域会开放两个电梯，也就是第三张图的位置，下电梯，之后就会来到第二张图的位置，进入那个引歧帘，然后开扫描。"
+              },
+              {
+                "bvid": "BV19kNu6AEVR",
+                "event": 9,
+                "pointId": "1526609969292886016",
+                "stateId": "8",
+                "guide": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016.json",
+                "images": [
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016-1.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016-2.png",
+                  "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016-3.png"
+                ],
+                "description": "雾隐阁系列任务得最后，在中央区域会开放两个电梯，也就是第三张图的位置，下电梯，之后就会来到第二张图的位置，进入那个引歧帘，然后开扫描。"
+              }
+            ],
+            "exclusionEvidence": [],
+            "positionAttempts": [
+              {
+                "source": "out/detectability-v2/review-root/BV19kNu6AEVR-p1/geometry.json",
+                "method": "frozen SIFT full-map and minimap; full-map viewport is not player",
+                "frames": [
+                  {
+                    "time": 297,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 298,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 299,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 300,
+                    "kind": "fullmap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 369,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 372,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 380,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 381,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 387,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  },
+                  {
+                    "time": 389,
+                    "kind": "minimap",
+                    "acceptedGeometry": false,
+                    "reasons": [
+                      [
+                        "insufficient-ratio-matches"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-minimap-fullscale.json",
+                "method": "fullscale local surface tile retry; fixed limits unchanged",
+                "results": [
+                  {
+                    "time": 369,
+                    "eventId": "BV19kNu6AEVR:p1:e009",
+                    "source": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00369.00.jpg",
+                    "candidates": [
+                      {
+                        "acceptedGeometry": false,
+                        "goodMatches": 1,
+                        "rejectionReasons": [
+                          "insufficient-ratio-matches"
+                        ],
+                        "reference": {
+                          "region": "mengzhou-kurotiles",
+                          "scene": "World",
+                          "state": 8,
+                          "layer": "surface",
+                          "resourceVersion": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+                          "bounds": [
+                            -8,
+                            -6,
+                            0,
+                            2
+                          ],
+                          "mosaicScale": 1.0,
+                          "missingTiles": [],
+                          "coordinateTransform": {
+                            "originX": 2474.0,
+                            "originY": 1957.0,
+                            "scale": 1.205
+                          }
+                        }
+                      }
+                    ],
+                    "roi": {
+                      "center": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "radius": 104.016,
+                      "player": [
+                        107.01119999999999,
+                        108.0
+                      ],
+                      "playerMethod": "configured-pixel",
+                      "roiMethod": "configured-circle",
+                      "maskMethod": "inner-87%-circle;player-24%-radius;compact-bright-symbols;explicit-rectangles"
+                    },
+                    "acceptedGeometry": false,
+                    "searchPrior": {
+                      "time": 264,
+                      "role": "viewport geographic prior only; no continuity across cuts"
+                    }
+                  }
+                ]
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "basis": "user-authorized-video-scope-default",
+              "analysis": "用户确认：本合集正式整理的收集目标默认为不可探测；不要求逐项额外证明探测属性。沿途观察及排除对象不纳入。 选题范围默认标签，不是逐点实机试扫结论；身份匹配仍独立审核。",
+              "evidence": [
+                {
+                  "source": "user-approved-scope",
+                  "locator": "tools/MarkerDetectabilityV2/detectability-policy.json",
+                  "reason": "本成员属于视频正式收集事件，按用户指定口径赋予默认属性；不提供点位身份证明。",
+                  "role": "support"
+                }
+              ]
+            },
+            "visualReviewSource": "out/detectability-v2/review-new-resume/BV19kNu6AEVR-e9.jpg",
+            "audioMethod": "local ASR aligned with visible frames; no listening claim",
+            "firstPassAnalysis": "已分别对比原始攻略：1526608470311550976为北侧栏杆朴素箱，1526609969292886016为两旗之间屋顶朴素箱，1526609257964093440为狐像前基准箱，与369/380/387s逐成员场景吻合。三灯与生成因果未证明。当前表面底图不能替代该秘境层，缺层内独立定位，逐成员未确认；攻略的开扫描文字也不是奇藏探测仪能力证明。",
+            "overviewSupplement": {
+              "status": "identity-confirmed-from-post-review-layer-followup",
+              "priorIdentityStatus": "unresolved",
+              "analysis": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员狐群雕像前中央台阶与基准箱与原始攻略图逐一核对，确认1526609257964093440。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。"
+            },
+            "missingEvidence": [],
+            "limitations": [
+              "领取帧小地图未通过；正确层定位来自片尾全图，成员区分依靠连续路线和独特场景，非逐奖励精确坐标。",
+              "点亮三灯与宝箱生成的因果关系未证明；未据此推导属性。"
+            ],
+            "candidates": [
+              {
+                "stateId": "8",
+                "pointId": "1526609257964093440",
+                "status": "confirmed-after-layer-followup",
+                "analysis": "末帧425.2秒与正确地下层雾隐帘洞 state8 floor -1/57配准，半/全尺度分别36/39内点；相邻雾隐阁-1/58及-2/58不通过。三候选原始点投影位于该建筑群，结合本成员狐群雕像前中央台阶与基准箱与原始攻略图逐一核对，确认1526609257964093440。不是按三箱数组顺序分配；不把片尾玩家坐标倒推为领取时坐标。奖励时小地图36次候选/尺度尝试均失败，只采用正确层轮廓+连续室内路线+独特实景和指南。"
+              }
+            ],
+            "attributeReviewBeforeVideoScopeDefault": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "352.22–355.14s明确说秘境里一共三个宝箱均扫不到；369–389s可见三个对应实体依次领取，覆盖这三成员。不是凭标题，也不把点灯当探测证明。",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "local ASR 352.22–355.14s + visible reward sequence",
+                  "reason": "352.22–355.14s明确说秘境里一共三个宝箱均扫不到；369–389s可见三个对应实体依次领取，覆盖这三成员。不是凭标题，也不把点灯当探测证明。",
+                  "role": "support",
+                  "start": 352.22,
+                  "end": 355.14
+                }
+              ]
+            }
+          },
+          "stateId": "8",
+          "pointId": "1526609257964093440"
+        }
+      ],
+      "uncertainties": [
+        "灯与宝箱的因果关系未直接证明，三箱按同一秘境探索事件分成员。",
+        "机巧点与阁/地下层的专名ASR有错字，定位时以游戏地图画面为准。"
+      ]
+    },
+    {
+      "eventId": "BV19kNu6AEVR:p1:e010",
+      "ordinal": 10,
+      "start": 391,
+      "end": 424,
+      "progressBarMark": {
+        "rawLabel": null,
+        "note": "三个箱标之后的对话尾段，无新增宝箱刻度"
+      },
+      "observedMechanism": "三处后续对话：狐像、灯旁、屋顶桌旁；无新箱体或独立领奖过程",
+      "route": "狐像→左下西南灯旁→向东上屋顶",
+      "transcriptRefs": [
+        {
+          "start": 390.97,
+          "end": 392.05,
+          "text": "你们就自己对一下画"
+        },
+        {
+          "start": 396.96,
+          "end": 397.98,
+          "text": "狐狸对完画之后"
+        },
+        {
+          "start": 397.98,
+          "end": 399.54,
+          "text": "小蜘蛛左下方西南方向往前"
+        },
+        {
+          "start": 401.44,
+          "end": 402.8,
+          "text": "来面前我们再对一下画"
+        },
+        {
+          "start": 408.02,
+          "end": 408.94,
+          "text": "对完画之后呢"
+        },
+        {
+          "start": 408.94,
+          "end": 409.68,
+          "text": "我们再转小游戏"
+        },
+        {
+          "start": 409.68,
+          "end": 411.44,
+          "text": "右边动画样往前爬上来"
+        },
+        {
+          "start": 413.88,
+          "end": 414.68,
+          "text": "再往上"
+        },
+        {
+          "start": 415.66,
+          "end": 416.5,
+          "text": "好对画"
+        },
+        {
+          "start": 419.45,
+          "end": 420.71,
+          "text": "这里对完画之后呢"
+        },
+        {
+          "start": 420.71,
+          "end": 422.83,
+          "text": "我们这个奇藏探测仪扫不到的宝箱"
+        },
+        {
+          "start": 422.83,
+          "end": 423.81,
+          "text": "到这里就结束了"
+        }
+      ],
+      "evidenceFrames": [
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00392.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00393.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00396.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00397.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00403.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00404.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00407.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00408.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00416.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00418.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00420.00.jpg",
+        "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00422.00.jpg"
+      ],
+      "rewards": [],
+      "relatedEventIds": [
+        "BV19kNu6AEVR:p1:e009"
+      ],
+      "uncertainties": [
+        "对话有黑屏跳剪；未证明额外收集奖励，保留尾段但不增加奖励数。"
+      ]
+    }
+  ],
+  "nonEventIntervals": [
+    [
+      0,
+      4.9,
+      "主题介绍；游戏地图画面，不读取作者总览"
+    ],
+    [
+      424,
+      425.401375,
+      "结尾游戏地图位置展示"
+    ]
+  ],
+  "reviewedEvidence": [
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00028.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00040.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00068.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00100.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00112.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00144.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00178.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00214.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00251.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00280.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00292.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00350.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00362.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00374.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00386.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00398.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00410.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-1s-00422.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-5s-00005.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-5s-00060.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-5s-00120.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-5s-00180.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-5s-00240.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-5s-00300.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-5s-00360.00.jpg",
+    "out/detectability-v2/BV19kNu6AEVR/p01/visual/scenes-5s-00420.00.jpg"
+  ],
+  "transcriptCorrections": [
+    {
+      "start": 37.46,
+      "end": 40.3,
+      "raw": "潮汐之翼",
+      "corrected": "潮汐之遗",
+      "basis": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00039.00.jpg"
+    },
+    {
+      "start": 25.06,
+      "end": 26.92,
+      "raw": "红冰怪",
+      "corrected": "红名怪",
+      "basis": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00041.00.jpg"
+    },
+    {
+      "start": 103.23,
+      "end": 107.33,
+      "raw": "虎鸣怪",
+      "corrected": "红名怪",
+      "basis": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00104.00.jpg"
+    },
+    {
+      "start": 143.73,
+      "end": 145.29,
+      "raw": "红冰怪",
+      "corrected": "红名怪",
+      "basis": "out/detectability-v2/BV19kNu6AEVR/p01/visual/frame-00145.00.jpg"
+    }
+  ],
+  "coverageNotes": [
+    "进度标识潮1–7、箱1–4均有对应奖励；共7个金色交互奖励+4箱，不以红名怪数量计算奖励。",
+    "作者口述八个红名怪包含产生普通箱子的战斗；不能因此把箱1改成潮汐之遗。",
+    "原视频已有字幕也存在同音字错误，校正文稿优先游戏UI文字。所有身份和属性等待下一阶段独立审核。"
+  ]
+}

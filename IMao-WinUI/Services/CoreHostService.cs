@@ -284,7 +284,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         bool? expectedAutoReplanEnabled = null, string? expectedAutoReplanProfile = null,
         int? completionRangePixels = null, int? guideRangePixels = null, int? farmRangePixels = null,
         int? markerMergeOverlapPercent = null, string? gamepadDeviceId = null,
-        GamepadButtonLayout? gamepadButtonLayout = null)
+        GamepadButtonLayout? gamepadButtonLayout = null,
+        bool? gapFillModeEnabled = null, bool? expectedGapFillModeEnabled = null)
     {
         await lifecycleLock.WaitAsync(cancellationToken);
         try
@@ -293,6 +294,11 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                 (expectedAutoReplanEnabled.HasValue && expectedAutoReplanEnabled != Configuration.AutoReplanEnabled))
             {
                 ReportUserError("实时规划设置已变化，请重试。");
+                return false;
+            }
+            if (expectedGapFillModeEnabled.HasValue && expectedGapFillModeEnabled != Configuration.GapFillModeEnabled)
+            {
+                ReportUserError("查漏补缺设置已变化，请重试。");
                 return false;
             }
             // Persist the desired state before sending it. A disconnected core restores it on reconnect.
@@ -311,6 +317,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                     MapStatusBarEnabled = mapStatusBarEnabled ?? old.MapStatusBarEnabled,
                     StatusBallEnabled = statusBallEnabled ?? old.StatusBallEnabled,
                     AutoReplanEnabled = autoReplanEnabled ?? old.AutoReplanEnabled,
+                    GapFillModeEnabled = gapFillModeEnabled ?? old.GapFillModeEnabled,
                     NearestCompletionKey = nearestCompletionKey ?? old.NearestCompletionKey,
                     ManualRouteKey = manualRouteKey ?? old.ManualRouteKey,
                     CurrentTargetGuideKey = currentTargetGuideKey ?? old.CurrentTargetGuideKey,
@@ -524,6 +531,20 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         catch (Exception exception) { ReportUserError("实时规划设置未生效：" + exception.Message); }
     }
 
+    private async Task ApplyGapFillRequestAsync(Session session, JsonElement request)
+    {
+        try
+        {
+            if (!ReferenceEquals(active, session) || session.Stop.IsCancellationRequested) return;
+            if (!request.TryGetProperty("enabled", out var enabled) || enabled.ValueKind is not (JsonValueKind.True or JsonValueKind.False) ||
+                !request.TryGetProperty("expectedEnabled", out var expected) || expected.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                throw new InvalidOperationException("查漏补缺设置请求无效");
+            await ConfigureAsync(gapFillModeEnabled: enabled.GetBoolean(), expectedGapFillModeEnabled: expected.GetBoolean(), cancellationToken: session.Stop.Token);
+        }
+        catch (OperationCanceledException) when (session.Stop.IsCancellationRequested) { }
+        catch (Exception exception) { ReportUserError("查漏补缺设置未生效：" + exception.Message); }
+    }
+
     private async Task ReadEventsAsync(Session session)
     {
         try
@@ -547,6 +568,11 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                         if (root.GetProperty("accepted").GetBoolean()) pending.TrySetResult(root.GetProperty("data").Clone());
                         else pending.TrySetException(new InvalidOperationException(root.GetProperty("message").GetString() ?? "点位操作失败"));
                     }
+                }
+                else if (type == "markerGapFillRequested")
+                {
+                    var value = root.Clone();
+                    OnSessionUi(session, () => _ = ApplyGapFillRequestAsync(session, value));
                 }
                 else if (type == "markerAutoReplanRequested")
                 {

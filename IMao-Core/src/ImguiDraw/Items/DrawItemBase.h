@@ -13,6 +13,7 @@ using json = nlohmann::json;
 
 #include "../../Domain/MapData.h"
 #include "../../Runtime/NearbySelection.h"
+#include "../../Runtime/GapFillFilter.h"
 #include "../../Runtime/CompletionReadView.h"
 #include "../../Runtime/RenderCompletionRead.h"
 
@@ -69,6 +70,7 @@ public:
     // waiting for it, so an unambiguous nearest point opens without a chooser window.
     static json ResolveNearbyGuide(const NearbySelection::Observation& initial);
     static std::uint64_t MarkerFilterRevision();
+    static bool AllowsGapFill(const std::string& scene, const ItemDatas& item);
     static void NotifyNearby(const std::string& message, const std::string& outcome);
     static void UpdateMarkerContext(const std::string& sceneName);
     static void ClearMarkerCandidates(bool force = false);

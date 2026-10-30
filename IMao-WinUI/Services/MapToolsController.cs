@@ -558,6 +558,14 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
                 await guides.OpenRouteGuideFromToolsAsync(profile, gameIdentity.Handle, window.Handle);
                 return;
             }
+            if (action == "gapFill")
+            {
+                bool applied = await core.ConfigureAsync(gapFillModeEnabled: !core.Configuration.GapFillModeEnabled,
+                    expectedGapFillModeEnabled: core.Configuration.GapFillModeEnabled,
+                    cancellationToken: sessionCancellation?.Token ?? default);
+                if (!applied) Report("查漏补缺设置尚未应用：" + core.LastFault);
+                return;
+            }
             if (action == "autoReplan")
             {
                 bool applied = await core.ConfigureAsync(autoReplanEnabled: !core.Configuration.AutoReplanEnabled,

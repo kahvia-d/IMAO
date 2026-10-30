@@ -1,0 +1,161 @@
+{
+  "entries": [
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e002",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1343632032590700544",
+      "analysis": "黎乔利港出发向东南飞独立平顶小岛；祭坛草台二级石阶、左侧树/蓝灌木、右树桩及远岸突起轮廓与攻略吻合。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e002-0.jpg",
+        "out/detectability-v2/route-shrines/e2-106s.jpg",
+        "out/detectability-v2/route-shrines/e2-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1343632032590700544-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1343632032590700544.json",
+        "out/detectability-v2/route-shrines/confirmed-shrines-map.png"
+      ],
+      "limitations": [
+        "112秒黄箭头虽未贴图像底边，已处于游戏地图可用视窗的下边界；动态前后帧证明它是离屏方向提示，撤销7318,3985位置及52单位偏差论证，身份依据独立小岛路线与独特场景。"
+      ]
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e003",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1344663479527120896",
+      "analysis": "舵盘村码头向西跨栏杆，木板台背靠岩壁；左侧两鱼篮、大圆蓝吊灯、右矮蟹盘与攻略对应。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e003-0.jpg",
+        "out/detectability-v2/route-shrines/e3-134s.jpg",
+        "out/detectability-v2/route-shrines/e3-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1344663479527120896-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1344663479527120896.json",
+        "out/detectability-v2/route-shrines/confirmed-shrines-map.png"
+      ],
+      "limitations": []
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e004",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1344664011070038016",
+      "analysis": "回舵盘码头向东接两次勾索，跨大粉花到高石台；左大鱼篮、下方小篮、右侧两鱼盆及阶梯状岩壁逐一对应。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e004-0.jpg",
+        "out/detectability-v2/route-shrines/e4-162s.jpg",
+        "out/detectability-v2/route-shrines/e4-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1344664011070038016-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1344664011070038016.json",
+        "out/detectability-v2/route-shrines/confirmed-shrines-map.png"
+      ],
+      "limitations": []
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e006",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1343634231349714944",
+      "analysis": "沉静湾码头东北过大粉花到残墙正面；双拱雕纹墙、右突石/青色草坡及坛左矮蟹盘与攻略一致。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e006-0.jpg",
+        "out/detectability-v2/route-shrines/e6-206s.jpg",
+        "out/detectability-v2/route-shrines/e6-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1343634231349714944-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1343634231349714944.json",
+        "out/detectability-v2/route-shrines/confirmed-shrines-map.png"
+      ],
+      "limitations": []
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e008",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1344432685607870464",
+      "analysis": "莱耶斯遗迹码头西北飞沉船岛；坛后大岩块、脚下木船板、右侧破船和远处黄矿对应攻略，区别普通树根祭坛。 撤销首轮“岩下木板不是同处”判断：242–258秒连续飞近沉船岛，256秒坛后岩块、脚下木板、右侧破船与攻略完全一致；旧判断忽略了奖励周围船板，非发现另一个同型祭坛。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e008-0.jpg",
+        "out/detectability-v2/route-shrines/e8-256s.jpg",
+        "out/detectability-v2/route-shrines/e8-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1344432685607870464-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1344432685607870464.json",
+        "out/detectability-v2/route-shrines/confirmed-shrines-map.png"
+      ],
+      "limitations": [],
+      "exclusionReversals": [
+        {
+          "locator": "out/detectability-v2/matching-rinascita/guides/guide-8-1344432685607870464-1.png",
+          "reason": "撤销首轮“岩下木板不是同处”判断：242–258秒连续飞近沉船岛，256秒坛后岩块、脚下木板、右侧破船与攻略完全一致；旧判断忽略了奖励周围船板，非发现另一个同型祭坛。"
+        }
+      ]
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e010",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1342170544779616256",
+      "analysis": "从E9继续攀主岛最高峰至单树山顶，交十蟹出辉光箱；草台阶、左高右矮坛、背后树冠及对岸旗杆城墙完全对应新补攻略。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e010-0.jpg",
+        "out/detectability-v2/route-shrines/e10-325s.jpg",
+        "out/detectability-v2/route-shrines/e10-comparison.jpg",
+        "out/detectability-v2/route-shrines/guide-8-1342170544779616256-1.png",
+        "out/detectability-v2/route-shrines/guide-8-1342170544779616256.json",
+        "out/detectability-v2/route-shrines/confirmed-shrines-map.png"
+      ],
+      "limitations": [
+        "此ID来自全库位置与供奉文本补搜，不沿用此前朴素坛候选。"
+      ]
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e012",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1344430297941598208",
+      "analysis": "从E11草顶东南下降至最低海岸熊旁台地；后方斜倒几何遗迹板、右高左矮祭坛及坛前圆石平台与攻略一致。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e012-0.jpg",
+        "out/detectability-v2/route-shrines/e12-358s.jpg",
+        "out/detectability-v2/route-shrines/e12-comparison.jpg",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1344430297941598208-1.png",
+        "out/detectability-v2/matching-rinascita/guides/guide-8-1344430297941598208.json",
+        "out/detectability-v2/route-shrines/confirmed-shrines-map.png"
+      ],
+      "limitations": [
+        "箱已出现；领取仍未证实，不因身份确认修改原领取时间。"
+      ]
+    },
+    {
+      "eventId": "BV1hHuGzFEZG:p1:e001",
+      "member": 1,
+      "status": "reviewed-route-and-guide",
+      "decision": "confirm",
+      "stateId": "8",
+      "pointId": "1348745715440394240",
+      "analysis": "52秒选德雷克岛小型信标1339271282462375936（6874.34,4385.9），64秒向北穿岩拱，70–76秒到沉船船首高一级木台白箱。全库检索该信标北侧找到6837,4298的露天白箱，攻略明确开启获得眷属珍奇契约，与76秒实际奖励吻合；船首斜木梁、船舷和下层金色装饰箱位置也一一对应。视频领取的是上层白箱，不是下层金色箱；此前渊海遗藏类别候选不符。",
+      "evidence": [
+        "out/detectability-v2/route-rinascita/route-BV1hHuGzFEZG-p01-e001-0.jpg",
+        "out/detectability-v2/route-shrines/e1-73s.jpg",
+        "out/detectability-v2/route-shrines/e1-comparison.jpg",
+        "out/detectability-v2/route-shrines/guide-8-1348745715440394240-1.png",
+        "out/detectability-v2/route-shrines/guide-8-1348745715440394240.json"
+      ],
+      "limitations": [
+        "“海墟秘匣”为视频线索，不据此强制点库类别；点库归类为朴素奇藏箱。"
+      ]
+    }
+  ]
+}

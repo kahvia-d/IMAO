@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>V2 · 视频时间轴审阅</title>
+<style>
+:root{color-scheme:dark;font:15px/1.6 system-ui,sans-serif;background:#0d131c;color:#dce5ef}*{box-sizing:border-box}body{margin:0}button,select{font:inherit;color:inherit;background:#1c2a3c;border:1px solid #42556c;border-radius:7px;padding:7px 11px;cursor:pointer}button:hover,button.active{background:#284b67}button:disabled{opacity:.4;cursor:default}a{color:#8bd3f5}header{padding:22px 28px;border-bottom:1px solid #344256}h1{font-size:25px;margin:0}h2{font-size:19px;margin:0 0 12px}h3{font-size:16px}p{margin:8px 0}.muted{color:#a1b1c3;font-size:13px}.badge{display:inline-block;padding:3px 10px;background:#233142;border-radius:99px;margin:3px}.ok{color:#9be5b8}.pending{color:#ffd08a}.layout{display:grid;grid-template-columns:285px minmax(0,1fr)}aside{padding:16px;border-right:1px solid #344256;max-height:calc(100vh - 155px);overflow:auto;position:sticky;top:0}aside button{display:block;width:100%;text-align:left;margin:0 0 7px}main{padding:22px;min-width:0;max-width:1500px}.panel{padding:18px;border:1px solid #344256;border-radius:12px;margin-bottom:18px;background:#121d2a}.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.controls select{max-width:100%;flex:1}video{width:100%;max-height:62vh;background:#03060a;margin-top:12px}audio{width:100%;height:36px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.frames{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}figure{margin:0}img{width:100%;border-radius:6px}figcaption{font-size:12px;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}table{width:100%;border-collapse:collapse}td,th{text-align:left;vertical-align:top;padding:8px;border-bottom:1px solid #344256}.scroll{overflow:auto}.source{border-left:4px solid #69bce7}.support{border-left:4px solid #95c893}.exclude{border-left:4px solid #dcaf77}.textrow{padding:9px 0;border-bottom:1px solid #263749}.time{font-size:12px;margin-right:8px}.alert{color:#ffc18c}#mediaStatus{min-height:24px}@media(max-width:850px){.layout{display:block}aside{position:static;max-height:240px;border-right:0}main{padding:12px}header{padding:16px}}
+</style></head><body>
+<header><h1>视频时间轴审阅 <span class="muted">V2 · 离线证据浏览</span></h1><details><summary>数据状态（可选）</summary><div id="gates"></div><div id="snapshot" class="muted"></div></details><div id="delivery"></div></header>
+<section class="panel"><h2>身份待审清单</h2><p>视频正式目标按用户指定口径默认为不可探测。此处只审核它对应哪个 IMao 点位。选择条目后点击“查看证据”，页面会跳到对应事件；已整组确认的奖励不再列入待审；剩余多箱事件可整体判断，无需区分左右顺序。</p><div class="controls"><select id="identityQueue" aria-label="身份待审奖励"></select><button id="openIdentity">查看证据</button></div></section>
+<div class="layout"><aside><h2>分P状态</h2><div id="parts"></div></aside><main>
+<section class="panel"><h2 id="partTitle"></h2><div id="partStatus"></div><div class="controls"><button id="prev">← 上一事件</button><select id="eventSelect" aria-label="按视频顺序选择事件"></select><button id="next">下一事件 →</button></div><p id="eventMeta"></p>
+<video id="video" controls preload="metadata" playsinline></video><audio id="audio" preload="metadata"></audio>
+<div class="controls"><button id="play">同步播放 / 暂停</button><button id="jump">跳到事件起点</button><label><input id="sound" type="checkbox" checked>独立音轨</label><span id="clock" class="muted"></span></div><p id="mediaStatus" class="alert" role="status"></p><p class="muted">视频无音轨；独立音轨跟随视频播放、暂停和跳转。容器时间戳同步不等于感知对齐已经核验。</p></section>
+<div id="eventContent"></div><section class="panel"><details><summary>本分P全段转写、非事件区间与审阅备注</summary><div id="partDetails"></div></details></section>
+<section class="panel"><details><summary id="pathSummary"></summary><pre id="pathIssues"></pre></details></section>
+</main></div>
+<script id="review-data" type="application/json">__REVIEW_DATA__</script>
+<script>
+'use strict';
+const D=JSON.parse(document.getElementById('review-data').textContent);
+const $=id=>document.getElementById(id), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const json=v=>'<pre>'+esc(JSON.stringify(v,null,2))+'</pre>';
+const time=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?`${Math.floor(v/60)}:${(v%60).toFixed(1).padStart(4,'0')}`:'未知';
+const status=v=>v==='reviewed'?'<span class="ok">已审阅</span>':'<span class="pending">'+esc(v||'尚未开始')+'</span>';
+const video=$('video'),audio=$('audio');let pi=0,ei=0,seekPending=null,playGeneration=0;
+function url(path){return D.assets[path]||null}
+function badge(name,open){return `<span class="badge ${open?'ok':'pending'}">${name}：${open?'已开放':'未开放'}</span>`}
+const complete=D.parts.filter(p=>p.timeline&&['reviewStatus','audioReviewStatus','progressBarReviewStatus'].every(k=>p.timeline[k]==='reviewed')&&!p.errors.length).length;
+$('gates').innerHTML=`<span class="badge">首阶段 ${complete}/${D.parts.length} 分P</span>`+badge('逐箱匹配门禁',D.gates.matching)+badge('总览补漏门禁',D.gates.overview);
+$('snapshot').textContent=`构建快照 ${D.generatedAt} · 后续结果需重新运行 build_review.py 更新 · 身份未确认则保留待定；视频正式目标默认不可探测`;
+if(D.results){const r=D.results;$('delivery').innerHTML=`<p>${r.parts} 分P · ${r.events} 事件 · ${r.counts.rewards} 奖励成员 · ${r.positives.length} 去重遗漏正例 · ${r.unresolved.length} 待核实成员</p><details><summary>数据导出（可选）</summary><p>${Object.entries(D.downloads||{}).map(([name,path])=>`<a href="${esc(url(path))}" target="_blank" rel="noopener">${esc({summary:'汇总',positives:'遗漏正例',unresolved:'待核实',matching:'完整匹配', 'v1-diff':'新旧差异'}[name]||name)}</a>`).join(' · ')}</p></details><p class="muted">未列入正例的点位保持未知。总览补漏：${esc(D.overviewStatus)}。离线作者证言与图文交叉核对，不代表逐点实机扫描。</p>`}
+$('pathSummary').textContent=`资源检查：${Object.keys(D.assets).length} 个可用，${D.pathIssues.length} 个问题`;
+$('pathIssues').textContent=D.pathIssues.length?JSON.stringify(D.pathIssues,null,2):'所有已引用本地资源存在。';
+function current(){return D.parts[pi]}
+function event(){return current().timeline?.events?.[ei]}
+function stop(){playGeneration++;video.pause();audio.pause()}
+function seek(t){seekPending=Number(t)||0;if(video.readyState){video.currentTime=seekPending;seekPending=null}if(audio.readyState)audio.currentTime=Number(t)||0;$('clock').textContent=time(t)}
+function sync(force=false){if(current().audio&&audio.readyState&&(force||Math.abs(audio.currentTime-video.currentTime)>.3))audio.currentTime=video.currentTime;audio.playbackRate=video.playbackRate}
+function playAudio(){const generation=playGeneration;if(!url(current().audio)||!$('sound').checked)return;sync(true);audio.play().then(()=>{if(generation!==playGeneration||video.paused)audio.pause()}).catch(()=>{$('mediaStatus').textContent='独立音轨未能播放；请点击同步播放按钮或检查本地文件。'})}
+video.addEventListener('loadedmetadata',()=>{if(seekPending!==null)seek(seekPending)});
+audio.addEventListener('loadedmetadata',()=>sync(true));
+video.addEventListener('play',playAudio);video.addEventListener('playing',playAudio);video.addEventListener('waiting',()=>audio.pause());video.addEventListener('pause',()=>{playGeneration++;audio.pause()});video.addEventListener('ended',()=>audio.pause());video.addEventListener('seeking',()=>sync(true));video.addEventListener('ratechange',()=>sync(true));video.addEventListener('timeupdate',()=>{sync();$('clock').textContent=time(video.currentTime)});
+video.addEventListener('error',()=>{$('mediaStatus').textContent='视频加载失败，请检查媒体路径与浏览器支持。'});audio.addEventListener('error',()=>{$('mediaStatus').textContent='独立音轨加载失败。'});
+$('play').onclick=()=>{if(video.paused){video.play().catch(()=>{$('mediaStatus').textContent='播放被浏览器阻止，请使用视频原生播放按钮。'})}else stop()};
+$('sound').onchange=()=>{if(!$('sound').checked)audio.pause();else if(!video.paused)playAudio()};$('jump').onclick=()=>seek(event()?.start||0);
+function frames(items){return '<div class="frames">'+(items||[]).map(item=>{const path=typeof item==='string'?item:item.path;const href=url(path);return `<figure>${href?`<a href="${esc(href)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(href)}" alt="${esc(typeof item==='string'?path:(item.caption||item.reason||path))}"></a>`:`<p class="alert">资源不可用</p>`}<figcaption>${esc(path)}${typeof item==='object'?json(item):''}</figcaption></figure>`}).join('')+'</div>'}
+function evidence(items){return (items||[]).map(item=>{const locator=item.locator||item.path||'',assetPath=url(locator)?locator:(url(item.source)?item.source:locator),href=url(assetPath),isImage=/\.(png|jpe?g|webp|gif)(?:#.*)?$/i.test(assetPath);return `<figure><figcaption><strong>${esc(item.source)}</strong> · ${esc(locator)}<p>${esc(item.reason)}</p><span class="muted">角色：${esc(item.role)}</span></figcaption>${href?`<a href="${esc(href)}" target="_blank" rel="noopener">${isImage?`<img loading="lazy" src="${esc(href)}" alt="${esc(item.reason)}">`:'打开本地证据'}</a>`:''}</figure>`}).join('')||'<p class="muted">尚无证据记录。</p>'}
+function pictureCards(paths,label){return '<div class="frames">'+(paths||[]).filter(x=>url(x)).map(x=>`<figure><a href="${esc(url(x))}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(url(x))}" alt="${esc(label)}"></a><figcaption>${esc(label)} · 点击放大</figcaption></figure>`).join('')+'</div>'}
+function rewardReview(r){
+ const e=event(),m=r.matchingReview||{},g=(e.identityGroups||[]).find(g=>g.members.includes(r.member));
+ const confirmed=r.identityStatus==='confirmed'||g;
+ const why=confirmed?(g?'整组点位已确认，无需逐箱对应。':m.reviewedBy==='user'?m.analysis:'点位已确认。'):(e.reviewBrief?.why||'尚未唯一确定对应点位，需要对照下面的视频与攻略。');
+ const images=(m.videoEvidence||[]).map(x=>x.locator).filter(x=>/\.(png|jpe?g|webp)$/i.test(x)&&url(x));
+ const candidates=m.candidates||[];
+ function candidateCard(c,i){return `<section><h3>候选 ${i+1} · ${esc(c.name||'收集点位')}${c.status==='excluded'?'（此前排除，仍可复核）':''}</h3><p>${esc(c.displayDescription||c.analysis||'暂无可用攻略文字。')}</p>${c.guideUrl?`<p><a href="${esc(c.guideUrl)}" target="_blank" rel="noopener">打开库街区此点位攻略 ↗</a></p>`:'<p class="muted">尚无可用攻略跳转链接。</p>'}${pictureCards((c.displayImages||c.guideImages||[]).slice(0,2),'库街区候选攻略图')}${(c.displayImages||c.guideImages||[]).length>2?`<details><summary>更多攻略图片</summary>${pictureCards((c.displayImages||c.guideImages).slice(2),'库街区候选攻略图')}</details>`:''}</section>`}
+ return `<section class="panel" data-member="${esc(r.member)}"><h2>成员 ${r.member} · ${esc(r.observedType)} · ${confirmed?'已确认':'待你判断'}</h2><h3>${confirmed?'当前结论':'为什么不确定'}</h3><p>${esc(why)}</p><div class="grid"><section><h3>视频里是什么样的</h3><p>${esc(e.observedMechanism)}</p><button data-seek="${Number(r.appearanceSeconds??e.start)}">跳到奖励画面 ${time(r.appearanceSeconds??e.start)}</button>${pictureCards(images.slice(0,1),'视频奖励画面')}</section><section><h3>攻略里是什么样的</h3>${candidates.length?candidateCard(candidates[0],0):'<p>尚无可直接展示的候选攻略，不能据此判断匹配。</p>'}${candidates.length>1?`<details><summary>其他 ${candidates.length-1} 个候选</summary>${candidates.slice(1).map((c,i)=>candidateCard(c,i+1)).join('')}</details>`:''}</section></div><details><summary>详细证据、路线与历史判断（可选）</summary>${technicalRewardReview(r)}</details></section>`;
+}
+function technicalRewardReview(r){
+ const group=(event()?.identityGroups||[]).find(g=>g.members.includes(r.member));
+ if(group)return `<section class="panel" data-member="${esc(r.member)}"><h2>奖励成员 ${esc(r.member)} · 整组已确认，不需逐箱绑定</h2><p>本组全部ID已标为不可探测；下列ID是集合，不按排列顺序对应视频成员。</p><p>${esc(group.analysis)}</p>${json(group.points)}<details><summary>匹配支持 · 整组视频、位置和各ID攻略证据</summary>${evidence(group.videoEvidence)}${evidence(group.positionEvidence)}${evidence(group.guideEvidence)}</details><details><summary>排除证据 · 原逐箱待定记录（历史）</summary>${json(r.matchingReview)}</details></section>`;
+ const m=r.matchingReview||{},exclusions=m.exclusionEvidence||[],key=x=>JSON.stringify([x.source,x.locator||x.path]),excluded=new Set(exclusions.map(key));
+ const support=items=>(items||[]).filter(x=>x.role==='support'&&!excluded.has(key(x)));
+ const conflicts=['positionEvidence','videoEvidence','guideEvidence'].flatMap(k=>m[k]||[]).concat(m.attributeReview?.evidence||[]).filter(x=>x.role!=='support'||excluded.has(key(x)));
+ const candidates=m.candidates||m.candidateIds||[];
+ return `<section class="panel" data-member="${esc(r.member)}"><h2>奖励成员 ${esc(r.member)} · 匹配审阅</h2><p>身份：${esc(r.identityStatus||'pending')} · 探测性：${esc(r.detectability||'unknown')} · 首轮：${esc(r.firstPassStatus||'尚未开始')}</p><p>stateId：${esc(r.stateId??'未确认')} · pointId：${esc(r.pointId??'未确认')}</p><p>${esc(m.analysis||'匹配尚未开始。')}</p>
+ ${r.routeFollowup?`<p><strong>连续路线复查：</strong>${esc(r.routeFollowup.decision)} · 原结论保存在历史记录中。</p><h3>本轮反证与限制</h3>${json(m.routeCounterEvidence||[])}${json(m.routeLimitations||[])}`:''}
+ <h3>候选点位</h3>${candidates.length?candidates.map(c=>`<div class="textrow">${json(c)}</div>`).join(''):'<p class="muted">暂无候选记录。</p>'}
+ <section class="support" data-review-section="support"><h3>匹配支持 · 位置证据</h3>${evidence(support(m.positionEvidence))}<h3>视频证据</h3>${evidence(support(m.videoEvidence))}<h3>攻略证据</h3>${evidence(support(m.guideEvidence))}</section>
+ <details data-review-section="diagnostic"><summary>定位诊断 · 包含失败匹配与已否决的自动提议</summary>${evidence(m.diagnosticEvidence)}</details>
+ <section class="exclude" data-review-section="exclusion"><h3>排除证据 · 单独归档</h3>${evidence(exclusions)}${conflicts.length?'<p class="alert">存在证据角色冲突，以下记录未计入支持。</p>'+evidence(conflicts):''}</section>
+ ${r.routeFollowup?`<details><summary>复查前的历史结论</summary>${json(r.routeFollowup.before)}</details>`:''}
+ <section data-review-section="missing"><h3>缺失证明</h3>${json(m.missingEvidence||m.missingProofs||[])}<p class="muted">未列出缺失项不代表证明完整。</p></section>
+ <section data-review-section="attribute"><h3>属性审阅 · 独立于身份</h3><p>${esc(m.attributeReview?.status||'尚未开始')} · ${esc(m.attributeReview?.detectability||'unknown')}</p><p>${esc(m.attributeReview?.analysis||'暂无属性分析。')}</p>${evidence(support(m.attributeReview?.evidence))}</section></section>`;
+}
+function textRows(segments,corrections){return (segments||[]).map(s=>{const cs=(corrections||[]).filter(c=>c.end>s.start&&c.start<s.end);return `<div class="textrow"><button class="time" data-seek="${Number(s.start)}">${time(s.start)}–${time(s.end)}</button><span>${esc(s.text)}</span>${cs.map(c=>`<p class="ok">校正：${esc(c.raw)} → ${esc(c.corrected)}</p><p class="muted">依据：${esc(c.basis)}</p>`).join('')}</div>`}).join('')||'<p class="muted">暂无转写文本。</p>'}
+function bindSeek(container){container.querySelectorAll('[data-seek]').forEach(b=>b.onclick=()=>seek(Number(b.dataset.seek)))}
+function choosePart(i){stop();pi=i;ei=0;const p=current(),t=p.timeline;$('parts').querySelectorAll('button').forEach((b,j)=>b.classList.toggle('active',j===i));$('partTitle').textContent=`${p.manifest.bvid} · P${p.manifest.part} · ${p.manifest.partTitle}`;
+ $('partStatus').innerHTML=`时间轴 ${status(t?.reviewStatus)} · 文本与画面 ${status(t?.audioReviewStatus)} · 进度条 ${status(t?.progressBarReviewStatus)}${p.errors.length?'<p class="alert">契约问题：'+esc(p.errors.join('；'))+'</p>':''}`;
+ $('eventSelect').innerHTML=(t?.events||[]).map((e,j)=>`<option value="${j}">${e.ordinal}. ${time(e.start)} · ${esc(e.observedMechanism)}</option>`).join('')||'<option>暂无事件 / 前言</option>';
+ for(const [el,path] of [[video,p.video],[audio,p.audio]]){if(url(path))el.src=url(path);else el.removeAttribute('src');el.load()}
+ $('mediaStatus').textContent=[!url(p.video)?'缺少视频':'',!url(p.audio)?'缺少独立音轨':''].filter(Boolean).join('；');
+ $('partDetails').innerHTML=(p.overview?'<h3>总览补漏（首轮之后）</h3><p>'+esc(p.overview.analysis)+'</p>'+frames(p.overview.evidence?.filter(x=>/\.(jpg|png|webp)$/i.test(x)))+'<details><summary>总览关联与缺口</summary>'+json(p.overview)+'</details>':'')+'<h3>非事件区间</h3>'+json(t?.nonEventIntervals||[])+'<h3>覆盖备注</h3><p>'+esc(t?.coverageNotes||'尚未开始')+'</p><p class="muted">音频审阅方法：'+esc(t?.audioReviewMethod||'尚未开始')+' · 对齐：'+esc(p.alignmentStatus||'未知')+'</p><h3>完整原始 ASR（校正单独展示）</h3>'+textRows(p.transcript,t?.transcriptCorrections);bindSeek($('partDetails'));chooseEvent(0);
+}
+function chooseEvent(i){stop();ei=i;const e=event(),p=current(),t=p.timeline;$('eventSelect').value=String(i);$('prev').disabled=!e||i===0;$('next').disabled=!e||i>=t.events.length-1;
+ if(!e){$('eventMeta').textContent='无事件记录；前言或尚未审阅。';$('eventContent').innerHTML='<section class="panel">'+esc(t?.coverageNotes||'时间轴尚未开始，不能从标题推断奖励。')+'</section>';seek(0);return}
+ $('eventMeta').textContent=`${e.eventId} · ${time(e.start)}–${time(e.end)} · ${e.rewards?.length||0} 个奖励成员`;seek(e.start);
+ const raw=p.transcript.filter(s=>s.end>e.start&&s.start<e.end);
+ $('eventContent').innerHTML=`${(e.rewards||[]).map(rewardReview).join('')||'<p>此事件仅为任务前置，不计收集点位。</p>'}<details class="panel"><summary>完整时间轴、来源画面与转写（可选）</summary><section class="panel"><h2>${esc(e.observedMechanism)}</h2><p>${esc(e.route)}</p><details><summary>作者进度条标记</summary>${json(e.progressBarMark)}</details><h3>奖励成员</h3><div class="scroll"><table><thead><tr><th>成员 / 画面类型</th><th>触发 / 出现 / 领取</th><th>身份 / 探测性 / 首轮</th></tr></thead><tbody>${(e.rewards||[]).map(r=>`<tr><td>${esc(r.member)} · ${esc(r.observedType)}</td><td>${['triggerSeconds','appearanceSeconds','collectionSeconds'].map(k=>r[k]===null||r[k]===undefined?'未知':`<button class="time" data-seek="${Number(r[k])}">${time(r[k])}</button>`).join(' / ')}</td><td>${esc((e.identityGroups||[]).some(g=>g.members.includes(r.member))?'整组已确认':(r.identityStatus||'pending'))} / ${esc(r.detectability||'unknown')} / ${esc(r.firstPassStatus||'尚未开始')}</td></tr>`).join('')}</tbody></table></div><h3>疑点</h3>${json(e.uncertainties||[])}</section>
+ <section class="panel source"><h2>来源画面 · 当前视频事件</h2><p class="muted">仅作为视频过程证据，不代表点位身份或不可探测性已确认。</p>${frames(e.evidenceFrames)}</section>
+ <section class="panel"><h2>原始 ASR 与单独校正</h2>${textRows(raw.length?raw:e.transcriptRefs,t.transcriptCorrections)}</section>
+ <p class="muted">匹配支持 / 排除证据见各成员详情。</p></details>`;bindSeek($('eventContent'));
+}
+const identityQueue=[];
+D.parts.forEach((p,partIndex)=>(p.timeline?.events||[]).forEach((e,eventIndex)=>(e.rewards||[]).forEach(r=>{if(r.identityStatus!=='confirmed'&&!(e.identityGroups||[]).some(g=>g.members.includes(r.member)))identityQueue.push({partIndex,eventIndex,member:r.member,label:`${p.manifest.partTitle} · P${p.manifest.part} · E${e.ordinal} / 成员${r.member} · ${time(r.collectionSeconds??e.start)} · ${r.observedType||''}`})})));
+$('identityQueue').innerHTML=identityQueue.length?identityQueue.map((x,i)=>`<option value="${i}">${esc(x.label)}</option>`).join(''):'<option>全部收集目标已完成身份审核，无待审项目</option>';
+$('identityQueue').disabled=!identityQueue.length;$('openIdentity').disabled=!identityQueue.length;
+$('openIdentity').onclick=()=>{const x=identityQueue[Number($('identityQueue').value)];if(!x)return;choosePart(x.partIndex);chooseEvent(x.eventIndex);$('partTitle').scrollIntoView?.({behavior:'smooth'});};
+$('parts').innerHTML=D.parts.map((p,i)=>`<button data-part="${i}"><strong>${esc(p.manifest.partTitle)} · P${p.manifest.part}</strong><br><span class="muted">${esc(p.manifest.bvid)}</span><br>${status(p.timeline?.reviewStatus)} · ${p.timeline?.events?.length||0} 事件${p.errors.length?' · 契约异常':''}</button>`).join('');
+$('parts').querySelectorAll('button').forEach((b,i)=>b.onclick=()=>choosePart(i));$('eventSelect').onchange=()=>chooseEvent(Number($('eventSelect').value));$('prev').onclick=()=>chooseEvent(ei-1);$('next').onclick=()=>chooseEvent(ei+1);if(D.parts.length)choosePart(0);
+</script></body></html>

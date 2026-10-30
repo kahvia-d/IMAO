@@ -163,6 +163,9 @@ PlanningGesture gesture;
 std::optional<PlanningGesture> pendingGesture;
 std::string planningNotice;
 std::optional<bool> autoReplanPending;
+std::optional<bool> gapFillPending;
+Clock::time_point gapFillRequestedAt;
+std::uint64_t observedGapFilterRevision=0;
 Clock::time_point autoReplanRequestedAt{};
 // The last farming batch this toolbar has shown. A farming completion is the one change
 // the player did not ask for, so its sentence has to be shown even when a leftover notice is
@@ -854,6 +857,11 @@ ToolbarUi BuildPlanningToolbar(const RoutePlanningView& view, const RECT& rect) 
         if (ui.notice.empty()) ui.notice = view.start.valid ? (view.start.source == "manual" ? "起点：手动指定" : "起点：打开地图前最后确认的位置") :
             "起点未知，请指定起点或返回游戏完成定位";
     }
+    ToolbarButton gap{view.gapFillModeEnabled ? "查漏补缺：开" : "查漏补缺：关",
+        view.gapFillModeEnabled ? "route:gapFill:off" : "route:gapFill:on", view.gapFillModeEnabled, !gapFillPending.has_value(), 0};
+    auto farm = std::find_if(ui.buttons.begin(), ui.buttons.end(), [](const auto& button){return button.key.starts_with("route:farm:");});
+    ui.buttons.insert(farm==ui.buttons.end()?ui.buttons.end():std::next(farm), std::move(gap));
+    if (view.gapFillModeEnabled && !view.gapFillCatalogAvailable) ui.notice="查漏补缺名录不可用，已隐藏普通点位；可关闭此模式恢复显示";
     const auto returning = RouteGamepadBridge::Shared().ReturnDisplay(game, view.profileId);
     if (returning.visible) {
         ui.notice = returning.Message();
@@ -1398,7 +1406,7 @@ void DrawMarkerInteraction::Clear() {
     RouteGamepadBridge::Shared().PublishFrame(false, {}, 0);
     CancelRouteGamepad("地图画面不可用，已取消本次操作");
     routeGamepadSession = 0;
-    autoReplanPending.reset();
+    autoReplanPending.reset();gapFillPending.reset();
     mapInteractive = false; regions.clear(); clicks.clear();
     // Clear transient input immediately, but keep the service's drawing. Only
     // fresh gameplay evidence from App can confirm that the map was closed.
@@ -1560,6 +1568,13 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     };
     displayedProfile = frame.profileId;
     hitClientRect = rect;
+    if (observedGapFilterRevision != GapFillFilter::Revision()) {
+        observedGapFilterRevision=GapFillFilter::Revision();ClearSelection();clicks.clear();handCommands.clear();
+        GamepadCursorTargets::Shared().Clear();GamepadCursorGeometry::Shared().Clear();
+    }
+    if(gapFillPending && (*gapFillPending==GapFillFilter::Enabled() || Clock::now()-gapFillRequestedAt>std::chrono::seconds(3))) {
+        planningNotice=*gapFillPending==GapFillFilter::Enabled()?"查漏补缺设置已更新":"查漏补缺设置未生效，请重试";gapFillPending.reset();
+    }
     const float radius = std::max(9.0f, rect.right * 0.0135f / 2);
     POINT origin{}; ClientToScreen(gameWindow, &origin);
     POINT cursor{}; GetCursorPos(&cursor);
@@ -1587,15 +1602,18 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     // question the click answers.
     const auto mapTools = MapToolsBridge::Shared().Read(frame.profileId);
     const auto observedPanel = ToolsPanel(mapTools, origin);
-    AutoRoute::ViewportCandidates eligible;
-    if (previousPlanning.enabled || previousPlanning.active || previousPlanning.handDrawnActive) for (const auto& item : frame.markers) {
+    AutoRoute::ViewportCandidates eligible, displayedMarkers;
+    if (GapFillFilter::Enabled() || previousPlanning.enabled || previousPlanning.active || previousPlanning.handDrawnActive) for (const auto& item : frame.markers) {
+        if (!DrawItemBase::AllowsGapFill(frame.sceneName, item)) continue;
         if(LayeredMap::RoleFor(item)==LayeredMap::MarkerRole::Hidden)continue;
         const auto position = motion.Apply(item.screenCoordiante);
+        displayedMarkers.Add(item, position, rect.right, rect.bottom,
+            (previousPlanning.enabled || !showCompleted) && completed(item), false);
         eligible.Add(item, position, rect.right, rect.bottom,
             (previousPlanning.handDrawnActive&&showCompleted)?false:completed(item), observedPanel.Contains(position.x, position.y));
     }
     const int sceneId = Scene::SceneNameToId(frame.sceneName);
-    RoutePlanningService::ObserveMap(sceneId, eligible.inViewport);
+    RoutePlanningService::ObserveMap(sceneId, eligible.inViewport, &displayedMarkers.inViewport);
     auto planning = RoutePlanningService::View();
     PlanningBinding currentBinding;
     currentBinding.origin = origin; currentBinding.rect = rect; currentBinding.profile = frame.profileId;
@@ -1668,6 +1686,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     std::unordered_map<std::string, std::size_t> visible;
     for (std::size_t index = 0; index < mapItems.size(); ++index) {
         const auto& item = mapItems[index];
+        if (!AutoRoute::IsFreeStop(item) && !DrawItemBase::AllowsGapFill(frame.sceneName, item)) continue;
         if ((planning.enabled || !showCompleted) && completed(item)) continue;
         // Hidden markers must not reach the layout either: a marker that is not drawn must
         // not stay hoverable, selectable or counted in a group.
@@ -2138,6 +2157,11 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
                 command["action"] = "farm";
                 command["enabled"] = click.target == "route:farm:on";
                 PlanningResult(RoutePlanningService::Command(command));
+            } else if (click.target.starts_with("route:gapFill:")) {
+                if(gapFillPending)continue;
+                const bool enabled=click.target=="route:gapFill:on";gapFillPending=enabled;gapFillRequestedAt=Clock::now();
+                DrawItemBase::PublishMarkerEvent({{"type","markerGapFillRequested"},{"enabled",enabled},{"expectedEnabled",!enabled}});
+                planningNotice="正在保存查漏补缺设置…";
             } else if (click.target.starts_with("route:autoReplan:")) {
                 const bool enabled = click.target == "route:autoReplan:on";
                 if (autoReplanPending) continue;
@@ -2178,6 +2202,10 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             if (point == visible.end()) continue;
             selected = id;
             const auto& item = mapItems[point->second];
+            // Configure may arrive after this frame's visible/hit-test lists were built.
+            if (!AutoRoute::IsFreeStop(item) && !DrawItemBase::AllowsGapFill(frame.sceneName, item)) {
+                ClearSelection();continue;
+            }
             if (click.planning || RoutePlanningService::PlanningMode()) {
                 // Both mouse buttons stay out of guide/completion commands in
                 // planning mode. Selection remains a separate reversible set.

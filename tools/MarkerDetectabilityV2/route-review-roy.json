@@ -1,0 +1,3148 @@
+{
+  "status": "route-sampling-reviewed-identity-incomplete",
+  "scope": "Assigned five parts; 5-second contact sheets are preparation, not completion",
+  "method": "Continuous sampled route + ASR + first-open full map before pan + original guide cross-check; no original timeline mutation",
+  "rows": [
+    {
+      "eventId": "BV13ZvrBtEde:p1:e001",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "85s地图中枢图标(594,332)经已有地形变换对应906/1452435373664972800，95s落地后沿东北路贴左走，110–115s黄花下三角尖顶+圆形金色面板与原攻略两图同构；目标确在信标东北路旁。"
+      ],
+      "counterEvidence": [
+        "未使用奖励终点SIFT作身份门槛；依据实际设施锚、连续北向路线和独特攻略地标闭合。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e01.jpg",
+        "out/detectability-v2/route-roy/chain-guides/guide-906-1454172613768327168.json",
+        "out/detectability-v2/route-roy/chain-guides/guide-906-1454172613768327168-1.png",
+        "out/detectability-v2/route-roy/chain-guides/guide-906-1454172613768327168-2.png",
+        "out/detectability-v2/route-roy/five-chain-e1-map.jpg",
+        "out/detectability-v2/route-roy/five-chain-maps.json",
+        "out/detectability-v2/route-roy/five-chain-candidates.json"
+      ],
+      "candidates": [
+        {
+          "stateId": "906",
+          "pointId": "1454172613768327168",
+          "rawPosition": [
+            -363700.0,
+            -651700.0
+          ]
+        }
+      ],
+      "stateId": "906",
+      "pointId": "1454172613768327168",
+      "routeFacility": {
+        "stateId": "906",
+        "pointId": "1452435373664972800",
+        "type": "中枢信标"
+      },
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1454172613768327168",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-v2/route-roy/chain-guides/guide-906-1454172613768327168.json",
+        "images": [
+          "out/detectability-v2/route-roy/chain-guides/guide-906-1454172613768327168-1.png",
+          "out/detectability-v2/route-roy/chain-guides/guide-906-1454172613768327168-2.png"
+        ]
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e005",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "193s地图下方小型信标图标(421,350)对应906/1451338353915146240；203–208s落地后西北进洞贴左，216s箱旁高低石碑的紫光横条/圆纽/黑矩形槽与原攻略一致，终点小地图信标在东南。"
+      ],
+      "counterEvidence": [
+        "未使用奖励终点SIFT作身份门槛；依据实际设施锚、连续北向路线和独特攻略地标闭合。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e05.jpg",
+        "out/detectability-v2/route-roy/chain-guides/guide-906-1454883074551902208.json",
+        "out/detectability-v2/route-roy/chain-guides/guide-906-1454883074551902208-1.png",
+        "out/detectability-v2/route-roy/five-chain-e5-map.jpg",
+        "out/detectability-v2/route-roy/five-chain-maps.json",
+        "out/detectability-v2/route-roy/five-chain-candidates.json"
+      ],
+      "candidates": [
+        {
+          "stateId": "906",
+          "pointId": "1454883074551902208",
+          "rawPosition": [
+            -384700.0,
+            -627000.0
+          ]
+        }
+      ],
+      "stateId": "906",
+      "pointId": "1454883074551902208",
+      "routeFacility": {
+        "stateId": "906",
+        "pointId": "1451338353915146240",
+        "type": "小型信标"
+      },
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1454883074551902208",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-v2/route-roy/chain-guides/guide-906-1454883074551902208.json",
+        "images": [
+          "out/detectability-v2/route-roy/chain-guides/guide-906-1454883074551902208-1.png"
+        ]
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e006",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "E5起无传送，223s沿小路东北→228s贴左跳上黄花平台→233–240s显像箱。原攻略1454173376710242304的层状石壁、紫色突起、橙色细花和立石相符；其位置为E5东北。另查看1454088428051443712攻略，其大型圆门和一列几何石明显不同，排除。"
+      ],
+      "counterEvidence": [
+        "未使用奖励终点SIFT作身份门槛；依据实际设施锚、连续北向路线和独特攻略地标闭合。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e06.jpg",
+        "out/detectability-v2/route-roy/chain-guides/guide-906-1454173376710242304.json",
+        "out/detectability-v2/route-roy/chain-guides/guide-906-1454173376710242304-1.png",
+        "out/detectability-v2/route-roy/chain-guides/guide-906-1454173376710242304-2.png",
+        "out/detectability-v2/route-roy/five-chain-e5-map.jpg",
+        "out/detectability-v2/route-roy/five-chain-maps.json",
+        "out/detectability-v2/route-roy/five-chain-candidates.json"
+      ],
+      "candidates": [
+        {
+          "stateId": "906",
+          "pointId": "1454173376710242304",
+          "rawPosition": [
+            -373800.0,
+            -632400.0
+          ]
+        }
+      ],
+      "stateId": "906",
+      "pointId": "1454173376710242304",
+      "routeFacility": {
+        "stateId": "906",
+        "pointId": "1451338353915146240",
+        "type": "小型信标"
+      },
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1454173376710242304",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-v2/route-roy/chain-guides/guide-906-1454173376710242304.json",
+        "images": [
+          "out/detectability-v2/route-roy/chain-guides/guide-906-1454173376710242304-1.png",
+          "out/detectability-v2/route-roy/chain-guides/guide-906-1454173376710242304-2.png"
+        ]
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e008",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "276s阶梯→281s南行→286s西转→291s小路→301s紫纹倒柱。306s首次开图真实玩家箭头(425,240)，独立255内点，距候选2.51单位；攻略倒柱紫纹、黄花、岩蛛显像吻合。310s拖图边缘箭头作反证弃用。"
+      ],
+      "counterEvidence": [
+        "310s地图拖动后黄色边缘指示不是可投影位置"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e08.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451227352486064128-2.png",
+        "out/detectability-v2/route-roy/roy-e8-route-map.jpg",
+        "out/detectability-v2/route-roy/roy-e8-anchor.json",
+        "out/detectability-v2/route-roy/roy-306s.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451227352486064128.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451227352486064128-1.png"
+      ],
+      "candidates": [],
+      "stateId": "906",
+      "pointId": "1451227352486064128",
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1451227352486064128",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451227352486064128.json",
+        "images": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451227352486064128-1.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451227352486064128-2.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e009",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "321s中枢西北阶梯→326–336s沿路北上→341s紫柱→351s奖励。353s首次开图玩家箭头，148内点，距候选1.96；攻略双紫柱、蓝花、黄花完全对应。"
+      ],
+      "counterEvidence": [],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e09.jpg",
+        "out/detectability-v2/route-roy/roy-e9-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e9-new-anchor.jpg",
+        "out/detectability-v2/route-roy/guide-1451234423356993536.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451234423356993536.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451234423356993536-1.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451234423356993536-2.png"
+      ],
+      "candidates": [
+        {
+          "pointId": "1451234423356993536",
+          "stateId": "906",
+          "distance": 1.963,
+          "description": "原本的样子是第二张图的模样，靠近之后使用显像功能，显像岩蛛就可以。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -379500.0,
+            -690900.0
+          ]
+        },
+        {
+          "pointId": "1451233958101839872",
+          "stateId": "906",
+          "distance": 66.925,
+          "description": "",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -382100.0,
+            -684700.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-353.0s.jpg",
+        "time": 353,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -379691.2587221164,
+          -690944.0218255802
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 148
+      },
+      "stateId": "906",
+      "pointId": "1451234423356993536",
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1451234423356993536",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451234423356993536.json",
+        "images": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451234423356993536-1.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451234423356993536-2.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e011",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "394–409s信标东北跨水上台，414–429s瘫痪机械显像激活，432–439s四箱。442s开图在最后基准箱1.66单位内；三朴素箱分布跨度约30单位，不能用最后位置替三成员排序。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "集合已定位，逐成员ID未分配；禁止将邻近同型箱任意对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e11.jpg",
+        "out/detectability-v2/route-roy/roy-e11-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e11-new-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "pointId": "1452383307930333184",
+          "stateId": "906",
+          "distance": 1.657,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "基准奇藏箱",
+          "raw": [
+            -117100.0,
+            -690600.0
+          ]
+        },
+        {
+          "pointId": "1452382463822458880",
+          "stateId": "906",
+          "distance": 10.614,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -117800.0,
+            -689600.0
+          ]
+        },
+        {
+          "pointId": "1452382463721795584",
+          "stateId": "906",
+          "distance": 25.732,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -119800.0,
+            -690500.0
+          ]
+        },
+        {
+          "pointId": "1452382463621132288",
+          "stateId": "906",
+          "distance": 26.089,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -119200.0,
+            -692200.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-442.0s.jpg",
+        "time": 442,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -117226.79115224055,
+          -690493.2934373366
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 195
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e011",
+      "member": 2,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "394–409s信标东北跨水上台，414–429s瘫痪机械显像激活，432–439s四箱。442s开图在最后基准箱1.66单位内；三朴素箱分布跨度约30单位，不能用最后位置替三成员排序。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "集合已定位，逐成员ID未分配；禁止将邻近同型箱任意对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e11.jpg",
+        "out/detectability-v2/route-roy/roy-e11-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e11-new-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "pointId": "1452383307930333184",
+          "stateId": "906",
+          "distance": 1.657,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "基准奇藏箱",
+          "raw": [
+            -117100.0,
+            -690600.0
+          ]
+        },
+        {
+          "pointId": "1452382463822458880",
+          "stateId": "906",
+          "distance": 10.614,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -117800.0,
+            -689600.0
+          ]
+        },
+        {
+          "pointId": "1452382463721795584",
+          "stateId": "906",
+          "distance": 25.732,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -119800.0,
+            -690500.0
+          ]
+        },
+        {
+          "pointId": "1452382463621132288",
+          "stateId": "906",
+          "distance": 26.089,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -119200.0,
+            -692200.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-442.0s.jpg",
+        "time": 442,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -117226.79115224055,
+          -690493.2934373366
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 195
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e011",
+      "member": 3,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "394–409s信标东北跨水上台，414–429s瘫痪机械显像激活，432–439s四箱。442s开图在最后基准箱1.66单位内；三朴素箱分布跨度约30单位，不能用最后位置替三成员排序。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "集合已定位，逐成员ID未分配；禁止将邻近同型箱任意对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e11.jpg",
+        "out/detectability-v2/route-roy/roy-e11-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e11-new-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "pointId": "1452383307930333184",
+          "stateId": "906",
+          "distance": 1.657,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "基准奇藏箱",
+          "raw": [
+            -117100.0,
+            -690600.0
+          ]
+        },
+        {
+          "pointId": "1452382463822458880",
+          "stateId": "906",
+          "distance": 10.614,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -117800.0,
+            -689600.0
+          ]
+        },
+        {
+          "pointId": "1452382463721795584",
+          "stateId": "906",
+          "distance": 25.732,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -119800.0,
+            -690500.0
+          ]
+        },
+        {
+          "pointId": "1452382463621132288",
+          "stateId": "906",
+          "distance": 26.089,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -119200.0,
+            -692200.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-442.0s.jpg",
+        "time": 442,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -117226.79115224055,
+          -690493.2934373366
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 195
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e011",
+      "member": 4,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "394–409s信标东北跨水上台，414–429s瘫痪机械显像激活，432–439s四箱。442s开图在最后基准箱1.66单位内；三朴素箱分布跨度约30单位，不能用最后位置替三成员排序。"
+      ],
+      "counterEvidence": [],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e11.jpg",
+        "out/detectability-v2/route-roy/roy-e11-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e11-new-anchor.jpg",
+        "out/detectability-v2/route-roy/guide-1452383307930333184.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452383307930333184.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452383307930333184-1.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452383307930333184-2.png"
+      ],
+      "candidates": [
+        {
+          "pointId": "1452383307930333184",
+          "stateId": "906",
+          "distance": 1.657,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "基准奇藏箱",
+          "raw": [
+            -117100.0,
+            -690600.0
+          ]
+        },
+        {
+          "pointId": "1452382463822458880",
+          "stateId": "906",
+          "distance": 10.614,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -117800.0,
+            -689600.0
+          ]
+        },
+        {
+          "pointId": "1452382463721795584",
+          "stateId": "906",
+          "distance": 25.732,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -119800.0,
+            -690500.0
+          ]
+        },
+        {
+          "pointId": "1452382463621132288",
+          "stateId": "906",
+          "distance": 26.089,
+          "description": "这四个宝箱，三个朴素，一个基准，需要小解密，第一次来这里的时候，第二张图琳奈站的位置有一个瘫痪的机械，用显像声骸，显像噼啪啪，激活机械，然后稍等一会就可以了。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -119200.0,
+            -692200.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-442.0s.jpg",
+        "time": 442,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -117226.79115224055,
+          -690493.2934373366
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 195
+      },
+      "stateId": "906",
+      "pointId": "1452383307930333184",
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1452383307930333184",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452383307930333184.json",
+        "images": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452383307930333184-1.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1452383307930333184-2.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e012",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "446s副本传送，451s载入后转身，456–466s紫晶水边显像。469s玩家位置距候选1.54；攻略浅水/岩壁/巨大紫晶相符。"
+      ],
+      "counterEvidence": [],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e12.jpg",
+        "out/detectability-v2/route-roy/roy-e12-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e12-new-anchor.jpg",
+        "out/detectability-v2/route-roy/guide-1451682859980222464.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451682859980222464.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451682859980222464-1.png"
+      ],
+      "candidates": [
+        {
+          "pointId": "1451682859980222464",
+          "stateId": "906",
+          "distance": 1.541,
+          "description": "显像宝箱，直接显像岩蛛声骸就可以。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -25900.0,
+            -677300.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-469.0s.jpg",
+        "time": 469,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -26053.998001207765,
+          -677293.7719399695
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 136
+      },
+      "stateId": "906",
+      "pointId": "1451682859980222464",
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1451682859980222464",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451682859980222464.json",
+        "images": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1451682859980222464-1.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e013",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "483–493s向东穿路，498s进入紫叶黄花，503–513s显像领奖。515.5s开图坐标距候选2.97；攻略紫叶黄花布局一致。"
+      ],
+      "counterEvidence": [],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e13.jpg",
+        "out/detectability-v2/route-roy/roy-e13-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e13-new-anchor.jpg",
+        "out/detectability-v2/route-roy/guide-1453878917491535872.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453878917491535872.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453878917491535872-1.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453878917491535872-2.png"
+      ],
+      "candidates": [
+        {
+          "pointId": "1453878917491535872",
+          "stateId": "906",
+          "distance": 2.968,
+          "description": "需要使用显像功能，显像岩蛛声骸。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -5800.0,
+            -580700.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-515.5s.jpg",
+        "time": 515.5,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -6090.677595155557,
+          -580640.2644268805
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 70
+      },
+      "stateId": "906",
+      "pointId": "1453878917491535872",
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1453878917491535872",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453878917491535872.json",
+        "images": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453878917491535872-1.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453878917491535872-2.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e014",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "530s信标北行→535–545s机械→550–565s护送至营地→575–582s三箱；584.5s最后位置接近1454160397155495936。现时间轴成员1/2均写基准，但原始攻略为两朴素一基准，类型对应冲突未更改原断言。"
+      ],
+      "counterEvidence": [
+        "时间轴两基准一朴素与原始攻略两朴素一基准冲突；需复核领取提示，不擅改断言"
+      ],
+      "gaps": [
+        "集合已定位，逐成员ID未分配；禁止将邻近同型箱任意对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e14.jpg",
+        "out/detectability-v2/route-roy/roy-e14-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e14-new-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "pointId": "1454160397155495936",
+          "stateId": "906",
+          "distance": 1.953,
+          "description": "需要先去第三张图方框位置，显像噼啪啪声骸，激活机器，然后帮机器打怪，才会有两个朴素、一个基准。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            106300.0,
+            -581500.0
+          ]
+        },
+        {
+          "pointId": "1454159815621423104",
+          "stateId": "906",
+          "distance": 13.592,
+          "description": "需要先去第三张图方框位置，显像噼啪啪声骸，激活机器，然后帮机器打怪，才会有两个朴素、一个基准。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            106100.0,
+            -582900.0
+          ]
+        },
+        {
+          "pointId": "1454159713108439040",
+          "stateId": "906",
+          "distance": 14.731,
+          "description": "需要先去第三张图方框位置，显像噼啪啪声骸，激活机器，然后帮机器打怪，才会有两个朴素、一个基准。",
+          "type": "基准奇藏箱",
+          "raw": [
+            105200.0,
+            -582700.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-584.5s.jpg",
+        "time": 584.5,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          106109.03361030924,
+          -581540.8558384806
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 129
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e014",
+      "member": 2,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "530s信标北行→535–545s机械→550–565s护送至营地→575–582s三箱；584.5s最后位置接近1454160397155495936。现时间轴成员1/2均写基准，但原始攻略为两朴素一基准，类型对应冲突未更改原断言。"
+      ],
+      "counterEvidence": [
+        "时间轴两基准一朴素与原始攻略两朴素一基准冲突；需复核领取提示，不擅改断言"
+      ],
+      "gaps": [
+        "集合已定位，逐成员ID未分配；禁止将邻近同型箱任意对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e14.jpg",
+        "out/detectability-v2/route-roy/roy-e14-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e14-new-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "pointId": "1454160397155495936",
+          "stateId": "906",
+          "distance": 1.953,
+          "description": "需要先去第三张图方框位置，显像噼啪啪声骸，激活机器，然后帮机器打怪，才会有两个朴素、一个基准。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            106300.0,
+            -581500.0
+          ]
+        },
+        {
+          "pointId": "1454159815621423104",
+          "stateId": "906",
+          "distance": 13.592,
+          "description": "需要先去第三张图方框位置，显像噼啪啪声骸，激活机器，然后帮机器打怪，才会有两个朴素、一个基准。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            106100.0,
+            -582900.0
+          ]
+        },
+        {
+          "pointId": "1454159713108439040",
+          "stateId": "906",
+          "distance": 14.731,
+          "description": "需要先去第三张图方框位置，显像噼啪啪声骸，激活机器，然后帮机器打怪，才会有两个朴素、一个基准。",
+          "type": "基准奇藏箱",
+          "raw": [
+            105200.0,
+            -582700.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-584.5s.jpg",
+        "time": 584.5,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          106109.03361030924,
+          -581540.8558384806
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 129
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e014",
+      "member": 3,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "530s信标北行→535–545s机械→550–565s护送至营地→575–582s三箱；584.5s最后位置接近1454160397155495936。现时间轴成员1/2均写基准，但原始攻略为两朴素一基准，类型对应冲突未更改原断言。"
+      ],
+      "counterEvidence": [
+        "时间轴两基准一朴素与原始攻略两朴素一基准冲突；需复核领取提示，不擅改断言"
+      ],
+      "gaps": [
+        "集合已定位，逐成员ID未分配；禁止将邻近同型箱任意对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e14.jpg",
+        "out/detectability-v2/route-roy/roy-e14-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e14-new-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "pointId": "1454160397155495936",
+          "stateId": "906",
+          "distance": 1.953,
+          "description": "需要先去第三张图方框位置，显像噼啪啪声骸，激活机器，然后帮机器打怪，才会有两个朴素、一个基准。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            106300.0,
+            -581500.0
+          ]
+        },
+        {
+          "pointId": "1454159815621423104",
+          "stateId": "906",
+          "distance": 13.592,
+          "description": "需要先去第三张图方框位置，显像噼啪啪声骸，激活机器，然后帮机器打怪，才会有两个朴素、一个基准。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            106100.0,
+            -582900.0
+          ]
+        },
+        {
+          "pointId": "1454159713108439040",
+          "stateId": "906",
+          "distance": 14.731,
+          "description": "需要先去第三张图方框位置，显像噼啪啪声骸，激活机器，然后帮机器打怪，才会有两个朴素、一个基准。",
+          "type": "基准奇藏箱",
+          "raw": [
+            105200.0,
+            -582700.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-584.5s.jpg",
+        "time": 584.5,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          106109.03361030924,
+          -581540.8558384806
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 129
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e015",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "594–609s信标东北绕过摩托挑战，614–634s紫花岩壁显像领奖；639.5s首次地图距候选2.56，攻略紫叶、分叉叶、岩块与斜坡吻合。"
+      ],
+      "counterEvidence": [],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e15.jpg",
+        "out/detectability-v2/route-roy/roy-e15-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e15-new-anchor.jpg",
+        "out/detectability-v2/route-roy/guide-1453504922365784064.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453504922365784064.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453504922365784064-1.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453504922365784064-2.png"
+      ],
+      "candidates": [
+        {
+          "pointId": "1453504922365784064",
+          "stateId": "906",
+          "distance": 2.558,
+          "description": "使用显像功能，显像岩蛛声骸。",
+          "type": "朴素奇藏箱",
+          "raw": [
+            157300.0,
+            -416800.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-639.5s.jpg",
+        "time": 639.5,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          157044.26325055773,
+          -416802.90959777404
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 72
+      },
+      "stateId": "906",
+      "pointId": "1453504922365784064",
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1453504922365784064",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453504922365784064.json",
+        "images": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453504922365784064-1.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453504922365784064-2.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e016",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "645s小型信标图标(382,208)地形变换对应906/1451327183948935168；658–663s西南直行至道路西侧白屋，668s圆绿门、右侧六格附件和门前箱与补下载攻略完全对应，原始描述明确清小屋前怪物出箱。"
+      ],
+      "counterEvidence": [
+        "未使用奖励终点SIFT作身份门槛；依据实际设施锚、连续北向路线和独特攻略地标闭合。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e16.jpg",
+        "out/detectability-v2/route-roy/chain-guides/guide-906-1454168539463364608.json",
+        "out/detectability-v2/route-roy/chain-guides/guide-906-1454168539463364608-1.png",
+        "out/detectability-v2/route-roy/five-chain-e16-map.jpg",
+        "out/detectability-v2/route-roy/five-chain-maps.json",
+        "out/detectability-v2/route-roy/five-chain-candidates.json"
+      ],
+      "candidates": [
+        {
+          "stateId": "906",
+          "pointId": "1454168539463364608",
+          "rawPosition": [
+            -36672.0,
+            -449801.0
+          ]
+        }
+      ],
+      "stateId": "906",
+      "pointId": "1454168539463364608",
+      "routeFacility": {
+        "stateId": "906",
+        "pointId": "1451327183948935168",
+        "type": "小型信标"
+      },
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1454168539463364608",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-v2/route-roy/chain-guides/guide-906-1454168539463364608.json",
+        "images": [
+          "out/detectability-v2/route-roy/chain-guides/guide-906-1454168539463364608-1.png"
+        ]
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e018",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "718s中枢→723s东南道路→728s右侧柱群→733–743s柱脚紫花显像清怪。746s首次地图距候选2.16；攻略倒斜机械柱与紫花完全吻合。"
+      ],
+      "counterEvidence": [],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e18.jpg",
+        "out/detectability-v2/route-roy/roy-e18-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e18-new-anchor.jpg",
+        "out/detectability-v2/route-roy/guide-1454171047204171776.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454171047204171776.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454171047204171776-1.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454171047204171776-2.png"
+      ],
+      "candidates": [
+        {
+          "pointId": "1454171047204171776",
+          "stateId": "906",
+          "distance": 2.157,
+          "description": "使用显像功能，显像岩蛛声骸，之后需要清怪。",
+          "type": "基准奇藏箱",
+          "raw": [
+            -177600.0,
+            -451200.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-746.0s.jpg",
+        "time": 746,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -177803.14235577843,
+          -451127.4904086713
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 154
+      },
+      "stateId": "906",
+      "pointId": "1454171047204171776",
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1454171047204171776",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454171047204171776.json",
+        "images": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454171047204171776-1.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1454171047204171776-2.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e019",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "761s信标→766–776s东北道路→781s显像→786–788s两朴素与日灵。790s地理集合得到确认，但两ID仅2单位且共用同一攻略图，不能逐成员排序。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "集合已定位，逐成员ID未分配；禁止将邻近同型箱任意对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e19.jpg",
+        "out/detectability-v2/route-roy/roy-e19-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e19-new-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "pointId": "1454557442936729600",
+          "stateId": "906",
+          "distance": 1.663,
+          "description": "通过显像显出岩蛛声骸 可出现2个朴素宝箱和1个日灵（标点由玩家改文件用提供）",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -201400.0,
+            -716900.0
+          ]
+        },
+        {
+          "pointId": "1454557443037392896",
+          "stateId": "906",
+          "distance": 3.584,
+          "description": "通过显像显出岩蛛声骸 可出现2个朴素宝箱和1个日灵（标点由玩家改文件用提供）",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -201200.0,
+            -716900.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-790.0s.jpg",
+        "time": 790,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -201552.04551272708,
+          -716967.313091961
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 151
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e019",
+      "member": 2,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "761s信标→766–776s东北道路→781s显像→786–788s两朴素与日灵。790s地理集合得到确认，但两ID仅2单位且共用同一攻略图，不能逐成员排序。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "集合已定位，逐成员ID未分配；禁止将邻近同型箱任意对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e19.jpg",
+        "out/detectability-v2/route-roy/roy-e19-map-open.jpg",
+        "out/detectability-v2/route-roy/roy-e19-new-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "pointId": "1454557442936729600",
+          "stateId": "906",
+          "distance": 1.663,
+          "description": "通过显像显出岩蛛声骸 可出现2个朴素宝箱和1个日灵（标点由玩家改文件用提供）",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -201400.0,
+            -716900.0
+          ]
+        },
+        {
+          "pointId": "1454557443037392896",
+          "stateId": "906",
+          "distance": 3.584,
+          "description": "通过显像显出岩蛛声骸 可出现2个朴素宝箱和1个日灵（标点由玩家改文件用提供）",
+          "type": "朴素奇藏箱",
+          "raw": [
+            -201200.0,
+            -716900.0
+          ]
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/roy-790.0s.jpg",
+        "time": 790,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -201552.04551272708,
+          -716967.313091961
+        ],
+        "transformSource": "out/detectability-v2/route-roy/roy-new-anchors.json",
+        "inliers": 151
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p1:e021",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "858s实际选择灾逆旧殿，设施ID906/1451184353290956800；863s门前向南，868s左转绕圆台，873–878s在斜放的紫纹巨大残片下显像。原攻略紫色弯条立片、斜残片和圆台位置同构，候选在副本门东南；未借用上箱855s角色坐标。"
+      ],
+      "counterEvidence": [
+        "未使用奖励终点SIFT作身份门槛；依据实际设施锚、连续北向路线和独特攻略地标闭合。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p1-e21.jpg",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453867668039069696.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453867668039069696-1.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453867668039069696-2.png",
+        "out/detectability-v2/route-roy/five-chain-e21-map.jpg",
+        "out/detectability-v2/route-roy/five-chain-maps.json",
+        "out/detectability-v2/route-roy/five-chain-candidates.json"
+      ],
+      "candidates": [
+        {
+          "stateId": "906",
+          "pointId": "1453867668039069696",
+          "rawPosition": [
+            -33900.0,
+            -829900.0
+          ]
+        }
+      ],
+      "stateId": "906",
+      "pointId": "1453867668039069696",
+      "routeFacility": {
+        "stateId": "906",
+        "pointId": "1451184353290956800",
+        "type": "灾逆旧殿"
+      },
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1453867668039069696",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453867668039069696.json",
+        "images": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453867668039069696-1.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1453867668039069696-2.png"
+        ]
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p2:e001",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测朴素，三箱组中该类型唯一，距对应点12.18游戏单位。"
+      ],
+      "counterEvidence": [
+        "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+        "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+        "out/detectability-v2/route-roy/roy-p2-anchors.json",
+        "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+        "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240.json",
+        "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-1.png",
+        "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-2.png",
+        "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-3.png"
+      ],
+      "candidates": [
+        {
+          "stateId": "906",
+          "pointId": "1454100828267950080",
+          "distance": 9.788677837479291,
+          "type": "基准奇藏箱",
+          "description": "摩托挑战宝箱，挑战地点在第三张图。温馨提示：这挑战有点小难（指pc端），移动端看人，没有动态难度，移动端会一遍过，不会的，要么摩托搞到20级之后，试试能不能无限飞过去，要么找人帮过，要么可以死扛着，看看能不能运气好刚好过去，也就25星声，大伙没必要玩得红温。"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1454101048523436032",
+          "distance": 10.667279437339696,
+          "type": "精密奇藏箱",
+          "description": "摩托挑战宝箱，挑战地点在第三张图。温馨提示：这挑战有点小难（指pc端），移动端看人，没有动态难度，移动端会一遍过，不会的，可以摩托搞到20级直接飞过去（最新的已经几次失败后会有选项直接通过）"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1454100367756554240",
+          "distance": 12.182612527433887,
+          "type": "朴素奇藏箱",
+          "description": "摩托挑战宝箱，挑战地点在第三张图。温馨提示：这挑战有点小难（指pc端），移动端看人，没有动态难度，移动端会一遍过，不会的，要么摩托搞到20级之后，试试能不能无限飞过去，要么找人帮过，要么可以死扛着，看看能不能运气好刚好过去，也就25星声，大伙没必要玩得红温。"
+        }
+      ],
+      "stateId": "906",
+      "pointId": "1454100367756554240",
+      "anchor": {
+        "time": 99.5,
+        "playerPixel": [
+          436,
+          264
+        ],
+        "rawPosition": [
+          123785.42801919502,
+          -721882.6280305483
+        ],
+        "inliers": 28,
+        "source": "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg"
+      },
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1454100367756554240",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240.json",
+        "images": [
+          "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-1.png",
+          "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-2.png",
+          "out/detectability-v2/route-roy/id-guides/guide-906-1454100367756554240-3.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p2:e001",
+      "member": 2,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测基准，三箱组中该类型唯一，距对应点9.79游戏单位。"
+      ],
+      "counterEvidence": [
+        "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+        "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+        "out/detectability-v2/route-roy/roy-p2-anchors.json",
+        "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+        "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080.json",
+        "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-1.png",
+        "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-2.png",
+        "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-3.png"
+      ],
+      "candidates": [
+        {
+          "stateId": "906",
+          "pointId": "1454100828267950080",
+          "distance": 9.788677837479291,
+          "type": "基准奇藏箱",
+          "description": "摩托挑战宝箱，挑战地点在第三张图。温馨提示：这挑战有点小难（指pc端），移动端看人，没有动态难度，移动端会一遍过，不会的，要么摩托搞到20级之后，试试能不能无限飞过去，要么找人帮过，要么可以死扛着，看看能不能运气好刚好过去，也就25星声，大伙没必要玩得红温。"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1454101048523436032",
+          "distance": 10.667279437339696,
+          "type": "精密奇藏箱",
+          "description": "摩托挑战宝箱，挑战地点在第三张图。温馨提示：这挑战有点小难（指pc端），移动端看人，没有动态难度，移动端会一遍过，不会的，可以摩托搞到20级直接飞过去（最新的已经几次失败后会有选项直接通过）"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1454100367756554240",
+          "distance": 12.182612527433887,
+          "type": "朴素奇藏箱",
+          "description": "摩托挑战宝箱，挑战地点在第三张图。温馨提示：这挑战有点小难（指pc端），移动端看人，没有动态难度，移动端会一遍过，不会的，要么摩托搞到20级之后，试试能不能无限飞过去，要么找人帮过，要么可以死扛着，看看能不能运气好刚好过去，也就25星声，大伙没必要玩得红温。"
+        }
+      ],
+      "stateId": "906",
+      "pointId": "1454100828267950080",
+      "anchor": {
+        "time": 99.5,
+        "playerPixel": [
+          436,
+          264
+        ],
+        "rawPosition": [
+          123785.42801919502,
+          -721882.6280305483
+        ],
+        "inliers": 28,
+        "source": "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg"
+      },
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1454100828267950080",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080.json",
+        "images": [
+          "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-1.png",
+          "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-2.png",
+          "out/detectability-v2/route-roy/id-guides/guide-906-1454100828267950080-3.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p2:e001",
+      "member": 3,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "19s天帷机兵投掷→24–29s跨岸→34–49s北行平台→54–59s东行→64–79s挑战→84–94s三箱。99.5s实际箭头(436,264)，28内点；补取原始攻略三箱排列为基准/精密/朴素，阶梯石墙和海岸高台与视频一致。 本成员观测精密，三箱组中该类型唯一，距对应点10.67游戏单位。"
+      ],
+      "counterEvidence": [
+        "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e01.jpg",
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg",
+        "out/detectability-v2/route-roy/roy-p2-e1-anchor.jpg",
+        "out/detectability-v2/route-roy/roy-p2-anchors.json",
+        "out/detectability-v2/route-roy/new-guides/guide-906-1454101048523436032-1.png",
+        "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032.json",
+        "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-1.png",
+        "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-2.png",
+        "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-3.png"
+      ],
+      "candidates": [
+        {
+          "stateId": "906",
+          "pointId": "1454100828267950080",
+          "distance": 9.788677837479291,
+          "type": "基准奇藏箱",
+          "description": "摩托挑战宝箱，挑战地点在第三张图。温馨提示：这挑战有点小难（指pc端），移动端看人，没有动态难度，移动端会一遍过，不会的，要么摩托搞到20级之后，试试能不能无限飞过去，要么找人帮过，要么可以死扛着，看看能不能运气好刚好过去，也就25星声，大伙没必要玩得红温。"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1454101048523436032",
+          "distance": 10.667279437339696,
+          "type": "精密奇藏箱",
+          "description": "摩托挑战宝箱，挑战地点在第三张图。温馨提示：这挑战有点小难（指pc端），移动端看人，没有动态难度，移动端会一遍过，不会的，可以摩托搞到20级直接飞过去（最新的已经几次失败后会有选项直接通过）"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1454100367756554240",
+          "distance": 12.182612527433887,
+          "type": "朴素奇藏箱",
+          "description": "摩托挑战宝箱，挑战地点在第三张图。温馨提示：这挑战有点小难（指pc端），移动端看人，没有动态难度，移动端会一遍过，不会的，要么摩托搞到20级之后，试试能不能无限飞过去，要么找人帮过，要么可以死扛着，看看能不能运气好刚好过去，也就25星声，大伙没必要玩得红温。"
+        }
+      ],
+      "stateId": "906",
+      "pointId": "1454101048523436032",
+      "anchor": {
+        "time": 99.5,
+        "playerPixel": [
+          436,
+          264
+        ],
+        "rawPosition": [
+          123785.42801919502,
+          -721882.6280305483
+        ],
+        "inliers": 28,
+        "source": "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-99.5s.jpg"
+      },
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1454101048523436032",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032.json",
+        "images": [
+          "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-1.png",
+          "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-2.png",
+          "out/detectability-v2/route-roy/id-guides/guide-906-1454101048523436032-3.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p2:e003",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测朴素，三箱组中该类型唯一，距对应点1.12游戏单位。"
+      ],
+      "counterEvidence": [
+        "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+        "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+        "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+        "out/detectability-v2/route-roy/roy-p2-anchors.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-1.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-2.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-3.png"
+      ],
+      "candidates": [
+        {
+          "stateId": "906",
+          "pointId": "1457043417928265728",
+          "distance": 2.2665622567558255,
+          "type": "基准奇藏箱",
+          "description": "摩托挑战宝箱，挑战有点小难，可以故意失败几次，触发强制解锁权限（一开始几个转弯的地方可以左右方向键+空格键原地烧胎转弯慢慢调整转向）。挑战地点在第二、三张图。（感谢玩家反馈。）强制结算不了可以尝试摩托翘头飞上去。"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1457043525350125568",
+          "distance": 1.0929054238125304,
+          "type": "精密奇藏箱",
+          "description": "摩托挑战宝箱，挑战有点小难，可以故意失败几次，触发强制解锁权限（一开始几个转弯的地方可以左右方向键+空格键原地烧胎转弯慢慢调整转向）。挑战地点在第二、三张图。前置修路任务（感谢玩家反馈。）"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1457043289922301952",
+          "distance": 1.1187403930526658,
+          "type": "朴素奇藏箱",
+          "description": "摩托挑战宝箱，挑战有点小难，可以故意失败几次，触发强制解锁权限（一开始几个转弯的地方可以左右方向键+空格键原地烧胎转弯慢慢调整转向）。挑战地点在第二、三张图。ps：如果没有就是开辟测界之路的星跃公路没有修建（感谢玩家反馈。）"
+        }
+      ],
+      "stateId": "906",
+      "pointId": "1457043289922301952",
+      "anchor": {
+        "time": 293,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -53408.67991856885,
+          -643588.4631913487
+        ],
+        "inliers": 231,
+        "source": "out/detectability-v2/route-roy/roy-p2-293s.jpg"
+      },
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1457043289922301952",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952.json",
+        "images": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-1.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-2.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043289922301952-3.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p2:e003",
+      "member": 2,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测精密，三箱组中该类型唯一，距对应点1.09游戏单位。"
+      ],
+      "counterEvidence": [
+        "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+        "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+        "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+        "out/detectability-v2/route-roy/roy-p2-anchors.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-2.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-3.png"
+      ],
+      "candidates": [
+        {
+          "stateId": "906",
+          "pointId": "1457043417928265728",
+          "distance": 2.2665622567558255,
+          "type": "基准奇藏箱",
+          "description": "摩托挑战宝箱，挑战有点小难，可以故意失败几次，触发强制解锁权限（一开始几个转弯的地方可以左右方向键+空格键原地烧胎转弯慢慢调整转向）。挑战地点在第二、三张图。（感谢玩家反馈。）强制结算不了可以尝试摩托翘头飞上去。"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1457043525350125568",
+          "distance": 1.0929054238125304,
+          "type": "精密奇藏箱",
+          "description": "摩托挑战宝箱，挑战有点小难，可以故意失败几次，触发强制解锁权限（一开始几个转弯的地方可以左右方向键+空格键原地烧胎转弯慢慢调整转向）。挑战地点在第二、三张图。前置修路任务（感谢玩家反馈。）"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1457043289922301952",
+          "distance": 1.1187403930526658,
+          "type": "朴素奇藏箱",
+          "description": "摩托挑战宝箱，挑战有点小难，可以故意失败几次，触发强制解锁权限（一开始几个转弯的地方可以左右方向键+空格键原地烧胎转弯慢慢调整转向）。挑战地点在第二、三张图。ps：如果没有就是开辟测界之路的星跃公路没有修建（感谢玩家反馈。）"
+        }
+      ],
+      "stateId": "906",
+      "pointId": "1457043525350125568",
+      "anchor": {
+        "time": 293,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -53408.67991856885,
+          -643588.4631913487
+        ],
+        "inliers": 231,
+        "source": "out/detectability-v2/route-roy/roy-p2-293s.jpg"
+      },
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1457043525350125568",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568.json",
+        "images": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-2.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-3.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV13ZvrBtEde:p2:e003",
+      "member": 3,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "213–223s北行抵公路→228s摩托挑战→233–278s沿石梁→283s出挑战→288–290s三箱。293s实际箭头(425,240)，231内点；原始攻略红草地、公路及弧形石壁吻合。 本成员观测基准，三箱组中该类型唯一，距对应点2.27游戏单位。"
+      ],
+      "counterEvidence": [
+        "挑战及昼夜存在剪辑，起终点不连贯；独立终点锚解决此项，不从起点推算。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV13ZvrBtEde-p2-e03.jpg",
+        "out/detectability-v2/route-roy/roy-p2-293s.jpg",
+        "out/detectability-v2/route-roy/roy-p2-e3-anchor.jpg",
+        "out/detectability-v2/route-roy/roy-p2-anchors.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043525350125568-1.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728.json",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-1.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-2.png",
+        "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-3.png"
+      ],
+      "candidates": [
+        {
+          "stateId": "906",
+          "pointId": "1457043417928265728",
+          "distance": 2.2665622567558255,
+          "type": "基准奇藏箱",
+          "description": "摩托挑战宝箱，挑战有点小难，可以故意失败几次，触发强制解锁权限（一开始几个转弯的地方可以左右方向键+空格键原地烧胎转弯慢慢调整转向）。挑战地点在第二、三张图。（感谢玩家反馈。）强制结算不了可以尝试摩托翘头飞上去。"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1457043525350125568",
+          "distance": 1.0929054238125304,
+          "type": "精密奇藏箱",
+          "description": "摩托挑战宝箱，挑战有点小难，可以故意失败几次，触发强制解锁权限（一开始几个转弯的地方可以左右方向键+空格键原地烧胎转弯慢慢调整转向）。挑战地点在第二、三张图。前置修路任务（感谢玩家反馈。）"
+        },
+        {
+          "stateId": "906",
+          "pointId": "1457043289922301952",
+          "distance": 1.1187403930526658,
+          "type": "朴素奇藏箱",
+          "description": "摩托挑战宝箱，挑战有点小难，可以故意失败几次，触发强制解锁权限（一开始几个转弯的地方可以左右方向键+空格键原地烧胎转弯慢慢调整转向）。挑战地点在第二、三张图。ps：如果没有就是开辟测界之路的星跃公路没有修建（感谢玩家反馈。）"
+        }
+      ],
+      "stateId": "906",
+      "pointId": "1457043417928265728",
+      "anchor": {
+        "time": 293,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "rawPosition": [
+          -53408.67991856885,
+          -643588.4631913487
+        ],
+        "inliers": 231,
+        "source": "out/detectability-v2/route-roy/roy-p2-293s.jpg"
+      },
+      "guideReview": {
+        "stateId": "906",
+        "pointId": "1457043417928265728",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728.json",
+        "images": [
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-1.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-2.png",
+          "out/detectability-collection/BV13ZvrBtEde/guides/guide-906-1457043417928265728-3.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e001",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-source-guide-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "40s选择中枢图标(425,240)，原地形变换对应8/1466135547073429504；48–58s向西南下坡到冰锥处显像NPC，63–66s对话出朴素箱。原攻略1469743197810446336文字机制完全一致，图中左侧横斜岩面、箱背后窄高尖石及右侧两三角岩，与63–64s实景相同。目标在该中枢西南，路线和地标闭合。"
+      ],
+      "counterEvidence": [
+        "先前抽样描述误把NPC称科考员；原文只记NPC，本次按显像破冰后对话出箱描述，不依赖NPC名称。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e01.jpg",
+        "out/detectability-v2/route-roy/chain-guides/guide-8-1469743197810446336.json",
+        "out/detectability-v2/route-roy/chain-guides/guide-8-1469743197810446336-1.png",
+        "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-00040.00.jpg",
+        "out/detectability-v2/route-roy/surface-two-chain-e1-map.jpg",
+        "out/detectability-v2/route-roy/surface-two-chain-maps.json",
+        "out/detectability-v2/route-roy/surface-two-chain-anchors.json",
+        "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-00064.00.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1469743197810446336"
+        }
+      ],
+      "stateId": "8",
+      "pointId": "1469743197810446336",
+      "routeFacility": {
+        "stateId": "8",
+        "pointId": "1466135547073429504",
+        "type": "CS_01"
+      },
+      "facilityAnchor": {
+        "event": 1,
+        "time": 40,
+        "anchorPixel": [
+          425,
+          240
+        ],
+        "anchorRole": "actual selected teleport facility icon; NOT player yellow arrow",
+        "source": "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-00040.00.jpg",
+        "affineFrameToReference": [
+          [
+            1.6427105941891271,
+            -0.0013350162493679983,
+            938.6268819265769
+          ],
+          [
+            0.0013350162493679983,
+            1.6427105941891271,
+            2479.4413186530496
+          ]
+        ],
+        "pixelToGame": [
+          [
+            1.66015625,
+            0.0,
+            -4250.0
+          ],
+          [
+            0.0,
+            1.66015625,
+            -11050.0
+          ]
+        ],
+        "facility": {
+          "countryId": 4,
+          "description": "",
+          "floorId": "",
+          "gravityType": 1,
+          "id": "1466135547073429504",
+          "level": "0",
+          "online": false,
+          "stateId": 8,
+          "typeId": "CS_01",
+          "x": -153100.0,
+          "y": -627900.0,
+          "type": "中枢信标",
+          "group": "CS_01"
+        }
+      },
+      "guideReview": {
+        "stateId": "8",
+        "pointId": "1469743197810446336",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-v2/route-roy/chain-guides/guide-8-1469743197810446336.json",
+        "images": [
+          "out/detectability-v2/route-roy/chain-guides/guide-8-1469743197810446336-1.png"
+        ]
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e002",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "73s从上一岩缝爬南坡→78–83s转西至挑战→88s挑战切换→93–98s装置与奖励。挑战转场不能由起点代替终点，缺终点坐标。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "需核对山顶挑战起点的实际攻略，现仅有路线抽样"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e02.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e003",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "102–117s沿岸向南至岛边战斗；122–137s拔出探测器后与先遣研究员对话出现基准。140.5s首次开图真箭头距候选2.78；攻略海岸、冰岩断口、杆状探测器相符。"
+      ],
+      "counterEvidence": [],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e03.jpg",
+        "out/detectability-v2/route-roy/guide-1469147104529924096.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-140.5s.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e3-surface-anchor.jpg",
+        "out/detectability-v2/route-roy/surface-anchored-route-map.jpg",
+        "out/detectability-v2/route-roy/surface-anchored-route-map.jpg.json",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469147104529924096.json",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469147104529924096-1.png",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469147104529924096-2.png"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1469147104529924096",
+          "distance": 2.78,
+          "type": "基准奇藏箱",
+          "description": "第一次来到这里的时候，会看到小爱对面的岸上有一个先遣队队员被怪物围攻，清怪，会接到拔探测器的任务，拔完之后在对话，就有这个宝箱。",
+          "floorId": "",
+          "level": "0"
+        }
+      ],
+      "stateId": "8",
+      "pointId": "1469147104529924096",
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-140.5s.jpg",
+        "time": 140.5,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "roiRadius": 300,
+        "roiReason": "full-map viewport",
+        "layer": "surface",
+        "rawPosition": [
+          -171851.5978161434,
+          -586082.4018566711
+        ],
+        "inliers": 129,
+        "transformSource": "out/detectability-v2/route-roy/surface-layer-new-anchors.json"
+      },
+      "guideReview": {
+        "stateId": "8",
+        "pointId": "1469147104529924096",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469147104529924096.json",
+        "images": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469147104529924096-1.png",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469147104529924096-2.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e004",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "150s信标→155–170s入坑跨隙→175–185s西侧黑池→190s显像→194–200s三种箱。201s表面大地图仅证明XY，洞层由视频入洞及原攻略明确-1/45，不能把surface标签授予箱。三候选文字/矿晶池攻略相符，仍需逐成员方位对应。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "视频三箱类型与原始三候选的成员对应尚未逐个复核"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e04.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-201.0s.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e4-surface-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1469150333640495104",
+          "distance": 11.81,
+          "type": "基准奇藏箱",
+          "description": "此处需要用摩托跳上来，摩托跳跃地点在第三张图的位置，之后，显像格洛犸图声骸，就会出现三个宝箱。",
+          "floorId": "45",
+          "level": "-1/45"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1469149723331514368",
+          "distance": 18.03,
+          "type": "朴素奇藏箱",
+          "description": "此处需要用摩托跳上来，摩托跳跃地点在第三张图的位置，之后，显像格洛犸图声骸，就会出现三个宝箱。",
+          "floorId": "45",
+          "level": "-1/45"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1469151068226895872",
+          "distance": 19.94,
+          "type": "辉光奇藏箱",
+          "description": "此处需要用摩托跳上来，摩托跳跃地点在第三张图的位置，之后，显像格洛犸图声骸，就会出现三个宝箱。",
+          "floorId": "45",
+          "level": "-1/45"
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-201.0s.jpg",
+        "time": 201,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "roiRadius": 300,
+        "roiReason": "full-map viewport",
+        "layer": "surface",
+        "rawPosition": [
+          -135067.55766894453,
+          -623880.894262231
+        ],
+        "inliers": 138,
+        "transformSource": "out/detectability-v2/route-roy/surface-layer-new-anchors.json"
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e004",
+      "member": 2,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "150s信标→155–170s入坑跨隙→175–185s西侧黑池→190s显像→194–200s三种箱。201s表面大地图仅证明XY，洞层由视频入洞及原攻略明确-1/45，不能把surface标签授予箱。三候选文字/矿晶池攻略相符，仍需逐成员方位对应。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "视频三箱类型与原始三候选的成员对应尚未逐个复核"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e04.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-201.0s.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e4-surface-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1469150333640495104",
+          "distance": 11.81,
+          "type": "基准奇藏箱",
+          "description": "此处需要用摩托跳上来，摩托跳跃地点在第三张图的位置，之后，显像格洛犸图声骸，就会出现三个宝箱。",
+          "floorId": "45",
+          "level": "-1/45"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1469149723331514368",
+          "distance": 18.03,
+          "type": "朴素奇藏箱",
+          "description": "此处需要用摩托跳上来，摩托跳跃地点在第三张图的位置，之后，显像格洛犸图声骸，就会出现三个宝箱。",
+          "floorId": "45",
+          "level": "-1/45"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1469151068226895872",
+          "distance": 19.94,
+          "type": "辉光奇藏箱",
+          "description": "此处需要用摩托跳上来，摩托跳跃地点在第三张图的位置，之后，显像格洛犸图声骸，就会出现三个宝箱。",
+          "floorId": "45",
+          "level": "-1/45"
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-201.0s.jpg",
+        "time": 201,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "roiRadius": 300,
+        "roiReason": "full-map viewport",
+        "layer": "surface",
+        "rawPosition": [
+          -135067.55766894453,
+          -623880.894262231
+        ],
+        "inliers": 138,
+        "transformSource": "out/detectability-v2/route-roy/surface-layer-new-anchors.json"
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e004",
+      "member": 3,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "150s信标→155–170s入坑跨隙→175–185s西侧黑池→190s显像→194–200s三种箱。201s表面大地图仅证明XY，洞层由视频入洞及原攻略明确-1/45，不能把surface标签授予箱。三候选文字/矿晶池攻略相符，仍需逐成员方位对应。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "视频三箱类型与原始三候选的成员对应尚未逐个复核"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e04.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-201.0s.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e4-surface-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1469150333640495104",
+          "distance": 11.81,
+          "type": "基准奇藏箱",
+          "description": "此处需要用摩托跳上来，摩托跳跃地点在第三张图的位置，之后，显像格洛犸图声骸，就会出现三个宝箱。",
+          "floorId": "45",
+          "level": "-1/45"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1469149723331514368",
+          "distance": 18.03,
+          "type": "朴素奇藏箱",
+          "description": "此处需要用摩托跳上来，摩托跳跃地点在第三张图的位置，之后，显像格洛犸图声骸，就会出现三个宝箱。",
+          "floorId": "45",
+          "level": "-1/45"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1469151068226895872",
+          "distance": 19.94,
+          "type": "辉光奇藏箱",
+          "description": "此处需要用摩托跳上来，摩托跳跃地点在第三张图的位置，之后，显像格洛犸图声骸，就会出现三个宝箱。",
+          "floorId": "45",
+          "level": "-1/45"
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-201.0s.jpg",
+        "time": 201,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "roiRadius": 300,
+        "roiReason": "full-map viewport",
+        "layer": "surface",
+        "rawPosition": [
+          -135067.55766894453,
+          -623880.894262231
+        ],
+        "inliers": 138,
+        "transformSource": "out/detectability-v2/route-roy/surface-layer-new-anchors.json"
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e005",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-source-guide-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "205s选择地下小型信标图标(495,175)，地形变换对应8/1466228486910681088（-1/46）；213–221s向西北找胆怯日灵后被推下，226–231s下方清怪领取箱。原始攻略1469353477272096768明确同一NPC推下清怪机制，且箱边紫花、右侧四根发光石笋及浅台阶与231s画面一致。使用真实-1/46层瓦片标设施及目标；不将236–241s回访NPC位置当领奖点。"
+      ],
+      "counterEvidence": [
+        "地表开图只定位被选信标XY；地下层由实际选定地下设施及原始点两者-1/46记录支持，不由地表瓦片推断。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e05.jpg",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469353477272096768.json",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469353477272096768-1.png",
+        "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-00205.00.jpg",
+        "out/detectability-v2/route-roy/surface-e5-chain-e5-map.jpg",
+        "out/detectability-v2/route-roy/surface-e5-chain-maps.json",
+        "out/detectability-v2/route-roy/surface-e5-chain-anchor.json"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1469353477272096768",
+          "level": "-1/46"
+        }
+      ],
+      "stateId": "8",
+      "pointId": "1469353477272096768",
+      "routeFacility": {
+        "stateId": "8",
+        "pointId": "1466228486910681088",
+        "level": "-1/46"
+      },
+      "guideReview": {
+        "stateId": "8",
+        "pointId": "1469353477272096768",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469353477272096768.json",
+        "images": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469353477272096768-1.png"
+        ]
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e006",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "243–248s自前点向东越峡谷；253–263s洞口显像猛犸，266s箱。268s首次地图为观测廊道-1/46；专用该层缓存25内点、距候选0.65；攻略成对晶柱/黑岩凹洞吻合。原始文本说明此冰洞奖励品质随次数变化，不能只因当前观测基准而排除记录精密。"
+      ],
+      "counterEvidence": [
+        "初始全幅radius300把小房间所有地形判为空间集中；此次按真实小型分层图范围配置ROI，LIMITS未修改。若不接受小图ROI需保留未决，不能声称原大ROI通过。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e06.jpg",
+        "out/detectability-v2/route-roy/guide-1469355348737179648.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-268.0s.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e6-L46_F-1-46-anchor.jpg",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469355348737179648.json",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469355348737179648-1.png",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469355348737179648-2.png"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1469355348737179648",
+          "distance": 0.65,
+          "type": "精密奇藏箱",
+          "description": "使用显像功能，显像格洛犸图声骸。 该宝箱品质并非固定，根据冰洞次数来决定。全图共4个冰洞。 冰洞第一次为【基准】、第二次【精密】、第三次【涡纹】、第四次【日灵】（之后前往罗伊冰原·地表，日灵归还处上方，与日灵对话，获得成就【日灵三窟】）（感谢玩家反馈。）",
+          "floorId": "46",
+          "level": "-1/46"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1467302223666597888",
+          "distance": 67.76,
+          "type": "基准奇藏箱",
+          "description": "挑战“日灵流引”宝箱。",
+          "floorId": "",
+          "level": "0"
+        }
+      ],
+      "stateId": "8",
+      "pointId": "1469355348737179648",
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-268.0s.jpg",
+        "time": 268,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "roiRadius": 100,
+        "roiReason": "visible small isolated floor drawing",
+        "layer": "L46_F-1-46",
+        "rawPosition": [
+          -103461.40500002826,
+          -743820.1465011389
+        ],
+        "inliers": 25,
+        "transformSource": "out/detectability-v2/route-roy/surface-layer-new-anchors.json"
+      },
+      "guideReview": {
+        "stateId": "8",
+        "pointId": "1469355348737179648",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469355348737179648.json",
+        "images": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469355348737179648-1.png",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469355348737179648-2.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e007",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "283–293s信标东北道路乘风，298–308s继续北攀，313–318s高坡摩托挑战奖励。319s首次地图距候选1.46；攻略坡顶装置与远方锯齿山脊相符。"
+      ],
+      "counterEvidence": [],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e07.jpg",
+        "out/detectability-v2/route-roy/guide-1526394917809278976.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-319.0s.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e7-surface-anchor.jpg",
+        "out/detectability-v2/route-roy/surface-anchored-route-map.jpg",
+        "out/detectability-v2/route-roy/surface-anchored-route-map.jpg.json",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1526394917809278976.json",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1526394917809278976-1.png",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1526394917809278976-2.png"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1526394917809278976",
+          "distance": 1.46,
+          "type": "精密奇藏箱",
+          "description": "摩托挑战宝箱，如果觉得小难得，就直接失败五次，然后可以直接领取。",
+          "floorId": "",
+          "level": "0"
+        }
+      ],
+      "stateId": "8",
+      "pointId": "1526394917809278976",
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-319.0s.jpg",
+        "time": 319,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "roiRadius": 300,
+        "roiReason": "full-map viewport",
+        "layer": "surface",
+        "rawPosition": [
+          -32143.771979573605,
+          -646075.0647545235
+        ],
+        "inliers": 129,
+        "transformSource": "out/detectability-v2/route-roy/surface-layer-new-anchors.json"
+      },
+      "guideReview": {
+        "stateId": "8",
+        "pointId": "1526394917809278976",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1526394917809278976.json",
+        "images": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1526394917809278976-1.png",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1526394917809278976-2.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e008",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-source-guide-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "325s所选小型信标(353,225)经地形变换对应8/1466186928035373056；333–343s东北行后右转，348s到大斜岩脚冰锥旧址。原攻略1469344326655721472两图为斜纹大岩脚的冰锥及其解锁精密箱，且明确领取时触发冰原往事，与350–354s口播任务名一致。原始坐标在该信标东北、空间站圆环北缘，符合北向路线。"
+      ],
+      "counterEvidence": [
+        "视频是已领取后讲解位置，没有本次开箱；保留原事件narrated-only，不据攻略图改写视频目击箱型或领取时间。"
+      ],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e08.jpg",
+        "out/detectability-v2/route-roy/chain-guides/guide-8-1469344326655721472.json",
+        "out/detectability-v2/route-roy/chain-guides/guide-8-1469344326655721472-1.png",
+        "out/detectability-v2/route-roy/chain-guides/guide-8-1469344326655721472-2.png",
+        "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-00325.00.jpg",
+        "out/detectability-v2/route-roy/surface-two-chain-e8-map.jpg",
+        "out/detectability-v2/route-roy/surface-two-chain-maps.json",
+        "out/detectability-v2/route-roy/surface-two-chain-anchors.json",
+        "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-00348.00.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1469344326655721472"
+        }
+      ],
+      "stateId": "8",
+      "pointId": "1469344326655721472",
+      "routeFacility": {
+        "stateId": "8",
+        "pointId": "1466186928035373056",
+        "type": "CS_02"
+      },
+      "facilityAnchor": {
+        "event": 8,
+        "time": 325,
+        "anchorPixel": [
+          353,
+          225
+        ],
+        "anchorRole": "actual selected teleport facility icon; NOT player yellow arrow",
+        "source": "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-00325.00.jpg",
+        "affineFrameToReference": [
+          [
+            2.128086273661745,
+            -0.0005099861894875203,
+            753.4959795403184
+          ],
+          [
+            0.0005099861894875203,
+            2.128086273661745,
+            1970.128146523031
+          ]
+        ],
+        "pixelToGame": [
+          [
+            1.66015625,
+            0.0,
+            -4250.0
+          ],
+          [
+            0.0,
+            1.66015625,
+            -11050.0
+          ]
+        ],
+        "facility": {
+          "countryId": 4,
+          "description": "",
+          "floorId": "",
+          "gravityType": 1,
+          "id": "1466186928035373056",
+          "level": "0",
+          "online": false,
+          "stateId": 8,
+          "typeId": "CS_02",
+          "x": -175200.0,
+          "y": -698300.0,
+          "type": "小型信标",
+          "group": "CS_02"
+        }
+      },
+      "guideReview": {
+        "stateId": "8",
+        "pointId": "1469344326655721472",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-v2/route-roy/chain-guides/guide-8-1469344326655721472.json",
+        "images": [
+          "out/detectability-v2/route-roy/chain-guides/guide-8-1469344326655721472-1.png",
+          "out/detectability-v2/route-roy/chain-guides/guide-8-1469344326655721472-2.png"
+        ]
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e010",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "433s传送落点→438s西北雪坡→443s跨圆筒顶→448s圆筒内沿→453s摩托挑战→458s菜单→463s奖励。挑战有跳剪，缺独立终点锚。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "圆筒旁摩托挑战原攻略起点未完成比对"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e10.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e012",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "534s信标→539–549s东北绕尖岩下降→554s西向降落→559s摩托装置→564s黑屏→569s奖励。转场断链，缺终点坐标。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "尖岩坡底摩托挑战原攻略起点未完成比对"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e12.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e013",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "571s前箱→576–581s向南跳崖乘摩托→586s洞底→591s西北显像→596s清怪→601s箱。可见入洞路径但小地图空白，未独立确认洞层与终点。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "洞内多箱尚未将各成员与原始ID对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e13.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e013",
+      "member": 2,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "571s前箱→576–581s向南跳崖乘摩托→586s洞底→591s西北显像→596s清怪→601s箱。可见入洞路径但小地图空白，未独立确认洞层与终点。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "洞内多箱尚未将各成员与原始ID对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e13.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e013",
+      "member": 3,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "571s前箱→576–581s向南跳崖乘摩托→586s洞底→591s西北显像→596s清怪→601s箱。可见入洞路径但小地图空白，未独立确认洞层与终点。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "洞内多箱尚未将各成员与原始ID对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e13.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e015",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "629s地图传送后断链；634s信标→639s东行绕尖岩→644–654s继续东跳崖→659s摩托装置→664s挑战完成。尚未获取终点大地图，不能从起点外推。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "东向跳崖摩托装置需对应原始攻略挑战起点"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e15.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e016",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "664s前奖励→669–679s西南沿紫色大环边→684s南向洞内→689s显像猛犸→694–704s连续两箱。洞内路径清楚，缺洞层坐标及两成员ID顺序。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "紫环旁下洞后的多个成员尚未与原始ID一一对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e16.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e016",
+      "member": 2,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "664s前奖励→669–679s西南沿紫色大环边→684s南向洞内→689s显像猛犸→694–704s连续两箱。洞内路径清楚，缺洞层坐标及两成员ID顺序。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "紫环旁下洞后的多个成员尚未与原始ID一一对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e16.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e016",
+      "member": 3,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "664s前奖励→669–679s西南沿紫色大环边→684s南向洞内→689s显像猛犸→694–704s连续两箱。洞内路径清楚，缺洞层坐标及两成员ID顺序。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "紫环旁下洞后的多个成员尚未与原始ID一一对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e16.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e017",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "704s箱→709s向北青晶→714s黑屏→719s阿布对话→724s箱。黑屏剧情断链，缺终点独立定位。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "剧情黑屏后的阿布箱未对上可唯一辨认原攻略"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e17.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e020",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "792s营地出发，797–807s南行水面白冰，812s开启摩托挑战，817–821s奖励。822.5s地图距候选3.86；攻略冰平台/对岸三角塔/下方小门相符。"
+      ],
+      "counterEvidence": [],
+      "gaps": [],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e20.jpg",
+        "out/detectability-v2/route-roy/guide-1469081439357751296.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-822.5s.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e20-surface-anchor.jpg",
+        "out/detectability-v2/route-roy/surface-anchored-route-map.jpg",
+        "out/detectability-v2/route-roy/surface-anchored-route-map.jpg.json",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469081439357751296.json",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469081439357751296-1.png",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469081439357751296-2.png",
+        "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469081439357751296-3.png"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1469081439357751296",
+          "distance": 3.86,
+          "type": "精密奇藏箱",
+          "description": "摩托挑战宝箱，小难，失败五次可以启动强制结算。对准轨道一直点加速即可过",
+          "floorId": "",
+          "level": "0"
+        }
+      ],
+      "stateId": "8",
+      "pointId": "1469081439357751296",
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-822.5s.jpg",
+        "time": 822.5,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "roiRadius": 300,
+        "roiReason": "full-map viewport",
+        "layer": "surface",
+        "rawPosition": [
+          -17386.391513301576,
+          -551707.2376329433
+        ],
+        "inliers": 87,
+        "transformSource": "out/detectability-v2/route-roy/surface-layer-new-anchors.json"
+      },
+      "guideReview": {
+        "stateId": "8",
+        "pointId": "1469081439357751296",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469081439357751296.json",
+        "images": [
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469081439357751296-1.png",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469081439357751296-2.png",
+          "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469081439357751296-3.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e021",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "826s地图传送断链；836s东北跨湖→841–846s北侧NPC→851s黑屏→856s战斗→861s箱→866–871s南返NPC→876s地图。现有层图锚位在回访NPC，不能套给861s箱。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "已有层图在回访NPC，箱场景与原始攻略尚未闭合"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e21.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-876.0s.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e21-L47_F-1-47-anchor.jpg"
+      ],
+      "candidates": [],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-876.0s.jpg",
+        "time": 876,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "roiRadius": 300,
+        "roiReason": "full-map viewport",
+        "layer": "L47_F-1-47",
+        "rawPosition": [
+          -6428.508996981656,
+          -799602.0595403127
+        ],
+        "inliers": 74,
+        "transformSource": "out/detectability-v2/route-roy/surface-layer-new-anchors.json"
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e022",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "881s选择信标后断链；891s落点→896–906s东北绕蓝色几何球→911–916s入球下方→921s奖励→926s黑屏→931s对话。缺奖励点独立坐标，后对话不等于箱位置。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "蓝色球内奖励的原始点位与攻略未完整核对"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e22.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e024",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "1000s信标→1005s西南尖石→1010–1015s艾尔玛对话→1020s箱。1021s真箭头离原始候选23.22单位，唯一描述是第三次救艾尔玛，尚无缓存攻略图进行独立场景比对。",
+        "本轮已补下载原始攻略：雪坡石缝下朴素箱。"
+      ],
+      "counterEvidence": [
+        "攻略只有单箱近景，录像为艾尔玛救援；23.22单位偏差且缺可唯一比对背景，仍保留未知。"
+      ],
+      "gaps": [
+        "已补图但仍不能独立确定同点"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e24.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-1021.0s.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e24-surface-anchor.jpg",
+        "out/detectability-v2/route-roy/new-guides/guide-8-1477785036769918976-1.png",
+        "out/detectability-v2/route-roy/surface-anchored-route-map.jpg",
+        "out/detectability-v2/route-roy/surface-anchored-route-map.jpg.json"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1477785036769918976",
+          "distance": 23.22,
+          "type": "朴素奇藏箱",
+          "description": "在完成成就“她所见的风景”过程中，在标点处第三次救下艾尔玛，可获得宝箱.——東方斌鬼",
+          "floorId": "",
+          "level": "0"
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-1021.0s.jpg",
+        "time": 1021,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "roiRadius": 300,
+        "roiReason": "full-map viewport",
+        "layer": "surface",
+        "rawPosition": [
+          -80.35991996457597,
+          -760488.1933974948
+        ],
+        "inliers": 149,
+        "transformSource": "out/detectability-v2/route-roy/surface-layer-new-anchors.json"
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e025",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "1026s传送后断链；1031s信标→1036–1046s西行水面→1051s洞口阿布→1056s黑屏→1061s洞内箱。缺该层独立定位。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "洞口阿布剧情后奖励未对应原始分层攻略"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e25.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e026",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "1068s离开洞口，1073–1088s跨湖向南转东，1093–1108s第二风场到东北岩尖，1113s艾尔玛，1123s双箱。1124s专用-1/48层图96内点支持两候选集合，左右ID无法由同一攻略图确定。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "两同型箱集合已定位，原始ID与成员左右未闭合"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e26.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-1124.0s.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e26-L48_F-1-48-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1477786265842372608",
+          "distance": 13.06,
+          "type": "基准奇藏箱",
+          "description": "在标点处第四次与艾尔玛对话，获得成就“她所见的风景”，并获得两个基准奇藏箱。——東方斌鬼",
+          "floorId": "48",
+          "level": "-1/48"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1477786512450670592",
+          "distance": 13.32,
+          "type": "基准奇藏箱",
+          "description": "在标点处第四次与艾尔玛对话，获得成就“她所见的风景”，并获得两个基准奇藏箱。——東方斌鬼",
+          "floorId": "48",
+          "level": "-1/48"
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-1124.0s.jpg",
+        "time": 1124,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "roiRadius": 300,
+        "roiReason": "full-map viewport",
+        "layer": "L48_F-1-48",
+        "rawPosition": [
+          55775.46752719845,
+          -692658.5793124521
+        ],
+        "inliers": 96,
+        "transformSource": "out/detectability-v2/route-roy/surface-layer-new-anchors.json"
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e026",
+      "member": 2,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "1068s离开洞口，1073–1088s跨湖向南转东，1093–1108s第二风场到东北岩尖，1113s艾尔玛，1123s双箱。1124s专用-1/48层图96内点支持两候选集合，左右ID无法由同一攻略图确定。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "两同型箱集合已定位，原始ID与成员左右未闭合"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e26.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-1124.0s.jpg",
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-e26-L48_F-1-48-anchor.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1477786265842372608",
+          "distance": 13.06,
+          "type": "基准奇藏箱",
+          "description": "在标点处第四次与艾尔玛对话，获得成就“她所见的风景”，并获得两个基准奇藏箱。——東方斌鬼",
+          "floorId": "48",
+          "level": "-1/48"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1477786512450670592",
+          "distance": 13.32,
+          "type": "基准奇藏箱",
+          "description": "在标点处第四次与艾尔玛对话，获得成就“她所见的风景”，并获得两个基准奇藏箱。——東方斌鬼",
+          "floorId": "48",
+          "level": "-1/48"
+        }
+      ],
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-1124.0s.jpg",
+        "time": 1124,
+        "playerPixel": [
+          425,
+          240
+        ],
+        "roiRadius": 300,
+        "roiReason": "full-map viewport",
+        "layer": "L48_F-1-48",
+        "rawPosition": [
+          55775.46752719845,
+          -692658.5793124521
+        ],
+        "inliers": 96,
+        "transformSource": "out/detectability-v2/route-roy/surface-layer-new-anchors.json"
+      }
+    },
+    {
+      "eventId": "BV1F3A3zxEDQ:p1:e028",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "1173s传送后断链；1178–1188s北转西抵水边NPC→1193s黑屏→1198s格蕾罗对话→1203–1208s北入洞→1213s黑屏→1218–1223s洞内→1228s外场→1233s黑屏→1238–1243s洞内箱。多次剧情切换，不得从岸边起点外推箱位置。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "多次剧情黑屏跨场景，末次洞内奖箱未与某原攻略唯一对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1F3A3zxEDQ-p1-e28.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e004",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "271s传送后朝西北气流，286s飞行、291s登台，两日灵与两球吻合候选1500305893891219456。311–316s任务黑幕，321–326s同岩壁领奖；图仅画候选走廊，仍缺终点唯一坐标。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "气流平台的两日灵/球场景尚未完成原攻略独特地标对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1pa9RBtEPA-p1-e04.jpg",
+        "out/detectability-v2/route-roy/dark-route-map.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "909",
+          "pointId": "1500305893891219456"
+        }
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e006",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "392s信标向西下崖→403s右侧石碑→407s触摸→414–448s日灵交互→456s双箱。462s旧锚点支持双ID集合，左右成员仍无可靠ID对应。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "双箱原始ID与视频成员顺序未闭合"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1pa9RBtEPA-p1-e06.jpg",
+        "out/detectability-v2/route-roy/dark-route-map.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "909",
+          "pointId": "1500200422475800576"
+        },
+        {
+          "stateId": "909",
+          "pointId": "1500200454327345152"
+        }
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e006",
+      "member": 2,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "392s信标向西下崖→403s右侧石碑→407s触摸→414–448s日灵交互→456s双箱。462s旧锚点支持双ID集合，左右成员仍无可靠ID对应。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "双箱原始ID与视频成员顺序未闭合"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1pa9RBtEPA-p1-e06.jpg",
+        "out/detectability-v2/route-roy/dark-route-map.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "909",
+          "pointId": "1500200422475800576"
+        },
+        {
+          "stateId": "909",
+          "pointId": "1500200454327345152"
+        }
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e007",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "476–496s北行至浮岛铸光仪→516s假箱→518–521s陷阱传送→524s真箱；传送断链，严禁把入口坐标授予奖励。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "假箱陷阱发生传送，真实箱落点场景未独立对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1pa9RBtEPA-p1-e07.jpg",
+        "out/detectability-v2/route-roy/dark-route-map.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "909",
+          "pointId": "1499243508455006208"
+        }
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e008",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "540s同信标北行→552s右侧蓝柱→557s经过→562s崖缘→567s下看左大石→577–582s清怪日灵→592s奖励。图上大石候选走廊未实现独立定位。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "崖下左侧大石未与候选攻略唯一对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1pa9RBtEPA-p1-e08.jpg",
+        "out/detectability-v2/route-roy/dark-route-map.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "909",
+          "pointId": "1500363088875986944"
+        }
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e009",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "593–608s东北下崖转南沿道；613s不同角色插片领取，618s恢复原角色。原片路线可识别区域但插片奖励必须独立定位。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "插入不同角色画面造成断链，插入片段场景与原始攻略未对应"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1pa9RBtEPA-p1-e09.jpg",
+        "out/detectability-v2/route-roy/dark-route-map.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "909",
+          "pointId": "1501513441654841344"
+        }
+      ]
+    },
+    {
+      "eventId": "BV1pa9RBtEPA:p1:e010",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm-after-manual-terrain-review",
+      "support": [
+        "627s选东南信标1496905665611128832；633–642s东北飞上台，647s双座椅/老者，657s树旁坐等，662s箱。657s小地图北侧单环岩纹/东南双环/西侧弯路独立对应本地瓦片，手工约10–20单位误差，支持候选1500192871343808512；不称SIFT通过。"
+      ],
+      "counterEvidence": [],
+      "gaps": [
+        "手工地形对应为约10–20游戏单位精度；请root复核图中A/B两地形点"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV1pa9RBtEPA-p1-e10.jpg",
+        "out/detectability-v2/route-roy/dark-route-map.jpg",
+        "out/detectability-v2/route-roy/dark-e10-terrain-proof.jpg",
+        "out/detectability-v2/route-roy/dark-627s.jpg",
+        "out/detectability-v2/route-roy/dark-657s.jpg"
+      ],
+      "candidates": [
+        {
+          "stateId": "909",
+          "pointId": "1500192871343808512"
+        }
+      ],
+      "stateId": "909",
+      "pointId": "1500192871343808512"
+    },
+    {
+      "eventId": "BV19kNu6AEVR:p1:e006",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "retain-unresolved",
+      "support": [
+        "199s阁北信标→204–209s西北跨断崖与樱树→214s路面敌人→219s金色奖励；223s开图为本处。原有候选1524481633250820096仍与攻略水面地貌不同。"
+      ],
+      "counterEvidence": [
+        "原攻略水中怪与录像道路终点存在视觉冲突"
+      ],
+      "gaps": [
+        "需排除攻略后续替换/多图位置不一致，不能只凭坐标升格"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-e06.jpg"
+      ],
+      "candidates": []
+    },
+    {
+      "eventId": "BV19kNu6AEVR:p1:e008",
+      "member": 1,
+      "detectability": "undetectable",
+      "reviewStatus": "route-samples-reviewed",
+      "proposal": "confirm",
+      "support": [
+        "271s选择雾隐枢最后地下层的机巧传送设施，281s沿矩形房间向东直行→286s巨大圆门前战斗→291–296s金色奖励。297s真箭头(444,242)匹配专用-4/56层，44内点，距原始金潮汐0.99；攻略巨大圆门和青色地纹完全相符。"
+      ],
+      "counterEvidence": [
+        "初始全幅radius300把小房间所有地形判为空间集中；此次按真实小型分层图范围配置ROI，LIMITS未修改。若不接受小图ROI需保留未决，不能声称原大ROI通过。"
+      ],
+      "gaps": [
+        "机巧传送设施在原始点位组无可确认ID；图上仅标视频实际设施，不虚构CS信标。"
+      ],
+      "evidence": [
+        "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-e08.jpg",
+        "out/detectability-v2/route-roy/guide-1526600365212684288.jpg",
+        "out/detectability-v2/route-roy/meng-e8-layer-route.jpg",
+        "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-297.0s.jpg",
+        "out/detectability-v2/route-roy/BV19kNu6AEVR-e8-L56_F-4-56-anchor.jpg",
+        "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+        "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png"
+      ],
+      "candidates": [
+        {
+          "stateId": "8",
+          "pointId": "1526600365212684288",
+          "distance": 0.99,
+          "type": "潮汐之遗·金",
+          "description": "先做完“雾锁机伶”，然后再来一遍这里，就能刷新怪物。",
+          "floorId": "56",
+          "level": "-4/56"
+        },
+        {
+          "stateId": "8",
+          "pointId": "1524135058460102656",
+          "distance": 31.01,
+          "type": "朴素奇藏箱",
+          "description": "标点位置建筑的最高房顶。",
+          "floorId": "",
+          "level": "0"
+        }
+      ],
+      "stateId": "8",
+      "pointId": "1526600365212684288",
+      "anchor": {
+        "source": "out/detectability-v2/route-roy/BV19kNu6AEVR-p1-297.0s.jpg",
+        "time": 297,
+        "playerPixel": [
+          444,
+          242
+        ],
+        "roiRadius": 130,
+        "roiReason": "visible small isolated floor drawing",
+        "layer": "L56_F-4-56",
+        "rawPosition": [
+          -605595.4739996396,
+          -27125.628388120855
+        ],
+        "inliers": 44,
+        "transformSource": "out/detectability-v2/route-roy/surface-layer-new-anchors.json"
+      },
+      "guideReview": {
+        "stateId": "8",
+        "pointId": "1526600365212684288",
+        "status": "actual-source-images-reviewed",
+        "sourceJson": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288.json",
+        "images": [
+          "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526600365212684288-1.png"
+        ],
+        "note": "按候选实际ID核对原始攻略；P2三箱组每个成员均有自身ID攻略，成员通过唯一类型区别。"
+      }
+    }
+  ],
+  "validation": {
+    "members": 63,
+    "routeSamplesManuallyReviewed": 63,
+    "confirmProposals": 26,
+    "unresolved": 37,
+    "missingEvidencePaths": [],
+    "limitations": [
+      "5秒连续抽样审阅不是逐帧精密跟踪；所有未决身份保留",
+      "拼图路线仅有手工方向走廊，其他路线只记录独立终点并附连续截图，未伪造中间坐标"
+    ]
+  }
+}

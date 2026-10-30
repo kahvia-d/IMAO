@@ -1,0 +1,447 @@
+{
+  "schemaVersion": 1,
+  "stage": "post-first-pass-overview",
+  "firstPassFrozen": true,
+  "timelineMutations": false,
+  "parts": [
+    {
+      "bvid": "BV1pa9RBtEPA",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "首0–15s为游戏区域地图，无作者箱号落点/路线叠加；21–48s为任务与显像准备。中段抽查为收集/传送/对白，尾639–669.8s为长椅对话、领取和普通区域地图。未找到作者点位总览；底部箱1–10章节条不是空间总览。611–615s旧录像断点仍不继承610s或后续地图位置。",
+      "evidence": [
+        "out/detectability-v2/overview-new-regions/BV1pa9RBtEPA-p1/survey-000.jpg",
+        "out/detectability-v2/overview-new-regions/BV1pa9RBtEPA-p1/survey-024.jpg",
+        "out/detectability-v2/overview-new-regions/BV1pa9RBtEPA-p1/survey-048.jpg",
+        "out/detectability-v2/overview-new-regions/BV1pa9RBtEPA-p1/last-frame.jpg"
+      ],
+      "associations": [],
+      "unresolved": [
+        "No new overview evidence resolves e006 member-to-ID ambiguity or e009 inserted footage localization; frozen first-pass preserved."
+      ],
+      "overviewOnly": [],
+      "inspectionMethod": "New extraction from cached raw source: first90s every3s, interior every30s, last30s every3s plus actual final frame. Human visual review of all survey panels; no v1 decisions read. not-found is bounded to inspected frames, not a proof against a sub-second insert."
+    },
+    {
+      "bvid": "BV19kNu6AEVR",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "首0–12s为游戏地图及信标选择，中段为红名战斗和秘境探索；尾395–422s为秘境对白，最后425.2s打开秘境层地图。未找到作者编号总览，底部潮1–7/箱1–4是章节条。最后实际地下地图是新可用定位线索，但它不是作者总览，也不能拿地表仿射投射。",
+      "evidence": [
+        "out/detectability-v2/overview-new-regions/BV19kNu6AEVR-p1/survey-000.jpg",
+        "out/detectability-v2/overview-new-regions/BV19kNu6AEVR-p1/survey-024.jpg",
+        "out/detectability-v2/overview-new-regions/BV19kNu6AEVR-p1/survey-048.jpg",
+        "out/detectability-v2/overview-new-regions/BV19kNu6AEVR-p1/last-frame.jpg",
+        "out/detectability-v2/overview-new-regions/meng-layer-results.json",
+        "out/detectability-v2/overview-new-regions/meng-layer-proposal.json",
+        "out/detectability-v2/overview-new-regions/meng-projected-points.jpg"
+      ],
+      "associations": [],
+      "unresolved": [
+        {
+          "eventId": "BV19kNu6AEVR:p1:e009",
+          "members": [
+            1,
+            2,
+            3
+          ],
+          "newSource": "out/detectability-v2/overview-new-regions/BV19kNu6AEVR-p1/last-frame.jpg",
+          "analysis": "425.2s actual map shows the secret chamber floor with water, bridge/rooms and real player arrow. This is a better floor outline seed than surface maps; needs matching against a correctly registered underground reference before upgrading the three visually associated raw guide IDs. No identity change made.",
+          "followup": "Completed bounded dedicated-layer matching; see followupAttempt. Correct layer no longer missing. Direct reward-frame geometry still fails; three identity proposals handed to parent rather than silently changing frozen timeline."
+        }
+      ],
+      "overviewOnly": [],
+      "inspectionMethod": "New extraction from cached raw source: first90s every3s, interior every30s, last30s every3s plus actual final frame. Human visual review of all survey panels; no v1 decisions read. not-found is bounded to inspected frames, not a proof against a sub-second insert.",
+      "followupAttempt": {
+        "status": "bounded-attempt-complete",
+        "correctReference": {
+          "stateId": "8",
+          "layerId": 57,
+          "floorId": "-1/57",
+          "name": "雾隐帘洞",
+          "source": "map-regions/layers/B50F4135DCCC4D8DA87ED33CE95EA31D/8/57/-1/-7_1.png",
+          "metadata": "Assets/FeaturesDatas/KuroTilePacks/mengzhou/layered-floors/floor-index.json",
+          "coordinateTransform": "localize.tile_transform([-7,-7,1,1],scale); raw state coordinates = game*100; app origin/scale not applied"
+        },
+        "registeredFrame": "out/detectability-v2/overview-new-regions/BV19kNu6AEVR-p1/last-frame.jpg",
+        "acceptedFullMapFits": [
+          {
+            "inliers": 36,
+            "medianError": 0.16004480534222448,
+            "p90Error": 0.4177950586578234,
+            "scale": 0.7225607152367666,
+            "hullFraction": 0.14227549661264396,
+            "layer": "-1/57",
+            "visualization": "out/detectability-v2/overview-new-regions/meng-425.2--1_57-0.5-match.jpg"
+          },
+          {
+            "inliers": 39,
+            "medianError": 0.5103677475837854,
+            "p90Error": 0.9946681083163966,
+            "scale": 1.4450681861136532,
+            "hullFraction": 0.14932530594969923,
+            "layer": "-1/57",
+            "visualization": "out/detectability-v2/overview-new-regions/meng-425.2--1_57-1-match.jpg"
+          }
+        ],
+        "rewardFrameFits": "0/36 trials passed (6 reward frames x 3 correct-domain floors x 2 reference scales); limits unchanged",
+        "proposals": [
+          {
+            "eventId": "BV19kNu6AEVR:p1:e009",
+            "member": 1,
+            "stateId": "8",
+            "pointId": "1526608470311550976",
+            "recommendation": "confirm-after-parent-review",
+            "analysis": "首轮唯一明确缺口是正确层的独立定位；本轮末帧确定雾隐帘洞-1/57，三候选原始坐标均落在这张洞层对应建筑群。北侧沿水栏杆平台朴素箱；源372s箱背后为水平金色栏杆、岩壁和方形平台，原始攻略图1相同平台地砖/灯柱/栏杆组合。不是按编号顺序分配。 不把425.2s玩家位置倒推至本次领取，不声称奖励帧SIFT通过。",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/overview-new-regions/meng-layer-results.json",
+                "locator": "425.2s; layer -1/57; half/full resolution",
+                "reason": "Correct dedicated underground map aligns with 36/39 inliers; alternative -1/58 and -2/58 fail frozen gate. Raw marker projected onto this registered floor, not surface.",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-v2/overview-new-regions/meng-projected-points.json",
+                "locator": "pointId 1526608470311550976",
+                "reason": "Raw point [-635300.0, -29000.0] projects to source floor-map pixel [393.42666477540934, 212.6245008473066]; bounds establish correct cave domain; no earlier player coordinate inferred.",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "369–373s member 1",
+                "start": 369,
+                "end": 373,
+                "reason": "北侧沿水栏杆平台朴素箱；源372s箱背后为水平金色栏杆、岩壁和方形平台，原始攻略图1相同平台地砖/灯柱/栏杆组合。不是按编号顺序分配。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976.json",
+                "locator": "content.description and image1",
+                "reason": "北侧沿水栏杆平台朴素箱；源372s箱背后为水平金色栏杆、岩壁和方形平台，原始攻略图1相同平台地砖/灯柱/栏杆组合。不是按编号顺序分配。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526608470311550976-1.png",
+                "locator": "full screenshot",
+                "reason": "北侧沿水栏杆平台朴素箱；源372s箱背后为水平金色栏杆、岩壁和方形平台，原始攻略图1相同平台地砖/灯柱/栏杆组合。不是按编号顺序分配。",
+                "role": "support"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "352.22–355.14s local ASR explicitly scopes the scanner claim to the three boxes in this secret chamber, independently supported by three visible pickups; not based on title or lamp-unlock assumption.",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "352.22–355.14s",
+                  "start": 352.22,
+                  "end": 355.14,
+                  "role": "support",
+                  "reason": "Explicit three-box scanner statement; visible three member pickups 369–390s"
+                }
+              ]
+            },
+            "limitations": [
+              "No accepted direct reward-frame geometry: 369/372/380/381/387/389s remained below fixed minMatches16.",
+              "Position support is correct floor registration + guide-specific architecture, not metric per-reward coordinates. Parent may retain unresolved if exact reward geometry is mandatory."
+            ]
+          },
+          {
+            "eventId": "BV19kNu6AEVR:p1:e009",
+            "member": 2,
+            "stateId": "8",
+            "pointId": "1526609969292886016",
+            "recommendation": "confirm-after-parent-review",
+            "analysis": "首轮唯一明确缺口是正确层的独立定位；本轮末帧确定雾隐帘洞-1/57，三候选原始坐标均落在这张洞层对应建筑群。屋顶朴素箱；源380–381s箱体位于两根悬旗之间，前方栏杆开口和右侧陶罐可见，原始攻略图1显示同样旗柱、栏杆和陶罐。用独特屋顶构造区别北侧朴素箱。 不把425.2s玩家位置倒推至本次领取，不声称奖励帧SIFT通过。",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/overview-new-regions/meng-layer-results.json",
+                "locator": "425.2s; layer -1/57; half/full resolution",
+                "reason": "Correct dedicated underground map aligns with 36/39 inliers; alternative -1/58 and -2/58 fail frozen gate. Raw marker projected onto this registered floor, not surface.",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-v2/overview-new-regions/meng-projected-points.json",
+                "locator": "pointId 1526609969292886016",
+                "reason": "Raw point [-630800.0, -28900.0] projects to source floor-map pixel [430.94206058912914, 213.37496223046355]; bounds establish correct cave domain; no earlier player coordinate inferred.",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "380–382s member 2",
+                "start": 380,
+                "end": 382,
+                "reason": "屋顶朴素箱；源380–381s箱体位于两根悬旗之间，前方栏杆开口和右侧陶罐可见，原始攻略图1显示同样旗柱、栏杆和陶罐。用独特屋顶构造区别北侧朴素箱。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016.json",
+                "locator": "content.description and image1",
+                "reason": "屋顶朴素箱；源380–381s箱体位于两根悬旗之间，前方栏杆开口和右侧陶罐可见，原始攻略图1显示同样旗柱、栏杆和陶罐。用独特屋顶构造区别北侧朴素箱。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609969292886016-1.png",
+                "locator": "full screenshot",
+                "reason": "屋顶朴素箱；源380–381s箱体位于两根悬旗之间，前方栏杆开口和右侧陶罐可见，原始攻略图1显示同样旗柱、栏杆和陶罐。用独特屋顶构造区别北侧朴素箱。",
+                "role": "support"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "352.22–355.14s local ASR explicitly scopes the scanner claim to the three boxes in this secret chamber, independently supported by three visible pickups; not based on title or lamp-unlock assumption.",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "352.22–355.14s",
+                  "start": 352.22,
+                  "end": 355.14,
+                  "role": "support",
+                  "reason": "Explicit three-box scanner statement; visible three member pickups 369–390s"
+                }
+              ]
+            },
+            "limitations": [
+              "No accepted direct reward-frame geometry: 369/372/380/381/387/389s remained below fixed minMatches16.",
+              "Position support is correct floor registration + guide-specific architecture, not metric per-reward coordinates. Parent may retain unresolved if exact reward geometry is mandatory."
+            ]
+          },
+          {
+            "eventId": "BV19kNu6AEVR:p1:e009",
+            "member": 3,
+            "stateId": "8",
+            "pointId": "1526609257964093440",
+            "recommendation": "confirm-after-parent-review",
+            "analysis": "首轮唯一明确缺口是正确层的独立定位；本轮末帧确定雾隐帘洞-1/57，三候选原始坐标均落在这张洞层对应建筑群。狐像前基准箱；源387–390s经过平台至狐像前开基准箱，原始攻略图1显示狐像、正前箱位、对称阶梯/水池。和两个朴素箱类别、场景均不同。 不把425.2s玩家位置倒推至本次领取，不声称奖励帧SIFT通过。",
+            "positionEvidence": [
+              {
+                "source": "out/detectability-v2/overview-new-regions/meng-layer-results.json",
+                "locator": "425.2s; layer -1/57; half/full resolution",
+                "reason": "Correct dedicated underground map aligns with 36/39 inliers; alternative -1/58 and -2/58 fail frozen gate. Raw marker projected onto this registered floor, not surface.",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-v2/overview-new-regions/meng-projected-points.json",
+                "locator": "pointId 1526609257964093440",
+                "reason": "Raw point [-633600.0, -27100.0] projects to source floor-map pixel [407.63356688738895, 228.43213333313705]; bounds establish correct cave domain; no earlier player coordinate inferred.",
+                "role": "support"
+              }
+            ],
+            "videoEvidence": [
+              {
+                "source": "BV19kNu6AEVR:p1",
+                "locator": "387–390s member 3",
+                "start": 387,
+                "end": 390,
+                "reason": "狐像前基准箱；源387–390s经过平台至狐像前开基准箱，原始攻略图1显示狐像、正前箱位、对称阶梯/水池。和两个朴素箱类别、场景均不同。",
+                "role": "support"
+              }
+            ],
+            "guideEvidence": [
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440.json",
+                "locator": "content.description and image1",
+                "reason": "狐像前基准箱；源387–390s经过平台至狐像前开基准箱，原始攻略图1显示狐像、正前箱位、对称阶梯/水池。和两个朴素箱类别、场景均不同。",
+                "role": "support"
+              },
+              {
+                "source": "out/detectability-collection/BV19kNu6AEVR/guides/guide-8-1526609257964093440-1.png",
+                "locator": "full screenshot",
+                "reason": "狐像前基准箱；源387–390s经过平台至狐像前开基准箱，原始攻略图1显示狐像、正前箱位、对称阶梯/水池。和两个朴素箱类别、场景均不同。",
+                "role": "support"
+              }
+            ],
+            "attributeReview": {
+              "status": "reviewed",
+              "detectability": "undetectable",
+              "analysis": "352.22–355.14s local ASR explicitly scopes the scanner claim to the three boxes in this secret chamber, independently supported by three visible pickups; not based on title or lamp-unlock assumption.",
+              "evidence": [
+                {
+                  "source": "BV19kNu6AEVR:p1",
+                  "locator": "352.22–355.14s",
+                  "start": 352.22,
+                  "end": 355.14,
+                  "role": "support",
+                  "reason": "Explicit three-box scanner statement; visible three member pickups 369–390s"
+                }
+              ]
+            },
+            "limitations": [
+              "No accepted direct reward-frame geometry: 369/372/380/381/387/389s remained below fixed minMatches16.",
+              "Position support is correct floor registration + guide-specific architecture, not metric per-reward coordinates. Parent may retain unresolved if exact reward geometry is mandatory."
+            ]
+          }
+        ],
+        "timelineMutations": false,
+        "summary": "Correct cached layer and transform are available and verified. Three scene-specific identities now have independent correct-floor evidence; propose confirmation for parent review, explicitly without claiming direct reward-frame localization."
+      }
+    },
+    {
+      "bvid": "BV13ZvrBtEde",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "首0–30s为日灵现场和显像说明，33–75s为游戏地图/购买五松塔；中段为实际引路和显像，尾861–879s领取最后箱，882–891.4s为牙列石窟游戏地图和下P衔接。未找到作者空间编号总览；底部箱号条仅章节索引。",
+      "evidence": [
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p1/survey-000.jpg",
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p1/survey-024.jpg",
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p1/survey-048.jpg",
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p1/last-frame.jpg"
+      ],
+      "associations": [],
+      "unresolved": [
+        "No author overview found to supplement unmatched members. Existing footage and raw guides remain authoritative; no new ID assignment."
+      ],
+      "overviewOnly": [],
+      "inspectionMethod": "New extraction from cached raw source: first90s every3s, interior every30s, last30s every3s plus actual final frame. Human visual review of all survey panels; no v1 decisions read. not-found is bounded to inspected frames, not a proof against a sub-second insert."
+    },
+    {
+      "bvid": "BV13ZvrBtEde",
+      "part": 2,
+      "status": "reviewed",
+      "overviewPresence": "not-found",
+      "analysis": "首0–12s为牙列石窟原生地图/机兵导航；中间为三条摩托赛道，尾263–290s赛道及结算，末293.2s普通地表地图。没有作者编号落点总览。不能以进度条箱28–36顺序分配每组的三个数据库ID。",
+      "evidence": [
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p2/survey-000.jpg",
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p2/survey-024.jpg",
+        "out/detectability-v2/overview-new-regions/BV13ZvrBtEde-p2/last-frame.jpg"
+      ],
+      "associations": [],
+      "unresolved": [
+        "No author overview found to supplement unmatched members. Existing footage and raw guides remain authoritative; no new ID assignment."
+      ],
+      "overviewOnly": [],
+      "inspectionMethod": "New extraction from cached raw source: first90s every3s, interior every30s, last30s every3s plus actual final frame. Human visual review of all survey panels; no v1 decisions read. not-found is bounded to inspected frames, not a proof against a sub-second insert."
+    },
+    {
+      "bvid": "BV1F3A3zxEDQ",
+      "part": 1,
+      "status": "reviewed",
+      "overviewPresence": "present",
+      "analysis": "首0–约10s确有作者编号总览：地表大图叠加箱1–24、第二幅箱25–32及多个地下局部拼贴；12s后转普通地图。检查中段及末尾未再找到编号总览。0s和6s主体地图在固定SIFT门限下分别81/163内点通过，只可把作者标记作区域候选，不能把章节号当ID。拼贴子图不是同一坐标变换，左侧箱31的主图投影已明确作废。第二幅右侧标成箱32的位置接近王座任务，视频末段章节为箱33，编号冲突须保留。",
+      "evidence": [
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/survey-000.jpg",
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/survey-024.jpg",
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/survey-048.jpg",
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/survey-072.jpg",
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/last-frame.jpg",
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/frame-0000.jpg",
+        "out/detectability-v2/overview-new-regions/BV1F3A3zxEDQ-p1/frame-0006.jpg",
+        "out/detectability-v2/overview-new-regions/overview-geometry.json"
+      ],
+      "associations": [
+        {
+          "eventId": "BV1F3A3zxEDQ:p1:e001",
+          "member": 1,
+          "overviewLabel": "箱1",
+          "candidateStateId": "8",
+          "candidatePointId": "1469743197810446336",
+          "status": "candidate-rechecked-not-promoted",
+          "analysis": "总览圈点到候选约75.61游戏单位，仅粗定位。回看65s朴素箱、同一右侧尖石/黑岩壁，与攻略图吻合；显像破冰后NPC对话机制与原始文字一致。建议作为补强身份候选交主审核，属性仍不能由总览决定。",
+          "videoEvidence": [
+            "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-00065.00.jpg"
+          ],
+          "guideEvidence": [
+            "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469743197810446336.json",
+            "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1469743197810446336-1.png"
+          ]
+        },
+        {
+          "eventId": "BV1F3A3zxEDQ:p1:e024",
+          "member": 1,
+          "overviewLabel": "箱29",
+          "candidateStateId": "8",
+          "candidatePointId": "1477785036769918976",
+          "status": "candidate-rechecked-not-promoted",
+          "analysis": "总览区域候选49.68单位，与首轮1025s层图平面候选一致；新取原始攻略明确第三次营救艾尔玛，1017s回看岩壁脚下朴素箱与图相容。但阴影/视角差异及目标层归属仍缺独立验证，建议保持未确认。",
+          "videoEvidence": [
+            "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-01017.00.jpg"
+          ],
+          "guideEvidence": [
+            "out/detectability-v2/overview-new-regions/guides/guide-8-1477785036769918976.json",
+            "out/detectability-v2/overview-new-regions/guides/guide-8-1477785036769918976-1.png"
+          ]
+        },
+        {
+          "eventId": "BV1F3A3zxEDQ:p1:e028",
+          "member": 1,
+          "overviewLabel": "总览箱32 / 视频章节箱33",
+          "candidateStateId": "8",
+          "candidatePointId": "1477783180906614784",
+          "status": "candidate-rechecked-not-promoted",
+          "analysis": "主体图标离原始王只是一个位置候选23.70单位；回看1240–1244s为金色辉光箱及冰晶岩壁，攻略图显示同型箱和岩壁，任务首领/王座机制一致。总览标号与章节冲突，不按编号映射。作为强候选报告，不直接改变冻结首轮。",
+          "videoEvidence": [
+            "out/detectability-v2/BV1F3A3zxEDQ/p01/visual/frame-01240.00.jpg"
+          ],
+          "guideEvidence": [
+            "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477783180906614784.json",
+            "out/detectability-collection/BV1F3A3zxEDQ/guides/guide-8-1477783180906614784-1.png"
+          ]
+        }
+      ],
+      "unresolved": [
+        {
+          "overviewLabel": "箱4-6",
+          "eventId": "BV1F3A3zxEDQ:p1:e004",
+          "members": [
+            1,
+            2,
+            3
+          ],
+          "analysis": "总览三箱聚合标记给出候选组1469149723331514368/1469150333640495104/1469151068226895872，但位置约108–119单位且原片经坑道/地下黑池；未取得成员对应图证据，不能按ID数组或箱号顺序分配。"
+        },
+        {
+          "overviewLabel": "箱15-17 / 箱20-22",
+          "eventIds": [
+            "BV1F3A3zxEDQ:p1:e013",
+            "BV1F3A3zxEDQ:p1:e016"
+          ],
+          "analysis": "总览只聚合三箱位置，既不代表三成员各自坐标也不解决地下/地表层。保留已执行的区域搜索结果，不升级。"
+        },
+        {
+          "overviewLabel": "箱31",
+          "eventId": "BV1F3A3zxEDQ:p1:e026",
+          "analysis": "左下为独立地下拼贴；主地图仿射投影错误，已经在geometry中标记rejected。未把两箱按31/32顺序分ID。"
+        },
+        {
+          "overviewLabel": "箱10",
+          "eventId": "BV1F3A3zxEDQ:p1:e008",
+          "analysis": "仅提示已领取的冰原往事任务箱。候选1469344326655721472具对应任务描述，但该段无本次领取；总览不得补造可见奖励或变成目击确认。"
+        },
+        {
+          "overviewLabel": "箱32 / 箱33",
+          "eventId": "BV1F3A3zxEDQ:p1:e028",
+          "analysis": "总览右侧标签看作箱32，视频尾部章节为箱33。仅通过位置+任务内容形成候选，不强行统一或改既有时间线。"
+        }
+      ],
+      "overviewOnly": [],
+      "inspectionMethod": "New extraction from cached raw source: first90s every3s, interior every30s, last30s every3s plus actual final frame. Human visual review of all survey panels; no v1 decisions read. not-found is bounded to inspected frames, not a proof against a sub-second insert."
+    }
+  ],
+  "summary": {
+    "parts": 5,
+    "present": 1,
+    "notFound": 4,
+    "recheckedAssociations": 3,
+    "identityPromotions": 0,
+    "newVideoEvents": 0,
+    "additionalLayerProposals": 3
+  },
+  "notes": [
+    "No v1 matching conclusions or old candidate results consulted.",
+    "Source overview was opened only after root reported all380 first-pass rewards frozen.",
+    "All associations remain proposals; no map-layer or multi-box ambiguity is silently waived."
+  ]
+}

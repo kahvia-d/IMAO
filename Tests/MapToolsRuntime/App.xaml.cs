@@ -25,6 +25,7 @@ public partial class App : Application
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
         var arguments = Environment.GetCommandLineArgs();
+        if(arguments.Contains("--filter-bulk")){await RunFilterBulkAsync();return;}
         if(arguments.Contains("--route-controls")){await RunRouteControlsAsync();return;}
         int source = Array.IndexOf(arguments, "--source");
         if (source >= 0) { SourceFixture.RunChild(arguments[source + 1], int.Parse(arguments[source + 2]), int.Parse(arguments[source + 3])); return; }
@@ -303,6 +304,33 @@ public partial class App : Application
         }
         catch (Exception error) { log.WriteLine("FAIL " + error); Environment.ExitCode = 1; }
         finally { keeper.Close(); Exit(); }
+    }
+    private async Task RunFilterBulkAsync()
+    {
+        string folder=Path.Combine(AppContext.BaseDirectory,"filter-bulk-"+DateTime.Now.ToString("yyyyMMdd-HHmmss"));Directory.CreateDirectory(folder);
+        using var log=new StreamWriter(Path.Combine(folder,"results.log")){AutoFlush=true};Window? view=null;
+        void Check(bool ok,string message){if(!ok)throw new Exception(message);log.WriteLine("PASS "+message);}
+        try {
+            var catalog=MapFilterCatalog.Load(new[]{new MapFilterSourceItem("a","A","collect"),new("b","B","collect"),new("c","C","collect")},folder);
+            var saved=new Dictionary<string,bool>{{"a",true},{"b",true},{"c",false}};bool reject=false;
+            using var filters=new FilterSelectionService(catalog,saved,(ids,enabled)=>{if(reject)return(false,"fixture failure");foreach(var id in ids)saved[id]=enabled;return (true,"");},(_,_)=>Task.FromResult(true));filters.SetConnected(true);
+            var control=new FilterControl(filters){CompactMode=true};view=new Window{Content=control};view.AppWindow.Resize(new SizeInt32(1000,520));view.Activate();await Task.Delay(500);
+            Check(Boxes().Count==3,"three realized filter checkboxes");
+            // A pointer click runs Item_Click even when the saved value already agrees.
+            foreach(var box in Boxes()) typeof(FilterControl).GetMethod("Item_Click",Private)!.Invoke(control,[box,new RoutedEventArgs()]);
+            Invoke("取消当前结果");await Task.Delay(100);
+            Check(saved.Values.All(v=>!v),"clear results persists deselection");
+            Check(Boxes().All(b=>b.IsChecked==false),"clear results unchecks realized boxes without changing rows");
+            Invoke("全选当前结果");await Task.Delay(100);
+            Check(Boxes().All(b=>b.IsChecked==true),"select results checks realized boxes");
+            reject=true;Invoke("取消当前结果");await Task.Delay(100);
+            Check(Boxes().All(b=>b.IsChecked==true)&&saved.Values.All(v=>v),"failed save preserves checked boxes and persisted selection");
+            reject=false;filters.SetEnabled(["a"],false);await Task.Delay(100);
+            Check(Boxes().Single(b=>((FilterSelectionRow)b.Tag).Id=="a").IsChecked==false,"external selection change updates realized checkbox");
+            log.WriteLine("ALL FILTER BULK CHECKS PASSED");Environment.ExitCode=0;
+            List<CheckBox> Boxes()=>Descendants(control).OfType<CheckBox>().Where(b=>b.Tag is FilterSelectionRow).ToList();
+            void Invoke(string label){var button=Descendants(control).OfType<Button>().Single(b=>Equals(b.Content,label));((IInvokeProvider)new ButtonAutomationPeer(button).GetPattern(PatternInterface.Invoke)).Invoke();}
+        }catch(Exception ex){log.WriteLine("FAIL "+ex);Environment.ExitCode=1;}finally{view?.Close();Exit();}
     }
     private async Task RunRouteControlsAsync()
     {

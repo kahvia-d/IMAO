@@ -1,0 +1,345 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-29",
+  "experimentOnly": true,
+  "runtimeIntegration": false,
+  "scope": "只读质量核查root-review-notes.json中P10；重点5项做1–5秒局部补帧。其余确认项只作全时间轴/攻略缩略图交叉筛查，不宣称逐条重新认证。",
+  "summary": {
+    "focusedPins": [
+      2,
+      16,
+      19,
+      21,
+      24
+    ],
+    "retainConfirmed": [
+      2
+    ],
+    "downgradeConfirmed": [
+      16
+    ],
+    "upgradeUnresolved": [
+      19
+    ],
+    "remainUnresolved": [
+      21,
+      24
+    ],
+    "netExistingConfirmedChange": 0
+  },
+  "reviews": [
+    {
+      "pin": 2,
+      "pointId": "1251624058141462528",
+      "previousConfirmed": true,
+      "recommendation": "retain-confirmed-with-corrected-evidence",
+      "segmentSecondsApprox": [
+        57,
+        82
+      ],
+      "basis": "57–63秒启动30秒飞檐，66–78秒通过树根和弹跳苔，81秒明确开启独立基准箱。攻略第2图同为宽大覆草树根斜面上的基准箱，树枝/下方蓝色植物和通路形状相合。原75秒仅为途中，确认应引用完整路线与81秒奖励。",
+      "duplicateCheck": "不同于pin1：其90–105秒剑形战斗挑战位于草地并出现另一个基准箱；也与705秒空圆台无关。",
+      "confidenceBoundary": "场景人工对应；未新增地图几何。",
+      "bvid": "BV1iMTXzVE8J",
+      "part": 10,
+      "stateId": 8,
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-60.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-66.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-72.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-75.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-78.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-81.jpg"
+        ],
+        "guideJson": "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1251624058141462528.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1251624058141462528-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1251624058141462528-2.png"
+        ]
+      },
+      "sourceUrl": "https://www.bilibili.com/video/BV1iMTXzVE8J/?p=10&t=57",
+      "guideDescription": "在地图左上方完成飞檐挑战获得！",
+      "guidePictureUrls": [
+        "https://prod-alicdn-community.kurobbs.com/forum/e77a47cbb892446b90ab78eed2257fa620240615.png",
+        "https://prod-alicdn-community.kurobbs.com/forum/1522cf14c9f04de6ad40bd29c491c3a420240615.png"
+      ],
+      "detectability": "not-detectable-for-normal-sweep"
+    },
+    {
+      "pin": 16,
+      "pointId": "1282455168761909248",
+      "previousConfirmed": true,
+      "recommendation": "downgrade-to-unresolved",
+      "segmentSecondsApprox": [
+        678,
+        729
+      ],
+      "basis": "攻略是有灯门厅、空调、罐子和巨树包围的实验室外，旁有青色弹跳苔和紫色跑酷起点。678–693秒实际为中央巨榕树根和红色蘑菇，696–702秒地图在巨榕西侧，705–711秒角色站空圆台；没有对应亮灯建筑或独立基准奖励。之后直接飞向裂纹岩并在729秒开朴素箱。原备注把同类蘑菇/植物当作匹配，缺乏可核地标。",
+      "duplicateCheck": "714–729是pin10裂纹岩路线及奖励；不能将该连续移动再算为pin16挑战完成。不能确定pin16在视频其他时段不存在，但当前证据必须撤销。",
+      "bvid": "BV1iMTXzVE8J",
+      "part": 10,
+      "stateId": 8,
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-678.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-690.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-693.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-696.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-702.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-705.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-711.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-717.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-723.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-729.jpg"
+        ],
+        "guideJson": "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1282455168761909248.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1282455168761909248-1.png"
+        ]
+      },
+      "sourceUrl": "https://www.bilibili.com/video/BV1iMTXzVE8J/?p=10&t=678",
+      "guideDescription": "完成标点附近挑战后获得（标点由玩家雲开提供）",
+      "guidePictureUrls": [
+        "https://prod-alicdn-community.kurobbs.com/forum/e7651b6527784f2484c23163f542a18220240908.png"
+      ],
+      "detectability": "unknown"
+    },
+    {
+      "pin": 19,
+      "pointId": "1288245572837634048",
+      "previousConfirmed": false,
+      "recommendation": "upgrade-to-confirmed-by-agent-cross-check",
+      "segmentSecondsApprox": [
+        228,
+        299
+      ],
+      "basis": "238秒已显示三石柱空地后方巨型横根及石壁；248–293秒逐次取回隙声蝶（含荆棘处），298秒紫潮汐在白花草地柱前出现。攻略首图中三柱、右后单块竖石、左侧石壁、两道横根拱洞和白花分布与视频同一场地对应。53.6位置偏差不是确认依据。",
+      "duplicateCheck": "该段不同于瀑布隙声蝶pin22（585–630秒）；也不同于850–905秒山坡三柱段。",
+      "bvid": "BV1iMTXzVE8J",
+      "part": 10,
+      "stateId": 8,
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-238.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-243.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-248.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-253.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-263.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-268.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-273.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-278.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-288.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-293.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-298.jpg"
+        ],
+        "guideJson": "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1288245572837634048.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1288245572837634048-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1288245572837634048-2.png"
+        ]
+      },
+      "sourceUrl": "https://www.bilibili.com/video/BV1iMTXzVE8J/?p=10&t=228",
+      "guideDescription": "将附近三只隙声蝶送回柱子后解锁，隙声蝶位置如图二所示",
+      "guidePictureUrls": [
+        "https://prod-alicdn-community.kurobbs.com/forum/0460238fc1924532a5b144352e159ab120240924.png",
+        "https://prod-alicdn-community.kurobbs.com/forum/bfeb046f122e4a739222b29e348c660d20240924.png"
+      ],
+      "detectability": "not-detectable-for-normal-sweep"
+    },
+    {
+      "pin": 21,
+      "pointId": "1252777761631461376",
+      "previousConfirmed": false,
+      "recommendation": "keep-unresolved",
+      "segmentSecondsApprox": null,
+      "basis": "攻略要求五罐子并给出裸地五罐布局与怪物场景。完整15秒时间轴及300秒附近补帧没有建立五罐布局到该绿潮汐的独立对应；330–350秒属于紫花草地另一罐子/战斗金潮汐场景，不能复用pin23作为此处证据。",
+      "unresolvedReason": "缺少可靠的五罐触发及绿色潮汐奖励连续场景，42.7距离不能替代图文核对。",
+      "bvid": "BV1iMTXzVE8J",
+      "part": 10,
+      "stateId": 8,
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-301.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-313.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-316.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-322.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-328.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-331.jpg"
+        ],
+        "guideJson": "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1252777761631461376.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1252777761631461376-1.png",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1252777761631461376-2.png"
+        ]
+      },
+      "sourceUrl": "https://www.bilibili.com/video/BV1iMTXzVE8J/?p=10&t=0",
+      "guideDescription": "打掉地上五个罐子会出现",
+      "guidePictureUrls": [
+        "https://prod-alicdn-community.kurobbs.com/forum/e62f2fd0796b4f18a56761a729480be420240721.png",
+        "https://prod-alicdn-community.kurobbs.com/forum/12acc43bd92c4efaa68b63f585bde70b20240902.png"
+      ],
+      "detectability": "unknown"
+    },
+    {
+      "pin": 24,
+      "pointId": "1251558983059951616",
+      "previousConfirmed": false,
+      "recommendation": "keep-unresolved",
+      "segmentSecondsApprox": [
+        850,
+        905
+      ],
+      "basis": "850–903秒确有山坡三只隙声蝶及最后紫潮汐，能确认是独立于pin19/pin22的收集事件。但该点仅一张两柱草坡攻略图，石坡、草地与视频相似而缺少独有地标或更精确位置复核；尚不能排除其他同机制三柱点。",
+      "unresolvedReason": "机制对应，具体库街区身份尚欠唯一视觉/地图证据。",
+      "bvid": "BV1iMTXzVE8J",
+      "part": 10,
+      "stateId": 8,
+      "localEvidence": {
+        "videoFrames": [
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-853.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-858.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-863.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-868.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-873.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-878.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-883.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-888.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-898.jpg",
+          "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-903.jpg"
+        ],
+        "guideJson": "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1251558983059951616.json",
+        "guideImagesReviewed": [
+          "out/detectability-collection/BV1iMTXzVE8J/p10/guides/guide-8-1251558983059951616-1.png"
+        ]
+      },
+      "sourceUrl": "https://www.bilibili.com/video/BV1iMTXzVE8J/?p=10&t=850",
+      "guideDescription": "找到三个隙声蝶解密",
+      "guidePictureUrls": [
+        "https://prod-alicdn-community.kurobbs.com/forum/1ffacb32980349bdb0b5fd19296cb8c820240828.jpg"
+      ],
+      "detectability": "unknown"
+    }
+  ],
+  "otherConfirmedItemsContactPass": [
+    {
+      "pin": 0,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 1,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 4,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 5,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 6,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 7,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 8,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 9,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 10,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 11,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 13,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 14,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 15,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 17,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 18,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 20,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 22,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    },
+    {
+      "pin": 23,
+      "status": "no-specific-new-contradiction-observed-in-contact-pass",
+      "note": "并非完整独立复核"
+    }
+  ],
+  "coverageConcern": {
+    "segmentSecondsApprox": [
+      1092,
+      1104
+    ],
+    "mechanism": "采集花圈的三株碧蝶花后出现基准箱",
+    "pointId": null,
+    "reviewStatus": "unbound-source-target",
+    "evidence": [
+      "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-1092.jpg",
+      "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-1095.jpg",
+      "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-1098.jpg",
+      "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-1101.jpg",
+      "out/detectability-collection/BV1iMTXzVE8J/p10/quality-review/frame-1104.jpg"
+    ],
+    "reason": "该段明确出现独立奖励；与165秒六株鸳鸯花及击败游弋蝶不同。需回到总览和库街区查身份、核对它是否已经被某pin隐含计数，暂不武断增加全局计数。"
+  },
+  "reviewedContacts": [
+    "out/detectability-collection/BV1iMTXzVE8J/p10/contact-15s-0000.jpg",
+    "out/detectability-collection/BV1iMTXzVE8J/p10/contact-15s-0300.jpg",
+    "out/detectability-collection/BV1iMTXzVE8J/p10/contact-15s-0600.jpg",
+    "out/detectability-collection/BV1iMTXzVE8J/p10/contact-15s-0900.jpg"
+  ],
+  "reviewedGuideSheets": [
+    "out/detectability-collection/BV1iMTXzVE8J/p10/guide-review-00.jpg",
+    "out/detectability-collection/BV1iMTXzVE8J/p10/guide-review-08.jpg",
+    "out/detectability-collection/BV1iMTXzVE8J/p10/guide-review-16.jpg",
+    "out/detectability-collection/BV1iMTXzVE8J/p10/guide-review-24.jpg"
+  ]
+}

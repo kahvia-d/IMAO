@@ -1,0 +1,844 @@
+{
+  "schemaVersion": 1,
+  "experimentOnly": true,
+  "date": "2026-10-29",
+  "baseCommit": "eab43c815d37dfffd1f9f80690a6de82caf86e04",
+  "definition": "正常使用探测仪查漏会漏掉的点位，包括机关、采集、解谜或破坏障碍前不可探测，触发后才出现或可探测的目标。未命中清单的点仍为未知。",
+  "sourceAuthor": "又肝又氪ya",
+  "sourceTitle": "【鸣潮】黑海岸群岛查漏补缺系列 奇藏探测仪扫不到的奇藏/奇藏/补全探索度/补全宝箱数",
+  "tileArchiveGeneration": "B50F4135DCCC4D8DA87ED33CE95EA31D",
+  "automationBoundary": "人工选择时间段、地图画面、场景及大地图玩家中心；SIFT和RANSAC自动配准，小地图自动产生附近候选；代理人工视觉与文本复核。非盲测、非全自动准确率评估。",
+  "runtimeIntegration": false,
+  "confirmedPoints": [
+    {
+      "ordinal": 1,
+      "stateId": 8,
+      "pointId": "1290445725890076672",
+      "typeId": "qzx_02",
+      "name": "基准奇藏箱",
+      "rawPosition": [
+        309575.0,
+        134964.0
+      ],
+      "detectability": "not-detectable-for-normal-sweep",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "reviewMethod": "big-map-and-guide-reviewed",
+      "basis": "地图27秒配准后，玩家位置最近候选为该点；柱子、建筑底部白色斜板、三株香苏及生成的基准箱均与两张攻略图对应。",
+      "source": {
+        "bvid": "BV1evKmzxE34",
+        "cid": "30746478372",
+        "part": 1,
+        "segmentSecondsApprox": [
+          0,
+          28
+        ],
+        "beforeFrameSeconds": 21,
+        "afterFrameSeconds": 24,
+        "url": "https://www.bilibili.com/video/BV1evKmzxE34/?t=21"
+      },
+      "guide": {
+        "description": "采集柱子周围三株香苏后，开启隐藏宝箱",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/89eeb13c021e40cc93025a8ffd4b876f20240930.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/4bec75ea1e5641cb95643976b513594920240930.png"
+        ],
+        "lastUpdateTime": "2025-07-24",
+        "url": "https://www.kurobbs.com/mc/map/?state=8&country=900&typeId=qzx_02&pointId=1290445725890076672"
+      },
+      "localEvidence": {
+        "videoBefore": "frame-021.jpg",
+        "videoAfter": "frame-024.jpg",
+        "guideBefore": "guide-1290445725890076672-1.png",
+        "guideAfter": "guide-1290445725890076672-2.png"
+      }
+    },
+    {
+      "ordinal": 2,
+      "stateId": 900,
+      "pointId": "1290808586256605184",
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -40620.0,
+        81525.0
+      ],
+      "detectability": "not-detectable-for-normal-sweep",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "reviewMethod": "minimap-and-guide-reviewed",
+      "basis": "63/66秒小地图几何通过；河岸、崖壁、符文石堆和开启后的朴素箱与攻略对应。附近高处精密箱平面坐标接近，凭高度及触发机制排除。",
+      "source": {
+        "bvid": "BV1evKmzxE34",
+        "cid": "30746478372",
+        "part": 1,
+        "segmentSecondsApprox": [
+          28,
+          70
+        ],
+        "beforeFrameSeconds": 61,
+        "afterFrameSeconds": 66,
+        "url": "https://www.bilibili.com/video/BV1evKmzxE34/?t=61"
+      },
+      "guide": {
+        "description": "位于山底河流旁的石头内，打破石头即可获得",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/33e49242abd84f33903417b604fb28a020241001.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/26a4d9713a5740dda51a42c99319529720241001.png"
+        ],
+        "lastUpdateTime": "2025-07-24",
+        "url": "https://www.kurobbs.com/mc/map/?state=900&country=900&typeId=qzx_01&pointId=1290808586256605184"
+      },
+      "localEvidence": {
+        "videoBefore": "frame-061.jpg",
+        "videoAfter": "frame-066.jpg",
+        "guideBefore": "guide-1290808586256605184-1.png",
+        "guideAfter": "guide-1290808586256605184-2.png"
+      }
+    },
+    {
+      "ordinal": 3,
+      "stateId": 900,
+      "pointId": "1290808067052609536",
+      "typeId": "qzx_01",
+      "name": "朴素奇藏箱",
+      "rawPosition": [
+        -31067.0,
+        68370.0
+      ],
+      "detectability": "not-detectable-for-normal-sweep",
+      "reviewStatus": "confirmed-by-agent-cross-check",
+      "reviewMethod": "guide-reviewed-geometry-insufficient",
+      "basis": "105/108/111/114秒最近候选一致，但几何内点仅7至11个，均未过门槛。山坡、岩壁凹口、蓝紫色植被、邻侧巨大光柱及石堆变宝箱过程与攻略对应，人工复核确认。",
+      "source": {
+        "bvid": "BV1evKmzxE34",
+        "cid": "30746478372",
+        "part": 1,
+        "segmentSecondsApprox": [
+          70,
+          118.034
+        ],
+        "beforeFrameSeconds": 108,
+        "afterFrameSeconds": 114,
+        "url": "https://www.bilibili.com/video/BV1evKmzxE34/?t=108"
+      },
+      "guide": {
+        "description": "位于山崖间的石头里，打破石头即可解锁",
+        "pictureUrls": [
+          "https://prod-alicdn-community.kurobbs.com/forum/48f419a8e65348de87bb9a3b29536c1b20241001.png",
+          "https://prod-alicdn-community.kurobbs.com/forum/b89a7ac3ac5943c0bed39cb09886373920241001.png"
+        ],
+        "lastUpdateTime": "2025-07-24",
+        "url": "https://www.kurobbs.com/mc/map/?state=900&country=900&typeId=qzx_01&pointId=1290808067052609536"
+      },
+      "localEvidence": {
+        "videoBefore": "frame-108.jpg",
+        "videoAfter": "frame-114.jpg",
+        "guideBefore": "guide-1290808067052609536-1.png",
+        "guideAfter": "guide-1290808067052609536-2.png"
+      }
+    }
+  ],
+  "mapMatches": [
+    {
+      "stateId": 8,
+      "time": 9,
+      "goodMatches": 158,
+      "inliers": 139,
+      "medianErrorPixels": 0.24020682869281784,
+      "affineFrameToHalfMosaic": [
+        [
+          0.7239034784798429,
+          -0.00038371632276291615,
+          522.3020055024392
+        ],
+        [
+          0.00038371632276291615,
+          0.7239034784798429,
+          640.5770279506507
+        ]
+      ],
+      "bounds": [
+        3,
+        5,
+        -2,
+        0
+      ]
+    },
+    {
+      "stateId": 8,
+      "time": 27,
+      "goodMatches": 175,
+      "inliers": 159,
+      "medianErrorPixels": 0.25398716399405596,
+      "affineFrameToHalfMosaic": [
+        [
+          0.7236096066106894,
+          0.0001109397322985331,
+          534.9498120738333
+        ],
+        [
+          -0.0001109397322985331,
+          0.7236096066106894,
+          637.1380822828133
+        ]
+      ],
+      "bounds": [
+        3,
+        5,
+        -2,
+        0
+      ]
+    },
+    {
+      "stateId": 900,
+      "time": 30,
+      "goodMatches": 214,
+      "inliers": 209,
+      "medianErrorPixels": 0.31018171641272013,
+      "affineFrameToHalfMosaic": [
+        [
+          0.7229883110422546,
+          0.0004546719642216081,
+          664.3633839949836
+        ],
+        [
+          -0.0004546719642216081,
+          0.7229883110422546,
+          253.5128119952263
+        ]
+      ],
+      "bounds": [
+        -1,
+        1,
+        -2,
+        0
+      ]
+    },
+    {
+      "stateId": 900,
+      "time": 33,
+      "goodMatches": 235,
+      "inliers": 223,
+      "medianErrorPixels": 0.22751063383419068,
+      "affineFrameToHalfMosaic": [
+        [
+          0.7233235703923993,
+          -0.00022922683826065012,
+          533.0755600236796
+        ],
+        [
+          0.00022922683826065012,
+          0.7233235703923993,
+          303.4467952551179
+        ]
+      ],
+      "bounds": [
+        -1,
+        1,
+        -2,
+        0
+      ]
+    },
+    {
+      "stateId": 900,
+      "time": 69,
+      "goodMatches": 376,
+      "inliers": 362,
+      "medianErrorPixels": 0.2932632660442424,
+      "affineFrameToHalfMosaic": [
+        [
+          0.7076325588717902,
+          -1.2426727800827874e-05,
+          480.9926581246163
+        ],
+        [
+          1.2426727800827874e-05,
+          0.7076325588717902,
+          320.5328498818107
+        ]
+      ],
+      "bounds": [
+        -1,
+        1,
+        -2,
+        0
+      ]
+    }
+  ],
+  "minimapMatches": [
+    {
+      "time": 21,
+      "stateId": 8,
+      "goodMatches": 3,
+      "acceptedGeometry": false,
+      "inliers": 3,
+      "inlierRatio": 1.0,
+      "medianErrorHalfMosaicPixels": 0.0,
+      "rawPosition": [
+        310067.19515634305,
+        134660.95254701097
+      ],
+      "affineFrameToHalfMosaic": [
+        [
+          0.48343731917052085,
+          -0.0033488332519822674,
+          793.3063227924324
+        ],
+        [
+          0.0033488332519822674,
+          0.48343731917052085,
+          757.6044756829566
+        ]
+      ],
+      "nearest": [
+        {
+          "pointId": "1290445725890076672",
+          "typeId": "qzx_02",
+          "distanceGameUnits": 5.780085039951392,
+          "description": "采集柱子周围三株香苏后，开启隐藏宝箱"
+        },
+        {
+          "pointId": "1290445331528081408",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 34.81179931662241,
+          "description": "楼梯和树的夹缝里"
+        },
+        {
+          "pointId": "1298389150308835328",
+          "typeId": "qzx_03",
+          "distanceGameUnits": 40.20258285090272,
+          "description": "成就“祖传烧鸽子”获取过程中可开启，可查看对应攻略（该地图标点仅限展示作用，不代表实际位置，标点由玩家星玖onlive提供）"
+        },
+        {
+          "pointId": "1290397955877834752",
+          "typeId": "qzx_03",
+          "distanceGameUnits": 40.92462151150522,
+          "description": "在溯洄鱼所在的上方山洞，来到最下方看到溯洄鱼之后，抬头看到面有一个钩索点，抓取钩索上来之后爬两层台阶就可以看到"
+        }
+      ]
+    },
+    {
+      "time": 24,
+      "stateId": 8,
+      "goodMatches": 3,
+      "acceptedGeometry": false,
+      "inliers": 3,
+      "inlierRatio": 1.0,
+      "medianErrorHalfMosaicPixels": 0.0,
+      "rawPosition": [
+        309982.9005007392,
+        134536.41781228178
+      ],
+      "affineFrameToHalfMosaic": [
+        [
+          0.4843566262355777,
+          0.0011567355335802521,
+          792.2064316469058
+        ],
+        [
+          -0.0011567355335802521,
+          0.4843566262355777,
+          757.2262979908568
+        ]
+      ],
+      "nearest": [
+        {
+          "pointId": "1290445725890076672",
+          "typeId": "qzx_02",
+          "distanceGameUnits": 5.909393757038093,
+          "description": "采集柱子周围三株香苏后，开启隐藏宝箱"
+        },
+        {
+          "pointId": "1290445331528081408",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 33.51998808283676,
+          "description": "楼梯和树的夹缝里"
+        },
+        {
+          "pointId": "1290397955877834752",
+          "typeId": "qzx_03",
+          "distanceGameUnits": 40.56156927277239,
+          "description": "在溯洄鱼所在的上方山洞，来到最下方看到溯洄鱼之后，抬头看到面有一个钩索点，抓取钩索上来之后爬两层台阶就可以看到"
+        },
+        {
+          "pointId": "1298389150308835328",
+          "typeId": "qzx_03",
+          "distanceGameUnits": 41.65776733883511,
+          "description": "成就“祖传烧鸽子”获取过程中可开启，可查看对应攻略（该地图标点仅限展示作用，不代表实际位置，标点由玩家星玖onlive提供）"
+        }
+      ]
+    },
+    {
+      "time": 60,
+      "stateId": 900,
+      "goodMatches": 17,
+      "acceptedGeometry": true,
+      "inliers": 14,
+      "inlierRatio": 0.8235294117647058,
+      "medianErrorHalfMosaicPixels": 0.2610537285759492,
+      "rawPosition": [
+        -38076.15181387915,
+        82315.63056562931
+      ],
+      "affineFrameToHalfMosaic": [
+        [
+          0.4816531126261106,
+          -0.00379539596178146,
+          744.4910963923353
+        ],
+        [
+          0.00379539596178146,
+          0.4816531126261106,
+          442.4502627951668
+        ]
+      ],
+      "nearest": [
+        {
+          "pointId": "1290808586256605184",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 26.63880681512905,
+          "description": "位于山底河流旁的石头内，打破石头即可获得"
+        },
+        {
+          "pointId": "1290424637294469120",
+          "typeId": "qzx_03",
+          "distanceGameUnits": 28.135537580878363,
+          "description": "爬到顶上就好啦"
+        },
+        {
+          "pointId": "1290423666404417536",
+          "typeId": "qzx_03",
+          "distanceGameUnits": 50.62521219461391,
+          "description": "在中间的贝壳上"
+        },
+        {
+          "pointId": "1290798808548696064",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 56.82965199251485,
+          "description": "需开启任务《推演的边界》才能进入此房间（可查看相关攻略完成）"
+        }
+      ]
+    },
+    {
+      "time": 63,
+      "stateId": 900,
+      "goodMatches": 14,
+      "acceptedGeometry": true,
+      "inliers": 14,
+      "inlierRatio": 1.0,
+      "medianErrorHalfMosaicPixels": 0.2109255523158307,
+      "rawPosition": [
+        -39794.6951747748,
+        81737.62221656425
+      ],
+      "affineFrameToHalfMosaic": [
+        [
+          0.48186437068821086,
+          1.2219997489601359e-05,
+          733.6983800605469
+        ],
+        [
+          -1.2219997489601359e-05,
+          0.48186437068821086,
+          439.3451737932202
+        ]
+      ],
+      "nearest": [
+        {
+          "pointId": "1290808586256605184",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 8.522536368456812,
+          "description": "位于山底河流旁的石头内，打破石头即可获得"
+        },
+        {
+          "pointId": "1290424637294469120",
+          "typeId": "qzx_03",
+          "distanceGameUnits": 10.05529726565374,
+          "description": "爬到顶上就好啦"
+        },
+        {
+          "pointId": "1290798808548696064",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 39.65807740945505,
+          "description": "需开启任务《推演的边界》才能进入此房间（可查看相关攻略完成）"
+        },
+        {
+          "pointId": "1295878435809071104",
+          "typeId": "qzx_03",
+          "distanceGameUnits": 40.26907137407015,
+          "description": "在推演的边界任务中关闭正确电脑后获得，可查看对应攻略（标点由玩家星玖onlive提供）"
+        }
+      ]
+    },
+    {
+      "time": 66,
+      "stateId": 900,
+      "goodMatches": 14,
+      "acceptedGeometry": true,
+      "inliers": 13,
+      "inlierRatio": 0.9285714285714286,
+      "medianErrorHalfMosaicPixels": 0.16366603309886363,
+      "rawPosition": [
+        -40058.52033624517,
+        81772.06291298031
+      ],
+      "affineFrameToHalfMosaic": [
+        [
+          0.4835618294323445,
+          0.0007456244528242184,
+          731.8503137826458
+        ],
+        [
+          -0.0007456244528242184,
+          0.4835618294323445,
+          439.4429153469995
+        ]
+      ],
+      "nearest": [
+        {
+          "pointId": "1290808586256605184",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 6.134325519407593,
+          "description": "位于山底河流旁的石头内，打破石头即可获得"
+        },
+        {
+          "pointId": "1290424637294469120",
+          "typeId": "qzx_03",
+          "distanceGameUnits": 7.964543633017937,
+          "description": "爬到顶上就好啦"
+        },
+        {
+          "pointId": "1290798808548696064",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 37.00267000227208,
+          "description": "需开启任务《推演的边界》才能进入此房间（可查看相关攻略完成）"
+        },
+        {
+          "pointId": "1295878435809071104",
+          "typeId": "qzx_03",
+          "distanceGameUnits": 38.423167045437474,
+          "description": "在推演的边界任务中关闭正确电脑后获得，可查看对应攻略（标点由玩家星玖onlive提供）"
+        }
+      ]
+    },
+    {
+      "time": 105,
+      "stateId": 900,
+      "goodMatches": 9,
+      "acceptedGeometry": false,
+      "inliers": 8,
+      "inlierRatio": 0.8888888888888888,
+      "medianErrorHalfMosaicPixels": 0.16667809254115065,
+      "rawPosition": [
+        -31815.91481951501,
+        69010.45647536304
+      ],
+      "affineFrameToHalfMosaic": [
+        [
+          0.484843320366746,
+          -0.004359943133953504,
+          781.9269464286773
+        ],
+        [
+          0.004359943133953504,
+          0.484843320366746,
+          361.89595502925016
+        ]
+      ],
+      "nearest": [
+        {
+          "pointId": "1290808067052609536",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 9.854227030689144,
+          "description": "位于山崖间的石头里，打破石头即可解锁"
+        },
+        {
+          "pointId": "1290795799600238592",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 24.97627746965426,
+          "description": "位于山崖下的大叶子上（注意高度）"
+        },
+        {
+          "pointId": "1290421877568266240",
+          "typeId": "qzx_04",
+          "distanceGameUnits": 27.70609284864618,
+          "description": "完成“海风中失落的湛蓝回声·下”任务奖励"
+        },
+        {
+          "pointId": "1290796281955950592",
+          "typeId": "qzx_02",
+          "distanceGameUnits": 59.0029194218302,
+          "description": "山间建筑的角落处"
+        }
+      ]
+    },
+    {
+      "time": 108,
+      "stateId": 900,
+      "goodMatches": 12,
+      "acceptedGeometry": false,
+      "inliers": 11,
+      "inlierRatio": 0.9166666666666666,
+      "medianErrorHalfMosaicPixels": 0.1766348544554794,
+      "rawPosition": [
+        -30766.338118231288,
+        68190.10935731314
+      ],
+      "affineFrameToHalfMosaic": [
+        [
+          0.48186730402796396,
+          -0.0001246078573525899,
+          788.0956973939088
+        ],
+        [
+          0.0001246078573525899,
+          0.48186730402796396,
+          357.7266420371293
+        ]
+      ],
+      "nearest": [
+        {
+          "pointId": "1290808067052609536",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 3.5036867793082735,
+          "description": "位于山崖间的石头里，打破石头即可解锁"
+        },
+        {
+          "pointId": "1290795799600238592",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 25.58579642203501,
+          "description": "位于山崖下的大叶子上（注意高度）"
+        },
+        {
+          "pointId": "1290421877568266240",
+          "typeId": "qzx_04",
+          "distanceGameUnits": 33.14067657143225,
+          "description": "完成“海风中失落的湛蓝回声·下”任务奖励"
+        },
+        {
+          "pointId": "1290795343760941056",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 62.2540513105816,
+          "description": "乱石之间"
+        }
+      ]
+    },
+    {
+      "time": 111,
+      "stateId": 900,
+      "goodMatches": 11,
+      "acceptedGeometry": false,
+      "inliers": 7,
+      "inlierRatio": 0.6363636363636364,
+      "medianErrorHalfMosaicPixels": 0.30484672037503907,
+      "rawPosition": [
+        -30589.024550801525,
+        68196.38073592747
+      ],
+      "affineFrameToHalfMosaic": [
+        [
+          0.48737142022186575,
+          0.0040261317493906655,
+          788.1292373253254
+        ],
+        [
+          -0.0040261317493906655,
+          0.48737142022186575,
+          357.59479274804386
+        ]
+      ],
+      "nearest": [
+        {
+          "pointId": "1290808067052609536",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 5.085313942064664,
+          "description": "位于山崖间的石头里，打破石头即可解锁"
+        },
+        {
+          "pointId": "1290795799600238592",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 24.968149982134015,
+          "description": "位于山崖下的大叶子上（注意高度）"
+        },
+        {
+          "pointId": "1290421877568266240",
+          "typeId": "qzx_04",
+          "distanceGameUnits": 33.03637495615441,
+          "description": "完成“海风中失落的湛蓝回声·下”任务奖励"
+        },
+        {
+          "pointId": "1290795343760941056",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 60.4960977808852,
+          "description": "乱石之间"
+        }
+      ]
+    },
+    {
+      "time": 114,
+      "stateId": 900,
+      "goodMatches": 13,
+      "acceptedGeometry": false,
+      "inliers": 10,
+      "inlierRatio": 0.7692307692307693,
+      "medianErrorHalfMosaicPixels": 0.21803756182314327,
+      "rawPosition": [
+        -30665.117167183995,
+        68203.24209917526
+      ],
+      "affineFrameToHalfMosaic": [
+        [
+          0.485570419434871,
+          -0.00020646877286452372,
+          788.32558235261
+        ],
+        [
+          0.00020646877286452372,
+          0.485570419434871,
+          357.3898094031044
+        ]
+      ],
+      "nearest": [
+        {
+          "pointId": "1290808067052609536",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 4.351068935327174,
+          "description": "位于山崖间的石头里，打破石头即可解锁"
+        },
+        {
+          "pointId": "1290795799600238592",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 25.128987823804717,
+          "description": "位于山崖下的大叶子上（注意高度）"
+        },
+        {
+          "pointId": "1290421877568266240",
+          "typeId": "qzx_04",
+          "distanceGameUnits": 32.97400931356759,
+          "description": "完成“海风中失落的湛蓝回声·下”任务奖励"
+        },
+        {
+          "pointId": "1290795343760941056",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 61.26005406931128,
+          "description": "乱石之间"
+        }
+      ]
+    },
+    {
+      "time": 24,
+      "stateId": 900,
+      "goodMatches": 3,
+      "acceptedGeometry": false,
+      "inliers": 2,
+      "inlierRatio": 0.6666666666666666,
+      "medianErrorHalfMosaicPixels": 2.842170943040401e-14,
+      "rawPosition": [
+        -22224.664042739256,
+        45628.83368343177
+      ],
+      "affineFrameToHalfMosaic": [
+        [
+          3.1146767434534164,
+          1.0579630974012417,
+          446.7120836952253
+        ],
+        [
+          -1.0579630974012417,
+          3.1146767434534164,
+          43.31830516392592
+        ]
+      ],
+      "nearest": [
+        {
+          "pointId": "1290807420386893824",
+          "typeId": "qzx_01",
+          "distanceGameUnits": 82.42932487330896,
+          "description": "位于瀑布旁，山崖间，注意高度"
+        },
+        {
+          "pointId": "1289988412733988864",
+          "typeId": "qzx_03",
+          "distanceGameUnits": 95.89928245776531,
+          "description": "在瀑布中间噢"
+        },
+        {
+          "pointId": "1290791701960531968",
+          "typeId": "qzx_02",
+          "distanceGameUnits": 144.69357569460797,
+          "description": "石头堆上"
+        },
+        {
+          "pointId": "1290806744424472576",
+          "typeId": "qzx_02",
+          "distanceGameUnits": 159.4254951140547,
+          "description": "位于调律大厅顶部，需前往图一所示岛屿位置与库可可对话即可直接传送"
+        }
+      ]
+    },
+    {
+      "time": 63,
+      "stateId": 8,
+      "goodMatches": 0,
+      "acceptedGeometry": false
+    },
+    {
+      "time": 114,
+      "stateId": 8,
+      "goodMatches": 1,
+      "acceptedGeometry": false
+    }
+  ],
+  "files": [
+    {
+      "path": "out/detectability-spike-blackshores/video-480p.mp4",
+      "bytes": 8543921,
+      "sha256": "21d6def87f712b18d1340f5a6ff73fe260dfa099775a88cc5bc70de0a22fa0e3"
+    },
+    {
+      "path": "Assets/KuroMap/states/state-8.json",
+      "bytes": 4669442,
+      "sha256": "82b95bf62d82512060eea12a6bc2e85e3533bcecbc10b37402792e3f211ebee4"
+    },
+    {
+      "path": "Assets/KuroMap/states/state-900.json",
+      "bytes": 115358,
+      "sha256": "e9f843161fa8b88ece5c193740bb776ffa829e5b19f0d58f6ad4d138555b165b"
+    },
+    {
+      "path": "out/detectability-spike-blackshores/guide-1290445725890076672-1.png",
+      "bytes": 2416275,
+      "sha256": "931c4018cbd768650a6e40b28d9077ddf78f51fad538939243638bb159a9dcae"
+    },
+    {
+      "path": "out/detectability-spike-blackshores/guide-1290445725890076672-2.png",
+      "bytes": 2490987,
+      "sha256": "1267ccbb66be106722632abb7edd6530feff3a34342c3d0bc058fe154f7bf047"
+    },
+    {
+      "path": "out/detectability-spike-blackshores/guide-1290808067052609536-1.png",
+      "bytes": 3144456,
+      "sha256": "3bf6dd98f44e83b9846de123ca4eaef13a53c17db3df64f1116f0b2854ea4608"
+    },
+    {
+      "path": "out/detectability-spike-blackshores/guide-1290808067052609536-2.png",
+      "bytes": 3074555,
+      "sha256": "5964528b5873cd753f528993abcf683add5fb6fefe356505a0c1fb2764077cb2"
+    },
+    {
+      "path": "out/detectability-spike-blackshores/guide-1290808586256605184-1.png",
+      "bytes": 2656000,
+      "sha256": "133ec39a78cb4fb08f1748af46c5c957b3eec3c3288a09d1cccfd414ab619e41"
+    },
+    {
+      "path": "out/detectability-spike-blackshores/guide-1290808586256605184-2.png",
+      "bytes": 2668245,
+      "sha256": "243dddf568025f9a95d12f80a073a6425652b2348869e70878131324b8a5b70c"
+    }
+  ],
+  "limitations": [
+    "只有一个视频三个目标，不能估计全量匹配准确率或召回率。",
+    "未在当前游戏版本实测探测仪；不可探测结论来自视频专题及触发证据。",
+    "第三处几何门槛未通过，复核确认不能作为放宽几何门槛的理由。",
+    "不推断视频未涵盖点位为可探测；不声称覆盖整个黑海岸。"
+  ]
+}
