@@ -2,9 +2,12 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)][string]$PackageRoot,
-    [string]$DeltaRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$DeltaRoot,
     [switch]$VerifyOnly
 )
+if ([string]::IsNullOrWhiteSpace($DeltaRoot)) {
+    $DeltaRoot = Split-Path -Parent $PSScriptRoot
+}
 . (Join-Path $PSScriptRoot 'TestDeltaPackage.Common.ps1')
 $PackageRoot = Get-DeltaRoot $PackageRoot
 $DeltaRoot = Get-DeltaRoot $DeltaRoot

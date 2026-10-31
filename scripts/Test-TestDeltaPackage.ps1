@@ -60,6 +60,11 @@ try { Refuses { & $apply -PackageRoot $install } 'read.only' } finally { (Get-It
 Assert (-not (Test-Path "$install/added.dat")) 'Readonly file must refuse before writes'
 & $apply -PackageRoot $install
 & $apply -PackageRoot $install -VerifyOnly
+# The shipped CMD starts Windows PowerShell with -File, where script-scope
+# automatic variables are not available while binding parameter defaults.
+$windowsPowerShell = Join-Path $env:WINDIR 'System32/WindowsPowerShell/v1.0/powershell.exe'
+& $windowsPowerShell -NoProfile -ExecutionPolicy Bypass -File $apply -PackageRoot $install -VerifyOnly
+Assert ($LASTEXITCODE -eq 0) 'Windows PowerShell -File must infer DeltaRoot like Verify-Delta.cmd'
 foreach ($file in Get-ChildItem $target -File -Recurse) {
     $relative = $file.FullName.Substring($target.Length + 1)
     Assert ((Get-FileHash $file.FullName).Hash -eq (Get-FileHash (Join-Path $install $relative)).Hash) "Target equality: $relative"
