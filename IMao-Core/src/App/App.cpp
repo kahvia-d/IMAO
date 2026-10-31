@@ -1,4 +1,5 @@
-﻿#include "ScreenMotionTracker.h"
+﻿#include "../Runtime/CaptureContinuity.h"
+#include "ScreenMotionTracker.h"
 #include "../Feature/Match/SceneMapFeatures.h"
 #include "App.h"
 #include "MapViewportSearchGate.h"
@@ -361,17 +362,19 @@ winrt::IAsyncAction App::Start() {
         const auto serviceNow = CoordinateHandoff::Clock::now();
         const bool newCapture = latest->frameId != lastLocalizedFrame;
         const bool serviceContext = lastCoordinateVisible && !isOpenMap.load() && isExistMinMap.load() &&
-            isWindowFocused.load() && latest->frameId != 0 && serviceNow >= latest->capturedAt &&
-            serviceNow - latest->capturedAt < latest->maximumAge;
+            CaptureContinuity::CanService(isWindowFocused.load(), coordinateSuspendRequested.load(),
+                !latest->image.empty() && latest->frameId != 0, latest->capturedAt, serviceNow);
+        const bool serviceCaptureFresh = CaptureContinuity::Fresh(!latest->image.empty() && latest->frameId != 0,
+            latest->capturedAt, serviceNow, latest->maximumAge);
         const bool resultReady = serviceContext &&
             (IdentifyWorldCoordinates::HasLatestResult() || readoutVisualWorker.HasResult());
-        const bool timerReady = serviceContext && coordinateHandoff.ReadoutActive() && !ocrRequestInFlight &&
+        const bool timerReady = serviceContext && serviceCaptureFresh && coordinateHandoff.ReadoutActive() && !ocrRequestInFlight &&
             latest->frameId != lastOcrSubmittedFrame && serviceNow - lastOcrSubmitAt >= std::chrono::milliseconds(50) &&
             readoutWorkSchedule.SubmissionDue(serviceNow, ReadoutWorkSchedule::SubmissionInterval());
         if (latest->image.empty() || (!newCapture && !resultReady && !timerReady)) {
             if (latest->image.empty()) overlayFrames.Publish({});
             auto deadline = serviceNow + std::chrono::milliseconds(100);
-            if (serviceContext && coordinateHandoff.ReadoutActive() && !ocrRequestInFlight && latest->frameId != lastOcrSubmittedFrame)
+            if (serviceContext && serviceCaptureFresh && coordinateHandoff.ReadoutActive() && !ocrRequestInFlight && latest->frameId != lastOcrSubmittedFrame)
                 deadline = std::max(lastOcrSubmitAt + std::chrono::milliseconds(50),
                     readoutWorkSchedule.NextSubmission(serviceNow, ReadoutWorkSchedule::SubmissionInterval()));
             waitDeadline = deadline;
@@ -553,7 +556,9 @@ winrt::IAsyncAction App::Start() {
 		// Minimap coordinate recognition is valid only while the gameplay HUD is
 		// visible and focused. A UI generation change invalidates queued OCR.
 		const bool coordinateVisible = isExistMinMap.load() && !isOpenMap.load() &&
-			isWindowFocused.load() && captureFresh && !Isolation::Enabled(Isolation::kLocalization);
+			isWindowFocused.load() && CaptureContinuity::Retain(!currentSnapshot.empty() && captured.frameId != 0,
+                captured.capturedAt, std::chrono::steady_clock::now()) && !Isolation::Enabled(Isolation::kLocalization);
+        if (!captureFresh) localizationServiceOnly = true;
 		if (coordinateVisible != lastCoordinateVisible) {
 			lastCoordinateVisible = coordinateVisible;
 			++coordinateUiGeneration;
@@ -798,7 +803,8 @@ winrt::IAsyncAction App::Start() {
 		}
 		if (elapsedTime < cycleTime) {
             auto deadline = CoordinateHandoff::Clock::now() + std::chrono::milliseconds(cycleTime - elapsedTime);
-            if (coordinateHandoff.ReadoutActive() && !ocrRequestInFlight && snapshotFrameId != lastOcrSubmittedFrame)
+            if (CaptureContinuity::Fresh(true,snapshotCapturedAt,CoordinateHandoff::Clock::now(),captured.maximumAge) &&
+                coordinateHandoff.ReadoutActive() && !ocrRequestInFlight && snapshotFrameId != lastOcrSubmittedFrame)
                 deadline = std::min(deadline, std::max(lastOcrSubmitAt + std::chrono::milliseconds(50),
                     readoutWorkSchedule.NextSubmission(CoordinateHandoff::Clock::now(), ReadoutWorkSchedule::SubmissionInterval())));
             waitDeadline = deadline;
@@ -854,7 +860,7 @@ winrt::IAsyncAction App::GetMatSnapshot(bool isTaketAsync, Mat& result, uint64_t
 		if (recordPixels) {
 			diagnosticLastDirectory = directory;
 			diagnosticLastSourceSequence = *sequenceOutput;
-			ReproCapture::Image("wgc", temp, readbackInfo);
+			ReproCapture::ImageShared("wgc", temp, readbackInfo);
 		}
         ClientCapture::Geometry geometry;
         std::string geometryError;
@@ -970,6 +976,9 @@ void App::Thread_DetectGameState() {
             isWindowFocused = DrawItemBase::IsMarkerDisplayContext(hwnd) || IsWindowFocused(ImGuiOverWindows::overWindowsHwnd);
             if (isWindowFocused.load()) NoteForegroundGame();
             if (!isWindowFocused.load()) {
+                // Latch the lost epoch even without a new capture. Returning
+                // focus must not authorize the pre-focus-loss OCR completion.
+                coordinateSuspendRequested = true;
                 // A paused capture must not preserve a visible snapshot across
                 // focus loss. Only a new observed game frame may restore it -
                 // and until the focus grace has run out, the last published
@@ -981,7 +990,8 @@ void App::Thread_DetectGameState() {
                 }
                 visibilityPolicy.Reset(); minimapHudEvidence.Reset(); overlayVisibility.Publish({});
             }
-            if (!liveCapture) {
+            if (!CaptureContinuity::Retain(!captured->image.empty() && captured->frameId != 0,
+                captured->capturedAt, std::chrono::steady_clock::now())) {
                 GamepadContextSnapshot::Shared().Invalidate(coordinateSessionId);
                 mapUiState.Reset(); isOpenMap = false; isExistMinMap = false;
                 bigMapStructureConfirmed = false; consecutiveBigMapCompassFrames = 0;
@@ -1776,7 +1786,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
         return true;
     };
 
-    if (runLegacyLocalizationDiagnostics) prepareVisualFrame();
+    if (runLegacyLocalizationDiagnostics && !localizationServiceOnly) prepareVisualFrame();
     bool acceptedReadoutThisCycle = false;
 	CoordinateRecognitionResult ocrResult;
 	if (ocrAssistEnabled && IdentifyWorldCoordinates::TryTakeLatestResult(ocrResult)) {
@@ -1787,14 +1797,16 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
         Diagnostics::Record("coordinate-readout-latency", "request=" + std::to_string(ocrResult.requestId) +
             " captureToConsumeMs=" + std::to_string(ms(consumedAt-ocrResult.capturedAt)) +
             " submitToCompleteMs=" + std::to_string(ms(ocrResult.completedAt-ocrResult.submittedAt)) +
-            " completeToConsumeMs=" + std::to_string(ms(consumedAt-ocrResult.completedAt)));
+            " completeToConsumeMs=" + std::to_string(ms(consumedAt-ocrResult.completedAt)) +
+            " withinDrawAge=" + std::to_string(consumedAt >= ocrResult.capturedAt &&
+                consumedAt - ocrResult.capturedAt < std::chrono::milliseconds(500)));
 
         const bool activeOcrResult = ocrRequestInFlight.has_value() && ocrResult.requestId == *ocrRequestInFlight;
         if (activeOcrResult) ocrRequestInFlight.reset();
 		if (ocrResult.sessionId == coordinateSessionId && ocrResult.uiGeneration == coordinateUiGeneration &&
 			activeOcrResult &&
 			ocrResult.frameId <= snapshotFrameId && lastCoordinateVisible &&
-            coordinateHandoff.FreshReadout(ocrResult.frameId, ocrResult.capturedAt, now)) {
+            coordinateHandoff.FreshReadout(ocrResult.frameId, ocrResult.capturedAt, consumedAt)) {
 			ocrRequestInFlight.reset();
 			latestOcrHints.clear();
             if (ocrResult.candidates.empty()) { ocrCoordinateGate.Reset(); coordinateHandoff.BreakReadoutStreak(); }
@@ -2216,6 +2228,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			ocrRequestInFlight.has_value()) return;
         if (snapshotFrameId == lastOcrSubmittedFrame) return;
         const auto submitNow = CoordinateHandoff::Clock::now();
+        if (submitNow < snapshotCapturedAt || submitNow - snapshotCapturedAt >= std::chrono::milliseconds(250)) return;
         const auto cadence = coordinateHandoff.ReadoutActive() ? ReadoutWorkSchedule::SubmissionInterval() :
             (stalledTracker ? std::chrono::milliseconds(250) : coordinateHandoff.Cadence(submitNow));
         if (coordinateHandoff.ReadoutActive()) {
@@ -2383,7 +2396,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
         }
         if (!coordinateHandoff.ReadoutActive()) {
             readoutVisualWorker.Cancel(); pendingReadoutGlobalCandidate.reset();
-        } else if (readoutVisualWorker.CanSubmit() && snapshotFrameId != lastReadoutVisualSubmittedFrame &&
+        } else if (!localizationServiceOnly && readoutVisualWorker.CanSubmit() && snapshotFrameId != lastReadoutVisualSubmittedFrame &&
             readoutWorkSchedule.VisualDue(true, CoordinateHandoff::Clock::now())) {
             ReadoutVisualRequest request;
             request.session = coordinateSessionId; request.generation = coordinateUiGeneration;

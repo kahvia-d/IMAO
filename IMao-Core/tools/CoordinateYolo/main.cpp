@@ -87,6 +87,7 @@ int main(int argc,char**argv) {
             rows.push_back({{"id",row["id"]},{"selected",selected},{"detections",observations}});
             if(++count%250==0)std::cout<<count<<" frames\n"<<std::flush;
         }
+        if(net) std::cout << "Runtime " << net->RuntimeInfo().dump() << std::endl;
         std::ofstream output{std::filesystem::path(argv[4])};output<<rows.dump();
         std::cout<<"Completed "<<count<<" frames\n";
     } catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}

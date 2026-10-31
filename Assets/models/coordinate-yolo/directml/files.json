@@ -1,0 +1,37 @@
+[
+  {
+    "Name": "DirectML-LICENSE-CODE.txt",
+    "Size": 1093,
+    "SHA256": "903df5512f7d02609fed0c780a9b704f5a3eeb6e4d84ebe42a29845c81899a3c"
+  },
+  {
+    "Name": "DirectML-LICENSE.txt",
+    "Size": 10439,
+    "SHA256": "a05138e3a085ff60a44881eedfa58dccb03ecc1d7b1f6ae888418e8c2fec4b8d"
+  },
+  {
+    "Name": "DirectML.dll",
+    "Size": 18527776,
+    "SHA256": "9c9e6d822561c6c41b90e6994b3e8857cf1d66dbfb1e0c4c799c7c89b4e92da1"
+  },
+  {
+    "Name": "onnxruntime_providers_shared.dll",
+    "Size": 22040,
+    "SHA256": "265c8daf29637cb259cac8be9f08f2cd45f3883f0f0e4949cbfddd5b4cbec3b6"
+  },
+  {
+    "Name": "ONNXRuntime-LICENSE.txt",
+    "Size": 1094,
+    "SHA256": "c250d6278f0b47a6439fb7592b08b58a55eb9f535aa49a1db63211c3f982b674"
+  },
+  {
+    "Name": "ONNXRuntime-ThirdPartyNotices.txt",
+    "Size": 331175,
+    "SHA256": "fb0af774b4d7cffc5b9d046f2aaeade2f37df2f80abf8033c95dfffcc77a8866"
+  },
+  {
+    "Name": "onnxruntime.dll",
+    "Size": 17328152,
+    "SHA256": "e7eedec6a6f26dc39dc948276a75ef6d2bee3fff944d874ceed0bbd3b97bff40"
+  }
+]

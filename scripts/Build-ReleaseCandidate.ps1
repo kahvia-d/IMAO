@@ -4,6 +4,7 @@ param(
     [string]$SourceCommit,
     [string]$NativeConfigurationDirectory = 'out/build/windows-x64-release-vs144',
     [string]$RedistRoot,
+    [switch]$IncludeOcrBackendTestLaunchers,
     [ValidateRange(1, 32)][int]$Parallel = 4
 )
 $ErrorActionPreference = 'Stop'
@@ -139,6 +140,6 @@ Assert-ResourceBuildUnchanged $taskSource (Get-ResourceBuildProvenance $taskRepo
 # Native runtime regressions use the development output; refresh its versioned
 # resource descriptor from the same clean source before those checks run.
 & (Join-Path $PSScriptRoot 'Stage-UpdateResources.ps1') -SourceRoot $taskRepo -Destination $taskNativeOutput -SourceCommit $SourceCommit
-& (Join-Path $PSScriptRoot 'New-ProgramReleasePackage.ps1') -PublishRoot $taskPublish -NativeRoot $taskNative -LauncherRoot $taskLauncher -OutputRoot (Join-Path $OutputRoot 'program') -SourceCommit $SourceCommit -RedistRoot $RedistRoot
+& (Join-Path $PSScriptRoot 'New-ProgramReleasePackage.ps1') -PublishRoot $taskPublish -NativeRoot $taskNative -LauncherRoot $taskLauncher -OutputRoot (Join-Path $OutputRoot 'program') -SourceCommit $SourceCommit -RedistRoot $RedistRoot -IncludeOcrBackendTestLaunchers:$IncludeOcrBackendTestLaunchers
 Assert-ResourceBuildUnchanged $taskSource (Get-ResourceBuildProvenance $taskRepo $SourceCommit)
 Write-Host "Clean-source candidate complete: $OutputRoot; source $SourceCommit"

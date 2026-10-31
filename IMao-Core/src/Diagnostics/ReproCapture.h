@@ -28,6 +28,9 @@ private:
 };
 Json Context();
 void Image(const std::string& stage, const cv::Mat&, Json metadata = Json::object());
+// Caller guarantees pixels remain immutable through all aliases. Non-owning,
+// strided or partial allocation views are copied; complete owned frames are retained.
+void ImageShared(const std::string& stage, const cv::Mat&, Json metadata = Json::object());
 void Record(const std::string& stage, Json metadata = Json::object());
 void Log(Json event);
 }

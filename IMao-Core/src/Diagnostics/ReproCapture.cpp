@@ -108,6 +108,8 @@ public:
     }
     void run() noexcept {
         try {
+            if(!SetThreadPriority(GetCurrentThread(),THREAD_PRIORITY_LOWEST))
+                throw std::runtime_error("recording writer priority failed: "+std::to_string(GetLastError()));
             XpressWorkers encoders;
             std::ofstream records(directory / "records.jsonl", std::ios::binary);
             records.exceptions(std::ios::badbit | std::ios::failbit);
@@ -170,7 +172,7 @@ public:
     }
 };
 Recorder& recorder() { static Recorder r; return r; }
-void enqueue(const std::string& kind, const std::string& stage, const cv::Mat& image, Json metadata) noexcept {
+void enqueue(const std::string& kind, const std::string& stage, const cv::Mat& image, Json metadata, bool immutable = false) noexcept {
     auto& r = recorder();
     try {
         std::lock_guard lock(r.mutex);
@@ -194,7 +196,10 @@ void enqueue(const std::string& kind, const std::string& stage, const cv::Mat& i
             r.scratchBytes=(std::max)(r.scratchBytes,reservation.scratch);
             r.queuedBytes+=reserved;
             r.peakQueuedBytes=(std::max)(r.peakQueuedBytes,r.queuedBytes+r.scratchBytes);
-            try { r.queue.push_back(Item{std::move(serialized), kind == "image" ? record["image"]["path"].get<std::string>() : std::string{}, image.empty() ? cv::Mat{} : image.clone(), reserved, xpress}); }
+            const bool share = immutable && image.u && image.isContinuous() &&
+                image.data == image.datastart && image.dataend - image.datastart == raw &&
+                image.u->size == raw;
+            try { r.queue.push_back(Item{std::move(serialized), kind == "image" ? record["image"]["path"].get<std::string>() : std::string{}, image.empty() ? cv::Mat{} : (share ? image : image.clone()), reserved, xpress}); }
             catch(...) { r.queuedBytes -= reserved; throw; }
             if(kind=="image") ++r.acceptedImages;
             r.cv.notify_one();
@@ -248,6 +253,7 @@ Scope::Scope(Json values) : previous_(context), previousRecording_(scopeRecordin
 Scope::~Scope() { context.swap(previous_); scopeRecording.swap(previousRecording_); }
 Json Context() { return context; }
 void Image(const std::string& stage, const cv::Mat& image, Json metadata) { enqueue("image",stage,image,std::move(metadata)); }
+void ImageShared(const std::string& stage, const cv::Mat& image, Json metadata) { enqueue("image",stage,image,std::move(metadata),true); }
 void Record(const std::string& stage, Json metadata) { enqueue("stage",stage,{},std::move(metadata)); }
 void Log(Json event) { enqueue("log","log",{},std::move(event)); }
 }

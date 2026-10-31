@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$PublishRoot,
     [Parameter(Mandatory)][string]$NativeRoot,
@@ -7,7 +7,8 @@ param(
     [Parameter(Mandatory)][string]$RedistRoot,
     [string]$SourceRoot,
     [string]$NativeBuildReceipt,
-    [string]$LauncherRoot
+    [string]$LauncherRoot,
+    [switch]$IncludeOcrBackendTestLaunchers
 )
 $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer is required.' }
@@ -132,6 +133,11 @@ $runtime = Get-Content -LiteralPath (Join-Path $package 'IMao-WinUI.runtimeconfi
 if (-not $runtime.runtimeOptions.includedFrameworks -or $runtime.runtimeOptions.frameworks -or $runtime.runtimeOptions.framework) { throw 'Program package must include its .NET runtime.' }
 & (Join-Path $PSScriptRoot 'Test-ProgramReleasePackage.ps1') -PackageRoot $package -OutputRoot (Join-Path $OutputRoot 'verification')
 if (-not $?) { throw 'Program package probe failed.' }
+if ($IncludeOcrBackendTestLaunchers) {
+    foreach ($testFile in @('Start-CPU.cmd','Start-GPU.cmd','OCR-Test-Readme.txt')) {
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot "ocr-test/$testFile") -Destination $package
+    }
+}
 $archive = "$package.zip"
 if (Test-Path -LiteralPath $archive) { throw 'Archive already exists.' }
 $zip=[IO.Compression.ZipArchive]::new([IO.File]::Open($archive,[IO.FileMode]::CreateNew),[IO.Compression.ZipArchiveMode]::Create)

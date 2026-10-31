@@ -13,6 +13,21 @@
 #include <stdexcept>
 
 using CoordinateYolo::Json;
+namespace {
+std::string RuntimeErrorUtf8(const std::string& message) {
+    if(message.empty() || MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,message.data(),
+        static_cast<int>(message.size()),nullptr,0)>0) return message;
+    // Some DirectML/driver HRESULT messages use the Windows ANSI code page.
+    const int count=MultiByteToWideChar(CP_ACP,0,message.data(),static_cast<int>(message.size()),nullptr,0);
+    if(count<=0) return "GPU runtime error (message encoding unavailable)";
+    std::wstring wide(count,L'\0');
+    MultiByteToWideChar(CP_ACP,0,message.data(),static_cast<int>(message.size()),wide.data(),count);
+    const int bytes=WideCharToMultiByte(CP_UTF8,0,wide.data(),count,nullptr,0,nullptr,nullptr);
+    std::string utf8(bytes,'\0');
+    WideCharToMultiByte(CP_UTF8,0,wide.data(),count,utf8.data(),bytes,nullptr,nullptr);
+    return utf8;
+}
+}
 struct YoloCoordinateRecognizer::State {
     HMODULE library=nullptr;
     const OrtApi* api=nullptr;
@@ -22,7 +37,7 @@ struct YoloCoordinateRecognizer::State {
     void Check(OrtStatus* status) {
         if(!status)return;
         std::string message=api->GetErrorMessage(status);api->ReleaseStatus(status);
-        throw std::runtime_error("coordinate YOLO: "+message);
+        throw std::runtime_error("coordinate YOLO: "+RuntimeErrorUtf8(message));
     }
     ~State() {
         if(api){if(session)api->ReleaseSession(session);if(memory)api->ReleaseMemoryInfo(memory);if(env)api->ReleaseEnv(env);}
@@ -30,10 +45,40 @@ struct YoloCoordinateRecognizer::State {
     }
 };
 YoloCoordinateRecognizer::~YoloCoordinateRecognizer()=default;
-YoloCoordinateRecognizer::YoloCoordinateRecognizer(const std::filesystem::path& directory):state_(std::make_unique<State>()) {
+YoloCoordinateRecognizer::YoloCoordinateRecognizer(const std::filesystem::path& directory):directory_(directory) {
+    wchar_t mode[32]{};
+    const auto length=GetEnvironmentVariableW(L"IMAO_OCR_BACKEND",mode,32);
+    if(length==0 || (length<32 && _wcsicmp(mode,L"cpu")==0)) { Initialize(false); return; }
+    requested_="directml";
+    try {
+        if(length>=32 || _wcsicmp(mode,L"directml")!=0) throw std::runtime_error("unrecognized OCR backend");
+        wchar_t adapter[32]{};
+        const auto size=GetEnvironmentVariableW(L"IMAO_OCR_ADAPTER",adapter,32);
+        if(size) {
+            if(size>=32) throw std::runtime_error("DirectML adapter index is too long");
+            wchar_t* end=nullptr;
+            const long value=wcstol(adapter,&end,10);
+            if(end==adapter || *end || value<0 || value>1000000)
+                throw std::runtime_error("invalid DirectML adapter index");
+            adapter_=static_cast<int>(value);
+        }
+        Initialize(true);
+    } catch(const std::exception& e) {
+        fallback_=e.what(); Initialize(false);
+    }
+}
+Json YoloCoordinateRecognizer::RuntimeInfo() const {
+    return {{"backend",directMl_?"directml":"cpu"},{"requested",requested_},
+        {"adapter",adapter_},{"fallback",fallback_}};
+}
+void YoloCoordinateRecognizer::Initialize(bool directMl) {
+    state_.reset();
+    state_=std::make_unique<State>();
+    directMl_=directMl;
+    const auto runtimeDirectory=directMl ? directory_/L"directml" : directory_;
     auto&s=*state_;
     // Explicit application-owned path; never search PATH or load a Python installation.
-    s.library=LoadLibraryExW((std::filesystem::absolute(directory)/L"onnxruntime.dll").c_str(),nullptr,
+    s.library=LoadLibraryExW((std::filesystem::absolute(runtimeDirectory)/L"onnxruntime.dll").c_str(),nullptr,
         LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|LOAD_LIBRARY_SEARCH_APPLICATION_DIR|LOAD_LIBRARY_SEARCH_SYSTEM32);
     if(!s.library)throw std::runtime_error("coordinate YOLO runtime DLL unavailable: "+std::to_string(GetLastError()));
     const auto entry=reinterpret_cast<const OrtApiBase*(ORT_API_CALL*)()>(GetProcAddress(s.library,"OrtGetApiBase"));
@@ -44,14 +89,34 @@ YoloCoordinateRecognizer::YoloCoordinateRecognizer(const std::filesystem::path& 
         s.Check(s.api->SetIntraOpNumThreads(options,4));s.Check(s.api->SetInterOpNumThreads(options,1));
         s.Check(s.api->SetSessionGraphOptimizationLevel(options,ORT_ENABLE_ALL));
         s.Check(s.api->AddSessionConfigEntry(options,"session.intra_op.allow_spinning","0"));
-        s.Check(s.api->CreateSession(s.env,(directory/L"coordinate.onnx").c_str(),options,&s.session));
+        if(directMl) {
+            s.Check(s.api->DisableMemPattern(options));
+            s.Check(s.api->SetSessionExecutionMode(options,ORT_SEQUENTIAL));
+            using AppendDml=OrtStatus*(ORT_API_CALL*)(OrtSessionOptions*,int);
+            const auto append=reinterpret_cast<AppendDml>(GetProcAddress(s.library,"OrtSessionOptionsAppendExecutionProvider_DML"));
+            if(!append) throw std::runtime_error("DirectML provider entry unavailable");
+            s.Check(append(options,adapter_));
+        }
+        s.Check(s.api->CreateSession(s.env,(directory_/L"coordinate.onnx").c_str(),options,&s.session));
     } catch(...) {s.api->ReleaseSessionOptions(options);throw;}
     s.api->ReleaseSessionOptions(options);
     s.Check(s.api->CreateCpuMemoryInfo(OrtArenaAllocator,OrtMemTypeDefault,&s.memory));
-    Detect(cv::Mat(48,892,CV_8UC3,cv::Scalar::all(0)));
+    DetectImpl(cv::Mat(48,892,CV_8UC3,cv::Scalar::all(0)));
 }
 
 Json YoloCoordinateRecognizer::Detect(const cv::Mat& image) {
+    if(image.empty()||image.type()!=CV_8UC3)throw std::runtime_error("coordinate YOLO expects BGR8");
+    if(!state_ || !state_->api || !state_->session || !state_->memory)
+        throw std::runtime_error("coordinate YOLO runtime is unavailable after fallback failure");
+    try { return DetectImpl(image); }
+    catch(const std::exception& e) {
+        if(!directMl_) throw;
+        fallback_=e.what();
+        Initialize(false); // No further GPU retries during this runtime's lifetime.
+        return DetectImpl(image);
+    }
+}
+Json YoloCoordinateRecognizer::DetectImpl(const cv::Mat& image) {
     if(image.empty()||image.type()!=CV_8UC3)throw std::runtime_error("coordinate YOLO expects BGR8");
     constexpr int W=896,H=64;
     const double ratio=std::min(double(W)/image.cols,double(H)/image.rows);

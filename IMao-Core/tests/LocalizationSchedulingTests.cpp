@@ -2,6 +2,7 @@
 #include "Runtime/LocalizationSignal.h"
 #include "Runtime/LatestTaskWorker.h"
 #include "Runtime/ReadoutWorkSchedule.h"
+#include "Runtime/CaptureContinuity.h"
 #include <future>
 #include <iostream>
 #include <stdexcept>
@@ -9,6 +10,16 @@ using namespace std::chrono_literals;
 void Check(bool v,const char*m){if(!v)throw std::runtime_error(m);}
 int main(){try{
  const auto t=std::chrono::steady_clock::time_point{}+10s;
+ Check(CaptureContinuity::Retain(true,t,t+249ms),"fresh capture retains context");
+ Check(CaptureContinuity::Retain(true,t,t+690ms),"short capture gap must not cancel an otherwise timely OCR completion");
+ Check(!CaptureContinuity::Fresh(true,t,t+250ms),"retained context cannot authorize display or new work on stale pixels");
+ Check(!CaptureContinuity::Fresh(true,t,t+690ms),"completion servicing must not spin an expired submission timer");
+ Check(!CaptureContinuity::Retain(true,t,t+750ms),"long capture loss invalidates context");
+ Check(!CaptureContinuity::Retain(false,t,t),"empty capture cannot retain context");
+ Check(!CaptureContinuity::Retain(true,t,t-1ms),"future capture cannot retain context");
+ Check(CaptureContinuity::CanService(true,false,true,t,t+300ms),"capture gap alone allows completion service");
+ Check(!CaptureContinuity::CanService(false,true,true,t,t+400ms),"focus loss blocks completion service");
+ Check(!CaptureContinuity::CanService(true,true,true,t,t+500ms),"regaining focus without a new frame must not resurrect the old OCR epoch");
  ReadoutWorkSchedule schedule;
  Check(schedule.SubmissionDue(t,100ms),"first request is due");schedule.Submitted(t,100ms);
  Check(!schedule.SubmissionDue(t+99ms,100ms),"absolute deadline must not submit early");

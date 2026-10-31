@@ -43,3 +43,13 @@ add_executable(LocalizationSchedulingTests "${ROOT}/IMao-Core/tests/Localization
 target_include_directories(LocalizationSchedulingTests PRIVATE "${ROOT}/IMao-Core/src")
 target_compile_definitions(LocalizationSchedulingTests PRIVATE NOMINMAX)
 add_test(NAME LocalizationSchedulingTests COMMAND LocalizationSchedulingTests)
+
+add_executable(YoloBackendTests "${ROOT}/IMao-Core/tests/YoloBackendTests.cpp"
+    "${ROOT}/IMao-Core/src/Diagnostics/ReproCapture.cpp"
+    "${ROOT}/IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateRecognizer.cpp"
+    "${ROOT}/IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateDecoder.cpp")
+target_include_directories(YoloBackendTests PRIVATE "${ROOT}/IMao-Core/src" "${ROOT}/IMao-Core/packages/nlohmann" ${OpenCV_INCLUDE_DIRS})
+target_compile_options(YoloBackendTests PRIVATE /source-charset:utf-8 /execution-charset:utf-8 /EHsc /bigobj)
+target_compile_definitions(YoloBackendTests PRIVATE NOMINMAX)
+target_link_libraries(YoloBackendTests PRIVATE ${OpenCV_LIBS})
+add_test(NAME YoloBackendTests COMMAND YoloBackendTests "${ROOT}/Assets/models/coordinate-yolo")

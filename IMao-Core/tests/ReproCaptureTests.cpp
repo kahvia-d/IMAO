@@ -83,6 +83,9 @@ int main(int argc, char** argv) {
     }
     {
         XpressWorkers workers;
+        std::array<int,4> priorities{};
+        workers.Run([&](size_t i,COMPRESSOR_HANDLE) { priorities[i]=GetThreadPriority(GetCurrentThread()); });
+        for(int priority:priorities) check(priority==THREAD_PRIORITY_LOWEST,"recording must run below realtime OCR workers");
         for (int pass=0;pass<12;++pass) {
             std::array<bool,4> exact{};
             workers.Run([&](size_t i,COMPRESSOR_HANDLE compressor) {
@@ -174,6 +177,18 @@ int main(int argc, char** argv) {
     Stop(); Shutdown();
     auto generationRecords=records(std::filesystem::u8path(Status()["directory"].get<std::string>()));
     check(generationRecords.size()==1&&generationRecords[0]["stage"]=="fresh","stale scoped producer cannot contaminate restarted session");
+    check(Start(root),"shared image session");
+    {
+        cv::Mat owned(20,30,CV_8UC3,cv::Scalar(11,22,33));
+        ImageShared("immutable",owned);
+        owned.release();
+    }
+    Stop(); Shutdown();
+    auto sharedDirectory=std::filesystem::u8path(Status()["directory"].get<std::string>());
+    auto sharedRecords=records(sharedDirectory);
+    check(sharedRecords.size()==1 && Status()["missingImages"]==0,"released immutable owner is retained by recording");
+    auto saved=cv::imread((sharedDirectory/std::filesystem::u8path(sharedRecords[0]["image"]["path"].get<std::string>())).string());
+    check(!saved.empty() && cv::norm(saved,cv::Mat(20,30,CV_8UC3,cv::Scalar(11,22,33)),cv::NORM_INF)==0,"shared recording preserves pixels after caller release");
     std::cout << "PASS ReproCapture lifecycle, ownership, correlation, Unicode, bounds and completion\n";
     return 0;
  } catch(const std::exception& e) { Shutdown(); std::cerr << "FAIL " << e.what() << '\n'; return 1; }

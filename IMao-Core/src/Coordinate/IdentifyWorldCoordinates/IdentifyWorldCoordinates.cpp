@@ -1,4 +1,4 @@
-#include "IdentifyWorldCoordinates.h"
+﻿#include "IdentifyWorldCoordinates.h"
 
 #include "../../Diagnostics/Diagnostics.h"
 #include "../../Diagnostics/ReproCapture.h"
@@ -182,7 +182,8 @@ public:
             }
             result.status = result.candidates.empty() ? CoordinateRecognitionStatus::NoCandidate : CoordinateRecognitionStatus::Ready;
             Diagnostics::Record("coordinate-recognition", "model=own-yolo candidates=" +
-                std::to_string(result.candidates.size()) + " inferenceMs=" + std::to_string(result.inferenceMilliseconds));
+                std::to_string(result.candidates.size()) + " inferenceMs=" + std::to_string(result.inferenceMilliseconds) +
+                " runtime=" + yolo_->RuntimeInfo().dump());
             return result;
         }
 
@@ -375,6 +376,7 @@ private:
             if (std::filesystem::path(modelDirectory).filename() == "coordinate-yolo") {
                 yolo = std::make_unique<YoloCoordinateRecognizer>(std::filesystem::path(modelDirectory));
                 Diagnostics::RecordMemory("ocr-yolo-model-warmup-ready");
+                Diagnostics::Record("ocr-backend", yolo->RuntimeInfo().dump());
                 if (stopToken.stop_requested()) throw std::runtime_error("YOLO initialization cancelled");
             } else {
             const unsigned int hardwareThreads = std::max(1u, std::thread::hardware_concurrency());

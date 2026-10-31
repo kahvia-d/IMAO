@@ -228,3 +228,5 @@
 - [可探测性补充 v2：视频时间轴优先（2026-10-29）](MarkerDetectabilityV2_20261029.md)
 
 - [查漏补缺模式与名录维护](MarkerDetectabilityMaintenance.md)：正例名录、生成校验、资源分发和运行规则。
+
+- [旧电脑定位与录制隔离测试计划](OldPcLocalizationPlan_20261031.md)

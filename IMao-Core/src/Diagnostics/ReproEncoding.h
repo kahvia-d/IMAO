@@ -37,7 +37,13 @@ struct EvidenceReservation {
 class XpressWorkers {
 public:
     XpressWorkers() {
-        try { for (size_t i=0;i<threads.size();++i) threads[i]=std::thread([this,i]{ work(i); }); }
+        try {
+            for (size_t i=0;i<threads.size();++i) {
+                threads[i]=std::thread([this,i]{ work(i); });
+                if(!SetThreadPriority(threads[i].native_handle(),THREAD_PRIORITY_LOWEST))
+                    throw std::runtime_error("recording worker priority failed: "+std::to_string(GetLastError()));
+            }
+        }
         catch (...) { stop(); throw; }
     }
     ~XpressWorkers() { stop(); }
