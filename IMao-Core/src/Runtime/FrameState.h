@@ -44,24 +44,56 @@ struct OverlayFrame {
     MinimapReadoutProjection minimapReadout;
     // Empty for legacy full-size pixels; otherwise motionImage is tracking-size color.
     cv::Size motionSourceSize{};
+    std::uint64_t positionFrameId = 0;
 
     bool Fresh(std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now()) const {
         return frameId != 0 && now >= capturedAt && now - capturedAt < maximumAge;
     }
+    bool Drawable(std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now()) const {
+        // Display lifetime follows the observed UI/context, not CPU throughput.
+        // Fresh remains available to interaction/automation consumers.
+        return frameId != 0 && capturedAt != std::chrono::steady_clock::time_point{} && now >= capturedAt;
+    }
 };
+
+inline bool RetainAcceptedMinimapAnchor(OverlayFrame& pending, const OverlayFrame& previous) {
+    if (!pending.minimapVisible || pending.mapVisible || !previous.minimapVisible || previous.mapVisible ||
+        pending.minimapReadout.active || previous.minimapReadout.active ||
+        !pending.focused || !previous.focused || !previous.minimapMotion.reliable ||
+        previous.motionImage.empty() || pending.positionFrameId == 0 ||
+        previous.frameId == 0 || previous.frameId > pending.frameId ||
+        previous.capturedAt == std::chrono::steady_clock::time_point{} || previous.capturedAt > pending.capturedAt ||
+        pending.positionFrameId != previous.positionFrameId ||
+        pending.playerScene <= 0 || pending.playerScene != previous.playerScene ||
+        pending.minimapMotion.scene != previous.minimapMotion.scene ||
+        pending.minimapMotion.scene != pending.playerScene ||
+        pending.minimapMotion.generation != previous.minimapMotion.generation ||
+        pending.clientRect.right != previous.clientRect.right || pending.clientRect.bottom != previous.clientRect.bottom)
+        return false;
+    // Preserve the accepted pose/pixels pair; a newer capture is not a new fix.
+    pending.frameId = previous.frameId;
+    pending.capturedAt = previous.capturedAt;
+    pending.maximumAge = previous.maximumAge;
+    pending.minimapMotion = previous.minimapMotion;
+    pending.motionImage = previous.motionImage;
+    pending.motionRegion = previous.motionRegion;
+    pending.motionSourceSize = previous.motionSourceSize;
+    return true;
+}
 
 // A transient localization miss keeps the complete original image/pose pair.
 // It must never refresh that pair's timestamp or bind its pose to new pixels.
 inline bool CanRetainOverlayAnchor(const OverlayFrame& previous, const OverlayFrame& pending,
     bool mapRequested, bool minimapRequested,
     std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now()) {
-    return previous.Fresh(now) && previous.focused && pending.focused && !previous.motionImage.empty() &&
+    return previous.Drawable(now) && previous.focused && pending.focused && !previous.motionImage.empty() &&
         previous.clientRect.right == pending.clientRect.right && previous.clientRect.bottom == pending.clientRect.bottom &&
         ((mapRequested && previous.mapVisible && previous.mapMotion.generation == pending.mapMotion.generation) ||
             // Readout publication is authorized by its own original fix. Never
             // replace a rejected proof with a cached layout from another fix.
             (minimapRequested && !pending.minimapReadout.active && previous.minimapVisible &&
-                previous.playerScene == pending.playerScene));
+                previous.playerScene == pending.playerScene &&
+                previous.minimapMotion.generation == pending.minimapMotion.generation));
 }
 
 // Input consumers use the same geometry the renderer actually displayed.

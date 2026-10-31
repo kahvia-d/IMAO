@@ -779,3 +779,6 @@ target_compile_definitions(IMaoStateVisibilityTests PRIVATE NOMINMAX IMAO_SOURCE
 target_compile_options(IMaoStateVisibilityTests PRIVATE /source-charset:utf-8 /execution-charset:utf-8 /EHsc)
 target_link_libraries(IMaoStateVisibilityTests PRIVATE ${OpenCV_LIBS})
 add_test(NAME IMaoStateVisibilityTests COMMAND IMaoStateVisibilityTests)
+
+add_executable(IMaoPositionDisplayTests IMao-Core/tests/PositionDisplayTests.cpp)
+add_test(NAME IMaoPositionDisplayTests COMMAND IMaoPositionDisplayTests)

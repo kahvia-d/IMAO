@@ -611,7 +611,7 @@ int ImGuiOverWindows::start()
             : foreground == h_window ? OverlayPacing::FocusHandoffForeground::Game
             : foreground == nullptr ? OverlayPacing::FocusHandoffForeground::None
             : OverlayPacing::FocusHandoffForeground::Other;
-        const bool mapReady = markerFrame && markerFrame->Fresh(frameStart) && markerFrame->focused &&
+        const bool mapReady = markerFrame && markerFrame->Drawable(frameStart) && markerFrame->focused &&
             markerFrame->mapVisible && markerFrame->clientRect.right == GameRect.right &&
             markerFrame->clientRect.bottom == GameRect.bottom &&
             app.ReadOverlayVisibility()->AllowsMap(markerFrame->frameId) &&
@@ -810,10 +810,12 @@ int ImGuiOverWindows::start()
                         frameStart - capture->capturedAt).count() : -1) +
                     " sourceAgeMs=" + std::to_string(frame->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
                         frameStart - frame->capturedAt).count() : -1) +
-                    " sourceMaximumAgeMs=" + std::to_string(frame->maximumAge.count()) +
+                    " sourceDisplayExpires=0 sourceInteractionMaximumAgeMs=" + std::to_string(frame->maximumAge.count()) +
                     " visibilityAgeMs=" + std::to_string(visibility->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
                         frameStart - visibility->capturedAt).count() : -1) +
-                    " visibilityMaximumAgeMs=" + std::to_string(visibility->maximumAge.count()) +
+                    " visibilityHealthAgeMs=" + std::to_string(visibility->frameId ? std::chrono::duration_cast<std::chrono::milliseconds>(
+                        frameStart - visibility->processedAt).count() : -1) +
+                    " visibilityHealthTimeoutMs=" + std::to_string(visibility->maximumAge.count()) +
                     " sourceFrame=" + std::to_string(frame->frameId) +
                     " visibilityFrame=" + std::to_string(visibility->frameId) +
                     " visibilitySinceFrame=" + std::to_string(visibility->visibleSinceFrame) +
@@ -902,7 +904,7 @@ int ImGuiOverWindows::start()
             bool mapEligible = false, minimapEligible = false;
             PresentedOverlayFrame presented{frame, {}, false, false, frameStart};
             presented.capture = capture;
-            const bool sourceFresh = frame->Fresh();
+            const bool sourceFresh = frame->Drawable();
             if (frame->mapVisible) ++mapRequestedFrames;
             if (frame->minimapVisible) ++minimapRequestedFrames;
             if (sourceFresh && DrawItemBase::IsMarkerDisplayContext(h_window) &&

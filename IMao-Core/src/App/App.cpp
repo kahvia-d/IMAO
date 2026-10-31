@@ -1,5 +1,6 @@
 ﻿#include "../Runtime/CaptureContinuity.h"
 #include "ScreenMotionTracker.h"
+#include "../Runtime/PositionDisplayPolicy.h"
 #include "../Feature/Match/SceneMapFeatures.h"
 #include "App.h"
 #include "MapViewportSearchGate.h"
@@ -938,11 +939,11 @@ void App::Thread_DetectGameState() {
     int rawControllerTriggerAnchors = 0;
     bool rawControllerSlider = false;
     const auto publishVisibility = [&](const CapturedFrame& captured, bool mapEvidence,
-        bool minimapEvidence, bool focused) {
+        bool minimapEvidence, bool focused, bool stateRefresh = false) {
         const auto previous = overlayVisibility.Read();
         const auto visible = visibilityPolicy.Observe(captured.frameId, captured.capturedAt,
-            captured.maximumAge, mapUiState.State(), mapEvidence, minimapEvidence, focused,
-            panelVisible);
+            OverlayVisibilityFrame::Clock::now(), mapUiState.State(), mapEvidence, minimapEvidence, focused,
+            panelVisible, stateRefresh);
         overlayVisibility.Publish(visible);
         GamepadContextSnapshot::Shared().ObserveUi(coordinateSessionId, DrawItemBase::MarkerProfile(),
             MapUiStateController::IsStableBigMap(mapUiState.State()), mapEvidence, minimapEvidence,
@@ -1208,7 +1209,7 @@ void App::Thread_DetectGameState() {
 					!mapControlsVisible && !compassVisible && isExistMinMap);
 			}
 		}
-        publishVisibility(*captured, BigMapMarkersVisible(frameEvidence()), minimapVisible, focused);
+        publishVisibility(*captured, BigMapMarkersVisible(frameEvidence()), minimapVisible, focused, true);
 		std::string statusGameState = "unknown";
 		switch (update.current) {
 		case MapUiState::Gameplay: statusGameState = "gameplay"; break;
@@ -1577,7 +1578,9 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
             " steadyMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()));
     };
 	auto returnTrustedPosition = [&]() -> bool {
-		if (playerCurrentSceneId == 0 || !coordinateRecovery.CanUseTrustedPosition(now)) return false;
+		if (!HasDisplayPosition(playerLocationLock.valid, playerLocationLock.sceneId, playerCurrentSceneId,
+            playerLocationLock.generation, coordinateUiGeneration, playerLocationLock.confirmedAt, now) ||
+            coordinateRecovery.State() == CoordinateLockState::Hidden) return false;
 		outPlayerROC = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
 		outMinMapRadius = minMapImg.rows / 2.0f;
 		return true;
@@ -1588,7 +1591,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
         CoordinateHandoff::VisualSource visualSource = CoordinateHandoff::VisualSource::Local) -> bool {
         if (capturedAt == std::chrono::steady_clock::time_point{}) capturedAt = snapshotCapturedAt;
         if (sourceFrame == 0) sourceFrame = snapshotFrameId;
-        if (visual && !relative && (capturedAt > now || now - capturedAt > std::chrono::milliseconds(750))) return false;
+        if (capturedAt > now) return false;
         if (relative && coordinateHandoff.ReadoutActive()) return false;
 		// B：每次提交都记下它相对上一个可信位置的位移与来源，用来钉死"单秒跳 120~377 单位"是哪条路。
 		double commitJumpUnits = -1.0;
@@ -1599,7 +1602,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		if (visual && candidate.sceneId > 0 && candidate.sceneId == coordinateTrust.Scene()) {
 			Coordinate predicted{};
 			double speed = 0.0;
-			const double secondsAt = std::chrono::duration<double>(now.time_since_epoch()).count();
+			const double secondsAt = std::chrono::duration<double>(capturedAt.time_since_epoch()).count();
 			if (coordinateTrust.FitAt(candidate.sceneId, secondsAt, predicted, speed)) {
 				const double residual = std::hypot(candidate.mapCenter.x - predicted.x,
 					candidate.mapCenter.y - predicted.y) / 1.205;
@@ -1629,7 +1632,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		if (playerLocationLock.valid && candidate.sceneId == playerLocationLock.sceneId &&
 			playerLocationLock.generation == coordinateUiGeneration) {
 			const double elapsed = std::max(0.001,
-				std::chrono::duration<double>(now - playerLocationLock.confirmedAt).count());
+				std::chrono::duration<double>(capturedAt - playerLocationLock.confirmedAt).count());
 			// 与读数闸门同一套单位（世界单位）：map 空间的距离要除以该场景的比例，否则预算会被放宽 ~20%
 			const double jump = std::hypot(candidate.mapCenter.x - playerLocationLock.mapCoordinate.x,
 				candidate.mapCenter.y - playerLocationLock.mapCoordinate.y) / 1.205;
@@ -1677,7 +1680,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		// must not touch T or the record (an OCR misread may never move the region).
 		if (visual && candidate.sceneId > 0)
 			coordinateTrust.NoteVisualMatch(candidate.sceneId, candidate.mapCenter,
-				std::chrono::duration<double>(now.time_since_epoch()).count());
+				std::chrono::duration<double>(capturedAt.time_since_epoch()).count());
 		// A visual match names the region, so the "open the big map" instruction is answered.
 		if (coordinateTrust.HasScene()) RuntimeStatus::SetLocalizationHint({});
         if (recognition || playerCurrentSceneId != candidate.sceneId)
@@ -1819,7 +1822,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
             " captureToConsumeMs=" + std::to_string(ms(consumedAt-ocrResult.capturedAt)) +
             " submitToCompleteMs=" + std::to_string(ms(ocrResult.completedAt-ocrResult.submittedAt)) +
             " completeToConsumeMs=" + std::to_string(ms(consumedAt-ocrResult.completedAt)) +
-            " withinDrawAge=" + std::to_string(consumedAt >= ocrResult.capturedAt &&
+            " withinLegacy500ms=" + std::to_string(consumedAt >= ocrResult.capturedAt &&
                 consumedAt - ocrResult.capturedAt < std::chrono::milliseconds(500)));
 
         const bool activeOcrResult = ocrRequestInFlight.has_value() && ocrResult.requestId == *ocrRequestInFlight;
@@ -1827,6 +1830,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		if (ocrResult.sessionId == coordinateSessionId && ocrResult.uiGeneration == coordinateUiGeneration &&
 			activeOcrResult &&
 			ocrResult.frameId <= snapshotFrameId && lastCoordinateVisible &&
+            ocrResult.capturedAt >= lastPositionCapturedAt &&
             coordinateHandoff.FreshReadout(ocrResult.frameId, ocrResult.capturedAt, consumedAt)) {
 			ocrRequestInFlight.reset();
 			latestOcrHints.clear();
@@ -1881,7 +1885,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 					lock.sceneId = playerLocationLock.sceneId;
 					lock.mapCoordinate = playerLocationLock.mapCoordinate;
 					lock.secondsSinceLock = std::max(0.0,
-						std::chrono::duration<double>(now - playerLocationLock.confirmedAt).count());
+						std::chrono::duration<double>(ocrResult.capturedAt - playerLocationLock.confirmedAt).count());
 					if (const auto* lockedScene = Scene::Find(playerLocationLock.sceneId)) {
 						lock.sceneScale = lockedScene->scale;
 					}
@@ -1977,7 +1981,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 							trustCandidates.push_back(entry);
 						}
 						const auto chosen = coordinateTrust.Choose(coordinateTrust.Scene(), trustCandidates,
-							std::chrono::duration<double>(now.time_since_epoch()).count());
+							std::chrono::duration<double>(ocrResult.capturedAt.time_since_epoch()).count());
 						if (!chosen.has_value()) {
 							Diagnostics::Record("coordinate-publish-rejected", "reason=not-reachable scene=" +
 								std::to_string(coordinateTrust.Scene()) + " world=" + world);
@@ -2069,8 +2073,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
     // revalidation/resume work below. Continue that work afterwards so SURF
     // recovery cannot starve while OCR remains active.
     if (acceptedReadoutThisCycle && coordinateHandoff.ReadoutActive() && lastCoordinateVisible &&
-        enabledMinMapShowItem.load() && isExistMinMap.load() && !isOpenMap.load() &&
-        CoordinateHandoff::Clock::now() - routeFixCapturedAt < std::chrono::milliseconds(500)) {
+        enabledMinMapShowItem.load() && isExistMinMap.load() && !isOpenMap.load()) {
         auto center = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
         DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, center, minMapImg.rows / 2.0f,
             playerCurrentSceneId, minimapTerrainScale);
@@ -2693,9 +2696,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	}
 	if (previousState != CoordinateLockState::Recovering) {
 		// A third miss starts global recovery, but is not proof of teleporting.
-		// Keep the trusted position visible during the stale grace period so a
-		// camera turn or translucent HUD frame cannot flash markers.
-		++coordinateUiGeneration;
+		// A recovery attempt is not a new UI context. Keep the accepted position
+		// and its generation until an actual scene/UI discontinuity invalidates it.
 		globalVisualConfirmation.Reset();
 		visualRequestInFlight.reset();
 		activeVisualRequestId = 0;
@@ -3397,6 +3399,7 @@ void App::PublishOverlayFrame(const CapturedFrame& requestedCapture, const MapVi
         {"stage", "overlay-layout"}});
     OverlayFrame frame;
     frame.frameId = captured.frameId; frame.clientRect = captured.clientRect; frame.capturedAt = captured.capturedAt;
+    frame.positionFrameId = routeFixSequence;
     frame.maximumAge = std::chrono::milliseconds(std::max(500, 2 * std::max(
         updateMapDataCycleTime.load(), updateMinMapDataCycleTime.load())));
     if (anchored) frame.maximumAge = captured.maximumAge;
@@ -3446,6 +3449,10 @@ void App::PublishOverlayFrame(const CapturedFrame& requestedCapture, const MapVi
     // search. Resolve this before the old-anchor retention and all consumers.
     const auto readoutPublicationAt = std::chrono::steady_clock::now();
     AuthorizeReadoutMinimapPublication(frame, readoutPublicationAt);
+    const bool heldVisualAnchor = HasDisplayPosition(playerLocationLock.valid, playerLocationLock.sceneId,
+        playerCurrentSceneId, playerLocationLock.generation, coordinateUiGeneration,
+        playerLocationLock.confirmedAt, readoutPublicationAt) &&
+        RetainAcceptedMinimapAnchor(frame, *overlayFrames.Read());
     if (frame.minimapReadout.active) {
         if (frame.minimapMotion.reliable)
             RuntimeStatus::SetLocalization("tracking", "readout-verified", "小地图定位正常");
@@ -3474,7 +3481,7 @@ void App::PublishOverlayFrame(const CapturedFrame& requestedCapture, const MapVi
         if (CanRetainOverlayAnchor(*previous, frame, mapRequested, minimapRequested)) return;
         frame.mapVisible = frame.minimapVisible = false;
     }
-    if (frame.mapVisible || frame.minimapVisible) {
+    if ((frame.mapVisible || frame.minimapVisible) && !heldVisualAnchor) {
         const auto area = frame.mapVisible ? mapArea : ScreenCoordinate::SpecifyScreenCoordinate(
             captured.clientRect, hud::kMinimap);
         const cv::Rect region(static_cast<int>(area.leftPoint.x), static_cast<int>(area.topPoint.y),

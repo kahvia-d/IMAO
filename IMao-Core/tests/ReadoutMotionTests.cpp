@@ -52,9 +52,9 @@ void TestObservationIntegrity() {
  Check(a.offset.x==b.offset.x&&a.offset.y==b.offset.y,"same instant must not advance the animation or fit duplicate evidence");
  motion.Update({2,0},1,1,3,t+200ms,1,t+250ms);
  auto stale=motion.Update({2,0},1,1,3,t+200ms,1,t+700ms);
- Check(stale.offset.x==0,"animated history must expire at the original fix deadline");
+ Check(stale.offset.x<-.1&&std::abs(stale.offset.x)<=24,"held accepted fix must retain bounded animation beyond 500ms");
  auto recovered=motion.Update({3,0},1,1,4,t+710ms,1,t+730ms);
- Check(recovered.offset.x==0,"recovery after expiration must reacquire without stale velocity");
+ Check(recovered.offset.x==0,"a long gap between actual observations must reacquire without stale velocity");
 }
 int main(){try{
  TestContinuousFixHandoff();TestStopAndReverse();TestObservationIntegrity();
@@ -85,7 +85,7 @@ int main(){try{
  a=motion.Update({1000,0},1,1,2,t+100ms,1,t+120ms);
  Check(a.offset.x==0,"large jumps must snap and discard velocity");
  a=motion.Update({1000,0},1,1,2,t+100ms,1,t+600ms);
- Check(a.offset.x==0,"display prediction cannot extend 500ms proof lifetime");
+ Check(a.offset.x==0,"a single accepted observation must not invent velocity while held");
  OverlayVisibilityGap gap;
  Check(gap.Observe(true,true,t)==OverlayVisibilityGap::Event::None,"visible frame is not a gap");
  Check(gap.Observe(true,false,t+33ms)==OverlayVisibilityGap::Event::Started,"publisher rejection starts gap too");

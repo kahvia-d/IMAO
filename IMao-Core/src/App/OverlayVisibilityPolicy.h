@@ -4,6 +4,10 @@
 #include <chrono>
 #include <cstdint>
 
+// A stalled detector fails closed independently of the source capture's age.
+// Ordinary capture/processing gaps must not revoke a verified UI state.
+constexpr std::chrono::milliseconds kVisibilityDetectorHealthTimeout{2000};
+
 // Visibility is a property of the latest observed game UI, not of the last
 // successful location. This small snapshot can revoke a published marker frame
 // without waiting for the localization worker or clearing its recovery hints.
@@ -12,12 +16,14 @@ struct OverlayVisibilityFrame {
     std::uint64_t frameId = 0;
     std::uint64_t visibleSinceFrame = 0;
     Clock::time_point capturedAt{};
-    std::chrono::milliseconds maximumAge{500};
+    Clock::time_point processedAt{};
+    std::chrono::milliseconds maximumAge{kVisibilityDetectorHealthTimeout};
     bool mapVisible = false;
     bool minimapVisible = false;
 
     bool Fresh(Clock::time_point now = Clock::now()) const {
-        return frameId != 0 && now >= capturedAt && now - capturedAt < maximumAge;
+        return frameId != 0 && now >= capturedAt && now >= processedAt &&
+            now - processedAt < maximumAge;
     }
 
     bool AllowsMap(std::uint64_t markerFrame, Clock::time_point now = Clock::now()) const {
@@ -54,7 +60,7 @@ constexpr std::chrono::milliseconds kEvidenceHold{250};
 // Two different silences are involved and they deserve different limits:
 //   * the map is still up and the foreground moved somewhere else - we want to keep showing it, but
 //     not indefinitely, or an alt-tab would leave the overlay on top of another application. The
-//     capture freshness window (500 ms) is what finally ends this, so the limit stays under it.
+//     focus hold ends this independently of the detector-health watchdog.
 //   * focus was never seen at all (the tool's own window owns it, or the game window handle is not
 //     the one Windows reports as foreground) - treating that as "not live" is the documented rule
 //     above ("focus is lost"), so it keeps the same limit rather than holding forever.
@@ -66,12 +72,28 @@ class OverlayVisibilityPolicy {
 public:
     OverlayVisibilityFrame Observe(std::uint64_t frameId,
         OverlayVisibilityFrame::Clock::time_point capturedAt,
-        std::chrono::milliseconds maximumAge, MapUiState stableState,
-        bool mapEvidence, bool minimapEvidence, bool focused, bool regionPanel = false) {
+        OverlayVisibilityFrame::Clock::time_point processedAt, MapUiState stableState,
+        bool mapEvidence, bool minimapEvidence, bool focused, bool regionPanel = false,
+        bool stateRefresh = false) {
+        // App may finish structural/state work after publishing the HUD probes
+        // for this capture. Explicitly correct that state without treating it as
+        // another completed capture or extending its detector-health deadline.
+        const bool sameFrameRefresh = stateRefresh && frameId == frame_.frameId &&
+            capturedAt == frame_.capturedAt;
+        // Replayed/out-of-order observations cannot renew detector health or move
+        // the permission epoch backwards. A future capture is not evidence yet.
+        if (frameId == 0 || frameId < frame_.frameId ||
+            (frameId == frame_.frameId && !sameFrameRefresh) ||
+            (stateRefresh && !sameFrameRefresh) || capturedAt > processedAt ||
+            (frame_.frameId != 0 && (capturedAt < frame_.capturedAt || processedAt < frame_.processedAt)))
+            return frame_;
+        if (sameFrameRefresh && !frame_.Fresh(processedAt)) return frame_;
+        // Health loss revokes the permission epoch even if the next completed
+        // observation sees the same surface. Old localization cannot resurrect.
+        if (frame_.frameId != 0 && !frame_.Fresh(processedAt)) Reset();
         if (focused) lastFocusedAt_ = capturedAt;
         // "The game is up and in front of the player" for this frame. A foreground that flickers away
-        // and back is invisible here; a sustained switch is still a switch, and the freshness window
-        // in AllowsMap/AllowsMinimap is what finally expires a surface nobody is watching any more.
+        // and back is invisible here; a sustained switch is still a switch.
         const bool live = Observed(capturedAt) && frameId != 0;
         const bool mapUp = MapUiStateController::IsStableBigMap(stableState);
         const bool gameplayUp = MapUiStateController::IsStableGameplay(stableState);
@@ -94,7 +116,7 @@ public:
         }
         frame_.frameId = frameId;
         frame_.capturedAt = capturedAt;
-        frame_.maximumAge = maximumAge;
+        if (!sameFrameRefresh) frame_.processedAt = processedAt;
         frame_.mapVisible = showMap;
         frame_.minimapVisible = showMinimap;
         return frame_;

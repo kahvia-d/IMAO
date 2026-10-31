@@ -40,12 +40,18 @@ int main() {
     auto require=[](bool b) { if (!b) throw std::runtime_error("handoff invariant failed"); };
     H h;
     require(h.NeedsReadout(t));
-    require(!h.FreshReadout(1,t,t+751ms));
+    require(h.FreshReadout(1,t,t+2s)); // Inference latency alone does not invalidate current evidence.
     require(!h.FreshReadout(1,t+1ms,t));
     require(h.FreshReadout(1,t,t+20ms));
     require(!h.ConfirmReadout(1,t,1,10,20));
     require(!h.ConfirmReadout(1,t,1,10,20));
     require(h.ConfirmReadout(2,t+250ms,1,20,20));
+    require(!h.FreshReadout(1,t+300ms,t+2s)); // Older frame cannot overwrite newer evidence.
+    require(!h.FreshReadout(3,t+200ms,t+2s)); // Capture ordering is independent of frame ordering.
+    require(!h.FreshReadout(0,t+300ms,t+2s));
+    require(!h.FreshReadout(3,{},t+2s));
+    require(!h.ConfirmReadout(1,t+300ms,1,20,20));
+    require(h.FreshReadout(3,t+500ms,t+2s));
     require(!h.ConfirmReadout(3,t+500ms,2,20,20));
     require(!h.ConfirmReadout(4,t+3s,2,20,20));
     h.Reset();

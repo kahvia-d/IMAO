@@ -100,8 +100,9 @@ void TestOverlayFailureContinuity(Check check) {
     check(CanRetainOverlayAnchor(*source, pending, false, true, pending.capturedAt),
         "temporary localization loss retains the original image/pose without a new timestamp");
     check(!CanRetainOverlayAnchor(*source, pending, true, false, pending.capturedAt) &&
-        !CanRetainOverlayAnchor(*source, pending, false, true, start + milliseconds(501)),
-        "holding an anchor cannot cross a map transition or refresh its expiry");
+        CanRetainOverlayAnchor(*source, pending, false, true, start + milliseconds(501)) &&
+        !source->Fresh(start + milliseconds(501)) && source->capturedAt == start,
+        "display retention survives age without crossing a map transition or renewing interaction freshness");
     pending.clientRect.right = 640;
     check(!CanRetainOverlayAnchor(*source, pending, false, true, pending.capturedAt),
         "a resized capture cannot reuse the old HUD geometry");

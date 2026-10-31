@@ -50,7 +50,7 @@ inline OverlayScreenTransform ReconcileTerrainAnchor(const OverlayMotionSample& 
 
 // Renderer-owned. SURF frames use measured pixels. Accepted readout frames
 // already carry a north-up coordinate projection and do not require terrain.
-// Neither path extends the lifetime of its independent position evidence.
+// Drawing does not refresh evidence timestamps; current capture health remains independent.
 class ImageAnchoredOverlay {
 public:
     explicit ImageAnchoredOverlay(bool minimap, ReadoutDisplayMode displayMode = ReadoutDisplayMode::Animated)
@@ -84,8 +84,10 @@ public:
         if (!pose.reliable || pose.scene <= 0 || pose.pixelsPerUnit <= 0.0) { Reset(); return false; }
         failure_ = "source-anchor";
         if (source_ != source) {
-            bool continued = false;
-            if (source_) {
+            // Republishing a catalogue for the same accepted image/pose pair
+            // must keep the renderer's measured capture history and rebases.
+            bool continued = minimap_ && source_ && SameHeldMinimapAnchor(*source_, *source);
+            if (source_ && !continued) {
                 const auto& oldPose = minimap_ ? source_->minimapMotion : source_->mapMotion;
                 const double elapsed = std::chrono::duration<double>(pose.capturedAt - oldPose.capturedAt).count();
                 if (oldPose.scene == pose.scene && oldPose.generation == pose.generation && elapsed > 0.0 && elapsed < 0.5 &&
@@ -181,12 +183,31 @@ public:
         return true;
     }
 private:
+    static bool SameHeldMinimapAnchor(const OverlayFrame& a, const OverlayFrame& b) {
+        const auto& old = a.minimapMotion;
+        const auto& next = b.minimapMotion;
+        return a.positionFrameId != 0 && a.positionFrameId == b.positionFrameId &&
+            a.frameId == b.frameId && a.capturedAt == b.capturedAt &&
+            a.playerScene == b.playerScene && a.minimapVisible == b.minimapVisible &&
+            a.mapVisible == b.mapVisible && a.focused == b.focused &&
+            a.clientRect.left == b.clientRect.left && a.clientRect.top == b.clientRect.top &&
+            a.clientRect.right == b.clientRect.right && a.clientRect.bottom == b.clientRect.bottom &&
+            a.motionRegion == b.motionRegion && a.motionSourceSize == b.motionSourceSize &&
+            a.motionImage.data == b.motionImage.data && a.motionImage.size() == b.motionImage.size() &&
+            a.motionImage.type() == b.motionImage.type() && a.motionImage.step == b.motionImage.step &&
+            old.center.x == next.center.x && old.center.y == next.center.y &&
+            old.screenCenter.x == next.screenCenter.x && old.screenCenter.y == next.screenCenter.y &&
+            old.pixelsPerUnit == next.pixelsPerUnit && old.scene == next.scene &&
+            old.generation == next.generation && old.frameId == next.frameId &&
+            old.capturedAt == next.capturedAt && old.reliable == next.reliable &&
+            old.absoluteRevision == next.absoluteRevision;
+    }
     bool PlaceReadout(const OverlayFrame& source, const CapturedFrame& capture,
         OverlayScreenTransform& output, std::chrono::steady_clock::time_point now) {
         const auto& proof = source.minimapReadout;
         const auto& pose = source.minimapMotion;
         failure_ = "readout-context";
-        if (!source.Fresh(now) || !source.focused || !source.minimapVisible || source.mapVisible ||
+        if (!source.Drawable(now) || !source.focused || !source.minimapVisible || source.mapVisible ||
             capture.image.empty() || capture.frameId < source.frameId || capture.frameId == 0 ||
             now < capture.capturedAt || now - capture.capturedAt >= capture.maximumAge ||
             capture.capturedAt < source.capturedAt ||
@@ -200,8 +221,6 @@ private:
             proof.fixFrameId > source.frameId || proof.capturedAt == std::chrono::steady_clock::time_point{} ||
             proof.capturedAt > source.capturedAt || now < proof.capturedAt ||
             !std::isfinite(pose.center.x) || !std::isfinite(pose.center.y)) return false;
-        failure_ = "readout-fix-stale";
-        if (now - proof.capturedAt >= std::chrono::milliseconds(500)) return false;
         failure_ = "readout-geometry";
         if (!std::isfinite(proof.terrainScale) || proof.terrainScale <= 0.0 ||
             !std::isfinite(pose.pixelsPerUnit) || pose.pixelsPerUnit <= 0.0 ||

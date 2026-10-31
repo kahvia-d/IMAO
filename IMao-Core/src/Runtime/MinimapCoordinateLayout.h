@@ -9,12 +9,12 @@ inline void AuthorizeReadoutMinimapPublication(OverlayFrame& frame,
     auto& pose = frame.minimapMotion;
     pose.reliable = false;
     // A background visual search can be recovering while the committed readout
-    // is fresh. Authorize this layout from that fix, not the shared search state.
-    if (!frame.Fresh(now) || !frame.focused || !frame.minimapVisible || frame.mapVisible ||
+    // remains valid. Authorize this layout from that fix, not the shared search state.
+    if (!frame.Drawable(now) || !frame.focused || !frame.minimapVisible || frame.mapVisible ||
         frame.playerScene <= 0 || proof.scene != frame.playerScene || proof.scene != pose.scene ||
         proof.generation != pose.generation || proof.fixFrameId == 0 || proof.fixFrameId > frame.frameId ||
         proof.capturedAt == std::chrono::steady_clock::time_point{} || proof.capturedAt > frame.capturedAt ||
-        now < proof.capturedAt || now - proof.capturedAt >= std::chrono::milliseconds(500) ||
+        now < proof.capturedAt ||
         !std::isfinite(pose.center.x) || !std::isfinite(pose.center.y) ||
         !std::isfinite(proof.terrainScale) || proof.terrainScale <= 0.0 ||
         !std::isfinite(pose.pixelsPerUnit) || pose.pixelsPerUnit <= 0.0 ||

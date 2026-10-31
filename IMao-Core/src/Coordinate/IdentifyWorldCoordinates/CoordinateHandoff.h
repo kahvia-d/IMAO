@@ -49,15 +49,17 @@ public:
         if (capturedAt > lastVisual_ && frame != lastFrame_) ObserveFailure(source, capturedAt);
     }
     bool FreshReadout(std::uint64_t frame, Clock::time_point capturedAt, Clock::time_point now) const {
-        return frame != readFrame_ && capturedAt != Clock::time_point{} && capturedAt <= now &&
-            now - capturedAt <= std::chrono::milliseconds(750);
+        // The caller validates session/generation and ordering against the committed
+        // visual position. Slow inference alone does not invalidate this sample.
+        return frame > readFrame_ && capturedAt != Clock::time_point{} &&
+            capturedAt > readCapture_ && capturedAt <= now;
     }
     void BreakReadoutStreak() { readCount_ = 0; }
     bool ConfirmReadout(std::uint64_t frame, Clock::time_point capturedAt, int scene, double x, double y,
         const ReadoutPrior* prior = nullptr) {
         usedReadoutPrior_ = false;
         if (!std::isfinite(x) || !std::isfinite(y)) return false;
-        if(frame == readFrame_ || capturedAt <= readCapture_)return false;
+        if(frame <= readFrame_ || capturedAt <= readCapture_)return false;
         const double elapsed=std::chrono::duration<double>(capturedAt-readCapture_).count();
         const bool agrees=readCount_>0 && scene==readScene_ && elapsed<=1.5 &&
             std::hypot(x-readX_,y-readY_)<=(std::max)(30.,100.*elapsed);

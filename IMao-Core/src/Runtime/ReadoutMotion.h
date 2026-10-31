@@ -16,8 +16,7 @@ public:
     OverlayScreenTransform Update(Coordinate center, int scene, std::uint64_t generation,
         std::uint64_t fix, Clock::time_point at, double pixelsPerUnit, Clock::time_point now) {
         if (!Finite(center) || !std::isfinite(pixelsPerUnit) || pixelsPerUnit <= 0 ||
-            !fix || scene <= 0 || at == Clock::time_point{} || now < at ||
-            now - at >= std::chrono::milliseconds(500)) {
+            !fix || scene <= 0 || at == Clock::time_point{} || now < at) {
             Reset(); return {};
         }
         const bool sameContext = valid_ && scene == scene_ && generation == generation_ &&

@@ -11,6 +11,54 @@
 using namespace std::chrono_literals;
 static void Check(bool value,const char*message){if(!value)throw std::runtime_error(message);}
 
+void TestRetainAcceptedMinimapAnchor() {
+    const auto t=std::chrono::steady_clock::time_point{}+10s;
+    OverlayFrame previous;previous.frameId=10;previous.positionFrameId=8;previous.capturedAt=t;previous.maximumAge=200ms;
+    previous.clientRect={0,0,2560,1440};previous.focused=true;previous.minimapVisible=true;previous.playerScene=1;
+    previous.motionImage=cv::Mat(12,14,CV_8UC1,cv::Scalar(42));previous.motionRegion={11,13,140,120};
+    previous.motionSourceSize={140,120};
+    previous.minimapMotion={{100,200},{81,73},1.2,1,7,10,t,true};
+    OverlayFrame pending=previous;pending.frameId=50;pending.capturedAt=t+30s;pending.maximumAge=500ms;
+    pending.motionImage=cv::Mat(12,14,CV_8UC1,cv::Scalar(99));pending.motionRegion={21,23,140,120};
+    pending.motionSourceSize={};pending.minimapMotion.center={999,888};
+    pending.minimapMotion.frameId=50;pending.minimapMotion.capturedAt=t+30s;pending.minimapMotion.reliable=false;
+    ItemDatas marker;marker.itemId="new-catalogue";marker.itemMapROC={110,210};
+    pending.minimapMarkers.markers.push_back(marker);
+    auto retained=pending;
+    Check(RetainAcceptedMinimapAnchor(retained,previous),"same committed position must retain its original SURF image and pose");
+    Check(retained.frameId==10&&retained.capturedAt==t&&retained.positionFrameId==8&&retained.maximumAge==200ms,
+        "holding accepted position must not mint a new capture envelope");
+    Check(retained.motionImage.data==previous.motionImage.data&&retained.motionImage.at<unsigned char>(0,0)==42&&
+        retained.motionRegion==cv::Rect(11,13,140,120)&&retained.motionSourceSize==cv::Size(140,120),
+        "retained pose must stay paired with its exact old tracking pixels and crop geometry");
+    Check(retained.minimapMotion.center.x==100&&retained.minimapMotion.center.y==200&&
+        retained.minimapMotion.screenCenter.x==81&&retained.minimapMotion.screenCenter.y==73&&
+        retained.minimapMotion.pixelsPerUnit==1.2&&retained.minimapMotion.scene==1&&retained.minimapMotion.generation==7&&
+        retained.minimapMotion.frameId==10&&retained.minimapMotion.capturedAt==t&&retained.minimapMotion.reliable,
+        "holding accepted position must restore the complete original motion sample");
+    Check(retained.minimapMarkers.markers.size()==1&&retained.minimapMarkers.markers[0].itemId=="new-catalogue",
+        "retaining an anchor must preserve the newly selected marker payload");
+    Check(retained.Drawable(t+30s)&&!retained.Fresh(t+30s),
+        "held image anchor may draw after 30 seconds without becoming fresh for input or automation");
+    const auto reject=[&](auto mutate,const char* message) {
+        auto candidate=pending;auto old=previous;mutate(candidate,old);
+        Check(!RetainAcceptedMinimapAnchor(candidate,old),message);
+        Check(candidate.frameId==50&&candidate.capturedAt==t+30s,
+            "rejected anchor retention must leave the pending capture envelope untouched");
+    };
+    reject([](auto& p,auto&){p.minimapReadout.active=true;},"readout publication must not borrow a SURF anchor");
+    reject([](auto&,auto& p){p.minimapReadout.active=true;},"previous readout projection is not a SURF anchor");
+    reject([](auto& p,auto& old){p.positionFrameId=old.positionFrameId=0;},"unknown position identity must not retain an anchor");
+    reject([](auto& p,auto&){++p.positionFrameId;},"new accepted position must use its own image anchor");
+    reject([](auto& p,auto&){++p.minimapMotion.generation;},"another UI generation must not retain an anchor");
+    reject([](auto& p,auto&){++p.playerScene;},"another player scene must not retain an anchor");
+    reject([](auto& p,auto&){++p.minimapMotion.scene;},"another pose scene must not retain an anchor");
+    reject([](auto& p,auto&){--p.clientRect.right;},"resized client must not retain an anchor");
+    reject([](auto&,auto& old){old.minimapMotion.reliable=false;},"unreliable previous pose must not be retained");
+    reject([](auto&,auto& old){old.minimapVisible=false;},"previous non-minimap context must not supply an anchor");
+    reject([](auto& p,auto&){p.minimapVisible=false;},"pending non-minimap context must not retain an anchor");
+}
+
 void TestFreshSourceReacquisition(bool compact = false) {
     const auto t=std::chrono::steady_clock::now();
     cv::Mat original(320,320,CV_8UC1),replacement(320,320,CV_8UC1),third(320,320,CV_8UC1);
@@ -83,7 +131,7 @@ void TestStableHandoff() {
     h.RejectVisual(2,t+400ms,S::Local);
     Check(h.ObserveVisual(5,t+1250ms,1,1),"late rejected result cannot erase newer recovery evidence");
 }
-void TestRecentRegisteredCaptureReacquisition(bool compact = false) {
+void TestRecentRegisteredCaptureReacquisition(bool compact = false, bool republished = false) {
     const auto t=std::chrono::steady_clock::now();
     cv::Mat original(320,320,CV_8UC1),replacement(320,320,CV_8UC1),third(320,320,CV_8UC1);
     cv::RNG rng(161017);
@@ -92,7 +140,7 @@ void TestRecentRegisteredCaptureReacquisition(bool compact = false) {
     cv::Mat current=middle.clone();third(cv::Rect(0,0,160,320)).copyTo(current(cv::Rect(0,0,160,320)));
     cv::warpAffine(middle,middle,cv::Matx23d(1,0,3,0,1,0),middle.size(),cv::INTER_LINEAR,cv::BORDER_CONSTANT,cv::Scalar(95));
     cv::warpAffine(current,current,cv::Matx23d(1,0,6,0,1,0),current.size(),cv::INTER_LINEAR,cv::BORDER_CONSTANT,cv::Scalar(95));
-    auto source=std::make_shared<OverlayFrame>();source->frameId=1;source->capturedAt=t;
+    auto source=std::make_shared<OverlayFrame>();source->frameId=1;source->positionFrameId=1;source->capturedAt=t;
     source->clientRect={0,0,320,320};source->motionRegion={0,0,320,320};source->motionImage=original;
         if(compact){source->motionSourceSize=original.size();source->motionImage=ScreenMotionTracker::FreezeSource(original);}
     source->focused=true;source->minimapVisible=true;source->playerScene=1;
@@ -101,8 +149,14 @@ void TestRecentRegisteredCaptureReacquisition(bool compact = false) {
     Check(primary.Anchor(original,true)&&primary.Track(middle,measured),"recent fixture must have a registered intermediate capture");
     Check(!primary.Track(current,measured),"recent fixture must lose the original reference");
     Check(fresh.Anchor(middle,true)&&fresh.Track(current,measured),"recent capture must strictly register current pixels");
+    const auto republish=[&]() {
+        if (!republished) return;
+        source=std::make_shared<OverlayFrame>(*source);
+        ItemDatas marker;marker.itemId="updated-payload";source->minimapMarkers.markers.push_back(marker);
+    };
     ImageAnchoredOverlay overlay(true);
     Check(overlay.Update(source,{1,original,source->clientRect,t},measured,t),"recent initial attach");
+    republish();
     Check(overlay.Update(source,{2,middle,source->clientRect,t+200ms},measured,t+200ms),"intermediate pixels must attach without changing localizer source");
     auto stale=overlay;
     Check(!stale.Update(source,{3,current,source->clientRect,t+500ms},measured,t+500ms),"stale registered pixels must not bypass the250ms limit");
@@ -112,10 +166,22 @@ void TestRecentRegisteredCaptureReacquisition(bool compact = false) {
     Check(!context.Update(other,{3,current,source->clientRect,t+300ms},measured,t+300ms),"recent pixels must not survive a scene change");
     auto generation=overlay;auto newer=std::make_shared<OverlayFrame>(*source);++newer->minimapMotion.generation;
     Check(!generation.Update(newer,{3,current,source->clientRect,t+300ms},measured,t+300ms),"recent pixels must not survive a UI generation change");
+    if (republished) {
+        const auto reject=[&](auto mutate,const char* message) {
+            auto candidate=overlay;auto changed=std::make_shared<OverlayFrame>(*source);mutate(*changed);
+            Check(!candidate.Update(changed,{3,current,source->clientRect,t+300ms},measured,t+300ms),message);
+        };
+        reject([](auto& s){++s.positionFrameId;},"another accepted position must not reuse held tracking history");
+        reject([](auto& s){s.minimapMotion.center.x+=1;},"altered pose must not reuse held tracking history");
+        reject([](auto& s){s.motionRegion.x=1;},"altered crop must not reuse held tracking history");
+        reject([](auto& s){s.motionImage=s.motionImage.clone();},"replacement pixels must establish an independent anchor");
+    }
+    republish();
     Check(overlay.Update(source,{3,current,source->clientRect,t+300ms},measured,t+300ms),"recent registered capture must recover even when localizer source is older than250ms");
     Check(std::abs(measured.offset.x-6)<.6&&std::abs(measured.offset.y)<.6,"rebasing recent pixels must retain the source-to-current transform");
     Check(overlay.RecoveredRecentCapture(),"diagnostics must identify recovery through registered capture pixels");
     cv::Mat next;cv::warpAffine(current,next,cv::Matx23d(1,0,3,0,1,0),current.size(),cv::INTER_LINEAR,cv::BORDER_CONSTANT,cv::Scalar(95));
+    republish();
     Check(overlay.Update(source,{4,next,source->clientRect,t+333ms},measured,t+333ms),"subsequent captures must remain attached after rebasing");
     Check(std::abs(measured.offset.x-9)<.6&&std::abs(measured.offset.y)<.6,"later motion must not lose or double the rebased source offset");
 }
@@ -182,8 +248,16 @@ void TestReadoutProjectionWithoutTerrain() {
         auto invalid=std::make_shared<OverlayFrame>(*source);auto current=capture;mutate(*invalid,current);
         ImageAnchoredOverlay candidate(true);Check(!candidate.Update(invalid,current,measured,t+33ms),message);
     };
-    reject([&](auto& s,auto&){s.minimapReadout.capturedAt=t-501ms;},"stale accepted coordinates must not be refreshed by new pixels");
+    auto held=std::make_shared<OverlayFrame>(*source);held->minimapReadout.capturedAt=t-2s;
+    Check(overlay.Update(held,capture,measured,t+33ms),"accepted current-context coordinates remain drawable after slow inference");
+    Check(overlay.Update(held,{100,pixels,held->clientRect,t+5s},measured,t+5s),
+        "accepted layout remains drawable across long gaps with a healthy current capture");
+    Check(held->minimapReadout.capturedAt==t-2s,"drawing a held fix must preserve its original evidence time");
     reject([&](auto& s,auto&){s.minimapReadout.capturedAt=t+1ms;},"a readout newer than its layout cannot authorize the old snapshot");
+    reject([](auto& s,auto&){s.frameId=0;},"zero layout frame cannot authorize drawing");
+    reject([](auto& s,auto&){s.capturedAt={};},"missing layout capture time cannot authorize drawing");
+    reject([&](auto& s,auto&){s.capturedAt=t+1s;},"future layout capture time cannot authorize drawing");
+    reject([](auto& s,auto&){s.minimapReadout.capturedAt={};},"missing accepted fix time cannot authorize drawing");
     reject([](auto& s,auto&){s.minimapReadout.fixFrameId=0;},"pending or rejected readout has no accepted fix");
     reject([](auto& s,auto&){s.minimapReadout.fixFrameId=12;},"future frame evidence must not authorize an older layout");
     reject([](auto& s,auto&){s.minimapReadout.scene=2;},"readout from another region must not draw");
@@ -199,7 +273,7 @@ void TestReadoutProjectionWithoutTerrain() {
     reject([](auto&,auto& c){c.clientRect.right-=100;},"resized client must invalidate geometric placement");
     reject([&](auto&,auto& c){c.capturedAt=t-600ms;},"stale capture must not draw");
     auto old=std::make_shared<OverlayFrame>(*source);old->capturedAt=t-600ms;
-    Check(!overlay.Update(old,capture,measured,t+33ms),"stale layout must not draw even with fresh pixels");
+    Check(!overlay.Update(old,capture,measured,t+33ms),"proof newer than its layout must not draw even with fresh pixels");
     ImageAnchoredOverlay bigMap(false);
     Check(!bigMap.Update(source,capture,measured,t+33ms),"readout proof must not bypass big map image matching");
 }
@@ -208,7 +282,7 @@ void TestReadoutProjectionWithoutTerrain() {
 void TestReadoutProjectionVideoPixels(const std::string& path) {
     const auto t=std::chrono::steady_clock::now();
     ImageAnchoredOverlay pixelOnly(true),coordinate(true);
-    std::shared_ptr<OverlayFrame> source;int measuredFrames=0,coordinateFrames=0,expiredRejected=0;
+    std::shared_ptr<OverlayFrame> source;int measuredFrames=0,coordinateFrames=0,heldAccepted=0;
     for(int i=0;i<50;++i) {
         const auto crop=cv::imread((std::filesystem::path(path)/(std::to_string(i)+".png")).string());
         Check(!crop.empty(),"video fixture must contain the selected gameplay crops");
@@ -234,10 +308,10 @@ void TestReadoutProjectionVideoPixels(const std::string& path) {
         Check(coordinate.Update(source,capture,result,at),"fresh accepted projection must not depend on video terrain");
         Check(coordinate.UsedReadoutProjection(),"video frame must use coordinate placement");++coordinateFrames;
         auto expired=std::make_shared<OverlayFrame>(*source);expired->minimapReadout.capturedAt=at-501ms;
-        Check(!coordinate.Update(expired,capture,result,at),"real video pixels must not renew an expired readout");++expiredRejected;
+        Check(coordinate.Update(expired,capture,result,at),"accepted current-context readout remains drawable on real video pixels");++heldAccepted;
     }
     std::cout<<"Video-pixel fixture (simulated fixes, 200ms layouts): pixelAttached="<<measuredFrames
-        <<" readoutAttached="<<coordinateFrames<<" staleFixRejected="<<expiredRejected<<" / 50\n";
+        <<" readoutAttached="<<coordinateFrames<<" heldFixAccepted="<<heldAccepted<<" / 50\n";
 }
 void TestReadoutLayoutSharesOneCenter() {
     OverlayFrame frame;frame.clientRect={0,0,2560,1440};frame.playerScene=1;
@@ -288,10 +362,10 @@ void TestAcceptedReadoutSurvivesVisualRecoveryPublication() {
         "new publication must preserve the accepted readout's original provenance");
     ImageAnchoredOverlay overlay(true);OverlayScreenTransform transform;
     const cv::Mat capture(1440,2560,CV_8UC1,cv::Scalar(110));
-    Check(!overlay.Update(previous,{193,capture,previous->clientRect,t+531ms},transform,t+531ms),
-        "old retained proof in the incident must already be expired");
+    Check(overlay.Update(previous,{193,capture,previous->clientRect,t+531ms},transform,t+531ms),
+        "accepted prior proof remains drawable until a newer publication replaces it");
     Check(overlay.Update(selected,{193,capture,selected->clientRect,t+531ms},transform,t+531ms),
-        "the newly published readout must remain drawable with the same 500ms deadline");
+        "the newly published readout must remain drawable");
     auto reject=[&](auto mutate,const char* message) {
         auto invalid=*pending;mutate(invalid);invalid.minimapMotion.reliable=true;
         AuthorizeReadoutMinimapPublication(invalid,t+500ms);
@@ -299,7 +373,9 @@ void TestAcceptedReadoutSurvivesVisualRecoveryPublication() {
         Check(!CanRetainOverlayAnchor(*previous,invalid,false,true,t+500ms),
             "an invalid readout publication must not substitute an older snapshot");
     };
-    reject([&](auto& s){s.minimapReadout.capturedAt=t;},"publication cannot renew an expired readout even if recovery says tracking");
+    auto held=*pending;held.minimapReadout.capturedAt=t-2s;
+    AuthorizeReadoutMinimapPublication(held,t+5s);
+    Check(held.minimapMotion.reliable,"current-context accepted proof and layout must not expire by elapsed time");
     reject([](auto& s){s.minimapReadout.fixFrameId=0;},"an uncommitted candidate cannot authorize publication");
     reject([](auto& s){s.minimapReadout.scene=2;},"another region cannot authorize publication");
     reject([](auto& s){++s.minimapReadout.generation;},"another UI generation cannot authorize publication");
@@ -334,7 +410,7 @@ void TestReadoutRenderMotion() {
  Check(b.offset.x<a.offset.x&&b.offset.y<a.offset.y,"renderer must preserve animation across repeated snapshots");
  Check(source->minimapReadout.capturedAt==t+100ms&&source->playerCoordinate.x==0,"animation must not write authoritative proof or position");
  auto fresh=std::make_shared<OverlayFrame>(*source);fresh->frameId=19;fresh->capturedAt=t+550ms;
- Check(!renderer.Update(fresh,{20,pixels,fresh->clientRect,t+600ms},a,t+600ms),"fresh layout cannot renew expired animated proof");
+ Check(renderer.Update(fresh,{20,pixels,fresh->clientRect,t+600ms},a,t+600ms),"held accepted proof remains drawable in animated mode");
 }
 void TestContinuousReadoutLayoutHandoff() {
  const auto t=std::chrono::steady_clock::now();const RECT rect{0,0,2560,1440};
@@ -389,8 +465,9 @@ void TestDirectReadoutDisplay(ReadoutDisplayMode mode = kRuntimeReadoutDisplayMo
   }
  }
  auto fresh=std::make_shared<OverlayFrame>(*source);fresh->frameId+=10;fresh->capturedAt=t+890ms;
- Check(!renderer.Update(fresh,{fresh->frameId+1,pixels,rect,t+900ms},transform,t+900ms),
-  "turning animation off must not renew expired coordinate evidence");
+ Check(renderer.Update(fresh,{fresh->frameId+1,pixels,rect,t+900ms},transform,t+900ms),
+  "direct mode must retain accepted coordinates beyond the previous expiry");
+ Check(transform.scale==1&&transform.offset.x==0&&transform.offset.y==0,"held direct projection stays exactly at accepted coordinates");
 }
 void TestAsyncVisualEnvelope() {
  const auto t=std::chrono::steady_clock::now();const RECT rect{0,0,2560,1440};
@@ -403,12 +480,21 @@ void TestAsyncVisualEnvelope() {
  Check(!result.Fresh(1,7,41,t+66ms,rect,t+80ms),"future frame must reject async probe");
  Check(!result.Fresh(1,7,44,t-1ms,rect,t+80ms),"future capture time must reject async probe");
  Check(!result.Fresh(1,7,44,t+66ms,RECT{0,0,1920,1080},t+80ms),"resize must reject async probe");
- Check(!result.Fresh(1,7,50,t+300ms,rect,t+250ms),"new capture must not renew probe's original 250ms lifetime");
+ Check(result.Fresh(1,7,50,t+2s,rect,t+2s),"slow current-generation visual inference must remain eligible beyond 250ms");
+ Check(result.frame==42&&result.capturedAt==t,"accepting slow inference must not refresh its original frame or capture time");
+ Check(!result.Fresh(1,7,50,t+2s,rect,t-1ms),"future visual evidence must be rejected even when capture envelope is newer");
+ auto invalid=result;invalid.frame=0;
+ Check(!invalid.Fresh(1,7,50,t+2s,rect,t+2s),"missing visual frame identity must remain invalid");
+ invalid=result;invalid.capturedAt={};
+ Check(!invalid.Fresh(1,7,50,t+2s,rect,t+2s),"missing visual capture time must remain invalid");
  CapturedFrame anchor{result.frame,original,rect,result.capturedAt,250ms};
  Check(anchor.frameId==42&&anchor.capturedAt==t&&anchor.image.at<unsigned char>(0,0)==42,
   "visual handoff must retain paired pixels, frame and capture time");
 }
 int main(int argc,char**argv){try{
+    TestRetainAcceptedMinimapAnchor();
+    TestRecentRegisteredCaptureReacquisition(false,true);
+    TestRecentRegisteredCaptureReacquisition(true,true);
     if(argc>1&&std::string(argv[1])=="direct"){TestDirectReadoutDisplay();return 0;}
     if(argc>1&&std::string(argv[1])=="direct-control"){TestDirectReadoutDisplay(ReadoutDisplayMode::Animated);return 0;}
 

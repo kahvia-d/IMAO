@@ -232,3 +232,4 @@
 - [旧电脑定位与录制隔离测试计划](OldPcLocalizationPlan_20261031.md)
 
 - [显示许可与差量测试包实施计划](VisibilityAndDeltaPlan_20261031.md)
+- [104 状态式显示与位置保持](StatefulDisplayPlan_20261101.md)
