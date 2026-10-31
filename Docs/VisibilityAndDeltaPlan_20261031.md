@@ -19,7 +19,7 @@
 - [x] 地图检测ROI：`MapUiVisualDetector.cpp` 去除指南针和侧栏检测的整帧BGRA转换；指南针保留模板搜索边界padding。BGR/BGRA、边界和既有实图检测结果必须一致。
 - [x] 启动链：CPU/GPU脚本显式传参到提权助手；提权后再设置进程环境并直接启动launcher。记录实际后端到RuntimeStatus/IPC，诊断页展示等待、CPU、DirectML或回退原因。测试传参和序列化；完整WinUI构建由主流程执行。
 - [x] 差量工具：按完整树摘要生成改变/新增文件，含pri；清单记录基线/目标摘要，受控应用与校验，支持Windows PowerShell5.1目标机。用合成树覆盖错误基线、路径逃逸、重建一致性；最后用真实102副本实际还原103。
-- [ ] 原生回归、独立代码审查、版本103完整WinUI自包含发布、打包启动/资源检查、ZIP摘要和真实差量重建。更新交付说明，保留完整包作为本机校验基准。
+- [x] 原生回归、独立代码审查、版本103完整WinUI自包含发布、打包启动/资源检查、ZIP摘要和真实差量重建。更新交付说明，保留完整包作为本机校验基准。
 
 ## 复审重点
 
@@ -30,8 +30,17 @@
 - 新回归在旧顺序下观察到6项失败：模板命中仍等待SURF、失焦/地图证据仍触发昂贵回调、两个整帧BGRA分配。修复后全部通过。
 - 12张真实地图/游玩fixture中，ROI转换的BGRA检测统计和完整BGR参考完全一致；全套IMaoOptimizationTests通过。
 - 后端显式提权传参测试（含空格/单引号路径和适配器）、ManagedRuntime全套、原生状态和实际YOLO异步队列测试通过。实际旧电脑UAC启动仍待实机验证，不将提权丢环境称为已证明的唯一原因。
-- 差量合成测试在PowerShell5.1/7通过；说明已中文化并加入一键Verify-Delta.cmd，更新后5.1复测通过。真实102副本重建待新完整包。
+- 差量合成测试在PowerShell5.1/7通过；说明已中文化并加入一键Verify-Delta.cmd，更新后5.1复测通过。真实102原ZIP解压副本已重建为103，并通过PowerShell5.1逐文件校验。
 - 独立复审指出的推理异常后状态不更新问题已修复并复审关闭；真实Worker错误→状态failed→好帧恢复测试在CPU和无效DirectML适配器回退两种路径通过，临时撤回修复确认变红。
 - 当前帧模板与许可的时间戳保持原采集时间；不声称消除任意CPU饥饿下的所有过期间隙。新增visibility-probe-timing用于旧电脑核对阶段耗时。
 
 - 差量完整树摘要改用Ordinal排序，跨zh-CN/en-US语言环境的新增回归先红后绿；PowerShell5.1完整合成差量测试通过。
+
+## 最终交付验证
+
+- 代码提交 `b760a810be67f633cb24ce57174efc6485df6990`；完整原生构建、真正WinUI rebuild/publish、资源/IPC和原生picker 33项断言通过。
+- 完整103自包含包：1477文件，0联接，含resources.pri，ZIP逐文件differing=0；474629339字节，SHA256 `efc5230f3c6ea502e2959e5d34e821dca8f9948eb49600db910afb6837b5b694`。
+- 差量基线采用原始102 ZIP重新解压，SHA256与上次交付一致；旧本机运行目录残留ProgramUpdates/.update.lock，不作基线、未删除。
+- 差量 `out/oldpc-delta-102-to-103.zip`：64476678字节，15个程序载荷文件加5个校验/说明文件；SHA256 `aed68c98ea120290f8936874f4d2f55dd1f3325d4d593f45c2af9fe20604a16c`。
+- 原始102副本实际应用差量后全部1477文件与103相等，differing=0；Windows PowerShell5.1 VerifyOnly通过；差量ZIP全部20文件内容与差量目录相等。
+- 完全退出后覆盖原102独立测试目录，运行_test-delta/Verify-Delta.cmd，再重启。旧电脑实际帧耗时、UAC和闪烁改善仍待用户实测，不声称所有闪烁已消除。
