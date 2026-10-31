@@ -15,7 +15,7 @@
 - [x] 对确认不可变且独立拥有的 WGC 图像提供录制共享所有权入口，消除关键路径的整帧复制。普通调用仍复制；共享入口校验连续内存和独立分配，预算继续按完整像素计费。验证生命周期、释放调用方后仍可保存、队列边界、停止与重启隔离。
 - [x] 增加显式选择的 DirectML OCR 试验后端，默认 CPU。独立 DLL 目录，保留现有 CPU 运行时；GPU 初始化或推理失败后只回退一次，记录实际后端和原因。遵守 DirectML 顺序执行及禁用 memory pattern 要求，不改变模型、阈值与 SURF。测试包使用 CPU/GPU 启动脚本选择，暂不增加正式设置项。提供适配器编号选择，不声称默认适配器一定最快。
 - [x] 下载前核对大小：官方 Microsoft.ML.OnnxRuntime.DirectML 1.24.4 NuGet 为 12,458,649 字节，低于 100 MB；保留来源、许可证和摘要。测试真实 GPU 推理、CPU 对照、坏适配器回退；对旧电脑 29 样本比较接受结果。
-- [ ] 运行相关原生测试及实际 WinUI 自包含发布；独立审查整个差异，修复发现的问题。版本递增至 2026.10.31.102，干净提交后用 Build-ReleaseCandidate 整树构建新测试包。检查 includedFrameworks、resources.pri、无联接、逐文件一致。
+- [x] 运行相关原生测试及实际 WinUI 自包含发布；独立审查整个差异，修复发现的问题。版本递增至 2026.10.31.102，干净提交后用 Build-ReleaseCandidate 整树构建新测试包。检查 includedFrameworks、resources.pri、无联接、逐文件一致。
 
 ## 旧电脑验收
 
@@ -30,4 +30,10 @@
 - 本机 DirectML adapter 0 完成 29 张旧电脑样本回放，接受 XY/拒识与 CPU 29/29 一致。错误适配器 999999 自动回退 CPU；驱动本地代码页错误字符串统一转 UTF-8，避免写 JSON 再次失败。
 - 官方运行时合计下载约 21.8 MB：ORT ZIP 12,458,649 字节，DirectML 范围读取 9,342,072 字节。未下载 202 MB 完整 DirectML 包。
 - 原生 CoreHost 构建及 7 项针对性测试已通过。真实旧电脑游戏帧时间和连续游玩效果仍须用户对照验证。
-- 包待完成自包含构建和归档校验。
+- 复审确认失焦修复与录制优先级处理无 Important/Critical 遗留；失焦回归是服务门禁单测，未模拟完整 App 多线程实机时序。
+- 自包含包：`out/oldpc-test-20261031-102/program/IMao-v2026.10.31.102-windows-x64.zip`，源码 `bed055e0b46fb07659e287e85e7bbda85669157d`。
+- 真 WinUI rebuild/publish、启动器 self-check、资源/IPC 检查、33 项原生选择器断言均通过。已有 ResourceSnapshotService.cs 的 CS8604 警告仍存在，不属于本次改动。
+- 归档验证：1476 文件，differing=0，0 reparse point，includedFrameworks 与 resources.pri 齐全，版本/快照一致；474,623,930 字节。
+- SHA256：`2cd2c3a0038d3213c208d92329a9f433bf1607cccbefeab8f477dbf87c7f67a8`。
+- 使用最终包内 DirectML DLL 再回放 29 张，实际 backend=directml、无 fallback，与 CPU 接受 XY/拒识 29/29 一致。GPU 推理中途设备失效的回退分支已审阅，但未故意制造设备掉线；已实测初始化失败回退。
+- 包含 Start-CPU.cmd、Start-GPU.cmd、OCR-Test-Readme.txt。未 push、未正式发布、未修改玩家安装目录。
