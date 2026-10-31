@@ -26,14 +26,13 @@ inline void AuthorizeReadoutMinimapPublication(OverlayFrame& frame,
     pose.reliable = true;
 }
 
-inline void ProjectReadoutMinimapLayout(OverlayFrame& frame, const Coordinate& playerROC) {
-    if (!frame.minimapReadout.active) return;
+inline void ProjectMinimapLayout(OverlayFrame& frame, const Coordinate& acceptedPlayerROC) {
     const auto& pose = frame.minimapMotion;
     const auto project = [&](const Coordinate& point) {
-        return Coordinate{pose.screenCenter.x + (point.x - playerROC.x) * pose.pixelsPerUnit,
-            pose.screenCenter.y - (point.y - playerROC.y) * pose.pixelsPerUnit};
+        return Coordinate{pose.screenCenter.x + (point.x - acceptedPlayerROC.x) * pose.pixelsPerUnit,
+            pose.screenCenter.y - (point.y - acceptedPlayerROC.y) * pose.pixelsPerUnit};
     };
-    // The nearby catalogue can be selected using a smoothed center. Reproject
+    // The nearby catalogue can contain coordinates from another center. Reproject
     // its immutable payload here so every layer describes the accepted fix.
     frame.minimapMarkers.center = pose.screenCenter;
     for (auto& marker : frame.minimapMarkers.markers) marker.screenCoordiante = project(marker.itemMapROC);

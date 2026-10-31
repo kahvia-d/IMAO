@@ -8,7 +8,6 @@
 #include "../Runtime/GuideHotkeyRouting.h"
 #include "../Runtime/LayeredMapState.h"
 #include "../Runtime/MinimapCoordinateLayout.h"
-#include "../Runtime/ReadoutMotion.h"
 #include "..\Coordinate\locationCalculator\RelativeCoordinates.h"
 #include "../Coordinate/VisualLocalization/RecoveryPolicy.h"
 #include "..\Coordinate\locationCalculator\ScreenCoordinate.h"
@@ -584,14 +583,8 @@ winrt::IAsyncAction App::Start() {
             minimapPositionMs = std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - minimapPositionStarted).count();
 			if (minimapPositionKnown) {
-				// 影子预测：不改任何行为，只把"用正确坐标记录外推能有多准"测出来。
-				// 外推 0.5/1/2 秒的残差决定下一步要不要真的用预测替代冻结的位置。
+				// Warm OCR after first lock without starting a readout or predicting a position.
 				if (coordinateTrust.HasScene()) {
-					// OCR 预热（用户 2026-09-21 的关切：备选方案必须**无缝衔接**，而不是进了无特征区才现装）。
-					// 实测：模型加载 0.84 秒，而它原来只在"已经失败"之后才开始（trigger=minimap-recovery-bootstrap）
-					// ⟹ 从特征跟丢到第一条读数之间有约 1 秒盲区，恰好落在最需要它的时刻。
-					// 这里在**第一次定位成功之后**（启动期的资源竞争已过，不会拖慢加载）就后台把它加载好：
-					// 不请求读数、不改状态栏文字，只是让运行时热着。真正何时询问仍由停摆/恢复条件决定。
 					if (ocrAssistEnabled && !ocrPreloadStarted) {
 						const auto ocrModelDirectory = ResourceSnapshotContext::BaselineRoot() /
 							"models" / "coordinate-yolo";
@@ -599,122 +592,21 @@ winrt::IAsyncAction App::Start() {
 						ocrPreloadStarted = true;
 						Diagnostics::Record("ocr-preload", "enabled=true trigger=warmup-after-first-lock");
 					}
-					const auto predictionNow = std::chrono::steady_clock::now();
-					Coordinate predicted{};
-					double predictedSpeed = 0.0;
-					CoordinateTrust::FitReport predictionReport;
-					const double secondsAt = std::chrono::duration<double>(predictionNow.time_since_epoch()).count();
-					// 短窗（≈1.2 秒）估**当前**速度：长窗会把站立与飞行平均掉（14:55 实测 v=3.3 而人在飞）。
-					const bool predictedOk = coordinateTrust.PredictAt(coordinateTrust.Scene(), secondsAt,
-						predicted, predictedSpeed, &predictionReport);
-					if (predictedOk) {
-						predictedShadow = predicted;
-						predictedShadowSpeed = predictedSpeed;
-						predictedShadowAt = predictionNow;
-					}
-					if (predictionNow - lastPredictionLogAt >= std::chrono::seconds(1)) {
-						lastPredictionLogAt = predictionNow;
-						const auto* newest = coordinateTrust.Newest();
-						Diagnostics::Record("position-predicted",
-							std::string(predictedOk ? "ok=true" : "ok=false") +
-							" reason=" + predictionReport.reason + " entries=" + std::to_string(predictionReport.entries) +
-							" spanMs=" + std::to_string(static_cast<long long>(predictionReport.spanSeconds * 1000.0)) +
-							" predicted=" + std::to_string(predicted.x) + "," + std::to_string(predicted.y) +
-							" v=" + std::to_string(predictedSpeed) + " stalenessMs=" + std::to_string(
-								newest == nullptr ? -1LL : static_cast<long long>((secondsAt - newest->secondsAt) * 1000.0)) +
-							" record=" + std::to_string(coordinateTrust.Record().size()));
-					}
-					// 回测（用户 2026-09-21 的设计）：不等实机出现空档，直接拿记录本身验证外推精度。
-					// 做法：取"现在往前 h 秒"作为截止时刻 cut，只用 cut **之前**的条目预测 cut 之后第一条
-					// 记录的位置，与那条真值比较。这样 0.25/0.5/1/2 秒各有稳定样本，而且都来自真实游玩。
-					// ⚠️ 已经用它定完了"预测能不能替代"的结论（500ms 偏 3.0、1s 偏 7.2 单位），
-					// 现在只在**诊断/截图开关打开时**才跑：它每秒产出 4 条记录，是当天日志里最大的单一来源
-					// （2026-09-21 实测 18151 条 / 33.6MB），平时没必要付这个代价。
-					const auto& backtestRecord = coordinateTrust.Record();
-					if (Diagnostics::Enabled() && backtestRecord.size() >= CoordinateTrust::kFitMinimumEntries + 1) {
-						const double newestSeconds = backtestRecord.back().secondsAt;
-						for (const double wanted : { 0.25, 0.5, 1.0, 2.0 }) {
-							// 先选"真值"：从最新往回找**年龄恰好 ≥ wanted** 的那一条；再让 cut = 真值时刻 − wanted。
-							// （第一版写成"cut 之后第一条"，而条目间隔只有 50 毫秒，于是四个档位测的都是同一个 50 毫秒。） 
-							const CoordinateTrust::Entry* truth = nullptr;
-							for (auto it = backtestRecord.rbegin(); it != backtestRecord.rend(); ++it) {
-								if (newestSeconds - it->secondsAt >= wanted) { truth = &*it; break; }
-							}
-							if (truth == nullptr) continue;
-							const double cut = truth->secondsAt - wanted;
-							Coordinate backPredicted{};
-							double backSpeed = 0.0;
-							CoordinateTrust::FitReport backReport;
-							if (!coordinateTrust.PredictAt(coordinateTrust.Scene(), truth->secondsAt,
-								backPredicted, backSpeed, &backReport, cut)) continue;
-							const double backResidual = std::hypot(
-								backPredicted.x - truth->mapCoordinate.x,
-								backPredicted.y - truth->mapCoordinate.y) / 1.205;
-							Diagnostics::Record("position-predicted-backtest", "wantedMs=" + std::to_string(
-								static_cast<long long>(wanted * 1000.0)) + " horizonMs=" + std::to_string(
-								static_cast<long long>((truth->secondsAt - cut) * 1000.0)) +
-								" residual=" + std::to_string(backResidual) + " v=" + std::to_string(backSpeed) +
-								" entries=" + std::to_string(backReport.entries) + " record=" +
-								std::to_string(backtestRecord.size()));
-						}
-					}
-				}
-				// 第 2 步（用户 2026-09-21 拍板，回测支撑）：渲染位置在空档期用短窗速度外推。
-				// 回测实测（15:21 场，2929 样本）：飞行速度下外推 500ms 中位偏 3.0 单位、1s 偏 7.2 单位，
-				// 都远小于小地图半径 97 ⟹ 标记会随飞行正常滑出小地图，而不是黏在中心。
-				// 权威位置、坐标数组、路线规划**一概不动**；这里只改"画出来的那一个值"。
-				const auto renderNow = std::chrono::steady_clock::now();
-				const double fixAgeSeconds = std::chrono::duration<double>(renderNow - lastTrustedConfirmAt).count();
-				bool renderTrusted = true;
-				std::string renderNote = "authoritative";
-				Coordinate renderTargetROC = playerROC;
-                const bool directReadout = coordinateHandoff.ReadoutActive() &&
-                    kRuntimeReadoutDisplayMode == ReadoutDisplayMode::Direct;
-                if (directReadout) renderNote = "readout-direct";
-				if (!directReadout && playerCurrentSceneId > 0 && fixAgeSeconds > 0.25) {
-					Coordinate predictedMap{};
-					double predictedSpeed = 0.0;
-					const double secondsAt = std::chrono::duration<double>(renderNow.time_since_epoch()).count();
-					if (coordinateTrust.PredictAt(playerCurrentSceneId, secondsAt, predictedMap, predictedSpeed)) {
-						renderTargetROC = RelativeCoordinates::ImgMapCoordToROC(predictedMap, playerCurrentSceneId);
-						renderNote = "extrapolated";
-					}
-				}
-				// 超过 2 秒没有任何真值：外推误差已不可控（回测 p90 随时长增长），
-				// 宁可让标记消失，也不要停在错的位置一闪一闪——这是用户明确的取舍。
-				if (fixAgeSeconds > 2.0) {
-					renderTrusted = false;
-					renderNote = "hidden-stale";
-				}
-				// A：把"外推 → 真值"的回弹摊开，而不是一步跳回去。位置层已经有外推在跟着你动，
-				// 这里收敛的只是**残差**（实测中位 3~7 单位），所以不会像上一版平滑那样把真实移动拖住；
-				// 大位移（>40 单位）仍然立即吸附——那是真实移动/传送，不是预测误差。
-				const bool drawnSceneChanged = drawnMinimapSceneId != playerCurrentSceneId;
-				const double drawnElapsed = drawnMinimapAt == std::chrono::steady_clock::time_point{} ? 0.0 :
-					std::min(0.25, std::chrono::duration<double>(renderNow - drawnMinimapAt).count());
-				drawnMinimapAt = renderNow;
-				drawnMinimapSceneId = playerCurrentSceneId;
-				const double drawnGap = std::hypot(renderTargetROC.x - drawnMinimapROC.x,
-					renderTargetROC.y - drawnMinimapROC.y);
-				if (directReadout || drawnSceneChanged || drawnElapsed <= 0.0 || drawnGap > 40.0) {
-					drawnMinimapROC = renderTargetROC;
-				}
-				else {
-					constexpr double kRenderConvergeSeconds = 0.08;
-					const double blend = 1.0 - std::exp(-drawnElapsed / kRenderConvergeSeconds);
-					drawnMinimapROC.x += (renderTargetROC.x - drawnMinimapROC.x) * blend;
-					drawnMinimapROC.y += (renderTargetROC.y - drawnMinimapROC.y) * blend;
-				}
-				if (renderNow - lastRenderPredictionLogAt >= std::chrono::seconds(1)) {
-					lastRenderPredictionLogAt = renderNow;
-					Diagnostics::Record("minimap-render-position", "mode=" + renderNote +
-						" fixAgeMs=" + std::to_string(static_cast<long long>(fixAgeSeconds * 1000.0)) +
-						" drawn=" + std::to_string(renderTrusted) +
-						" settleGap=" + std::to_string(drawnGap));
-				}
-				if (enabledMinMapShowItem && renderTrusted) {
+                }
+                // The accepted position and its captured image are the only layout anchor.
+                // Real image tracking supplies screen motion; never predict or smooth a second center.
+                const auto renderNow = std::chrono::steady_clock::now();
+                if (renderNow - lastRenderPositionLogAt >= std::chrono::seconds(1)) {
+                    lastRenderPositionLogAt = renderNow;
+                    Diagnostics::Record("minimap-render-position", std::string("mode=") +
+                        (coordinateHandoff.ReadoutActive() ? "readout-direct" : "visual-direct") +
+                        " fixAgeMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                            renderNow - lastTrustedConfirmAt).count()) +
+                        " drawn=" + std::to_string(enabledMinMapShowItem.load()));
+                }
+				if (enabledMinMapShowItem) {
                     const auto minimapFilterStarted = std::chrono::steady_clock::now();
-					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, drawnMinimapROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
+					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, playerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
                     minimapFilterMs = std::chrono::duration<double, std::milli>(
                         std::chrono::steady_clock::now() - minimapFilterStarted).count();
                     minimapFilterRan = true;
@@ -1711,24 +1603,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 				lastVisualFixMapCoordinate = candidate.mapCenter;
 				lastVisualFixAt = now;
 			}
-			// 影子预测的残差：预测值 vs 这次的真值。horizonMs 说明外推了多久，
-			// 这样"外推多准"就是可以在日志里直接分档统计的数字。
-			// 只对**有意义的**真值记录：读数/全局匹配（间隔 0.25~3 秒，正是要替代的那种空档），
-			// 或者追踪命中但已经隔了 ≥300 ms（追踪器卡了一下的情况）。每秒 5 次的普通追踪提交
-			// 只差 0.1~0.2 秒，跟预测几乎是同一时刻，统计进去会让数字好看但毫无意义。
-			const bool measurable = !visual || recognition ||
-				std::chrono::duration_cast<std::chrono::milliseconds>(now - predictedShadowAt) >=
-					std::chrono::milliseconds(300);
-			if (measurable && predictedShadowAt != std::chrono::steady_clock::time_point{} &&
-				now - predictedShadowAt <= std::chrono::seconds(3)) {
-				const double residual = std::hypot(candidate.mapCenter.x - predictedShadow.x,
-					candidate.mapCenter.y - predictedShadow.y) / 1.205;
-				Diagnostics::Record("position-predicted-result", "residual=" + std::to_string(residual) +
-					" horizonMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
-						now - predictedShadowAt).count()) +
-					" v=" + std::to_string(predictedShadowSpeed) + " source=" +
-					std::string(recognition ? "recognition" : (visual ? "tracked" : "readout")));
-			}
+
 		}
 		App::gameMapCenterPointImgMapCoord = lastPlayerImgMapCoordinate = candidate.mapCenter;
 		// The floor the tool believes in is judged here too: the imagery is not always captured,
@@ -1916,40 +1791,12 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						return left->previousDistance < right->previousDistance;
 					});
 				ordered.insert(ordered.end(), repaired.begin(), repaired.end());
-				// 用短窗预测卡读数（用户 2026-09-21 的设计）。回测实测：飞行速度下外推 1 秒只偏
-				// 中位 7.2 / p90 18 单位；而 15:39 那两条错读偏 131 / 124 单位（source=readout），
-				// 靠着"间隔×100"的预算混了进来。容差 40 单位 ≈ 预测误差 p90 的两倍。
-				// **没有可用预测时绝不否决**——那是上次把星海定位锁死的教训。
-				Coordinate predictedForReadout{};
-				double predictedForReadoutSpeed = 0.0;
-				const double secondsForReadout = std::chrono::duration<double>(ocrResult.capturedAt.time_since_epoch()).count();
-				const bool hasReadoutPrediction = coordinateTrust.HasScene() &&
-					playerCurrentSceneId == coordinateTrust.Scene() &&
-					coordinateTrust.PredictAt(coordinateTrust.Scene(), secondsForReadout,
-						predictedForReadout, predictedForReadoutSpeed);
-				const Coordinate predictedWorld = hasReadoutPrediction
-					? ImgMapToWorldCoordinate(predictedForReadout, coordinateTrust.Scene()) : Coordinate{};
+                // Validate observed candidates directly; no extrapolated position may veto OCR.
 				for (const auto* candidate : ordered) {
 					OcrCoordinateGate::Reading reading;
 					reading.valid = true;
 					reading.score = candidate->modelScore;
 					const std::string world = std::to_string(candidate->x) + "," + std::to_string(candidate->y);
-					// 预测卡关：只拦**明显**离谱的读数。15:48 实测：16 条被这条规则拒绝的读数里，
-					// 中位偏离 73 单位、分数却有 0.94~0.98，而且它们**彼此连续**（相邻两条只差 8~11 单位，
-					// 明显是一条真实的飞行轨迹）——错的是预测（无特征区记录稀疏，短窗速度跟不上），
-					// 不是读数。40 单位太紧，收到 150：宁可放过 130 单位那种"可能是真加速"的边界情况，
-					// 也不能把合法读数丢掉——准确性优先，这是用户明确的取舍。
-					if (hasReadoutPrediction) {
-						const double predictionResidual = std::hypot(candidate->x - predictedWorld.x,
-							candidate->y - predictedWorld.y);
-						if (predictionResidual > 150.0) {
-							Diagnostics::Record("coordinate-publish-rejected", "reason=predicted-outlier world=" + world +
-								" predicted=" + std::to_string(predictedWorld.x) + "," + std::to_string(predictedWorld.y) +
-								" residual=" + std::to_string(predictionResidual) +
-								" score=" + std::to_string(reading.score));
-							continue;
-						}
-					}
 					if (lock.valid) {
 						reading.sceneId = lock.sceneId;
 						reading.mapCoordinate =
@@ -3575,8 +3422,8 @@ void App::PublishOverlayFrame(const CapturedFrame& requestedCapture, const MapVi
     // in progress and one that was finished but not saved yet — it stays on the map until the player
     // decides to keep or discard it.
 
-    ProjectReadoutMinimapLayout(frame,
-        RelativeCoordinates::ImgMapCoordToROC(frame.playerCoordinate, frame.playerScene));
+    ProjectMinimapLayout(frame,
+        RelativeCoordinates::ImgMapCoordToROC(frame.minimapMotion.center, frame.minimapMotion.scene));
     if (frame.minimapReadout.active && frame.minimapMotion.reliable &&
         frame.minimapReadout.fixFrameId != lastReadoutPublishedFix &&
         lastReadoutAcceptedAt != std::chrono::steady_clock::time_point{}) {

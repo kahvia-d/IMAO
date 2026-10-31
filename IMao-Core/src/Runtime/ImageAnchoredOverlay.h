@@ -3,7 +3,6 @@
 #include "../App/ScreenMotionTracker.h"
 #include "../Coordinate/locationCalculator/MinimapProjectionGeometry.h"
 #include <deque>
-#include "ReadoutMotion.h"
 
 inline OverlayScreenTransform ComposeOverlayTransforms(const OverlayScreenTransform& after,
     const OverlayScreenTransform& before) {
@@ -53,9 +52,9 @@ inline OverlayScreenTransform ReconcileTerrainAnchor(const OverlayMotionSample& 
 // Drawing does not refresh evidence timestamps; current capture health remains independent.
 class ImageAnchoredOverlay {
 public:
-    explicit ImageAnchoredOverlay(bool minimap, ReadoutDisplayMode displayMode = ReadoutDisplayMode::Animated)
-        : minimap_(minimap), displayMode_(displayMode) {}
-    void Reset() { readoutDisplay_.Reset(); readoutMode_ = false; source_.reset(); tracker_.Reset(); lastCapture_ = 0; freshAttempt_ = recentAttempt_ = 0; captureHistory_.clear(); recent_ = {}; }
+    explicit ImageAnchoredOverlay(bool minimap)
+        : minimap_(minimap) {}
+    void Reset() { readoutMode_ = false; source_.reset(); tracker_.Reset(); lastCapture_ = 0; freshAttempt_ = recentAttempt_ = 0; captureHistory_.clear(); recent_ = {}; }
     bool RecoveredFreshSource() const { return recoveredFresh_; }
     bool RecoveredRecentCapture() const { return recoveredRecent_; }
     bool UsedReadoutProjection() const { return usedReadoutProjection_; }
@@ -69,9 +68,7 @@ public:
         failure_ = "invalid-input";
         if (minimap_ && source && source->minimapReadout.active) {
             if (!readoutMode_) { Reset(); readoutMode_ = true; }
-            const bool placed = PlaceReadout(*source, capture, output, now);
-            if (!placed) readoutDisplay_.Reset();
-            return placed;
+            return PlaceReadout(*source, capture, output, now);
         }
         if (readoutMode_) Reset();
         if (!source || source->motionImage.empty() || capture.image.empty() || capture.frameId < source->frameId ||
@@ -231,12 +228,8 @@ private:
             (region & cv::Rect(0, 0, capture.image.cols, capture.image.rows)) != region ||
             std::hypot(geometry.center.x - pose.screenCenter.x, geometry.center.y - pose.screenCenter.y) > 0.01 ||
             std::abs(geometry.pixelsPerMapUnit - pose.pixelsPerUnit) > 1e-6) return false;
-        // Both modes share exactly the same evidence and geometry checks.
-        // Direct mode leaves the publisher's accepted-coordinate projection intact.
+        // Accepted coordinates are already projected by the publisher; never extrapolate.
         output = {};
-        if (displayMode_ == ReadoutDisplayMode::Animated)
-            output = readoutDisplay_.Update(pose.center, proof.scene, proof.generation,
-                proof.fixFrameId, proof.capturedAt, pose.pixelsPerUnit, now);
         usedReadoutProjection_ = true;
         failure_ = "none";
         return true;
@@ -266,10 +259,8 @@ private:
         if (captureHistory_.size() > 48) captureHistory_.pop_front();
     }
     std::deque<RegisteredCapture> captureHistory_;
-    ReadoutDisplayMotion readoutDisplay_;
     bool readoutMode_ = false;
     bool minimap_;
-    ReadoutDisplayMode displayMode_;
     ScreenMotionTracker tracker_;
     std::shared_ptr<const OverlayFrame> source_;
     OverlayScreenTransform correction_, anchorToSource_, anchorToCapture_;

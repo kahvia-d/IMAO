@@ -39,15 +39,6 @@ inline constexpr double kTrendToleranceUnits = 30.0;      // 拟合残差的固�
 inline constexpr double kTrendSpeedFactor = 2.5;          // 残差随时间/速度放宽的系数
 inline constexpr double kMirrorToleranceUnits = 60.0;     // 镜像判据的容差
 inline constexpr double kChainStepMinimumUnits = 60.0;    // 相邻两条记录步长的下限（超出即视为断点）
-// 预测专用短窗（用户 2026-09-21 的设计）：长窗（6~16 条 / 30 秒）是为**抗单点错误**设计的，
-// 但它会把"站立/悬停"和"飞行"平均掉——14:55 实测拟合速度只有 3.3 单位/秒而人正在飞（≈50~70），
-// 于是外推 2.2 秒偏出 94 单位（≈整个小地图半径）。预测要的是**当前**速度，所以另开一个短窗。
-inline constexpr double kPredictionWindowSeconds = 1.2;
-inline constexpr std::size_t kPredictionMinimumEntries = 3;
-inline constexpr std::size_t kPredictionMaximumEntries = 12;
-inline constexpr double kPredictionMinimumSpanSeconds = 0.3;
-inline constexpr double kPredictionMaximumAgeSeconds = 2.0;
-
 // 为什么拟合/预测被拒——没有这个，"测量没数据"永远无法解释。
 struct FitReport {
     bool ok = false;
@@ -172,65 +163,12 @@ public:
         return std::isfinite(predicted.x) && std::isfinite(predicted.y);
     }
 
-    // 预测用的**短窗**外推：取最近 kPredictionWindowSeconds 内的条目，用**首尾两点**估当前速度。
-    // 短窗里最小二乘对噪声更敏感、端点差更稳；而且它天然给出"此刻"的速度，而不是 30 秒的平均。
-    bool PredictAt(int sceneId, double secondsAt, Coordinate& predicted, double& speedPerSecond,
-        FitReport* report = nullptr, double latestEntrySeconds = 1.0e18) const {
-        const Entry* newest = nullptr;
-        const Entry* oldest = nullptr;
-        const Entry* newer = nullptr;
-        std::size_t count = 0;
-        const char* reject = "too-few";
-        for (auto it = record_.rbegin(); it != record_.rend(); ++it) {
-            if (it->sceneId != sceneId) continue;
-            // 回测用：只允许使用"更早的"条目，绝不偷看未来
-            if (it->secondsAt > latestEntrySeconds) continue;
-            if (newest == nullptr) {
-                newest = &*it;
-                if (secondsAt - it->secondsAt > kPredictionMaximumAgeSeconds) { reject = "stale"; break; }
-            }
-            if (newest->secondsAt - it->secondsAt > kPredictionWindowSeconds) break;
-            if (newer != nullptr) {
-                const double dt = newer->secondsAt - it->secondsAt;
-                const double step = std::hypot(newer->mapCoordinate.x - it->mapCoordinate.x,
-                    newer->mapCoordinate.y - it->mapCoordinate.y);
-                if (dt <= 0.0 || step > std::max(kChainStepMinimumUnits, dt * kMaximumSpeedUnitsPerSecond)) {
-                    reject = "chain";
-                    break;
-                }
-            }
-            oldest = &*it;
-            newer = &*it;
-            ++count;
-            if (count >= kPredictionMaximumEntries) break;
-        }
-        if (report != nullptr) {
-            report->entries = count;
-            report->spanSeconds = (newest != nullptr && oldest != nullptr)
-                ? newest->secondsAt - oldest->secondsAt : 0.0;
-            report->reason = reject;
-            report->ok = false;
-        }
-        if (newest == nullptr || oldest == nullptr || count < kPredictionMinimumEntries) return false;
-        const double span = newest->secondsAt - oldest->secondsAt;
-        if (span < kPredictionMinimumSpanSeconds) { if (report != nullptr) report->reason = "span"; return false; }
-        // 首尾两点差：位置差 / 时间差就是当前速度（map 单位/秒）
-        const double velocityX = (newest->mapCoordinate.x - oldest->mapCoordinate.x) / span;
-        const double velocityY = (newest->mapCoordinate.y - oldest->mapCoordinate.y) / span;
-        speedPerSecond = std::hypot(velocityX, velocityY);
-        const double ahead = secondsAt - newest->secondsAt;
-        predicted = { newest->mapCoordinate.x + velocityX * ahead,
-                      newest->mapCoordinate.y + velocityY * ahead };
-        if (report != nullptr) { report->reason = "ok"; report->ok = true; }
-        return std::isfinite(predicted.x) && std::isfinite(predicted.y);
-    }
-
     int Scene() const { return hasScene_ ? sceneId_ : 0; }
     const std::deque<Entry>& Record() const { return record_; }
     const Entry* Newest() const { return record_.empty() ? nullptr : &record_.back(); }
 
-    // 从候选里挑一个"解释得通"的：场景必须是 T、且从上一条记录可达。
-    // 选不出来返回 nullopt —— 调用方应当丢弃这一帧，而不是拿记录去顶替。
+    // Choose only a candidate reachable from accepted evidence in the same scene.
+    // No candidate means no new measurement; this never manufactures a position.
     std::optional<Candidate> Choose(int sceneId, const std::vector<Candidate>& candidates,
         double secondsAt) const {
         if (!hasScene_ || sceneId != sceneId_ || candidates.empty()) return std::nullopt;

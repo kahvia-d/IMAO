@@ -313,6 +313,55 @@ void TestReadoutProjectionVideoPixels(const std::string& path) {
     std::cout<<"Video-pixel fixture (simulated fixes, 200ms layouts): pixelAttached="<<measuredFrames
         <<" readoutAttached="<<coordinateFrames<<" heldFixAccepted="<<heldAccepted<<" / 50\n";
 }
+void TestSurfLayoutSharesAcceptedImageAnchor() {
+    const auto t=std::chrono::steady_clock::now();
+    auto source=std::make_shared<OverlayFrame>();
+    source->frameId=10;source->positionFrameId=8;source->capturedAt=t;
+    source->clientRect={0,0,320,320};source->focused=true;source->minimapVisible=true;source->playerScene=1;
+    source->motionRegion={0,0,320,320};
+    source->motionImage=cv::Mat(320,320,CV_8UC1);
+    cv::RNG rng(105104);rng.fill(source->motionImage,cv::RNG::UNIFORM,35,155);
+    cv::GaussianBlur(source->motionImage,source->motionImage,{5,5},.8);
+    source->minimapMotion={{1000,2000},{160,160},2,1,7,10,t,true};
+    const Coordinate acceptedROC{100,-200}; // Caller converts the accepted image-map pose to ROC.
+    const auto setStalePayload=[](OverlayFrame& frame) {
+        ItemDatas point;point.itemId="surf-target";point.itemMapROC={110,-185};point.screenCoordiante={-900,700};
+        frame.minimapMarkers.center={-1,-1};frame.minimapMarkers.markers={point};
+        frame.minimapFreeMarkers.clear();frame.minimapFreeMarkers.push_back({point});
+        frame.minimapRoutes.clear();
+        frame.minimapRoutes.emplace_back("surf-route",1,std::vector<Coordinate>{{100,-200},{110,-185}},
+            std::vector<Coordinate>{{800,-900},{700,-800}});
+    };
+    const auto checkLayout=[](const OverlayFrame& frame) {
+        const auto point=frame.minimapMarkers.markers[0].screenCoordiante;
+        Check(point.x==180&&point.y==130,"SURF marker must discard old screen coordinates and use the accepted pose center");
+        const auto free=frame.minimapFreeMarkers[0].point.screenCoordiante;
+        const auto& route=frame.minimapRoutes[0].routePointsScreenCoord;
+        Check(free.x==180&&free.y==130&&route.size()==2&&route[0].x==160&&route[0].y==160&&
+            route[1].x==180&&route[1].y==130,"SURF free marker and every route vertex must share the accepted projection");
+        Check(frame.minimapMarkers.center.x==160&&frame.minimapMarkers.center.y==160&&
+            frame.minimapMarkers.markers[0].itemId=="surf-target","SURF projection preserves marker identity and publishes the accepted screen center");
+    };
+    setStalePayload(*source);ProjectMinimapLayout(*source,acceptedROC);checkLayout(*source);
+    ImageAnchoredOverlay renderer(true);OverlayScreenTransform transform;
+    Check(renderer.Update(source,{10,source->motionImage,source->clientRect,t},transform,t),"projected SURF snapshot must attach to its actual image");
+    auto held=std::make_shared<OverlayFrame>(*source);held->frameId=11;held->capturedAt=t+33ms;
+    held->minimapMotion.center={9999,9999};held->minimapMotion.reliable=false;
+    setStalePayload(*held);
+    Check(RetainAcceptedMinimapAnchor(*held,*source),"catalogue republish must retain the accepted SURF image and pose");
+    ProjectMinimapLayout(*held,acceptedROC);checkLayout(*held);
+    ProjectMinimapLayout(*held,acceptedROC);checkLayout(*held);
+    cv::Mat shifted;cv::warpAffine(source->motionImage,shifted,cv::Matx23d(1,0,6,0,1,-4),
+        source->motionImage.size(),cv::INTER_LINEAR,cv::BORDER_REFLECT101);
+    Check(renderer.Update(held,{12,shifted,held->clientRect,t+66ms},transform,t+66ms),"held projected payload must continue tracking current terrain pixels");
+    for(const auto& point:{held->minimapMarkers.markers[0].screenCoordiante,
+        held->minimapFreeMarkers[0].point.screenCoordiante,held->minimapRoutes[0].routePointsScreenCoord.back()}) {
+        const auto drawn=transform.Apply(point);
+        Check(std::hypot(drawn.x-186,drawn.y-126)<.6,"SURF publication-to-image chain applies measured displacement exactly once to every marker layer");
+    }
+    Check(held->frameId==10&&held->capturedAt==t&&held->minimapMotion.generation==7&&
+        held->motionImage.data==source->motionImage.data,"projection must not renew or replace the retained anchor evidence");
+}
 void TestReadoutLayoutSharesOneCenter() {
     OverlayFrame frame;frame.clientRect={0,0,2560,1440};frame.playerScene=1;
     const auto geometry=GetMinimapProjectionGeometry(frame.clientRect);
@@ -322,7 +371,7 @@ void TestReadoutLayoutSharesOneCenter() {
     frame.minimapMarkers.markers.push_back(point);frame.minimapMarkers.center={1,1};
     frame.minimapFreeMarkers.push_back({point});
     frame.minimapRoutes.emplace_back("route",1,std::vector<Coordinate>{{100,200},{102,203}},std::vector<Coordinate>{{1,1},{2,2}});
-    ProjectReadoutMinimapLayout(frame,{100,200});
+    ProjectMinimapLayout(frame,{100,200});
     const auto marker=frame.minimapMarkers.markers[0].screenCoordiante;
     Check(std::abs(marker.x-geometry.center.x-2*geometry.pixelsPerMapUnit)<1e-9&&
         std::abs(marker.y-geometry.center.y+3*geometry.pixelsPerMapUnit)<1e-9,
@@ -332,7 +381,7 @@ void TestReadoutLayoutSharesOneCenter() {
     Check(std::hypot(endpoint.x-marker.x,endpoint.y-marker.y)<1e-9&&std::hypot(free.x-marker.x,free.y-marker.y)<1e-9,
         "marker, free marker and route endpoint must share one readout center");
     Check(frame.minimapMarkers.markers[0].itemId=="same-target","projection must preserve point identity");
-    const auto once=marker;ProjectReadoutMinimapLayout(frame,{100,200});
+    const auto once=marker;ProjectMinimapLayout(frame,{100,200});
     Check(std::hypot(frame.minimapMarkers.markers[0].screenCoordiante.x-once.x,
         frame.minimapMarkers.markers[0].screenCoordiante.y-once.y)<1e-9,"reprojection must not integrate movement twice");
 }
@@ -390,60 +439,10 @@ void TestAcceptedReadoutSurvivesVisualRecoveryPublication() {
     surf.minimapMotion.reliable=true;AuthorizeReadoutMinimapPublication(surf,t+500ms);
     Check(surf.minimapMotion.reliable,"healthy SURF publication must remain unchanged");
 }
-void TestReadoutRenderMotion() {
- const auto t=std::chrono::steady_clock::now();
- auto source=std::make_shared<OverlayFrame>();source->frameId=10;source->capturedAt=t;
- source->clientRect={0,0,2560,1440};source->focused=true;source->minimapVisible=true;source->playerScene=1;
- const auto g=GetMinimapProjectionGeometry(source->clientRect);
- source->motionRegion={g.left,g.top,g.width,g.height};
- source->minimapMotion={{100,100},g.center,g.pixelsPerMapUnit,1,7,10,t,true};
- source->minimapReadout={true,1,7,10,t,kNominalMinimapTerrainScale};
- cv::Mat pixels(1440,2560,CV_8UC1,cv::Scalar(110));OverlayScreenTransform a,b;
- ImageAnchoredOverlay renderer(true);
- Check(renderer.Update(source,{11,pixels,source->clientRect,t+20ms},a,t+20ms),"first proof must render");
- source=std::make_shared<OverlayFrame>(*source);source->frameId=12;source->capturedAt=t+100ms;
- source->minimapReadout.fixFrameId=12;source->minimapReadout.capturedAt=t+100ms;
- source->minimapMotion.center={110,105};
- Check(renderer.Update(source,{13,pixels,source->clientRect,t+120ms},a,t+120ms),"second accepted proof must render");
- Check(renderer.Update(source,{14,pixels,source->clientRect,t+153ms},a,t+153ms),"intermediate frame must render");
- Check(renderer.Update(source,{15,pixels,source->clientRect,t+186ms},b,t+186ms),"next intermediate frame must render");
- Check(b.offset.x<a.offset.x&&b.offset.y<a.offset.y,"renderer must preserve animation across repeated snapshots");
- Check(source->minimapReadout.capturedAt==t+100ms&&source->playerCoordinate.x==0,"animation must not write authoritative proof or position");
- auto fresh=std::make_shared<OverlayFrame>(*source);fresh->frameId=19;fresh->capturedAt=t+550ms;
- Check(renderer.Update(fresh,{20,pixels,fresh->clientRect,t+600ms},a,t+600ms),"held accepted proof remains drawable in animated mode");
-}
-void TestContinuousReadoutLayoutHandoff() {
+void TestDirectReadoutDisplay() {
  const auto t=std::chrono::steady_clock::now();const RECT rect{0,0,2560,1440};
  const auto geometry=GetMinimapProjectionGeometry(rect);
- cv::Mat pixels(1440,2560,CV_8UC1,cv::Scalar(110));ImageAnchoredOverlay renderer(true);
- double previous=0,worstReverse=0,maxHandoff=0;
- int lastCapture=-1;std::uint64_t fix=0;
- for(int ms=80;ms<2080;ms+=10){
-  const int captured=(ms-80)/100*100;const bool newFix=captured!=lastCapture;
-  if(newFix){lastCapture=captured;++fix;}
-  const auto now=t+std::chrono::milliseconds(ms),at=t+std::chrono::milliseconds(captured);
-  auto source=std::make_shared<OverlayFrame>();source->frameId=ms+1;source->capturedAt=now;
-  source->clientRect=rect;source->focused=true;source->minimapVisible=true;source->playerScene=1;
-  source->playerCoordinate={std::round(captured*.008),0};
-  source->motionRegion={geometry.left,geometry.top,geometry.width,geometry.height};
-  source->minimapMotion={source->playerCoordinate,geometry.center,geometry.pixelsPerMapUnit,1,1,source->frameId,now,true};
-  source->minimapReadout={true,1,1,fix,at,kNominalMinimapTerrainScale};
-  OverlayScreenTransform transform;
-  Check(renderer.Update(source,{source->frameId,pixels,rect,now},transform,now),"fresh changing readout layout must attach");
-  const double raw=geometry.center.x+(50-source->playerCoordinate.x)*geometry.pixelsPerMapUnit;
-  const double drawn=transform.Apply({raw,geometry.center.y}).x;
-  if(ms>600){worstReverse=std::max(worstReverse,drawn-previous);if(newFix)maxHandoff=std::max(maxHandoff,std::abs(drawn-previous));}
-  Check(source->playerCoordinate.x==std::round(captured*.008)&&source->minimapReadout.capturedAt==at,
-   "display handoff must retain original authoritative position and fix time");
-  previous=drawn;
- }
- Check(worstReverse<.45,"new layout snapshots must not create visible reverse jumps");
- Check(maxHandoff<.85,"accepted readout layout changes must retain a continuous screen trajectory");
-}
-void TestDirectReadoutDisplay(ReadoutDisplayMode mode = kRuntimeReadoutDisplayMode) {
- const auto t=std::chrono::steady_clock::now();const RECT rect{0,0,2560,1440};
- const auto geometry=GetMinimapProjectionGeometry(rect);
- const cv::Mat pixels(1440,2560,CV_8UC1,cv::Scalar(110));ImageAnchoredOverlay renderer(true,mode);
+ const cv::Mat pixels(1440,2560,CV_8UC1,cv::Scalar(110));ImageAnchoredOverlay renderer(true);
  auto source=std::make_shared<OverlayFrame>();
  source->clientRect=rect;source->focused=true;source->minimapVisible=true;source->playerScene=1;
  source->motionRegion={geometry.left,geometry.top,geometry.width,geometry.height};
@@ -464,9 +463,9 @@ void TestDirectReadoutDisplay(ReadoutDisplayMode mode = kRuntimeReadoutDisplayMo
     "direct display must preserve accepted coordinates and original proof time");
   }
  }
- auto fresh=std::make_shared<OverlayFrame>(*source);fresh->frameId+=10;fresh->capturedAt=t+890ms;
- Check(renderer.Update(fresh,{fresh->frameId+1,pixels,rect,t+900ms},transform,t+900ms),
-  "direct mode must retain accepted coordinates beyond the previous expiry");
+ auto fresh=std::make_shared<OverlayFrame>(*source);fresh->frameId+=10;fresh->capturedAt=t+4890ms;
+ Check(renderer.Update(fresh,{fresh->frameId+1,pixels,rect,t+4900ms},transform,t+4900ms),
+  "direct mode must retain accepted coordinates beyond both old 500ms and 2s expiries");
  Check(transform.scale==1&&transform.offset.x==0&&transform.offset.y==0,"held direct projection stays exactly at accepted coordinates");
 }
 void TestAsyncVisualEnvelope() {
@@ -492,16 +491,17 @@ void TestAsyncVisualEnvelope() {
   "visual handoff must retain paired pixels, frame and capture time");
 }
 int main(int argc,char**argv){try{
+    if(argc>1&&std::string(argv[1])=="direct"){TestDirectReadoutDisplay();return 0;}
+    TestSurfLayoutSharesAcceptedImageAnchor();
     TestRetainAcceptedMinimapAnchor();
     TestRecentRegisteredCaptureReacquisition(false,true);
     TestRecentRegisteredCaptureReacquisition(true,true);
-    if(argc>1&&std::string(argv[1])=="direct"){TestDirectReadoutDisplay();return 0;}
-    if(argc>1&&std::string(argv[1])=="direct-control"){TestDirectReadoutDisplay(ReadoutDisplayMode::Animated);return 0;}
+
 
     if(argc>1&&std::string(argv[1])=="publication"){TestAcceptedReadoutSurvivesVisualRecoveryPublication();return 0;}
     if(argc>1&&std::string(argv[1])=="layout"){TestReadoutLayoutSharesOneCenter();return 0;}
     if(argc>2&&std::string(argv[1])=="projection-video"){TestReadoutProjectionVideoPixels(argv[2]);return 0;}
     if(argc>1&&std::string(argv[1])=="projection"){TestReadoutProjectionWithoutTerrain();return 0;}
     if(argc>1&&std::string(argv[1])=="recent"){TestRecentRegisteredCaptureReacquisition();return 0;}
-    TestFreshSourceReacquisition(true);TestRecentRegisteredCaptureReacquisition(true);TestAsyncVisualEnvelope();TestDirectReadoutDisplay();TestContinuousReadoutLayoutHandoff();TestReadoutRenderMotion();TestFreshSourceReacquisition();TestStableHandoff();TestIndependentSourceHealth();TestRecentRegisteredCaptureReacquisition();TestReadoutProjectionWithoutTerrain();TestReadoutLayoutSharesOneCenter();TestAcceptedReadoutSurvivesVisualRecoveryPublication();std::cout<<"Coordinate continuity tests passed\n";}
+    TestFreshSourceReacquisition(true);TestRecentRegisteredCaptureReacquisition(true);TestAsyncVisualEnvelope();TestDirectReadoutDisplay();TestFreshSourceReacquisition();TestStableHandoff();TestIndependentSourceHealth();TestRecentRegisteredCaptureReacquisition();TestReadoutProjectionWithoutTerrain();TestReadoutLayoutSharesOneCenter();TestAcceptedReadoutSurvivesVisualRecoveryPublication();std::cout<<"Coordinate continuity tests passed\n";}
     catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}}

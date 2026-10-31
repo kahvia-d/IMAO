@@ -501,7 +501,7 @@ int ImGuiOverWindows::start()
     //std::vector<ID3D11ShaderResourceView*> texturesToRelease; // 用于存储需要释放的纹理
     // Main loop
     DrawMarkerInteraction::Initialize(h_window);
-    ImageAnchoredOverlay mapMotion(false), minimapMotion(true, kRuntimeReadoutDisplayMode);
+    ImageAnchoredOverlay mapMotion(false), minimapMotion(true);
     FramePacer framePacer;
     auto motionReportAt = std::chrono::steady_clock::now();
     std::uint64_t renderedFrames = 0, observedFrames = 0, lastObservedFrame = 0;
@@ -941,7 +941,7 @@ int ImGuiOverWindows::start()
                                 " fixFrame=" + std::to_string(frame->minimapReadout.fixFrameId) + " fixAgeMs=" +
                                 std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
                                     at - frame->minimapReadout.capturedAt).count()) +
-                                " displayMode=" + std::string(kRuntimeReadoutDisplayMode == ReadoutDisplayMode::Direct ? "direct" : "animated") +
+                                " displayMode=" + std::string("direct") +
                                 " displayOffsetPx=" + std::to_string(motion.offset.x) + "," + std::to_string(motion.offset.y));
                         }
                     }
