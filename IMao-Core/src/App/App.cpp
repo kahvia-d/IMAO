@@ -351,13 +351,16 @@ winrt::IAsyncAction App::Start() {
 	long long frameWindowSamples = 0;
 	auto frameWindowStartedAt = std::chrono::steady_clock::now();
 	while (!allThreadStopFlag) {
+        localizationLatency.SetStage("loop-start", lastLocalizedFrame);
         const auto wakeVersion = localizationSignal->Snapshot();
         std::optional<CoordinateHandoff::Clock::time_point> waitDeadline;
         bool waitOnCaptures = true, cycleProcessed = false;
         {
         // End all local pixel aliases before waiting. Asynchronous and displayed
         // frame owners keep their own immutable image/geometry pairs.
+        localizationLatency.SetStage("capture-read", lastLocalizedFrame);
         const auto latest = capturedFrames.Read();
+        localizationLatency.SetStage("service-check", latest->frameId);
         auto captureReadTrace = FrameStorage::Observe(latest->image, FrameStorage::ReaderRole::Localizer, latest->frameId);
         const auto serviceNow = CoordinateHandoff::Clock::now();
         const bool newCapture = latest->frameId != lastLocalizedFrame;
@@ -366,8 +369,11 @@ winrt::IAsyncAction App::Start() {
                 !latest->image.empty() && latest->frameId != 0, latest->capturedAt, serviceNow);
         const bool serviceCaptureFresh = CaptureContinuity::Fresh(!latest->image.empty() && latest->frameId != 0,
             latest->capturedAt, serviceNow, latest->maximumAge);
-        const bool resultReady = serviceContext &&
-            (IdentifyWorldCoordinates::HasLatestResult() || readoutVisualWorker.HasResult());
+        bool resultReady = false;
+        if (serviceContext) {
+            LocalizationLatencyTrace::Scope phase(localizationLatency, "result-ready-check", latest->frameId);
+            resultReady = IdentifyWorldCoordinates::HasLatestResult() || readoutVisualWorker.HasResult();
+        }
         const bool timerReady = serviceContext && serviceCaptureFresh && coordinateHandoff.ReadoutActive() && !ocrRequestInFlight &&
             latest->frameId != lastOcrSubmittedFrame && serviceNow - lastOcrSubmitAt >= std::chrono::milliseconds(50) &&
             readoutWorkSchedule.SubmissionDue(serviceNow, ReadoutWorkSchedule::SubmissionInterval());
@@ -384,6 +390,7 @@ winrt::IAsyncAction App::Start() {
         ReproCapture::Scope reproFrame({{"captureRun", coordinateSessionId}, {"frameId", captured.frameId},
             {"stage", "localization"}});
         const auto cycleStarted = std::chrono::steady_clock::now();
+        localizationLatency.SetStage("context-update", captured.frameId);
         double mapPredictMs = 0.0, mapResultMs = 0.0, mapSearchMs = 0.0, mapFilterMs = 0.0;
         bool measuredMapCycle = false;
         double minimapPositionMs = 0.0, minimapFilterMs = 0.0;
@@ -413,6 +420,7 @@ winrt::IAsyncAction App::Start() {
 		// and drawing only consume its latest accepted viewport or a lightweight
 		// frame-to-frame prediction; they never wait for SURF matching.
 		if (isOpenMap.load() and enabledMapShowItem and captureFresh and isWindowFocused.load()) {
+            LocalizationLatencyTrace::Scope phase(localizationLatency, "bigmap-work", captured.frameId);
             measuredMapCycle = true;
             const auto predictStarted = std::chrono::steady_clock::now();
 			RuntimeStatus::SetLocalization("mapLocating", {}, "正在识别大地图视口");
@@ -578,8 +586,10 @@ winrt::IAsyncAction App::Start() {
 			imguiWindowsHeight = minMapBottomPoint.y + 10;//在绘制小地图区域 缩写imgui透明窗口范围
 			imguiWindowsWidth = rect.right * 0.3;
 
+            localizationLatency.SetStage("minimap-position", captured.frameId);
             const auto minimapPositionStarted = std::chrono::steady_clock::now();
             minimapPositionKnown = co_await GetMinMapPlayerROC(currentSnapshot, playerROC, minMapRadius);
+            localizationLatency.SetStage("minimap-layout", captured.frameId);
             minimapPositionMs = std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - minimapPositionStarted).count();
 			if (minimapPositionKnown) {
@@ -605,6 +615,7 @@ winrt::IAsyncAction App::Start() {
                         " drawn=" + std::to_string(enabledMinMapShowItem.load()));
                 }
 				if (enabledMinMapShowItem) {
+                    LocalizationLatencyTrace::Scope phase(localizationLatency, "minimap-filter", captured.frameId);
                     const auto minimapFilterStarted = std::chrono::steady_clock::now();
 					DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, playerROC, minMapRadius, playerCurrentSceneId, minimapTerrainScale);
                     minimapFilterMs = std::chrono::duration<double, std::milli>(
@@ -642,6 +653,7 @@ winrt::IAsyncAction App::Start() {
         const auto publishStarted = std::chrono::steady_clock::now();
 		PublishOverlayFrame(captured, renderedViewport);
         const auto publishedAt = std::chrono::steady_clock::now();
+        localizationLatency.SetStage("cycle-tail", captured.frameId);
         if (coordinateVisible && publishedAt - lastMinimapCycleReport >= std::chrono::seconds(2)) {
             lastMinimapCycleReport = publishedAt;
             const auto published = overlayFrames.Read();
@@ -706,6 +718,7 @@ winrt::IAsyncAction App::Start() {
         cycleProcessed = true;
         }
         } // latest, captured, currentSnapshot and their diagnostic lease expire here.
+        localizationLatency.SetStage("loop-wait", lastLocalizedFrame);
         if (waitDeadline) localizationSignal->WaitUntil(wakeVersion, *waitDeadline, waitOnCaptures);
         if (cycleProcessed) startTime = std::chrono::high_resolution_clock::now();
 	}
@@ -1409,8 +1422,10 @@ int App::ValidateCoordinateCandidate(const Coordinate& identifyCoordinate, const
 }
 
 winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordinate& outPlayerROC, float& outMinMapRadius) {
+    LocalizationLatencyTrace::Scope positionPhase(localizationLatency, "minimap-crop", snapshotFrameId);
 	Mat minMapImg = ImageProcessing::CropToMinMapAreaImg(snapshot, rect, minMapBottomPoint);
 	ReproCapture::Image("minimap-crop", minMapImg, {{"clientSize", {snapshot.cols, snapshot.rows}}});
+    localizationLatency.SetStage("position-setup", snapshotFrameId);
 	Mat normalizedMinimap;
 	ImageFeatureData minMapFeatureData;
 	MinimapFeatureDiagnostics minimapDiagnostics;
@@ -1421,6 +1436,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
     auto prepareVisualFrame = [&]() {
         if (visualPrepared) return;
         visualPrepared = true;
+        LocalizationLatencyTrace::Scope phase(localizationLatency, "visual-prepare", snapshotFrameId);
 	minimapFeaturesReady = GlobalVisualLocalizer::PrepareMinimap(
 		minMapImg, normalizedMinimap, minMapFeatureData,
 		trustedMinimapReference.empty() ? nullptr : &trustedMinimapReference, &minimapDiagnostics);
@@ -1439,8 +1455,11 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	// rate-limits itself; an unknown answer must never disturb the marker display, so all
 	// debouncing lives in LayeredMapState. The last accepted position tells it whether the
 	// player is still standing in the known floor's cave.
+    {
+        LocalizationLatencyTrace::Scope phase(localizationLatency, "layered-observe", snapshotFrameId);
 	LayeredMap::ObserveMinimap(minMapFeatureData, playerCurrentSceneId,
 		lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y);
+    }
 	if (std::chrono::steady_clock::now() - lastMinimapFeatureReportAt >= std::chrono::seconds(2)) {
 		lastMinimapFeatureReportAt = std::chrono::steady_clock::now();
 		Diagnostics::Record("minimap-feature-mask", "raw=" + std::to_string(minimapDiagnostics.rawKeypointCount) +
@@ -1481,6 +1500,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	auto commitVisualPosition = [&](VisualLocalizationCandidate candidate, bool recognition, bool relative = false, bool visual = true,
         std::chrono::steady_clock::time_point capturedAt = {}, std::uint64_t sourceFrame = 0,
         CoordinateHandoff::VisualSource visualSource = CoordinateHandoff::VisualSource::Local) -> bool {
+        LocalizationLatencyTrace::Scope phase(localizationLatency, "visual-commit", snapshotFrameId);
         if (capturedAt == std::chrono::steady_clock::time_point{}) capturedAt = snapshotCapturedAt;
         if (sourceFrame == 0) sourceFrame = snapshotFrameId;
         if (capturedAt > now) return false;
@@ -1688,17 +1708,57 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
     if (runLegacyLocalizationDiagnostics && !localizationServiceOnly) prepareVisualFrame();
     bool acceptedReadoutThisCycle = false;
 	CoordinateRecognitionResult ocrResult;
+    localizationLatency.SetStage("ocr-take", snapshotFrameId);
 	if (ocrAssistEnabled && IdentifyWorldCoordinates::TryTakeLatestResult(ocrResult)) {
+        localizationLatency.SetStage("ocr-consume", snapshotFrameId);
 		ReproCapture::Scope reproResult({{"captureRun", ocrResult.sessionId}, {"frameId", ocrResult.frameId},
 			{"requestId", ocrResult.requestId}, {"stage", "ocr-consume"}});
         const auto consumedAt = CoordinateHandoff::Clock::now();
         const auto ms = [](auto duration) { return std::chrono::duration<double,std::milli>(duration).count(); };
+        const auto steadyMs = [&](auto time) { return ms(time.time_since_epoch()); };
+        const double readyToTakeMs = std::max(0.0, ms(ocrResult.takeStartedAt - ocrResult.completedAt));
         Diagnostics::Record("coordinate-readout-latency", "request=" + std::to_string(ocrResult.requestId) +
+            " process=" + std::to_string(GetCurrentProcessId()) + " session=" + std::to_string(ocrResult.sessionId) + " generation=" + std::to_string(ocrResult.uiGeneration) +
+            " frame=" + std::to_string(ocrResult.frameId) + " consumeFrame=" + std::to_string(snapshotFrameId) +
             " captureToConsumeMs=" + std::to_string(ms(consumedAt-ocrResult.capturedAt)) +
             " submitToCompleteMs=" + std::to_string(ms(ocrResult.completedAt-ocrResult.submittedAt)) +
             " completeToConsumeMs=" + std::to_string(ms(consumedAt-ocrResult.completedAt)) +
+            " processingToReadyMs=" + std::to_string(ms(ocrResult.completedAt-ocrResult.processingFinishedAt)) +
+            " workerPublishLockWaitMs=" + std::to_string(ocrResult.workerPublishLockWaitMilliseconds) +
+            " readyToTakeStartMs=" + std::to_string(readyToTakeMs) +
+            " takeStartedBeforeReady=" + std::to_string(ocrResult.takeStartedAt < ocrResult.completedAt) +
+            " takeLockWaitMs=" + std::to_string(ocrResult.takeLockWaitMilliseconds) +
+            " takeLockHeldMs=" + std::to_string(ms(ocrResult.dequeuedAt-ocrResult.takeLockAcquiredAt)) +
+            " captureSteadyMs=" + std::to_string(steadyMs(ocrResult.capturedAt)) +
+            " submitSteadyMs=" + std::to_string(steadyMs(ocrResult.submittedAt)) +
+            " processingFinishedSteadyMs=" + std::to_string(steadyMs(ocrResult.processingFinishedAt)) +
+            " readySteadyMs=" + std::to_string(steadyMs(ocrResult.completedAt)) +
+            " takeStartSteadyMs=" + std::to_string(steadyMs(ocrResult.takeStartedAt)) +
+            " takeLockAcquiredSteadyMs=" + std::to_string(steadyMs(ocrResult.takeLockAcquiredAt)) +
+            " dequeuedSteadyMs=" + std::to_string(steadyMs(ocrResult.dequeuedAt)) +
+            " consumeSteadyMs=" + std::to_string(steadyMs(consumedAt)) +
             " withinLegacy500ms=" + std::to_string(consumedAt >= ocrResult.capturedAt &&
                 consumedAt - ocrResult.capturedAt < std::chrono::milliseconds(500)));
+        // Diagnostic threshold only: no result is expired, rejected or hidden here.
+        const bool slowWait = consumedAt - ocrResult.completedAt >= std::chrono::milliseconds(100) ||
+            ocrResult.completedAt - ocrResult.processingFinishedAt >= std::chrono::milliseconds(100) ||
+            ocrResult.takeLockWaitMilliseconds >= 100.0;
+        if (slowWait) {
+            if (lastReadoutWaitReportAt == CoordinateHandoff::Clock::time_point{} ||
+                consumedAt - lastReadoutWaitReportAt >= std::chrono::seconds(1)) {
+                lastReadoutWaitReportAt = consumedAt;
+                const auto windowStarted = std::min(ocrResult.completedAt, ocrResult.takeStartedAt);
+                Diagnostics::Record("coordinate-readout-wait", "request=" + std::to_string(ocrResult.requestId) +
+                    " process=" + std::to_string(GetCurrentProcessId()) + " session=" + std::to_string(ocrResult.sessionId) + " generation=" + std::to_string(ocrResult.uiGeneration) +
+                    " frame=" + std::to_string(ocrResult.frameId) + " consumeFrame=" + std::to_string(snapshotFrameId) +
+                    " windowStartSteadyMs=" + std::to_string(steadyMs(windowStarted)) +
+                    " windowEndSteadyMs=" + std::to_string(steadyMs(consumedAt)) +
+                    " processingToReadyMs=" + std::to_string(ms(ocrResult.completedAt-ocrResult.processingFinishedAt)) +
+                    " suppressedSlowReports=" + std::to_string(suppressedReadoutWaitReports) + " " +
+                    localizationLatency.Describe(windowStarted, consumedAt));
+                suppressedReadoutWaitReports = 0;
+            } else ++suppressedReadoutWaitReports;
+        }
 
         const bool activeOcrResult = ocrRequestInFlight.has_value() && ocrResult.requestId == *ocrRequestInFlight;
         if (activeOcrResult) ocrRequestInFlight.reset();
@@ -1916,17 +1976,20 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	}
 
 
+    localizationLatency.SetStage("post-ocr", snapshotFrameId);
     // Publish the newly committed readout before any synchronous visual
     // revalidation/resume work below. Continue that work afterwards so SURF
     // recovery cannot starve while OCR remains active.
     if (acceptedReadoutThisCycle && coordinateHandoff.ReadoutActive() && lastCoordinateVisible &&
         enabledMinMapShowItem.load() && isExistMinMap.load() && !isOpenMap.load()) {
+        LocalizationLatencyTrace::Scope phase(localizationLatency, "readout-publish", snapshotFrameId);
         auto center = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
         DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, center, minMapImg.rows / 2.0f,
             playerCurrentSceneId, minimapTerrainScale);
         PublishOverlayFrame({snapshotFrameId, snapshot, rect, snapshotCapturedAt, std::chrono::milliseconds(250)}, {});
     }
 	auto acceptVisualResult = [&]() -> bool {
+        LocalizationLatencyTrace::Scope phase(localizationLatency, "global-result", snapshotFrameId);
 		VisualLocalizationResult result;
 		if (!GlobalVisualLocalizer::TryTakeLatestResult(result)) return false;
 		ReproCapture::Scope reproVisualResult({{"captureRun", result.sessionId}, {"frameId", result.frameId},
@@ -2095,6 +2158,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		RuntimeStatus::SetLocalization("recovering", {}, "正在加载小地图坐标文本识别");
 	};
 	auto submitOcrRead = [&](bool stalledTracker) {
+        LocalizationLatencyTrace::Scope phase(localizationLatency, "ocr-submit", snapshotFrameId);
 		if (!ocrAssistEnabled || !ocrPreloadStarted || !IdentifyWorldCoordinates::isLoaded.load() ||
 			ocrRequestInFlight.has_value()) return;
         if (snapshotFrameId == lastOcrSubmittedFrame) return;
@@ -2209,7 +2273,9 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
         acceptVisualResult();
         ReadoutVisualResult probe;
         std::string probeError;
+        localizationLatency.SetStage("readout-probe-take", snapshotFrameId);
         if (readoutVisualWorker.Take(probe, probeError)) {
+            LocalizationLatencyTrace::Scope phase(localizationLatency, "readout-probe-consume", snapshotFrameId);
             ReproCapture::Scope reproProbe({{"captureRun", probe.source.session}, {"frameId", probe.source.frame},
                 {"requestId", probe.source.globalRequest}, {"stage", "readout-visual-consume"}});
             const auto consumedAt = CoordinateHandoff::Clock::now();
@@ -2225,8 +2291,13 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
                 RuntimeStatus::SetMinimapFeatureStats(minimapDiagnostics.rawKeypointCount,
                     minimapDiagnostics.retainedKeypointCount, minimapDiagnostics.dynamicMaskPercent);
                 // Layer state remains single-writer and retains its own rate limit.
-                LayeredMap::ObserveMinimap(minMapFeatureData, playerCurrentSceneId,
-                    lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y);
+                const auto layerStarted = CoordinateHandoff::Clock::now();
+                {
+                    LocalizationLatencyTrace::Scope layerPhase(localizationLatency, "layered-observe", snapshotFrameId);
+                    LayeredMap::ObserveMinimap(minMapFeatureData, playerCurrentSceneId,
+                        lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y);
+                }
+                const auto layerEnded = CoordinateHandoff::Clock::now();
                 bool committed = false;
                 if (probe.globalMatched && probe.source.globalRequest == latestReadoutGlobalRequest)
                     committed = commitVisualPosition(probe.global, true, false, true,
@@ -2241,13 +2312,9 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
                         probe.source.clientRect, probe.source.capturedAt, std::chrono::milliseconds(250)};
                     readoutVisualAnchorGeneration = coordinateUiGeneration;
                 }
-                Diagnostics::Record("readout-visual-probe", "frame=" + std::to_string(probe.source.frame) +
-                    " local=" + std::to_string(probe.localMatched) + " global=" + std::to_string(probe.globalMatched) +
-                    " committed=" + std::to_string(committed) + " computeMs=" + std::to_string(probe.durationMs) +
-                    " ageMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
-                        consumedAt - probe.source.capturedAt).count()));
                 if (coordinateHandoff.ReadoutActive() && probe.prepared && !visualRequestInFlight &&
                     consumedAt - lastVisualSubmitAt >= std::chrono::milliseconds(500) && GlobalVisualLocalizer::IsReady()) {
+                    LocalizationLatencyTrace::Scope submitPhase(localizationLatency, "global-submit", snapshotFrameId);
                     VisualLocalizationRequest request;
                     request.sessionId = coordinateSessionId; request.uiGeneration = coordinateUiGeneration;
                     request.frameId = probe.source.frame; request.requestId = nextVisualRequestId++;
@@ -2263,12 +2330,24 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
                             std::to_string(id) + " frame=" + std::to_string(probe.source.frame));
                     }
                 }
+                const auto consumeEnded = CoordinateHandoff::Clock::now();
+                Diagnostics::Record("readout-visual-probe", "frame=" + std::to_string(probe.source.frame) +
+                    " local=" + std::to_string(probe.localMatched) + " global=" + std::to_string(probe.globalMatched) +
+                    " committed=" + std::to_string(committed) + " computeMs=" + std::to_string(probe.durationMs) +
+                    " layerObserveMs=" + std::to_string(std::chrono::duration<double, std::milli>(layerEnded-layerStarted).count()) +
+                    " consumeMs=" + std::to_string(std::chrono::duration<double, std::milli>(
+                        consumeEnded-consumedAt).count()) +
+                    " ageAtConsumeEndMs=" + std::to_string(std::chrono::duration<double, std::milli>(
+                        consumeEnded-probe.source.capturedAt).count()) +
+                    " ageMs=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                        consumedAt - probe.source.capturedAt).count()));
             }
         }
         if (!coordinateHandoff.ReadoutActive()) {
             readoutVisualWorker.Cancel(); pendingReadoutGlobalCandidate.reset();
         } else if (!localizationServiceOnly && readoutVisualWorker.CanSubmit() && snapshotFrameId != lastReadoutVisualSubmittedFrame &&
             readoutWorkSchedule.VisualDue(true, CoordinateHandoff::Clock::now())) {
+            LocalizationLatencyTrace::Scope phase(localizationLatency, "probe-submit", snapshotFrameId);
             ReadoutVisualRequest request;
             request.session = coordinateSessionId; request.generation = coordinateUiGeneration;
             request.frame = snapshotFrameId; request.capturedAt = snapshotCapturedAt; request.clientRect = rect;
@@ -2285,6 +2364,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
     }
     if (localizationServiceOnly) co_return returnTrustedPosition();
     readoutWorkSchedule.VisualDue(false, CoordinateHandoff::Clock::now());
+    localizationLatency.SetStage("surf-work", snapshotFrameId);
     prepareVisualFrame();
     bool resumeAwaitingConfirmation = false;
 	auto tryResumeHint = [&]() -> bool {
@@ -3236,6 +3316,7 @@ bool App::FrameObserved() const {
 }
 
 void App::PublishOverlayFrame(const CapturedFrame& requestedCapture, const MapViewportPrediction& viewport) {
+    LocalizationLatencyTrace::Scope phase(localizationLatency, "overlay-publish", requestedCapture.frameId);
     // An asynchronous visual fix is tied to its original pixels, never a newer
     // capture. Expiry is checked by the renderer, not renewed by publication.
     const bool anchored = readoutVisualAnchor && readoutVisualAnchorGeneration == coordinateUiGeneration &&
@@ -3430,7 +3511,11 @@ void App::PublishOverlayFrame(const CapturedFrame& requestedCapture, const MapVi
         lastReadoutPublishedFix = frame.minimapReadout.fixFrameId;
         const auto publishedAt = std::chrono::steady_clock::now();
         Diagnostics::Record("readout-commit-to-layout", "fixFrame=" + std::to_string(lastReadoutPublishedFix) +
-            " layoutFrame=" + std::to_string(frame.frameId) + " durationMs=" +
+            " layoutFrame=" + std::to_string(frame.frameId) +
+            " process=" + std::to_string(GetCurrentProcessId()) + " session=" + std::to_string(coordinateSessionId) + " generation=" + std::to_string(coordinateUiGeneration) +
+            " acceptedSteadyMs=" + std::to_string(std::chrono::duration<double,std::milli>(lastReadoutAcceptedAt.time_since_epoch()).count()) +
+            " publishedSteadyMs=" + std::to_string(std::chrono::duration<double,std::milli>(publishedAt.time_since_epoch()).count()) +
+            " durationMs=" +
             std::to_string(std::chrono::duration<double,std::milli>(publishedAt-lastReadoutAcceptedAt).count()));
     }
     overlayFrames.Publish(std::move(frame));

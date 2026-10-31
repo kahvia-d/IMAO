@@ -33,6 +33,7 @@
 #include "../Runtime/FrameState.h"
 #include "../Runtime/GamepadContext.h"
 #include "../Runtime/ThreadPriority.h"
+#include "../Runtime/LocalizationLatencyTrace.h"
 
 
 class App
@@ -369,6 +370,9 @@ private:
     Coordinate lastVisualFixMapCoordinate{};
     std::chrono::steady_clock::time_point lastVisualFixAt{};
     std::chrono::steady_clock::time_point lastRenderPositionLogAt{};
+    LocalizationLatencyTrace localizationLatency; // Localization-thread only, bounded diagnostic history.
+    std::chrono::steady_clock::time_point lastReadoutWaitReportAt{};
+    std::uint64_t suppressedReadoutWaitReports = 0;
     OcrCoordinateGate::Gate ocrCoordinateGate{OcrCoordinateGate::Config{.minimumScore = 0.25f}};
 	// OCR loads a native inference runtime.  Do not start that heavy runtime
 	// during App::Init, where capture and feature repositories are also being

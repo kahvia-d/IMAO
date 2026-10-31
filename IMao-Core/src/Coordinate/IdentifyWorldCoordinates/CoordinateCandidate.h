@@ -41,6 +41,12 @@ struct CoordinateRecognitionResult {
     double inferenceMilliseconds = 0.0;
     double parsingMilliseconds = 0.0;
     std::chrono::steady_clock::time_point submittedAt{}, completedAt{};
+    // Async handoff probes only. completedAt retains its existing meaning: the
+    // worker owns the publish lock and is about to make this result available.
+    std::chrono::steady_clock::time_point processingFinishedAt{};
+    std::chrono::steady_clock::time_point takeStartedAt{}, takeLockAcquiredAt{}, dequeuedAt{};
+    double workerPublishLockWaitMilliseconds = 0.0;
+    double takeLockWaitMilliseconds = 0.0;
 };
 
 class CoordinateCandidateParser {

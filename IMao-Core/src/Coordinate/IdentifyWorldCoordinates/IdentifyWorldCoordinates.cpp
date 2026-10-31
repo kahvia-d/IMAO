@@ -145,10 +145,17 @@ public:
     bool HasResult() { std::scoped_lock lock(mutex_); return latestResult_.has_value(); }
 
     bool TakeResult(CoordinateRecognitionResult& result) {
+        const auto takeStartedAt = std::chrono::steady_clock::now();
         std::scoped_lock lock(mutex_);
+        const auto takeLockAcquiredAt = std::chrono::steady_clock::now();
         if (!latestResult_.has_value()) return false;
         result = std::move(*latestResult_);
         latestResult_.reset();
+        result.dequeuedAt = std::chrono::steady_clock::now();
+        result.takeStartedAt = takeStartedAt;
+        result.takeLockAcquiredAt = takeLockAcquiredAt;
+        result.takeLockWaitMilliseconds = std::chrono::duration<double, std::milli>(
+            takeLockAcquiredAt - takeStartedAt).count();
         return true;
     }
 
@@ -478,8 +485,13 @@ private:
             catch (...) {
                 Diagnostics::Record("ocr-worker", "unknown exception");
             }
+            result.processingFinishedAt = std::chrono::steady_clock::now();
+            const auto publishLockStartedAt = std::chrono::steady_clock::now();
             {
                 std::scoped_lock lock(mutex_);
+                const auto publishLockAcquiredAt = std::chrono::steady_clock::now();
+                result.workerPublishLockWaitMilliseconds = std::chrono::duration<double, std::milli>(
+                    publishLockAcquiredAt - publishLockStartedAt).count();
                 result.submittedAt = request.submittedAt;
                 result.completedAt = std::chrono::steady_clock::now();
                 latestResult_ = std::move(result);

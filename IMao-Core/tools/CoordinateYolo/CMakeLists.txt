@@ -44,6 +44,11 @@ target_include_directories(LocalizationSchedulingTests PRIVATE "${ROOT}/IMao-Cor
 target_compile_definitions(LocalizationSchedulingTests PRIVATE NOMINMAX)
 add_test(NAME LocalizationSchedulingTests COMMAND LocalizationSchedulingTests)
 
+add_executable(LocalizationLatencyTraceTests "${ROOT}/IMao-Core/tests/LocalizationLatencyTraceTests.cpp")
+target_include_directories(LocalizationLatencyTraceTests PRIVATE "${ROOT}/IMao-Core/src")
+target_compile_definitions(LocalizationLatencyTraceTests PRIVATE NOMINMAX)
+add_test(NAME LocalizationLatencyTraceTests COMMAND LocalizationLatencyTraceTests)
+
 add_executable(YoloBackendTests "${ROOT}/IMao-Core/tests/YoloBackendTests.cpp"
     "${ROOT}/IMao-Core/src/Diagnostics/ReproCapture.cpp"
     "${ROOT}/IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateRecognizer.cpp"

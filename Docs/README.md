@@ -234,3 +234,4 @@
 - [显示许可与差量测试包实施计划](VisibilityAndDeltaPlan_20261031.md)
 - [104 状态式显示与位置保持](StatefulDisplayPlan_20261101.md)
 - [105 删除外推与统一标记投影计划](NoExtrapolationPlan_20261101.md)
+- [106 OCR结果消费延迟诊断计划](OcrDelayPlan_20261101.md)
