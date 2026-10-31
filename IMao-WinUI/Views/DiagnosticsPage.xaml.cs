@@ -68,6 +68,7 @@ public sealed partial class DiagnosticsPage : Page
         Diagnostics_StatusTitle.Text = status.DisplayState;
         Diagnostics_StatusDetail.Text = status.Message;
         Diagnostics_CoreVersion.Text = $"CoreHost：{status.CoreVersion} · 协议 v1";
+        Diagnostics_OcrBackend.Text = status.OcrBackend?.DisplayText ?? "OCR：等待核心报告实际后端";
         Diagnostics_Status.Severity = status.CoreState switch
         {
             "faulted" => InfoBarSeverity.Error,

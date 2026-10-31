@@ -3,6 +3,8 @@
 #include "../../Diagnostics/Diagnostics.h"
 #include "../../Diagnostics/ReproCapture.h"
 #include "../../Runtime/ThreadPriority.h"
+#include "../../Runtime/RuntimeStatus.h"
+#include "../../Runtime/OcrBackendOperation.h"
 #include "CoordinateReadoutRoi.h"
 #include "../../Runtime/ReadoutWorkSchedule.h"
 #include "YoloCoordinateRecognizer.h"
@@ -25,6 +27,12 @@ std::atomic_bool IdentifyWorldCoordinates::isLoaded = false;
 
 namespace {
 constexpr auto kMinimumSubmissionInterval = ReadoutWorkSchedule::SubmissionInterval();
+
+OcrBackendInfo ReadOcrBackend(const YoloCoordinateRecognizer& recognizer) {
+    const auto info = recognizer.RuntimeInfo();
+    return {info.value("requested", ""), info.value("backend", "waiting"),
+        info.value("adapter", 0), info.value("fallback", "")};
+}
 
 double MillisecondsSince(std::chrono::steady_clock::time_point start) {
     return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
@@ -88,6 +96,7 @@ public:
         started_ = true;
         initializationComplete_ = false;
         error_.clear();
+        RuntimeStatus::SetOcrBackend("", "waiting", 0, "");
         initThread_ = std::jthread([this, modelDirectory, dictionaryPath](std::stop_token stopToken) {
             Initialize(stopToken, modelDirectory, dictionaryPath);
         });
@@ -170,7 +179,9 @@ public:
                 {"crop", {region.x, region.y, region.width, region.height}}, {"calibrated", calibrated},
                 {"capturedSteadyMs", std::chrono::duration_cast<std::chrono::milliseconds>(request.capturedAt.time_since_epoch()).count()}});
             std::scoped_lock inferenceLock(inferenceMutex_);
-            const auto selected = yolo_->Recognize(cropped ? request.snapshot : request.snapshot(region), calibrated);
+            const auto selected = RunOcrInferenceReporting(
+                [&] { return yolo_->Recognize(cropped ? request.snapshot : request.snapshot(region), calibrated); },
+                [&] { return ReadOcrBackend(*yolo_); });
             result.inferenceMilliseconds = MillisecondsSince(started);
             if (!selected.is_null()) {
                 CoordinateCandidate candidate;
@@ -409,6 +420,9 @@ private:
             recognizer_ = std::move(recognizer);
             yolo_ = std::move(yolo);
             ready = recognizer_ != nullptr || yolo_ != nullptr;
+            if (yolo_) ReadOcrBackend(*yolo_).Publish();
+            else if (recognizer_) RuntimeStatus::SetOcrBackend("cpu", "cpu", 0, "");
+            else RuntimeStatus::SetOcrBackend("", "failed", 0, failure);
         }
         {
             std::scoped_lock lock(mutex_);

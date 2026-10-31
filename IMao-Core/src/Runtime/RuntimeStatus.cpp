@@ -6,6 +6,17 @@
 RuntimeStatusSnapshot RuntimeStatus::status{};
 std::mutex RuntimeStatus::mutex;
 
+void RuntimeStatus::SetOcrBackend(std::string requested, std::string backend, int adapter, std::string fallback) {
+    std::scoped_lock lock(mutex);
+    if (status.ocrRequested == requested && status.ocrBackend == backend &&
+        status.ocrAdapter == adapter && status.ocrFallback == fallback) return;
+    status.ocrRequested = std::move(requested);
+    status.ocrBackend = std::move(backend);
+    status.ocrAdapter = adapter;
+    status.ocrFallback = std::move(fallback);
+    TouchLocked();
+}
+
 RuntimeStatusSnapshot RuntimeStatus::Snapshot() {
     std::scoped_lock lock(mutex);
     return status;

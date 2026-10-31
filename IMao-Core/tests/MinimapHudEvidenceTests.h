@@ -74,6 +74,18 @@ void TestMinimapHudEvidence(Check check) {
     const auto first = synthetic(0, true);
     check(evidence.Observe(first, roi, true, true, false).templateReady,
         "HUD glyph template learns only from independent positive evidence");
+    int strongCalls = 0;
+    const auto slowProbe = [&] { ++strongCalls; return false; };
+    const auto fast = evidence.ObserveFast(synthetic(1,true),roi,true,false,slowProbe);
+    check(fast.visible && fast.usedTemplate && strongCalls == 0,
+        "current matching HUD pixels must publish evidence without waiting for SURF");
+    check(!evidence.ObserveFast(synthetic(2,false),roi,true,false,slowProbe).visible && strongCalls == 1,
+        "missing current glyph must verify independently rather than renew stale evidence");
+    check(!evidence.ObserveFast(first,roi,false,false,slowProbe).visible && strongCalls == 1,
+        "focus loss must revoke without waiting for SURF");
+    check(!evidence.ObserveFast(first,roi,true,true,slowProbe).visible && strongCalls == 1,
+        "positive map evidence must revoke without waiting for SURF");
+    evidence.Observe(first,roi,true,true,false);
     bool movingBackgroundAccepted = true;
     for (int frame = 1; frame <= 60; ++frame) {
         movingBackgroundAccepted = movingBackgroundAccepted &&

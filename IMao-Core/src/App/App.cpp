@@ -961,6 +961,7 @@ void App::Thread_DetectGameState() {
         }
     };
     uint64_t lastObservedFrame = 0;
+    auto lastVisibilityTimingReport = std::chrono::steady_clock::time_point{};
     bool previousHudConflict = false;
 	while (!allThreadStopFlag) {
 		auto start = std::chrono::high_resolution_clock::now();
@@ -1065,19 +1066,33 @@ void App::Thread_DetectGameState() {
 		}
 		else {
 		if (!stateSnapshot.empty()) {
-			minimapVisible = IsExistMinMap(stateSnapshot, stateRect, &minimapMatchCount);
-			const auto compass = IsBigMapCompass(stateSnapshot, stateRect);
+			const auto probeStarted = std::chrono::steady_clock::now();
+            const auto compass = IsBigMapCompass(stateSnapshot, stateRect);
 			compassPixels = compass.goldPixels;
 			compassVisible = compass.visible;
 			compassTemplateVerified = compass.templateVerified;
 			compassAgreement = compass.templateAgreement;
+            const auto compassFinished = std::chrono::steady_clock::now();
 			// Both mouse and controller layouts need their complete zoom controls.
 			const auto controls = MapUiVisualDetector::DetectBigMapControlLayout(stateSnapshot, stateRect);
 			mapControlsVisible = controls.visible;
 			rawControlLayout = controls.mouse ? "mouse" : controls.controller ? "controller" : "none";
 			rawControllerTriggerAnchors = controls.controllerTriggerAnchors;
 			rawControllerSlider = controls.controllerSlider;
-			rawMinimapEvidence = minimapVisible; rawCompassEvidence = compassVisible; rawControlEvidence = mapControlsVisible;
+            const auto controlsFinished = std::chrono::steady_clock::now();
+            rawMinimapEvidence = false; rawCompassEvidence = compassVisible; rawControlEvidence = mapControlsVisible;
+            const auto taskArea = ScreenCoordinate::SpecifyScreenCoordinate(stateRect, hud::kTaskIcon);
+            const cv::Rect taskRegion(static_cast<int>(taskArea.leftPoint.x), static_cast<int>(taskArea.topPoint.y),
+                static_cast<int>(taskArea.rightPoint.x - taskArea.leftPoint.x), static_cast<int>(taskArea.bottomPoint.y - taskArea.topPoint.y));
+            bool surfRan = false;
+            const auto hud = minimapHudEvidence.ObserveFast(stateSnapshot, taskRegion, focused,
+                mapControlsVisible || compassTemplateVerified, [&] {
+                    surfRan = true;
+                    rawMinimapEvidence = IsExistMinMap(stateSnapshot,stateRect,&minimapMatchCount);
+                    return rawMinimapEvidence;
+                });
+            minimapVisible = hud.visible; templateHudEvidence = hud.usedTemplate;
+            const auto hudFinished = std::chrono::steady_clock::now();
 			// A menu panel over the map, measured from the frame the way the compass is. While one is
 			// up the player is reading it rather than the map, so the markers for this view are in the
 			// way - and after a region pick they are about to be wrong as well. BigMapMarkersVisible
@@ -1094,13 +1109,6 @@ void App::Thread_DetectGameState() {
 					(panelVisible ? "hide-markers" : "show-markers"));
 			}
 			previousPanel = panelVisible;
-			const auto taskArea = ScreenCoordinate::SpecifyScreenCoordinate(stateRect, hud::kTaskIcon);
-			const cv::Rect taskRegion(static_cast<int>(taskArea.leftPoint.x), static_cast<int>(taskArea.topPoint.y),
-				static_cast<int>(taskArea.rightPoint.x - taskArea.leftPoint.x), static_cast<int>(taskArea.bottomPoint.y - taskArea.topPoint.y));
-			const auto hud = minimapHudEvidence.Observe(stateSnapshot, taskRegion, minimapVisible, focused,
-                mapControlsVisible || compassTemplateVerified);
-			minimapVisible = hud.visible;
-			templateHudEvidence = hud.usedTemplate;
 			// A verified map compass still identifies the current surface when
             // dragging hides the zoom strip. Do not learn or act on a task-icon
             // false hit as gameplay, which would destructively close the draft.
@@ -1117,6 +1125,19 @@ void App::Thread_DetectGameState() {
             // verification. The stable UI state remains available to preserve
             // location hints, but must not keep an absent map on the screen.
             publishVisibility(*captured, BigMapMarkersVisible(frameEvidence()), minimapVisible, focused);
+            const auto visibilityPublishedAt = std::chrono::steady_clock::now();
+            if(visibilityPublishedAt-lastVisibilityTimingReport >= std::chrono::seconds(1)) {
+                lastVisibilityTimingReport=visibilityPublishedAt;
+                const auto ms=[](auto duration) {return std::chrono::duration<double,std::milli>(duration).count();};
+                Diagnostics::Record("visibility-probe-timing", "frame=" + std::to_string(captured->frameId) +
+                    " compassMs=" + std::to_string(ms(compassFinished-probeStarted)) +
+                    " controlsMs=" + std::to_string(ms(controlsFinished-compassFinished)) +
+                    " hudMs=" + std::to_string(ms(hudFinished-controlsFinished)) +
+                    " panelAndPublishMs=" + std::to_string(ms(visibilityPublishedAt-hudFinished)) +
+                    " surfRan=" + std::to_string(surfRan) + " templateHud=" + std::to_string(templateHudEvidence) +
+                    " captureAgeAtStartMs=" + std::to_string(ms(probeStarted-captured->capturedAt)) +
+                    " ageAtPublishMs=" + std::to_string(ms(visibilityPublishedAt-captured->capturedAt)));
+            }
 
 			// The colour-only "compass" probe intentionally has a broad crop, and
 			// therefore can also see yellow gameplay UI. A live minimap is stronger

@@ -20,6 +20,18 @@ struct MinimapHudObservation {
 // then require those same details in the current frame when SURF is sparse.
 class MinimapHudEvidence {
 public:
+    template<class StrongProbe>
+    MinimapHudObservation ObserveFast(const cv::Mat& snapshot, const cv::Rect& iconRoi,
+        bool focused, bool definiteBigMap, StrongProbe&& strongProbe) {
+        // Verify the independently learned glyph on CURRENT pixels before
+        // asking for expensive descriptors. Template success never relearns.
+        const auto current=Observe(snapshot,iconRoi,false,focused,definiteBigMap);
+        if(current.visible || !focused || definiteBigMap || snapshot.empty() ||
+            snapshot.depth()!=CV_8U || (snapshot.channels()!=3 && snapshot.channels()!=4) ||
+            iconRoi.empty() || (iconRoi & cv::Rect(0,0,snapshot.cols,snapshot.rows))!=iconRoi)
+            return current;
+        return strongProbe() ? Observe(snapshot,iconRoi,true,focused,definiteBigMap) : current;
+    }
     void Reset() {
         foreground_.release(); darkDetails_.release();
         snapshotSize_ = {}; iconRoi_ = {};

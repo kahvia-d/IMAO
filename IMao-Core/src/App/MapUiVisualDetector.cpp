@@ -203,10 +203,19 @@ MapCompassDetection MapUiVisualDetector::DetectBigMapCompass(const cv::Mat& snap
     if (crop.empty() || snapshot.channels() < 3) return result;
 
     cv::Mat bgr;
+    cv::Rect localCrop=crop;
     if (snapshot.channels() == 3) bgr = snapshot;
-    else if (snapshot.channels() == 4) cv::cvtColor(snapshot, bgr, cv::COLOR_BGRA2BGR);
+    else if (snapshot.channels() == 4) {
+        // Template matching searches around the nominal crop. Retain exactly
+        // that border while avoiding an entire game-frame conversion.
+        const auto padded=cv::Rect(crop.x-kTemplateSearchRadius,crop.y-kTemplateSearchRadius,
+            crop.width+2*kTemplateSearchRadius,crop.height+2*kTemplateSearchRadius) &
+            cv::Rect(0,0,snapshot.cols,snapshot.rows);
+        cv::cvtColor(snapshot(padded),bgr,cv::COLOR_BGRA2BGR);
+        localCrop.x-=padded.x; localCrop.y-=padded.y;
+    }
     else return result;
-    const cv::Mat compass = bgr(crop);
+    const cv::Mat compass = bgr(localCrop);
     result.cropPixels = compass.rows * compass.cols;
     for (int row = 0; row < compass.rows; ++row) {
         for (int column = 0; column < compass.cols; ++column) {
@@ -230,7 +239,7 @@ MapCompassDetection MapUiVisualDetector::DetectBigMapCompass(const cv::Mat& snap
     // Zero gold cannot reach the agreement floor - the gold classes are more than half the mask - so it
     // is also a free early out.
     if (result.goldPixels > 0) {
-        const auto verdict = VerifyCompassTemplate(bgr, crop);
+        const auto verdict = VerifyCompassTemplate(bgr, localCrop);
         result.templateAvailable = verdict.available;
         result.templateVerified = verdict.verified;
         result.templateAgreement = verdict.agreement;
@@ -271,16 +280,17 @@ constexpr double kPanelMinEdgeFraction = 0.65;
 MapPanelDetection MapUiVisualDetector::DetectMapPanel(const cv::Mat& snapshot, const RECT& clientRect) {
     (void)clientRect;
     MapPanelDetection result;
-    if (snapshot.channels() < 3) return result;
-    cv::Mat bgr;
-    if (snapshot.channels() == 3) bgr = snapshot;
-    else if (snapshot.channels() == 4) cv::cvtColor(snapshot, bgr, cv::COLOR_BGRA2BGR);
-    else return result;
+    if (snapshot.channels()!=3 && snapshot.channels()!=4) return result;
+    const auto bgrCrop=[&](const cv::Rect& region) {
+        cv::Mat pixels=snapshot(region);
+        if(snapshot.channels()==4) cv::cvtColor(snapshot(region),pixels,cv::COLOR_BGRA2BGR);
+        return pixels;
+    };
 
     // ---- the region list's button column ----
     const cv::Rect crop = ScaleCrop(snapshot, hud::kRegionPanelButtons);
     if (!crop.empty()) {
-        const cv::Mat panel = bgr(crop);
+        const cv::Mat panel = bgrCrop(crop);
         result.sampledPixels = panel.rows * panel.cols;
         if (result.sampledPixels > 0) {
             // "Neutral light grey" as range tests rather than a per-pixel loop: the box is 240x390
@@ -323,7 +333,7 @@ MapPanelDetection MapUiVisualDetector::DetectMapPanel(const cv::Mat& snapshot, c
     const cv::Rect strip = ScaleCrop(snapshot, hud::kMapSidePanel);
     if (!strip.empty() && strip.width > kPanelEdgeLookback) {
         cv::Mat gray;
-        cv::cvtColor(bgr(strip), gray, cv::COLOR_BGR2GRAY);
+        cv::cvtColor(bgrCrop(strip), gray, cv::COLOR_BGR2GRAY);
         cv::Mat shifted, difference, stepped, columnHits;
         shifted = gray(cv::Rect(0, 0, gray.cols - kPanelEdgeLookback, gray.rows));
         cv::absdiff(gray(cv::Rect(kPanelEdgeLookback, 0, gray.cols - kPanelEdgeLookback, gray.rows)),

@@ -134,7 +134,7 @@ if (-not $runtime.runtimeOptions.includedFrameworks -or $runtime.runtimeOptions.
 & (Join-Path $PSScriptRoot 'Test-ProgramReleasePackage.ps1') -PackageRoot $package -OutputRoot (Join-Path $OutputRoot 'verification')
 if (-not $?) { throw 'Program package probe failed.' }
 if ($IncludeOcrBackendTestLaunchers) {
-    foreach ($testFile in @('Start-CPU.cmd','Start-GPU.cmd','OCR-Test-Readme.txt')) {
+    foreach ($testFile in @('Start-CPU.cmd','Start-GPU.cmd','Start-OcrTest.ps1','OCR-Test-Readme.txt')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot "ocr-test/$testFile") -Destination $package
     }
 }

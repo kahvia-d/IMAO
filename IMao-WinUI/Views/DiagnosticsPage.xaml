@@ -3,7 +3,7 @@
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
         <StackPanel Spacing="5"><TextBlock Text="RUNTIME INSIGHT" Style="{StaticResource IMaoEyebrowStyle}" /><TextBlock Text="诊断" Style="{StaticResource IMaoPageTitleStyle}" /><TextBlock Text="查看运行状态，保留排查问题需要的线索。" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
         <InfoBar Grid.Row="1" x:Name="Diagnostics_Status" IsOpen="True" IsClosable="False" Severity="Informational" CornerRadius="10">
-            <StackPanel Spacing="4"><TextBlock x:Name="Diagnostics_StatusTitle" FontWeight="SemiBold" TextWrapping="Wrap" /><TextBlock x:Name="Diagnostics_StatusDetail" TextWrapping="Wrap" /><TextBlock x:Name="Diagnostics_CoreVersion" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
+            <StackPanel Spacing="4"><TextBlock x:Name="Diagnostics_StatusTitle" FontWeight="SemiBold" TextWrapping="Wrap" /><TextBlock x:Name="Diagnostics_StatusDetail" TextWrapping="Wrap" /><TextBlock x:Name="Diagnostics_OcrBackend" TextWrapping="Wrap" /><TextBlock x:Name="Diagnostics_CoreVersion" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
         </InfoBar>
         <Border Grid.Row="2" Style="{StaticResource IMaoCardStyle}" Padding="14">
             <StackPanel Spacing="10">

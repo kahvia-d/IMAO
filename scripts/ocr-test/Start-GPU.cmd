@@ -1,15 +1,8 @@
 @echo off
 setlocal
-tasklist /FI "IMAGENAME eq IMao-WinUI.exe" /NH | find /I "IMao-WinUI.exe" >nul
-if not errorlevel 1 goto running
-tasklist /FI "IMAGENAME eq IMao-CoreHost.exe" /NH | find /I "IMao-CoreHost.exe" >nul
-if not errorlevel 1 goto running
-set "IMAO_OCR_BACKEND=directml"
-set "IMAO_OCR_ADAPTER=0"
-if not "%~1"=="" set "IMAO_OCR_ADAPTER=%~1"
-start "" "%~dp0IMao-WinUI.exe"
-exit /b 0
-:running
-echo Please fully exit IMao before switching OCR mode.
-pause
-exit /b 1
+set "ocrAdapter=0"
+if not "%~1"=="" set "ocrAdapter=%~1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Start-OcrTest.ps1" -Backend directml -Adapter "%ocrAdapter%"
+set "result=%errorlevel%"
+if not "%result%"=="0" pause
+exit /b %result%

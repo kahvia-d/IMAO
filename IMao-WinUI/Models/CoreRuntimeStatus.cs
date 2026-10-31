@@ -4,6 +4,9 @@ namespace IMao_WinUI.Models;
 
 public sealed class CoreRuntimeStatus
 {
+    [JsonPropertyName("ocrBackend")]
+    public OcrBackendStatus? OcrBackend { get; init; }
+
     [JsonPropertyName("diagnosticCapture")]
     public DiagnosticCaptureStatus? DiagnosticCapture { get; init; }
 
@@ -84,6 +87,26 @@ public sealed class CoreRuntimeStatus
         "stopped" => "核心已停止",
         "faulted" => "核心故障",
         _ => CoreState
+    };
+}
+
+public sealed class OcrBackendStatus
+{
+    [JsonPropertyName("requested")]
+    public string Requested { get; init; } = "";
+    [JsonPropertyName("backend")]
+    public string Backend { get; init; } = "waiting";
+    [JsonPropertyName("adapter")]
+    public int Adapter { get; init; }
+    [JsonPropertyName("fallback")]
+    public string Fallback { get; init; } = "";
+
+    public string DisplayText => Backend switch
+    {
+        "waiting" => "OCR：等待初始化",
+        "failed" => $"OCR：识别不可用 · 请求 {Requested.ToUpperInvariant()} · 显卡编号 {Adapter} · {Fallback}",
+        _ => $"OCR：实际 {Backend.ToUpperInvariant()} · 请求 {Requested.ToUpperInvariant()} · 显卡编号 {Adapter}"
+            + (string.IsNullOrEmpty(Fallback) ? "" : $" · 回退原因：{Fallback}")
     };
 }
 

@@ -15,6 +15,10 @@ struct RuntimeStatusSnapshot {
     // for one line of it, and "the markers are frozen" is not something a message channel that
     // scrolls with notifications can explain.
     std::string hint = "";
+    std::string ocrRequested = "";
+    std::string ocrBackend = "waiting";
+    std::string ocrFallback = "";
+    int ocrAdapter = 0;
     int minimapMarkers = 0;
     int mapMarkers = 0;
     int frameMilliseconds = 0;
@@ -52,6 +56,7 @@ public:
     static void SetStatusBallEnabled(bool enabled);
     static void SetMessage(std::string message);
     static void SetLocalizationHint(std::string hint);
+    static void SetOcrBackend(std::string requested, std::string backend, int adapter, std::string fallback);
 
 private:
     static void TouchLocked();

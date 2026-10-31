@@ -494,6 +494,10 @@ add_test(NAME IMaoOcrDependencyTests COMMAND IMaoOcrDependencyTests
     "${CMAKE_SOURCE_DIR}/x64/$<CONFIG>/Assets/models"
     "${CMAKE_BINARY_DIR}/ocr-dependencies-$<CONFIG>.jsonl")
 add_subdirectory(IMao-Core/tools/CoordinateYolo)
+add_executable(IMaoOcrRuntimeStatusTests
+    IMao-Core/tests/OcrRuntimeStatusTests.cpp
+    IMao-Core/src/Runtime/RuntimeStatus.cpp)
+add_test(NAME IMaoOcrRuntimeStatusTests COMMAND IMaoOcrRuntimeStatusTests)
 add_executable(IMaoCoordinateRuntimeTests
     IMao-Core/tests/CoordinateRuntimeTests.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/IdentifyWorldCoordinates.cpp
@@ -501,6 +505,7 @@ add_executable(IMaoCoordinateRuntimeTests
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateDecoder.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp
     IMao-Core/src/Diagnostics/Diagnostics.cpp
+    IMao-Core/src/Runtime/RuntimeStatus.cpp
     IMao-Core/src/Runtime/StructuredLogger.cpp)
 target_include_directories(IMaoCoordinateRuntimeTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
 target_compile_definitions(IMaoCoordinateRuntimeTests PRIVATE NOMINMAX)
@@ -658,6 +663,7 @@ add_executable(IMaoCoordinateRegression
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateDecoder.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp
     IMao-Core/src/Diagnostics/Diagnostics.cpp
+    IMao-Core/src/Runtime/RuntimeStatus.cpp
     IMao-Core/src/Runtime/StructuredLogger.cpp
     IMao-Core/src/util.cpp
 )
@@ -766,3 +772,10 @@ add_executable(IMaoGapFillFilterTests IMao-Core/tests/GapFillFilterTests.cpp)
 target_include_directories(IMaoGapFillFilterTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
 set_target_properties(IMaoGapFillFilterTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 add_test(NAME IMaoGapFillFilterTests COMMAND IMaoGapFillFilterTests)
+
+add_executable(IMaoStateVisibilityTests IMao-Core/tests/StateVisibilityTests.cpp IMao-Core/src/App/MapUiVisualDetector.cpp IMao-Core/src/App/MapUiStateController.cpp)
+target_include_directories(IMaoStateVisibilityTests PRIVATE "${CMAKE_SOURCE_DIR}/IMao-Core/src" ${OpenCV_INCLUDE_DIRS})
+target_compile_definitions(IMaoStateVisibilityTests PRIVATE NOMINMAX IMAO_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_options(IMaoStateVisibilityTests PRIVATE /source-charset:utf-8 /execution-charset:utf-8 /EHsc)
+target_link_libraries(IMaoStateVisibilityTests PRIVATE ${OpenCV_LIBS})
+add_test(NAME IMaoStateVisibilityTests COMMAND IMaoStateVisibilityTests)

@@ -15,6 +15,24 @@ static void Check(bool passed, string message)
     Console.WriteLine("PASS " + message);
 }
 
+// Backends are reported by CoreHost, never inferred from the launch button.
+var ocrStatus = JsonSerializer.Deserialize<CoreRuntimeStatus>("""
+    {"ocrBackend":{"requested":"directml","backend":"cpu","adapter":2,"fallback":"device lost"}}
+    """)!;
+Check(ocrStatus.OcrBackend is { Requested: "directml", Backend: "cpu", Adapter: 2, Fallback: "device lost" },
+    "OCR IPC preserves requested/actual backend, adapter and fallback");
+Check(ocrStatus.OcrBackend!.DisplayText.Contains("实际 CPU") && ocrStatus.OcrBackend.DisplayText.Contains("device lost"),
+    "OCR diagnostics exposes actual CPU fallback instead of requested GPU");
+Check(new OcrBackendStatus().DisplayText.Contains("等待初始化") &&
+    JsonSerializer.Deserialize<CoreRuntimeStatus>("{}")!.OcrBackend is null,
+    "OCR status waits for initialization and tolerates older hosts");
+var failedOcr = JsonSerializer.Deserialize<OcrBackendStatus>("""
+    {"requested":"directml","backend":"failed","adapter":2,"fallback":"GPU lost; CPU failed"}
+    """)!;
+Check(failedOcr.DisplayText.Contains("识别不可用") && failedOcr.DisplayText.Contains("DIRECTML") &&
+    failedOcr.DisplayText.Contains("显卡编号 2") && failedOcr.DisplayText.Contains("GPU lost; CPU failed"),
+    "failed OCR diagnostics retains request, adapter and both failure reasons");
+
 // Memory audit: start the real host through the real service, hold the session open, and sample what it
 // costs. OCR preload is deferred until the application reports ready, so a host started by hand - or sampled
 // without a session - never shows the recognizer's share at all.

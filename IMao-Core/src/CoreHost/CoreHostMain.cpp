@@ -165,6 +165,8 @@ json StatusEvent() {
         { "gameState", status.gameState }, { "localization", status.localization },
         { "quality", status.quality }, { "message", status.message },
         { "hint", status.hint },
+        { "ocrBackend", {{"requested", status.ocrRequested}, {"backend", status.ocrBackend},
+            {"adapter", status.ocrAdapter}, {"fallback", status.ocrFallback}} },
         { "minimapMarkers", status.minimapMarkers }, { "mapMarkers", status.mapMarkers },
         { "frameMilliseconds", status.frameMilliseconds }, { "gameFocused", status.gameFocused },
         { "lastGoodAgeMilliseconds", status.lastGoodAgeMilliseconds },

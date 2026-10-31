@@ -1,5 +1,6 @@
 #include "Coordinate/IdentifyWorldCoordinates/IdentifyWorldCoordinates.h"
 #include "Coordinate/IdentifyWorldCoordinates/YoloCoordinateRecognizer.h"
+#include "Runtime/RuntimeStatus.h"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <chrono>
@@ -118,6 +119,36 @@ int main(int argc,char**argv) {
                     << " channels=" << CV_MAT_CN(type) << " ownedBytes=" << ownedBytes << '\n';
             }
         }
+        // A real worker exception is converted to NoCandidate, but must also
+        // replace stale successful backend status; a later good frame recovers.
+        const auto healthyBackend = RuntimeStatus::Snapshot();
+        for (const bool malformed : {true, false}) {
+            std::this_thread::sleep_for(60ms);
+            CoordinateRecognitionRequest next;
+            next.sessionId = 13; next.uiGeneration = 7;
+            next.frameId = next.requestId = ++caseId;
+            next.capturedAt = std::chrono::steady_clock::now();
+            next.deadlineScheduled = true;
+            next.snapshot = cv::Mat(1440, 2560, malformed ? CV_8UC2 : CV_8UC3, cv::Scalar::all(0));
+            if (!malformed) crop.copyTo(next.snapshot(YoloCoordinateRecognizer::Region(next.snapshot.size())));
+            const auto pending = signal->Snapshot(); next.completionSignal = signal;
+            require(IdentifyWorldCoordinates::Submit(std::move(next)));
+            require(signal->WaitUntil(pending, std::chrono::steady_clock::now()+5s, false));
+            CoordinateRecognitionResult actual;
+            require(IdentifyWorldCoordinates::TryTakeLatestResult(actual));
+            const auto backend = RuntimeStatus::Snapshot();
+            require(backend.ocrRequested == healthyBackend.ocrRequested && backend.ocrAdapter == healthyBackend.ocrAdapter);
+            if (malformed) {
+                require(actual.status == CoordinateRecognitionStatus::NoCandidate);
+                if (backend.ocrBackend != "failed") throw std::runtime_error("worker swallowed inference failure without publishing failed backend");
+                require(backend.ocrFallback.find("unsupported coordinate crop pixels") != std::string::npos);
+                require(backend.ocrFallback.find(healthyBackend.ocrFallback) != std::string::npos);
+            } else {
+                require(actual.status == CoordinateRecognitionStatus::Ready);
+                require(backend.ocrBackend == healthyBackend.ocrBackend && backend.ocrFallback == healthyBackend.ocrFallback);
+            }
+        }
+        std::cout << "PASS real worker failure publishes failed backend and later successful recognition recovers\n";
         IdentifyWorldCoordinates::Shutdown();require(!IdentifyWorldCoordinates::isLoaded.load());
         IdentifyWorldCoordinates::BeginPreload((model/"missing"/"coordinate-yolo").string());
         require(!IdentifyWorldCoordinates::AwaitReady(error)&&!error.empty());
