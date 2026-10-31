@@ -1,4 +1,5 @@
 #include "ReproCapture.h"
+#include "ReproEncoding.h"
 #include <opencv2/imgcodecs.hpp>
 #include <condition_variable>
 #include <atomic>
@@ -37,17 +38,31 @@ public:
     std::deque<Item> queue;
     Options options;
     std::filesystem::path directory;
-    Clock::time_point began{}, finished{};
+    Clock::time_point began{}, finished{}, admissionEnded{};
     std::string state = "idle", error;
     bool accepting = false, running = false, failed = false;
-    size_t queuedBytes = 0;
+    size_t queuedBytes = 0, scratchBytes = 0, peakQueuedBytes = 0;
+    uint64_t acceptedImages = 0;
+    double maxImageWriteMs = 0;
     uint64_t savedImages = 0, missingImages = 0, missingRecords = 0, savedRecords = 0, nextId = 0, sequence = 0;
     std::atomic<uint64_t> diskBytes{0};
     ~Recorder() { shutdown(); }
     double elapsed() const { if(state == "idle") return 0; return std::chrono::duration<double, std::milli>(((state == "recording" || state == "draining") ? Clock::now() : finished) - began).count(); }
-    Json status() const { return {{"state",state},{"directory",utf8(directory)},{"elapsedMs",static_cast<int64_t>((std::max)(0.0,elapsed()))},{"durationMs",options.duration.count()},{"savedImages",savedImages},{"savedRecords",savedRecords},{"missingImages",missingImages},{"missingRecords",missingRecords},{"queuedBytes",queuedBytes},{"diskBytes",diskBytes.load()},{"error",error}}; }
+    void stopAccepting() {
+        if (admissionEnded == Clock::time_point{}) admissionEnded = (std::min)(Clock::now(), began + options.duration);
+        accepting = false; state = "draining"; cv.notify_all();
+    }
+    Json status() const {
+        const auto admission = admissionEnded == Clock::time_point{} ? (std::min)(Clock::now(), began + options.duration) : admissionEnded;
+        const auto captureMs = state == "idle" ? 0LL : std::chrono::duration_cast<std::chrono::milliseconds>(admission - began).count();
+        return {{"state",state},{"directory",utf8(directory)},{"elapsedMs",static_cast<int64_t>((std::max)(0.0,elapsed()))},
+            {"captureElapsedMs",captureMs},{"durationMs",options.duration.count()},{"savedImages",savedImages},{"acceptedImages",acceptedImages},
+            {"savedRecords",savedRecords},{"missingImages",missingImages},{"missingRecords",missingRecords},
+            {"queuedBytes",queuedBytes ? queuedBytes + scratchBytes : 0},{"peakQueuedBytes",peakQueuedBytes},
+            {"maxQueuedBytes",options.maxQueuedBytes},{"maxImageWriteMs",maxImageWriteMs},{"diskBytes",diskBytes.load()},{"error",error}};
+    }
     void fail(const std::string& reason, bool image = false, uint64_t missed = 1) {
-        failed = true; accepting = false; state = "draining";
+        failed = true; stopAccepting();
         if(error.empty()) error = reason;
         missingRecords += missed; if(image) missingImages += missed;
         cv.notify_all();
@@ -59,25 +74,20 @@ public:
         std::ofstream f(p, std::ios::binary | std::ios::trunc); f.exceptions(std::ios::badbit | std::ios::failbit);
         f.write(data, static_cast<std::streamsize>(size)); f.close(); diskBytes += size;
     }
-    void writeXpress(const Item& item) {
+    void writeXpress(const Item& item, XpressWorkers& encoders) {
         const size_t rawBytes=item.image.total()*item.image.elemSize();
         const size_t count=(std::min)(size_t{4},rawBytes);
         struct Chunk { std::vector<uchar> bytes; SIZE_T size=0; DWORD error=ERROR_SUCCESS; };
         std::vector<Chunk> chunks(count);
-        std::vector<std::jthread> encoders;
-        // This fixed fan-out is part of the bounded per-item encoding allowance.
-        // Each block is an independent Windows Compression API buffer.
-        for(size_t i=0;i<count;++i) encoders.emplace_back([&,i] {
-            COMPRESSOR_HANDLE compressor=nullptr;
+        encoders.Run([&](size_t i, COMPRESSOR_HANDLE compressor) {
+            if(i >= count) return;
             try {
+                if(!compressor) { chunks[i].error=ERROR_NOT_ENOUGH_MEMORY; return; }
                 const size_t from=rawBytes*i/count, length=rawBytes*(i+1)/count-from;
                 chunks[i].bytes.resize(length*2+65536);
-                if(!CreateCompressor(COMPRESS_ALGORITHM_XPRESS,nullptr,&compressor)) { chunks[i].error=GetLastError(); return; }
                 if(!Compress(compressor,item.image.data+from,length,chunks[i].bytes.data(),chunks[i].bytes.size(),&chunks[i].size)) chunks[i].error=GetLastError();
             } catch(...) { chunks[i].error=ERROR_NOT_ENOUGH_MEMORY; }
-            if(compressor) CloseCompressor(compressor);
         });
-        for(auto& encoder:encoders) encoder.join();
         uint64_t total=12+16*count;
         for(const auto& chunk:chunks) {
             if(chunk.error!=ERROR_SUCCESS) throw std::runtime_error("Windows XPRESS compression failed: "+std::to_string(chunk.error));
@@ -98,6 +108,7 @@ public:
     }
     void run() noexcept {
         try {
+            XpressWorkers encoders;
             std::ofstream records(directory / "records.jsonl", std::ios::binary);
             records.exceptions(std::ios::badbit | std::ios::failbit);
             for(;;) {
@@ -105,24 +116,28 @@ public:
                 {
                     std::unique_lock lock(mutex);
                     cv.wait_until(lock, began + options.duration, [&] { return !accepting || !queue.empty(); });
-                    if(Clock::now() >= began + options.duration) { accepting = false; state = "draining"; }
+                    if(Clock::now() >= began + options.duration) stopAccepting();
                     if(queue.empty()) { if(!accepting) break; continue; }
                     item = std::move(queue.front()); queue.pop_front();
                 }
                 bool wrote = false;
                 try {
                     if(!item.image.empty()) {
-                        if(item.xpress) writeXpress(item);
+                        const auto encodeStarted=Clock::now();
+                        if(item.xpress) writeXpress(item, encoders);
                         else {
                         std::vector<uchar> encoded;
-                        if(!cv::imencode(".png", item.image, encoded, {cv::IMWRITE_PNG_COMPRESSION, 1})) throw std::runtime_error("PNG encoding failed");
+                        if(!cv::imencode(".png", item.image, encoded, {cv::IMWRITE_PNG_COMPRESSION, 1, cv::IMWRITE_PNG_STRATEGY, cv::IMWRITE_PNG_STRATEGY_RLE})) throw std::runtime_error("PNG encoding failed");
                         const auto path = std::filesystem::u8path(item.imagePath);
                         write(directory / path, reinterpret_cast<const char*>(encoded.data()), encoded.size());
                         }
+                        { std::lock_guard lock(mutex); maxImageWriteMs=(std::max)(maxImageWriteMs,std::chrono::duration<double,std::milli>(Clock::now()-encodeStarted).count()); }
                     }
                     const auto& line = item.record;
                     if(line.size() > options.maxDiskBytes - (std::min)(diskBytes.load(), options.maxDiskBytes)) throw std::runtime_error("session disk byte limit exceeded");
-                    records.write(line.data(), static_cast<std::streamsize>(line.size())); records.flush();
+                    records.write(line.data(), static_cast<std::streamsize>(line.size()));
+                    // Confirm the record before counting its image as saved.
+                    records.flush();
                     diskBytes += line.size(); wrote = true;
                 } catch(const std::exception& e) { std::lock_guard lock(mutex); fail(e.what(), !item.image.empty()); }
                 {
@@ -141,7 +156,7 @@ public:
             queue.clear(); queuedBytes = 0;
         }
         std::lock_guard lock(mutex);
-        accepting = false; finished = Clock::now(); state = failed ? "failed" : "completed";
+        stopAccepting(); finished = Clock::now(); state = failed ? "failed" : "completed";
         try {
             Json completion = status(); completion["complete"] = !failed; completion["endedAt"] = timestamp();
             const auto text = completion.dump(2);
@@ -151,7 +166,7 @@ public:
         running = false; cv.notify_all();
     }
     void shutdown() noexcept {
-        try { std::lock_guard life(lifecycle); { std::lock_guard lock(mutex); accepting = false; if(running) state = "draining"; cv.notify_all(); } if(worker.joinable()) worker.join(); } catch(...) {}
+        try { std::lock_guard life(lifecycle); { std::lock_guard lock(mutex); if(running) stopAccepting(); else accepting=false; cv.notify_all(); } if(worker.joinable()) worker.join(); } catch(...) {}
     }
 };
 Recorder& recorder() { static Recorder r; return r; }
@@ -161,7 +176,7 @@ void enqueue(const std::string& kind, const std::string& stage, const cv::Mat& i
         std::lock_guard lock(r.mutex);
         if(!r.accepting) return;
         if(!scopeRecording.empty() && scopeRecording != utf8(r.directory)) return;
-        if(Clock::now() >= r.began + r.options.duration) { r.accepting = false; r.state = "draining"; r.cv.notify_all(); return; }
+        if(Clock::now() >= r.began + r.options.duration) { r.stopAccepting(); return; }
         try {
             if(kind == "image" && (image.empty() || image.depth() != CV_8U || (image.channels()!=1 && image.channels()!=3 && image.channels()!=4))) throw std::runtime_error("image must be nonempty 8-bit gray/BGR/BGRA for lossless PNG");
             Json record = {{"recordId", ++r.nextId},{"recordingId",utf8(r.directory)},{"kind",kind},{"stage",stage},{"timestamp",timestamp()},{"steadyMs",r.elapsed()},{"context",context},{"metadata",std::move(metadata)}};
@@ -171,14 +186,17 @@ void enqueue(const std::string& kind, const std::string& stage, const cv::Mat& i
             auto serialized = record.dump(-1,' ',false,Json::error_handler_t::replace) + '\n';
             const auto jsonBytes = serialized.capacity();
             const auto raw = image.total() * image.elemSize();
-            // Charge both the owned raw pixels and a conservative PNG output allowance,
-            // plus serialized JSON/node overhead, until the writer finishes the item.
-            if(raw > ((std::numeric_limits<size_t>::max)() - 262144) / 3 || jsonBytes > ((std::numeric_limits<size_t>::max)() - 1024) / 4) throw std::runtime_error("record size overflow");
-            const size_t reserved = jsonBytes * 4 + 1024 + (raw ? raw * 3 + 262144 : 0);
-            if(reserved > r.options.maxQueuedBytes || r.queuedBytes > r.options.maxQueuedBytes - reserved) { r.fail("bounded evidence queue capacity exceeded", kind == "image"); return; }
-            r.queuedBytes += reserved; // Reserve before cloning, including the in-flight encoder.
+            const auto reservation = EvidenceReservation::For(raw,jsonBytes);
+            if(!reservation.Fits(r.queuedBytes,r.scratchBytes,r.options.maxQueuedBytes)) {
+                r.fail("bounded evidence queue capacity exceeded",kind == "image"); return;
+            }
+            const size_t reserved=reservation.owned;
+            r.scratchBytes=(std::max)(r.scratchBytes,reservation.scratch);
+            r.queuedBytes+=reserved;
+            r.peakQueuedBytes=(std::max)(r.peakQueuedBytes,r.queuedBytes+r.scratchBytes);
             try { r.queue.push_back(Item{std::move(serialized), kind == "image" ? record["image"]["path"].get<std::string>() : std::string{}, image.empty() ? cv::Mat{} : image.clone(), reserved, xpress}); }
             catch(...) { r.queuedBytes -= reserved; throw; }
+            if(kind=="image") ++r.acceptedImages;
             r.cv.notify_one();
         } catch(const std::exception& e) { r.fail(e.what(),kind == "image"); }
           catch(...) { r.fail("unknown evidence enqueue exception",kind == "image"); }
@@ -193,7 +211,7 @@ bool Start(const std::filesystem::path& parent, const Json& metadata, const Opti
         if(r.worker.joinable()) r.worker.join();
         r.options = options; r.directory.clear(); r.error.clear(); r.queue.clear();
         r.accepting = false; r.failed = false; r.queuedBytes = 0; r.savedImages = r.missingImages = r.missingRecords = r.savedRecords = r.nextId = 0; r.diskBytes = 0;
-        r.began = r.finished = Clock::now(); r.state = "idle";
+        r.began = r.finished = Clock::now(); r.admissionEnded={}; r.scratchBytes=r.peakQueuedBytes=0; r.acceptedImages=0; r.maxImageWriteMs=0; r.state = "idle";
         try {
             if(options.duration.count() <= 0 || options.maxQueuedBytes == 0 || options.maxDiskBytes < 1024) throw std::runtime_error("invalid recorder options");
             std::filesystem::create_directories(parent);
@@ -206,7 +224,7 @@ bool Start(const std::filesystem::path& parent, const Json& metadata, const Opti
             r.accepting = r.running = true; r.state = "recording";
             r.worker = std::thread([&r] { r.run(); }); return true;
         } catch(const std::exception& e) {
-            r.error=e.what(); r.failed=true; r.running=r.accepting=false; r.state="failed"; r.finished=Clock::now();
+            r.error=e.what(); r.failed=true; r.running=r.accepting=false; r.state="failed"; r.finished=Clock::now(); r.admissionEnded=r.finished;
             try {
                 if(!r.directory.empty() && std::filesystem::is_directory(r.directory)) {
                     auto completion = r.status(); completion["complete"] = false;
@@ -218,7 +236,7 @@ bool Start(const std::filesystem::path& parent, const Json& metadata, const Opti
         }
     } catch(...) { return false; }
 }
-void Stop() { try { auto& r=recorder(); std::lock_guard lock(r.mutex); if(r.running) { r.accepting=false; r.state="draining"; r.cv.notify_all(); } } catch(...) {} }
+void Stop() { try { auto& r=recorder(); std::lock_guard lock(r.mutex); if(r.running) r.stopAccepting(); } catch(...) {} }
 void Shutdown() { recorder().shutdown(); }
 bool Active() { try { auto& r=recorder(); std::lock_guard lock(r.mutex); return r.accepting && Clock::now() < r.began+r.options.duration; } catch(...) { return false; } }
 Json Status() { auto& r=recorder(); std::lock_guard lock(r.mutex); return r.status(); }

@@ -92,7 +92,7 @@ public sealed partial class DiagnosticsPage : Page
         Diagnostics_CaptureOpen.IsEnabled = !string.IsNullOrWhiteSpace(coreHost.LastDiagnosticCaptureDirectory);
         Diagnostics_CaptureProgress.IsIndeterminate = draining;
         Diagnostics_CaptureProgress.Value = available && capture!.DurationMs > 0
-            ? Math.Clamp(100.0 * capture.ElapsedMs / capture.DurationMs, 0, 100) : 0;
+            ? Math.Clamp(100.0 * (capture.CaptureElapsedMs ?? capture.ElapsedMs) / capture.DurationMs, 0, 100) : 0;
         Diagnostics_CaptureStatus.Severity = InfoBarSeverity.Informational;
         string title;
         string detail;
@@ -105,7 +105,7 @@ public sealed partial class DiagnosticsPage : Page
         }
         else
         {
-            long remainingSeconds = (long)Math.Ceiling(Math.Max(0.0, (double)capture!.DurationMs - capture.ElapsedMs) / 1000);
+            long remainingSeconds = (long)Math.Ceiling(Math.Max(0.0, (double)capture!.DurationMs - (capture.CaptureElapsedMs ?? capture.ElapsedMs)) / 1000);
             title = capture.State switch
             {
                 "recording" => $"正在采集 · 剩余 {remainingSeconds / 60:00}:{remainingSeconds % 60:00}",
@@ -116,10 +116,17 @@ public sealed partial class DiagnosticsPage : Page
                 _ => "尚未开始采集"
             };
             detail = capture.State == "idle" ? "点击开始后，在游戏中重现问题。"
-                : $"已保存 {capture.SavedImages} 张画面，占用 {capture.DiskBytes / (1024.0 * 1024):F0} MB；未保存 {capture.MissingImages} 张。";
+                : $"已保存 {capture.SavedImages} 张画面，占用 {capture.DiskBytes / (1024.0 * 1024):F0} MB；接收期间未保存 {capture.MissingImages} 张。";
             if (capture.State == "draining") detail += " 保存完成后再发送整个采集文件夹。";
             if (capture.State == "completed") detail += " 请发送整个采集文件夹。";
-            if (!string.IsNullOrWhiteSpace(capture.Error)) detail += " " + capture.Error;
+            if (capture.State != "idle" && capture.CaptureElapsedMs is long recordedMs)
+                detail += $" 已记录 {recordedMs / 1000.0:F1} 秒，待保存数据峰值 {capture.PeakQueuedBytes / (1024.0 * 1024):F0} MB。";
+            if (!string.IsNullOrWhiteSpace(capture.Error))
+            {
+                if (capture.Error == "bounded evidence queue capacity exceeded")
+                    detail += " 保存速度暂时跟不上采集速度，待保存数据已达上限。";
+                detail += $" 已在 {(capture.CaptureElapsedMs ?? capture.ElapsedMs) / 1000.0:F1} 秒处停止接收，之后的画面未采集，不计入上述张数。已保存内容仍可用于排查。详情：{capture.Error}";
+            }
             Diagnostics_CaptureStatus.Severity = capture.State == "failed" ? InfoBarSeverity.Error
                 : capture.MissingImages > 0 ? InfoBarSeverity.Warning
                 : capture.State == "completed" ? InfoBarSeverity.Success : InfoBarSeverity.Informational;

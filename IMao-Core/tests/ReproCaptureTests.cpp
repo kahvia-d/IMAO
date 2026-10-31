@@ -1,4 +1,5 @@
 #include "Diagnostics/ReproCapture.h"
+#include "Diagnostics/ReproEncoding.h"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <fstream>
@@ -13,8 +14,9 @@ Json read(const std::filesystem::path& p) { std::ifstream f(p); Json j; f >> j; 
 std::vector<Json> records(const std::filesystem::path& p) { std::ifstream f(p / "records.jsonl"); std::vector<Json> r; std::string line; while(std::getline(f,line)) r.push_back(Json::parse(line)); return r; }
 int main(int argc, char** argv) {
  try {
-    if((argc == 4 || argc == 5) && std::string(argv[1]) == "--benchmark") {
-        const int offeredFrames=argc==5?std::stoi(argv[4]):20; check(offeredFrames>0&&offeredFrames<=10000,"bounded benchmark frame count");
+    if((argc >= 4 && argc <= 6) && std::string(argv[1]) == "--benchmark") {
+        const int offeredFrames=argc>=5?std::stoi(argv[4]):20; check(offeredFrames>0&&offeredFrames<=10000,"bounded benchmark frame count");
+        const int cadenceMs=argc==6?std::stoi(argv[5]):80; check(cadenceMs>0,"positive benchmark cadence");
         auto source = cv::imread(argv[2], cv::IMREAD_UNCHANGED);
         check(!source.empty(), "benchmark source decoded");
         if(source.channels() == 3) cv::cvtColor(source,source,cv::COLOR_BGR2BGRA);
@@ -49,22 +51,56 @@ int main(int argc, char** argv) {
             check(cv::norm(source,decoded,cv::NORM_INF)==0,"benchmark PNG lossless readback");
             std::cout << Json({{"codec",mode.first},{"encodeAndVerifyMs",std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-begin).count()},{"encodedBytes",encoded.size()}}).dump() << '\n';
         }
-        check(Start(std::filesystem::u8path(argv[3]), {{"benchmark",true},{"cadenceMs",80},{"offeredFrames",offeredFrames}}), "benchmark start");
+        check(Start(std::filesystem::u8path(argv[3]), {{"benchmark",true},{"cadenceMs",cadenceMs},{"offeredFrames",offeredFrames}}), "benchmark start");
         auto began=std::chrono::steady_clock::now(); size_t peak=0; double maxSubmitMs=0;
         for(int i=0;i<offeredFrames;++i) {
-            std::this_thread::sleep_until(began+std::chrono::milliseconds(i*80));
+            std::this_thread::sleep_until(began+std::chrono::milliseconds(i*cadenceMs));
             source.at<cv::Vec4b>(0,0)[0] = static_cast<uchar>(i);
             Scope frame({{"frameId",i+1},{"sourceSequence",i+1}});
             auto submitted=std::chrono::steady_clock::now(); Image("wgc",source);
+            if(argc==6) {
+                Image("stress-crop",source(cv::Rect(0,0,(std::min)(source.cols,246),(std::min)(source.rows,246))));
+                Record("stress-recognition",{{"frameId",i+1}});
+                Log({{"frameId",i+1},{"message","mixed capture stress"}});
+            }
             maxSubmitMs=(std::max)(maxSubmitMs,std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-submitted).count());
             peak=(std::max)(peak,Status()["queuedBytes"].get<size_t>());
         }
         Stop(); Shutdown(); auto result=Status(); result["peakQueuedBytes"]=peak; result["maxSubmitMs"]=maxSubmitMs;
         result["totalWallMs"]=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-began).count();
         result["width"]=source.cols; result["height"]=source.rows; result["channels"]=source.channels();
-        std::cout << result.dump(2) << '\n'; return result["state"] == "completed" && result["savedImages"] == offeredFrames ? 0 : 2;
+        std::cout << result.dump(2) << '\n'; return result["state"] == "completed" && result["savedImages"] == offeredFrames*(argc==6?2:1) ? 0 : 2;
     }
     const auto root = std::filesystem::temp_directory_path() / L"IMao-repro-测试";
+    {
+        const auto r=EvidenceReservation::For(1024*1024,128);
+        const size_t budget=r.owned*2+r.scratch;
+        check(r.Fits(r.owned,r.scratch,budget),"two waiting images share one encoding workspace");
+        check(!r.Fits(r.owned*2,r.scratch,budget),"in-flight pixels remain charged");
+        check(!EvidenceReservation::For(4*1024*1024,128).Fits(r.owned,r.scratch,budget),"larger image cannot exceed budget by growing shared workspace");
+        bool overflow=false;try{EvidenceReservation::For((std::numeric_limits<size_t>::max)(),0);}catch(...){overflow=true;}
+        check(overflow,"reservation overflow rejected");
+    }
+    {
+        XpressWorkers workers;
+        for (int pass=0;pass<12;++pass) {
+            std::array<bool,4> exact{};
+            workers.Run([&](size_t i,COMPRESSOR_HANDLE compressor) {
+                try {
+                    std::vector<uchar> raw(8192+pass*73+i*11,static_cast<uchar>(pass+i));
+                    std::vector<uchar> compressed(raw.size()*2+65536), restored(raw.size());
+                    SIZE_T size=0,decoded=0; DECOMPRESSOR_HANDLE decoder=nullptr;
+                    if (compressor && Compress(compressor,raw.data(),raw.size(),compressed.data(),compressed.size(),&size)
+                        && CreateDecompressor(COMPRESS_ALGORITHM_XPRESS,nullptr,&decoder)) {
+                        exact[i]=Decompress(decoder,compressed.data(),size,restored.data(),restored.size(),&decoded)
+                            && decoded==raw.size() && raw==restored;
+                        CloseDecompressor(decoder);
+                    }
+                } catch (...) { exact[i]=false; }
+            });
+            for(bool ok:exact) check(ok,"reused compressor produces independent lossless blocks");
+        }
+    }
     check(Start(root), "start session");
     check(!Start(root), "reject overlapping session");
     cv::Mat source(17, 19, CV_8UC3, cv::Scalar(1, 22, 203));
@@ -76,6 +112,9 @@ int main(int argc, char** argv) {
     }
     Log({{"text", "event"}}); Stop(); Shutdown();
     const auto s = Status(); check(s.at("state") == "completed", "completed after drain");
+    check(s.contains("captureElapsedMs") && s.contains("peakQueuedBytes") && s.contains("acceptedImages"),
+        "capture status distinguishes admission duration and queue peak from drain time");
+    check(s["acceptedImages"]==s["savedImages"]&&s["queuedBytes"]==0&&s["captureElapsedMs"]<=s["elapsedMs"],"drained counters and recording duration consistent");
     check(s["elapsedMs"].is_number_integer() && s["durationMs"].is_number_integer(), "status milliseconds compatible with managed Int64");
     const auto first = std::filesystem::u8path(s.at("directory").get<std::string>());
     auto r = records(first); check(r.size() == 5, "all ordered records persisted");
@@ -91,6 +130,7 @@ int main(int argc, char** argv) {
     check(Start(root, Json::object(), shortSession), "restart");
     std::this_thread::sleep_for(std::chrono::milliseconds(120));
     check(!Active(), "duration stops without frames"); Shutdown();
+    check(Status()["captureElapsedMs"]==40,"automatic cutoff excludes delayed shutdown");
     check(Status()["state"] == "completed" && Status()["directory"] != s["directory"] && Status()["savedImages"] == 0, "restart resets and unique directory");
     Options tiny; tiny.maxQueuedBytes = 1;
     check(Start(root, Json::object(), tiny), "tiny queue start"); Image("overflow", source); Shutdown();

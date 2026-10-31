@@ -95,6 +95,12 @@ public sealed class DiagnosticCaptureStatus
     public string Directory { get; init; } = "";
     [JsonPropertyName("elapsedMs")]
     public long ElapsedMs { get; init; }
+    [JsonPropertyName("captureElapsedMs")]
+    public long? CaptureElapsedMs { get; init; }
+    [JsonPropertyName("peakQueuedBytes")]
+    public long PeakQueuedBytes { get; init; }
+    [JsonPropertyName("acceptedImages")]
+    public long AcceptedImages { get; init; }
     [JsonPropertyName("durationMs")]
     public long DurationMs { get; init; } = 180000;
     [JsonPropertyName("savedImages")]
