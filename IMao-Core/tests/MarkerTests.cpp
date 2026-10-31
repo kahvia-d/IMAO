@@ -4,6 +4,7 @@
 #include "Runtime/MarkerLayout.h"
 #include "CompletionViewTests.h"
 #include "RenderCompletionTests.h"
+#include "PublicationCompletionTests.h"
 #include <iostream>
 #include <iterator>
 #include <stdexcept>
@@ -32,6 +33,7 @@ int main() {
     try {
         CompletionViewTests::Test(root, Require);
         RenderCompletionTests::Test(root, Require);
+        PublicationCompletionTests::Test(root, Require);
         WriteTextAtomically(root / "account_1.json", R"({"World":{"test":[{"id":"1410302557575794688"}]}})");
         MarkerCompletionStore store(root);
         Require(store.Completed("World", "test", "1410302557575794688"), "legacy string identity lost");

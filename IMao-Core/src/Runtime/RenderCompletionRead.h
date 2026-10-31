@@ -60,4 +60,14 @@ struct PointRenderCompletionRead {
             return farm.Contains(item.layer.stateId > 0 ? item.layer.stateId : permanent.stateId, item.itemId);
         return permanent.Contains(item.nameId, item.itemId);
     }
+    // Refresh a publication's interaction candidates from one owned ledger view.
+    // Incompatible accounts are unavailable, never a set of unfinished points.
+    bool ApplyTo(ItemMarkerFrame& frame) const {
+        if (!Compatible(frame.profileId)) {
+            frame.markers.clear();
+            return false;
+        }
+        for (auto& item : frame.markers) item.isSaved = Contains(item);
+        return true;
+    }
 };

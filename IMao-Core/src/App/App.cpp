@@ -3468,12 +3468,18 @@ void App::PublishOverlayFrame(const CapturedFrame& requestedCapture, const MapVi
         overlayVisibility.Read()->AllowsMinimap(frame.frameId) && playerLocationLock.valid &&
         playerLocationLock.sceneId == frame.playerScene) {
         auto gamepadMarkers = frame.minimapMarkers;
-        for (auto& item : gamepadMarkers.markers)
-            item.isSaved = DrawItemBase::IsPointCompleted(gamepadMarkers.sceneName, item);
-        GamepadContextSnapshot::Shared().ObserveMinimap(coordinateSessionId, gamepadProfile, gamepadMarkers,
-            RelativeCoordinates::ImgMapCoordToROC(frame.playerCoordinate, frame.playerScene),
-            std::min(frame.capturedAt, playerLocationLock.confirmedAt), frame.capturedAt + frame.maximumAge,
-            GamepadContextSnapshot::Clock::now(), frame.minimapMotion.pixelsPerUnit);
+        // Read once: individual cloud lookups scan the entire remote ID list and
+        // can consume the source frame's lifetime before it is even published.
+        const auto completions = DrawItemBase::ReadPointRenderCompletions(gamepadMarkers.sceneName);
+        if (completions.ApplyTo(gamepadMarkers) && gamepadMarkers.profileId == gamepadProfile &&
+            gamepadProfile == DrawItemBase::MarkerProfile()) {
+            GamepadContextSnapshot::Shared().ObserveMinimap(coordinateSessionId, gamepadProfile, gamepadMarkers,
+                RelativeCoordinates::ImgMapCoordToROC(frame.playerCoordinate, frame.playerScene),
+                std::min(frame.capturedAt, playerLocationLock.confirmedAt), frame.capturedAt + frame.maximumAge,
+                GamepadContextSnapshot::Clock::now(), frame.minimapMotion.pixelsPerUnit);
+        } else {
+            GamepadContextSnapshot::Shared().Invalidate(coordinateSessionId);
+        }
     }
     if (frame.mapVisible && frame.mapMotion.reliable && frame.Fresh())
         GamepadContextSnapshot::Shared().ObserveMapScene(coordinateSessionId, gamepadProfile,

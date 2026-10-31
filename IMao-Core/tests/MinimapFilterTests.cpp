@@ -28,6 +28,10 @@ void Set(const std::string& id, bool completed) {
 std::shared_ptr<const std::vector<ItemsDatas>> DrawItemBase::GetSceneItemsSnapshot(int) { return selected; }
 std::string DrawItemBase::MarkerProfile() { return permanent->Profile(); }
 std::uint64_t DrawItemBase::MarkerFilterRevision() { return 17; }
+bool DrawItemBase::AllowsGapFill(const std::string& scene, const ItemDatas& item) {
+    return GapFillFilter::Allows(item.layer.stateId > 0 ? item.layer.stateId : MarkerCompletionStore::SceneState(scene),
+        item.itemId, item.layer.stopKind == StopKind::Free);
+}
 std::vector<std::string> DrawItemBase::GetFilteredPoints(std::string scene, std::string category) {
     return category == "daily" ? farm->CompletedIds(MarkerCompletionStore::SceneState(scene)) : permanent->CompletedIds(scene,category);
 }
@@ -109,6 +113,16 @@ int main() {
         DrawItemOnMinMap::UpdatePlayerNearItemsData(rect,player,1,1);
         frame=DrawItemOnMinMap::Snapshot();
         Check(frame.markers.size()==1&&frame.markers[0].itemId=="center","minimap circle clipping changed");
+        // Exercise the real gap-fill policy through the production minimap filter.
+        WriteTextAtomically(root/"marker-detectability.json",nlohmann::json{
+            {"schemaVersion",1},{"states",{{"8",nlohmann::json::array({"center"})}}}}.dump());
+        GapFillFilter::Load(root,{{"8","center"},{"8","clipped"}});
+        GapFillFilter::SetEnabled(true);
+        frame=update();
+        Check(frame.markers.size()==1&&frame.markers[0].itemId=="center","enabled gap fill must hide points absent from the catalog");
+        GapFillFilter::SetEnabled(false);
+        frame=update();
+        Check(frame.markers.size()==2,"disabling gap fill restores ordinary nearby candidates");
         permanent.reset(); farm.reset(); std::filesystem::remove_all(root);
         std::cout<<"Minimap filtering, completion, hysteresis and account tests passed"<<std::endl;
         return 0;

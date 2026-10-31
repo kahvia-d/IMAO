@@ -408,7 +408,7 @@ PointRenderCompletionRead DrawItemBase::ReadPointRenderCompletions(const std::st
         if (freeStore) result.free = freeStore->ReadCompletions(result.permanent.profileId);
     } catch (const std::exception& error) {
         // Preserve the old unavailable-free-ledger behavior, but report it.
-        static auto lastReport = std::chrono::steady_clock::time_point{};
+        static thread_local auto lastReport = std::chrono::steady_clock::time_point{};
         const auto now = std::chrono::steady_clock::now();
         if (now - lastReport >= std::chrono::seconds(2)) {
             StructuredLogger::Record("warning", "markers", "render-free-completion-unavailable", error.what());

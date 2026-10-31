@@ -107,6 +107,7 @@
 | [`MapMarkerFlicker_20261014_even_diagnostic.md`](MapMarkerFlicker_20261014_even_diagnostic.md) | even 新诊断日志确认：大世界点位过滤耗时高，标记源帧过期导致撤绘（2026-10-14） |
 | [`MinimapMarkerFlicker_20261018_even.md`](MinimapMarkerFlicker_20261018_even.md) | even 确认大地图已修复；小地图仍使用逐类别完成状态读取，记录同类瓶颈、撤绘入口与诊断缺口（2026-10-18） |
 | [`MinimapMarkerFlickerFix_20261019_even.md`](MinimapMarkerFlickerFix_20261019_even.md) | 小地图接入批量完成状态读取，保留原筛选规则并补齐生产耗时与渲染拒绝诊断；本地回归和测试包说明（2026-10-19） |
+| [`MapMarkerFlickerAudit_20261031.md`](MapMarkerFlickerAudit_20261031.md) | 10.30 版本大小地图闪烁复查：发布前完成查询热点、筛选与撤绘路径、性能对照及测试缺口 |
 
 ## 库街区进度同步扩展
 
