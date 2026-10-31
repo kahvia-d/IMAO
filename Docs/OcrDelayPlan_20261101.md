@@ -18,8 +18,8 @@
 - [x] worker时点字段及有界阶段历史；单元回归覆盖281ms阶段归因、部分重叠、等待、环溢出和嵌套恢复。
 - [x] App实际生产链分阶段计时，慢请求输出关联证据；补同步楼层分类/消费结束耗时。
 - [x] 定向、原生回归和独立审查；确认正常日志自动记录，无须完整录制。
-- [ ] 版本106、提交代码、完整原生和真实WinUI自包含publish及包内资源/IPC门禁。
-- [ ] 以原始105ZIP解压基线生成差量，重建1477文件differing=0，校验ZIP和Windows PowerShell5.1真实-File入口。
+- [x] 版本106、提交代码、完整原生和真实WinUI自包含publish及包内资源/IPC门禁。
+- [x] 以原始105ZIP解压基线生成差量，重建1477文件differing=0，校验ZIP和Windows PowerShell5.1真实-File入口。
 
 不改C:/Dapps/IMao，不覆盖运行中测试树，不发布正式版。原始105ZIP SHA256：47d8cd021b2c984cc16ef69a7dc2076c1666051dfb688fe6be27e0034033ea32。
 
@@ -29,3 +29,12 @@
 - CoordinateYolo离线CTest 7/7通过；105的生产发布链保护脚本3/3通过；原生CoreHost编译和OptimizationTests通过。
 - 独立审查未发现Critical/Important项；确认trace只有定位路径访问、所有早退恢复阶段、没有新增锁或改变原结果槽行为。
 - 分阶段日志记录耗时现场，不把阶段墙钟耗时直接称为CPU时间。106是诊断包，尚未确认旧电脑281ms的最终根因。
+
+## 交付完成
+
+- 程序源码bbab795106a0176d94b467ba9b0dc7e3dfb986ed。完整原生及真实WinUI自包含构建/publish通过；包内资源、隔离IPC、picker33断言通过；候选重新编译的OptimizationTests再次全部通过。
+- 完整包：out/ocr-delay-test-20261101-106/program/IMao-v2026.11.1.106-windows-x64.zip，474633566字节；SHA256 ae1772c65fcd5c77bef48095373031b2b2a0eba845b8236666d3441bd28769ff。
+- 差量：out/IMao-105-to-106-delta.zip，64477588字节；SHA256 0c7f729c73e7a874c1b2ad03822ace3cb59ddde3303d9e0eda7e868afb34a406。11载荷+5助手/说明文件，含resources.pri。
+- 原始105基线覆盖重建1477文件differing=0；差量ZIP16文件逐一一致；Windows PowerShell5.1实际-File且无显式DeltaRoot的VerifyOnly通过。
+- 使用：完全退出105并备份，解压覆盖到IMao-WinUI.exe同级，运行_test-delta/Verify-Delta.cmd确认differing=0再启动。正常跑图复现后提供普通Logs即可，无须开启完整录制。
+- 待实机证据：coordinate-readout-wait中的dominantStage/phases/segments、coordinate-readout-latency中的workerPublishLockWaitMs/readyToTakeStartMs/takeLockWaitMs，以及readout-visual-probe的layerObserveMs/consumeMs/ageAtConsumeEndMs。不能提前将281ms归因于楼层分类。
