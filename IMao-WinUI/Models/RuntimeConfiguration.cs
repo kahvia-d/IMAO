@@ -2,6 +2,11 @@ namespace IMao_WinUI.Models;
 
 public sealed record RuntimeConfiguration
 {
+    // Null preserves the existing CPU/GPU test launcher until the player makes a choice.
+    public bool? OcrGpuAcceleration { get; init; }
+    public string ResolveOcrBackend(string? launchBackend) =>
+        (OcrGpuAcceleration ?? string.Equals(launchBackend, "directml", StringComparison.OrdinalIgnoreCase))
+            ? "directml" : "cpu";
     // Bumped when a stored default changes meaning, or when a new setting is introduced whose default a
     // stored file could not have chosen. Version 2 promoted the capture method; version 3 promoted the
     // overlay presentation to DirectComposition; version 4 takes that promotion back, because the

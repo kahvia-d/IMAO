@@ -1422,6 +1422,8 @@ int App::ValidateCoordinateCandidate(const Coordinate& identifyCoordinate, const
 }
 
 winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordinate& outPlayerROC, float& outMinMapRadius) {
+    LayeredMap::ConsumeMinimap(playerCurrentSceneId, lastPlayerImgMapCoordinate.x,
+        lastPlayerImgMapCoordinate.y, coordinateSessionId, coordinateUiGeneration);
     LocalizationLatencyTrace::Scope positionPhase(localizationLatency, "minimap-crop", snapshotFrameId);
 	Mat minMapImg = ImageProcessing::CropToMinMapAreaImg(snapshot, rect, minMapBottomPoint);
 	ReproCapture::Image("minimap-crop", minMapImg, {{"clientSize", {snapshot.cols, snapshot.rows}}});
@@ -1451,14 +1453,14 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	}
 	RuntimeStatus::SetMinimapFeatureStats(minimapDiagnostics.rawKeypointCount,
 		minimapDiagnostics.retainedKeypointCount, minimapDiagnostics.dynamicMaskPercent);
-	// Which floor of a layered map this capture belongs to. The classifier is cheap and
+	// Queue the floor classification off the localization thread. The worker is bounded and
 	// rate-limits itself; an unknown answer must never disturb the marker display, so all
 	// debouncing lives in LayeredMapState. The last accepted position tells it whether the
 	// player is still standing in the known floor's cave.
     {
         LocalizationLatencyTrace::Scope phase(localizationLatency, "layered-observe", snapshotFrameId);
-	LayeredMap::ObserveMinimap(minMapFeatureData, playerCurrentSceneId,
-		lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y);
+	LayeredMap::QueueMinimap(minMapFeatureData, playerCurrentSceneId, coordinateSessionId, coordinateUiGeneration,
+        lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y);
     }
 	if (std::chrono::steady_clock::now() - lastMinimapFeatureReportAt >= std::chrono::seconds(2)) {
 		lastMinimapFeatureReportAt = std::chrono::steady_clock::now();
@@ -2294,8 +2296,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
                 const auto layerStarted = CoordinateHandoff::Clock::now();
                 {
                     LocalizationLatencyTrace::Scope layerPhase(localizationLatency, "layered-observe", snapshotFrameId);
-                    LayeredMap::ObserveMinimap(minMapFeatureData, playerCurrentSceneId,
-                        lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y);
+                    LayeredMap::QueueMinimap(minMapFeatureData, playerCurrentSceneId, coordinateSessionId, coordinateUiGeneration,
+                        probe.source.center.x, probe.source.center.y);
                 }
                 const auto layerEnded = CoordinateHandoff::Clock::now();
                 bool committed = false;
@@ -2344,7 +2346,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
             }
         }
         if (!coordinateHandoff.ReadoutActive()) {
-            readoutVisualWorker.Cancel(); pendingReadoutGlobalCandidate.reset();
+            readoutVisualWorker.Cancel();
+            pendingReadoutGlobalCandidate.reset();
         } else if (!localizationServiceOnly && readoutVisualWorker.CanSubmit() && snapshotFrameId != lastReadoutVisualSubmittedFrame &&
             readoutWorkSchedule.VisualDue(true, CoordinateHandoff::Clock::now())) {
             LocalizationLatencyTrace::Scope phase(localizationLatency, "probe-submit", snapshotFrameId);
@@ -2658,6 +2661,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 void App::SuspendPlayerLocationForMapTransition() {
     readoutVisualAnchor.reset();
     readoutVisualWorker.Cancel();
+    LayeredMap::CancelPending();
     pendingReadoutGlobalCandidate.reset(); pendingReadoutGlobalRequest = latestReadoutGlobalRequest = 0;
     lastReadoutVisualSubmittedFrame = 0; readoutWorkSchedule.ResetSubmissions();
     ++routeFixContinuity;
@@ -2730,6 +2734,7 @@ void App::PrepareMinimapResumeHints(CoordinateRecoveryController::Clock::time_po
 void App::BeginMinimapReacquisition() {
     readoutVisualAnchor.reset();
     readoutVisualWorker.Cancel();
+    LayeredMap::CancelPending();
     pendingReadoutGlobalCandidate.reset(); pendingReadoutGlobalRequest = latestReadoutGlobalRequest = 0;
     lastReadoutVisualSubmittedFrame = 0; readoutWorkSchedule.ResetSubmissions();
 	const auto now = CoordinateRecoveryController::Clock::now();

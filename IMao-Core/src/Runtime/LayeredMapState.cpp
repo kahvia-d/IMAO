@@ -1,5 +1,8 @@
 #include "LayeredMapState.h"
 #include "TextEncoding.h"
+#include "LatestTaskWorker.h"
+#include <memory>
+#include <thread>
 
 #include "../Diagnostics/Diagnostics.h"
 #include "../Runtime/ResourceSnapshotContext.h"
@@ -27,7 +30,7 @@ struct Entry {
 };
 
 std::mutex stateMutex;
-std::vector<Entry> entries;
+std::shared_ptr<const std::vector<Entry>> entries = std::make_shared<const std::vector<Entry>>();
 Snapshot current;
 Scope scope;
 // A floor has to win `kSwitchFrames` classifications in a row before it is adopted, and
@@ -133,6 +136,36 @@ constexpr int kSharedGroundFrames = 3;
 // (22 vs 14, and a 9 vs 8 wrong answer), so 600 is the smallest cap that still separates them.
 constexpr int kFloorDescriptorCap = 600;
 
+// Immutable index ownership outlives replacement/reset while background work is running.
+struct ClassificationRequest {
+    std::shared_ptr<const std::vector<Entry>> index;
+    ImageFeatureData features;
+    int scene = 0;
+    double x = 0, y = 0;
+    std::chrono::steady_clock::time_point submittedAt{};
+    std::uint64_t session = 0, generation = 0;
+    std::function<void()> beforeCompute;
+};
+struct ClassificationResult {
+    ClassificationRequest source;
+    LayeredFloors::Classification classification;
+    double computeMs = 0;
+};
+std::function<void()> beforeAsyncClassifyForTest;
+std::chrono::steady_clock::time_point lastAsyncSubmitAt{};
+LatestTaskWorker<ClassificationRequest, ClassificationResult> classifier([](ClassificationRequest request) {
+    if (request.beforeCompute) request.beforeCompute();
+    const auto begin = std::chrono::steady_clock::now();
+    std::vector<const LayeredFloors::FloorEntry*> floors;
+    for (const auto& entry : *request.index)
+        if (request.scene == 0 || entry.sceneId == request.scene) floors.push_back(&entry.floor);
+    auto vote = request.scene == 0
+        ? LayeredFloors::Classify(request.features, floors, 4, 1.5, 0.75f, 0.6f, true)
+        : LayeredFloors::Classify(request.features, floors, 4, 2.0);
+    const double elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count();
+    return ClassificationResult{std::move(request), std::move(vote), elapsed};
+});
+
 std::string JoinFloors(const std::vector<std::string>& floors) {
     std::string joined;
     for (const auto& floor : floors) {
@@ -226,7 +259,7 @@ void Install(const std::filesystem::path& featureDataRoot) {
     }
 
     std::lock_guard lock(stateMutex);
-    entries = std::move(loaded);
+    entries = std::make_shared<const std::vector<Entry>>(std::move(loaded));
     current = Snapshot{};
     pendingFloorId.clear();
     pendingCount = 0;
@@ -235,7 +268,7 @@ void Install(const std::filesystem::path& featureDataRoot) {
     sharedGround = false;
     sharedGroundLogged = false;
     outsideFootprintSince = std::chrono::steady_clock::time_point{};
-    Diagnostics::Record("layered-floor-index", "stage=ready floors=" + std::to_string(entries.size()) +
+    Diagnostics::Record("layered-floor-index", "stage=ready floors=" + std::to_string(entries->size()) +
         " packsSkipped=" + std::to_string(skipped) + " selectedPacks=" +
         std::to_string(ResourceSnapshotContext::Configured() ? selected.size() : 0));
 }
@@ -256,8 +289,9 @@ VoteSupport SupportOf(const LayeredFloors::Classification& classification, int l
     return support;
 }
 
-void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double mapX, double mapY) {
-    if (minimapFeatures.imgDescriptors.empty()) return;
+static void ApplyMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double mapX, double mapY,
+    const LayeredFloors::Classification* prepared = nullptr) {
+    if (!prepared && minimapFeatures.imgDescriptors.empty()) return;
     const auto now = std::chrono::steady_clock::now();
 
     // Cold start: no scene is known, so no position can be interpreted either. The minimap can
@@ -270,11 +304,11 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         std::vector<const Entry*> all;
         {
             std::lock_guard lock(stateMutex);
-            if (entries.empty()) return;
-            if (lastClassifyAt.time_since_epoch().count() != 0 && now - lastClassifyAt < kMinimumInterval) return;
+            if (entries->empty()) return;
+            if (!prepared && lastClassifyAt.time_since_epoch().count() != 0 && now - lastClassifyAt < kMinimumInterval) return;
             lastClassifyAt = now;
-            all.reserve(entries.size());
-            for (const auto& entry : entries) all.push_back(&entry);
+            all.reserve(entries->size());
+            for (const auto& entry : *entries) all.push_back(&entry);
         }
         std::vector<const LayeredFloors::FloorEntry*> floors;
         floors.reserve(all.size());
@@ -288,7 +322,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         // the capped sample is thin, and this value never reaches `current` - a wrong scope costs
         // one wasted sweep, it cannot hide a marker. Asking for own-art evidence here would make the
         // cold start give up on the scoping hint inside a cave, which is the case it exists for.
-        const auto classification = LayeredFloors::Classify(minimapFeatures, floors, 4, 1.5, 0.75f, 0.6f, true);
+        const auto classification = prepared ? *prepared : LayeredFloors::Classify(minimapFeatures, floors, 4, 1.5, 0.75f, 0.6f, true);
         std::lock_guard lock(stateMutex);
         if (!classification.identified) return;
         const auto found = std::find_if(all.begin(), all.end(), [&](const Entry* entry) {
@@ -321,9 +355,9 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         std::lock_guard lock(stateMutex);
         // A scene is known again, so the cold-start scope has done its job.
         if (scope.valid) scope = Scope{};
-        if (entries.empty()) return;
+        if (entries->empty()) return;
         const auto interval = current.active ? kMinimumInterval : kIdleInterval;
-        if (lastClassifyAt.time_since_epoch().count() != 0 && now - lastClassifyAt < interval) return;
+        if (!prepared && lastClassifyAt.time_since_epoch().count() != 0 && now - lastClassifyAt < interval) return;
         lastClassifyAt = now;
         // Every floor of the scene is a candidate, deliberately: the SPREAD between the floors is
         // itself the evidence that the player is in a cave at all. A surface frame taken over a
@@ -333,7 +367,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         // wins its own vote, so a 4-match field frame read as a decision and held the cave for 22 s
         // while the player walked away from it. Containment is still what says which floor the
         // player can physically be standing in - see the adoption test below.
-        for (const auto& entry : entries) {
+        for (const auto& entry : *entries) {
             if (entry.sceneId != sceneId) continue;
             candidates.push_back(&entry);
             if (LayeredFloors::Contains(entry.floor, entry.transform, mapX, mapY)) inside.push_back(&entry);
@@ -354,7 +388,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         bool onSharedGround = false;
         double sharedFraction = 0.0;
         const Entry* sharedEntry = nullptr;
-        for (const auto& entry : entries) {
+        for (const auto& entry : *entries) {
             if (entry.sceneId != sceneId) continue;
             if (!LayeredFloors::SharesSurfaceGround(entry.floor)) continue;
             const double fraction = LayeredFloors::SharedFraction(entry.floor, entry.transform, mapX, mapY);
@@ -394,7 +428,7 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     // the frame is a cave frame at all (a 2x lead) and which floor it is. A low absolute bar is
     // safe here because the margin carries the meaning: in-cave winners can be small (4-9 on a
     // real 眠龙庭·上层 position) while a surface frame ties every floor of the cave it is above.
-    const auto classification = LayeredFloors::Classify(minimapFeatures, floors, 4, 2.0);
+    const auto classification = prepared ? *prepared : LayeredFloors::Classify(minimapFeatures, floors, 4, 2.0);
 
     const auto contained = [&](const std::string& floorId) {
         return std::any_of(inside.begin(), inside.end(), [&](const Entry* entry) {
@@ -548,10 +582,10 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
         // fresh identification every few seconds made the state flicker on and off. Once a
         // floor is known, it is kept for as long as the player is standing in that floor's
         // cave; leaving the cave (or a position jump) is what ends it.
-        const auto active = std::find_if(entries.begin(), entries.end(), [&](const Entry& entry) {
+        const auto active = std::find_if(entries->begin(), entries->end(), [&](const Entry& entry) {
             return entry.floor.floorId == current.floorId && entry.sceneId == current.sceneId;
         });
-        const bool stillInside = current.active && active != entries.end() &&
+        const bool stillInside = current.active && active != entries->end() &&
             LayeredFloors::Contains(active->floor, active->transform, mapX, mapY);
         // ... and "standing in that floor's cave" cannot be read off the footprint, because the
         // surface ABOVE a cave shares the coordinate: the player who walked out of 天槎空间站's
@@ -612,6 +646,87 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
     }
 }
 
+void ObserveMinimap(const ImageFeatureData& features, int scene, double x, double y) {
+    ApplyMinimap(features, scene, x, y);
+}
+
+void CancelPending() {
+    classifier.Cancel();
+    lastAsyncSubmitAt = {};
+}
+
+bool QueueMinimap(const ImageFeatureData& features, int scene, std::uint64_t session, std::uint64_t generation, double x, double y) {
+    if (features.imgDescriptors.empty() || !classifier.CanSubmit()) return false;
+    const auto now = std::chrono::steady_clock::now();
+    ClassificationRequest request;
+    {
+        std::lock_guard lock(stateMutex);
+        const auto interval = scene == 0 || current.active ? kMinimumInterval : kIdleInterval;
+        if (entries->empty() || (lastAsyncSubmitAt.time_since_epoch().count() != 0 && now - lastAsyncSubmitAt < interval)) return false;
+        request.index = entries;
+    }
+    // Only descriptors are needed by Classify. Clone the small query, never the floor index.
+    request.features.imgDescriptors = features.imgDescriptors.clone();
+    request.x = x; request.y = y; request.submittedAt = now;
+    request.scene = scene; request.session = session; request.generation = generation;
+    request.beforeCompute = beforeAsyncClassifyForTest;
+    if (!classifier.Submit(std::move(request))) return false;
+    lastAsyncSubmitAt = now;
+    return true;
+}
+
+bool ConsumeMinimap(int scene, double x, double y, std::uint64_t session, std::uint64_t generation) {
+    ClassificationResult result;
+    std::string error;
+    if (!classifier.Take(result, error)) return false;
+    if (!error.empty()) {
+        Diagnostics::Record("layered-floor-async", "stage=failed error=" + error);
+        return false;
+    }
+    const auto& source = result.source;
+    bool valid;
+    {
+        std::lock_guard lock(stateMutex);
+        valid = source.index == entries && source.scene == scene && source.session == session && source.generation == generation;
+    }
+    bool samePositionEvidence = true;
+    if (valid && scene != 0) {
+        for (const auto& entry : *source.index) {
+            if (entry.sceneId != scene) continue;
+            if (LayeredFloors::Contains(entry.floor, entry.transform, source.x, source.y) !=
+                LayeredFloors::Contains(entry.floor, entry.transform, x, y)) { samePositionEvidence = false; break; }
+            if (LayeredFloors::SharesSurfaceGround(entry.floor) &&
+                (LayeredFloors::SharedFraction(entry.floor, entry.transform, source.x, source.y) >= kSharedGroundFraction) !=
+                (LayeredFloors::SharedFraction(entry.floor, entry.transform, x, y) >= kSharedGroundFraction)) {
+                samePositionEvidence = false; break;
+            }
+        }
+    }
+    valid = valid && samePositionEvidence;
+    Diagnostics::Record("layered-floor-async", "stage=" + std::string(valid ? "consume" : "discard") +
+        " scene=" + std::to_string(source.scene) + " session=" + std::to_string(source.session) +
+        " generation=" + std::to_string(source.generation) + " computeMs=" + std::to_string(result.computeMs) +
+        " positionEvidenceChanged=" + std::to_string(!samePositionEvidence) +
+        " submitToConsumeMs=" + std::to_string(std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - source.submittedAt).count()));
+    if (!valid) return false;
+    // Only the localization thread commits. Do not combine an old image with new containment
+    // or shared-ground evidence: movement within the same evidence region remains admissible.
+    ApplyMinimap({}, scene, x, y, &result.classification);
+    return true;
+}
+
+void SetBeforeAsyncClassifyForTest(std::function<void()> callback) {
+    beforeAsyncClassifyForTest = std::move(callback);
+}
+void WaitAsyncForTest() {
+    const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (!classifier.HasResult() && !classifier.CanSubmit()) {
+        if (std::chrono::steady_clock::now() > until) throw std::runtime_error("async classification test timed out");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+
 Scope ScopeHint() {
     std::lock_guard lock(stateMutex);
     return scope;
@@ -620,17 +735,17 @@ Scope ScopeHint() {
 void ObservePosition(int sceneId, double mapX, double mapY) {
     const auto now = std::chrono::steady_clock::now();
     std::lock_guard lock(stateMutex);
-    if (entries.empty()) return;
+    if (entries->empty()) return;
     // Only the scene the state belongs to can judge it: another scene's coordinates say nothing,
     // and ObserveMinimap ends a state whose scene changed.
     if (!current.active || sceneId == 0 || sceneId != current.sceneId) {
         outsideFootprintSince = std::chrono::steady_clock::time_point{};
         return;
     }
-    const auto active = std::find_if(entries.begin(), entries.end(), [&](const Entry& entry) {
+    const auto active = std::find_if(entries->begin(), entries->end(), [&](const Entry& entry) {
         return entry.floor.floorId == current.floorId && entry.sceneId == current.sceneId;
     });
-    if (active == entries.end()) {
+    if (active == entries->end()) {
         outsideFootprintSince = std::chrono::steady_clock::time_point{};
         return;
     }
@@ -707,7 +822,7 @@ MarkerRole RoleFor(const ItemDatas& item) {
     const LayeredFloors::FloorEntry* markerFloor = nullptr;
     {
         std::lock_guard lock(stateMutex);
-        for (const auto& entry : entries) {
+        for (const auto& entry : *entries) {
             if (entry.floor.floorId == floorId) { markerFloor = &entry.floor; break; }
         }
     }
@@ -736,8 +851,9 @@ MarkerRole RoleFor(const ItemDatas& item) {
 }
 
 void Reset() {
+    CancelPending();
     std::lock_guard lock(stateMutex);
-    entries.clear();
+    entries = std::make_shared<const std::vector<Entry>>();
     current = Snapshot{};
     scope = Scope{};
     pendingFloorId.clear();
@@ -771,7 +887,7 @@ void SetEntriesForTest(int sceneId, std::vector<LayeredFloors::FloorEntry> floor
         loaded.push_back(std::move(entry));
     }
     std::lock_guard lock(stateMutex);
-    entries = std::move(loaded);
+    entries = std::make_shared<const std::vector<Entry>>(std::move(loaded));
     outsideFootprintSince = std::chrono::steady_clock::time_point{};
 }
 

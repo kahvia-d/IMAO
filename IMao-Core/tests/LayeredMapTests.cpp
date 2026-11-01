@@ -16,6 +16,8 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <future>
+#include <atomic>
 
 namespace {
 
@@ -170,6 +172,73 @@ LayeredFloors::FloorEntry ClassifierFloor(const std::string& floorId, int layerI
 
 int main() {
     try {
+    // Hold a real background classification before it starts: the caller must remain
+    // responsive, reject backlog, and discard results across UI generations/index swaps.
+    {
+        LayeredMap::Reset();
+        LayeredFloors::FloorEntry floor;
+        floor.floorId = "-1/1";
+        LayeredMap::SetEntriesForTest(1, {floor}, {});
+        ImageFeatureData feature;
+        feature.imgDescriptors = cv::Mat::zeros(2, 64, CV_32F);
+        std::promise<void> entered, release;
+        auto released = release.get_future().share();
+        LayeredMap::SetBeforeAsyncClassifyForTest([&] { entered.set_value(); released.wait(); });
+        Require(LayeredMap::QueueMinimap(feature, 1, 1, 1, 0, 0), "async classifier accepts first capture");
+        const bool started = entered.get_future().wait_for(std::chrono::seconds(5)) == std::future_status::ready;
+        const bool blockedQueue = !LayeredMap::QueueMinimap(feature, 1, 1, 1, 0, 0);
+        const bool pollEmpty = !LayeredMap::ConsumeMinimap(1, 0, 0, 1, 1);
+        LayeredMap::CancelPending();
+        release.set_value();
+        Require(started && blockedQueue && pollEmpty, "classification must not block consumers or queue stale frames");
+        LayeredMap::WaitAsyncForTest();
+        Require(!LayeredMap::ConsumeMinimap(1, 0, 0, 1, 1), "cancelled classification cannot publish");
+        LayeredMap::SetBeforeAsyncClassifyForTest({});
+        Require(LayeredMap::QueueMinimap(feature, 1, 1, 1, 0, 0), "new work accepted after cancellation");
+        LayeredMap::WaitAsyncForTest();
+        Require(!LayeredMap::ConsumeMinimap(1, 0, 0, 1, 2), "old UI generation is rejected");
+        LayeredMap::CancelPending();
+        Require(LayeredMap::QueueMinimap(feature, 1, 1, 2, 0, 0), "new generation can classify");
+        LayeredMap::WaitAsyncForTest();
+        Require(!LayeredMap::ConsumeMinimap(2, 0, 0, 1, 2), "old scene is rejected");
+        LayeredMap::CancelPending();
+        Require(LayeredMap::QueueMinimap(feature, 1, 1, 2, 0, 0), "index snapshot test submits");
+        LayeredMap::SetEntriesForTest(1, {floor}, {});
+        LayeredMap::WaitAsyncForTest();
+        Require(!LayeredMap::ConsumeMinimap(1, 0, 0, 1, 2), "old index cannot publish after replacement");
+        LayeredMap::CancelPending();
+        Require(LayeredMap::QueueMinimap(feature, 1, 1, 2, 0, 0), "current context submits");
+        LayeredMap::WaitAsyncForTest();
+        Require(LayeredMap::ConsumeMinimap(1, 0, 0, 1, 2), "current context result is consumed");
+        Require(!LayeredMap::ConsumeMinimap(1, 0, 0, 1, 2), "same result cannot be consumed twice");
+        LayeredMap::Reset();
+    }
+    {
+        auto first = ClassifierFloor("-3/44", 44, {0,1,2,3,4,5,6,7,8,9}, {1,1,1,1,1,1,1,1,1,1});
+        auto second = ClassifierFloor("-4/44", 44, {0,1,2,3,4,5,6,7,8,9}, {1,1,1,1,1,1,1,1,1,1});
+        CoverTile(first); CoverTile(second);
+        LayeredFloors::Transform transform;
+        const double x = 2.5 * transform.virtualMapSize * transform.scale + transform.originX;
+        const double y = 0.5 * transform.virtualMapSize * transform.scale + transform.originY;
+        Require(!LayeredFloors::Contains(first, transform, 0, 0) && LayeredFloors::Contains(first, transform, x, y), "fixture crosses floor boundary");
+        LayeredMap::SetEntriesForTest(1, {first, second}, transform);
+        Require(LayeredMap::QueueMinimap(QueryWithDescriptors(10), 1, 1, 1, 0, 0), "near tie submitted outside footprints");
+        LayeredMap::WaitAsyncForTest();
+        Require(!LayeredMap::ConsumeMinimap(1, x, y, 1, 1), "old outside image cannot become a local tie after entering overlap");
+        Require(!LayeredMap::Read().active, "cross-boundary result cannot activate a floor");
+        LayeredMap::CancelPending();
+        Require(LayeredMap::QueueMinimap(QueryWithDescriptors(10), 1, 1, 1, x, y), "inside near tie submits");
+        LayeredMap::WaitAsyncForTest();
+        Require(LayeredMap::ConsumeMinimap(1, x + 0.001, y, 1, 1), "normal movement within same footprints does not starve classification");
+        for (int vote = 0; vote < 2; ++vote) {
+            LayeredMap::CancelPending();
+            Require(LayeredMap::QueueMinimap(QueryWithDescriptors(10), 1, 1, 1, x, y), "next valid tie submits");
+            LayeredMap::WaitAsyncForTest();
+            Require(LayeredMap::ConsumeMinimap(1, x, y, 1, 1), "next valid tie consumed");
+        }
+        Require(LayeredMap::Read().active, "three valid 10:10 local ties still adopt a floor");
+        LayeredMap::Reset();
+    }
         // No floor known: nothing changes, layered markers keep their badge.
         LayeredMap::SetForTest({});
         Require(LayeredMap::RoleFor(Marker(8, "1", "-1/1")) == MarkerRole::Normal,

@@ -4,6 +4,15 @@
         <StackPanel Spacing="5"><TextBlock Text="PREFERENCES" Style="{StaticResource IMaoEyebrowStyle}" /><TextBlock Text="设置" Style="{StaticResource IMaoPageTitleStyle}" /><TextBlock Text="把显示、运行和操作习惯调整到适合你的状态。" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
         <Border Style="{StaticResource IMaoCardStyle}">
             <StackPanel Spacing="12">
+                <TextBlock Text="性能优化" Style="{StaticResource IMaoSectionTitleStyle}" />
+                <ToggleSwitch x:Name="OcrGpuAcceleration" Header="GPU 加速（OCR 坐标识别）" OnContent="使用 GPU" OffContent="使用 CPU" Toggled="OcrGpuAcceleration_Toggled" />
+                <TextBlock Text="将坐标识别交给 GPU，减轻 CPU 负担。可能增加显卡占用；不支持时自动回退到 CPU。更改后需从托盘完全退出并重新打开软件。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock x:Name="OcrBackendState" Style="{StaticResource IMaoBodyTextStyle}" TextWrapping="Wrap" />
+                <InfoBar x:Name="OcrPerformanceMessage" IsOpen="False" IsClosable="True" />
+            </StackPanel>
+        </Border>
+        <Border Style="{StaticResource IMaoCardStyle}">
+            <StackPanel Spacing="12">
                 <TextBlock Text="版本与地图资源" Style="{StaticResource IMaoSectionTitleStyle}" />
                 <TextBlock x:Name="UpdateVersions" Style="{StaticResource IMaoBodyTextStyle}" />
                 <TextBlock x:Name="UpdateLastChecked" Style="{StaticResource IMaoSecondaryTextStyle}" />

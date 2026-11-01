@@ -235,3 +235,5 @@
 - [104 状态式显示与位置保持](StatefulDisplayPlan_20261101.md)
 - [105 删除外推与统一标记投影计划](NoExtrapolationPlan_20261101.md)
 - [106 OCR结果消费延迟诊断计划](OcrDelayPlan_20261101.md)
+
+- [107 异步楼层分类与 OCR GPU 设置](OcrAsyncFloorPlan_20261101.md)

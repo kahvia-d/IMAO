@@ -13,6 +13,7 @@
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateRecoveryController.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\OcrCoordinateGate.h"
 #include "../Runtime/ReadoutWorkSchedule.h"
+#include "../Runtime/LayeredMapState.h"
 #include "ReadoutVisualWorker.h"
 #include "../Coordinate/IdentifyWorldCoordinates/CoordinateHandoff.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateTrust.h"
@@ -117,6 +118,9 @@ public:
 		if (keyMonitoringThread.joinable()) keyMonitoringThread.join();
 
         readoutVisualWorker.Shutdown();
+        // The floor worker owns its immutable index, but its result belongs to this session.
+        // Cancel only after the localization thread has stopped submitting/consuming.
+        LayeredMap::CancelPending();
 		featureResources.reset();
 		std::vector<cv::KeyPoint>().swap(nearPlayerMapKeypoints);
 		nearPlayerMapDescriptors.release();

@@ -4,6 +4,7 @@
 #include "../Feature/LayeredFloorIndex.h"
 
 #include <cstdint>
+#include <functional>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -103,6 +104,15 @@ void Install(const std::filesystem::path& featureDataRoot);
 /// decide whether the player is still standing in the known floor's cave, which is what keeps
 /// the answer stable where the imagery alone is too weak to re-confirm it every frame.
 void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double mapX, double mapY);
+
+// Localization-thread-only lifecycle. Background work owns an immutable index and never
+// mutates state. Consume rechecks context and current-position containment before adoption.
+bool QueueMinimap(const ImageFeatureData& features, int scene, std::uint64_t session, std::uint64_t generation, double x, double y);
+bool ConsumeMinimap(int scene, double x, double y, std::uint64_t session, std::uint64_t generation);
+void CancelPending();
+void SetBeforeAsyncClassifyForTest(std::function<void()> callback);
+void WaitAsyncForTest();
+
 
 /// Judges the known floor against a position alone, with no imagery involved.
 ///

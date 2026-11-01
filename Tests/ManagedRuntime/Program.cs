@@ -16,6 +16,11 @@ static void Check(bool passed, string message)
 }
 
 // Backends are reported by CoreHost, never inferred from the launch button.
+Check(new RuntimeConfiguration().ResolveOcrBackend(null) == "cpu", "OCR defaults to CPU");
+Check(new RuntimeConfiguration().ResolveOcrBackend("directml") == "directml", "Unset OCR preference honors test launcher");
+Check(new RuntimeConfiguration { OcrGpuAcceleration = false }.ResolveOcrBackend("directml") == "cpu", "Saved CPU preference overrides GPU launcher");
+Check(new RuntimeConfiguration { OcrGpuAcceleration = true }.ResolveOcrBackend("cpu") == "directml", "Saved GPU preference overrides CPU launcher");
+Check(JsonSerializer.Deserialize<RuntimeConfiguration>(JsonSerializer.Serialize(new RuntimeConfiguration { OcrGpuAcceleration = true }))!.OcrGpuAcceleration == true, "OCR preference persists");
 var ocrStatus = JsonSerializer.Deserialize<CoreRuntimeStatus>("""
     {"ocrBackend":{"requested":"directml","backend":"cpu","adapter":2,"fallback":"device lost"}}
     """)!;

@@ -37,6 +37,22 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     private readonly RuntimeConfigurationStore configuration;
     private readonly LocalItemFilter filters;
     public RuntimeConfiguration Configuration => configuration.Read();
+    public string DesiredOcrBackend => Configuration.ResolveOcrBackend(Environment.GetEnvironmentVariable("IMAO_OCR_BACKEND"));
+
+    public bool SaveOcrGpuAcceleration(bool enabled)
+    {
+        try
+        {
+            configuration.Update(old => old with { OcrGpuAcceleration = enabled });
+            OnUi(() => OnPropertyChanged(nameof(Configuration)));
+            return true;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            ReportUserError("无法保存 GPU 加速设置：" + error.Message);
+            return false;
+        }
+    }
 
     public CoreHostService() : this(AppContext.BaseDirectory,
         new RuntimeConfigurationStore(Path.Combine(UserDataPaths.Root, "runtime-preferences.json")), new LocalItemFilter(),
@@ -137,6 +153,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
             Pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous)
         };
         session.Process.StartInfo.ArgumentList.Add("--pipe");
+        session.Process.StartInfo.Environment["IMAO_OCR_BACKEND"] = DesiredOcrBackend;
         session.Process.StartInfo.ArgumentList.Add(pipeName);
         if (resourceSnapshots is not null)
         {
