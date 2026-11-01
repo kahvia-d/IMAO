@@ -11,12 +11,14 @@
     "version": "2026.11.1.108",
     "buildRunId": 41283712912,
     "previousChannelSequence": 49,
-    "status": "awaiting-signature",
+    "status": "publishing",
     "sourceCommit": "63459b7be6497785202c54b41ede2303fd5c76f8",
     "sequence": 50,
     "requestId": "6a85fe18f748da4991fee3129a62014f325c017226e000c80fa7734361cbc622",
     "requestArtifactId": 13075220528,
-    "requestArtifactDigest": "6b312e519ea5c0bdc4079ae7edd6967dff726381860bc855e26e9a9e634f8aba"
+    "requestArtifactDigest": "6b312e519ea5c0bdc4079ae7edd6967dff726381860bc855e26e9a9e634f8aba",
+    "responseSha256": "433bb86f64ffdbbf194f86d0ea8c26ffea255348a15c5f6c1d90af4dbf497a78",
+    "response": "{\r\n  \"formatVersion\": 1,\r\n  \"requestId\": \"6a85fe18f748da4991fee3129a62014f325c017226e000c80fa7734361cbc622\",\r\n  \"keyId\": \"wwmap-production-2026\",\r\n  \"catalogSha256\": \"9cabe313ffdf367471d6bb56a39a2eca1a864d783affd8f8e73958ebd0c8d471\",\r\n  \"approvalSha256\": \"e0692bb0bff9db3dd537e29893fd85d51f900182048f4fffd7c4efee87bd1d95\",\r\n  \"catalogSignature\": \"7J8Ib6gvEiz/gqX2s2N\\u002BLyNwqhONhvSWofrYQg73dWQfRJciRyPKApmBNRXhEwkL80Br08ljAu90c9oWON6HTg==\",\r\n  \"approvalSignature\": \"kIOCqi0q1Fy2DMrnc8p5d0j33XZI68r3NxFuzQW1nW85BCsn8cfIm6qCXDZwaqBzWtfsGzrl9c9mxMyRndA7\\u002Bw==\"\r\n}"
   },
   "completed": [
     {
