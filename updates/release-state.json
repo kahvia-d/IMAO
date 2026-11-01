@@ -13,7 +13,10 @@
     "previousChannelSequence": 49,
     "status": "awaiting-signature",
     "sourceCommit": "63459b7be6497785202c54b41ede2303fd5c76f8",
-    "sequence": 50
+    "sequence": 50,
+    "requestId": "6a85fe18f748da4991fee3129a62014f325c017226e000c80fa7734361cbc622",
+    "requestArtifactId": 13075220528,
+    "requestArtifactDigest": "6b312e519ea5c0bdc4079ae7edd6967dff726381860bc855e26e9a9e634f8aba"
   },
   "completed": [
     {
