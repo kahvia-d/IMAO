@@ -4,15 +4,6 @@
         <StackPanel Spacing="5"><TextBlock Text="PREFERENCES" Style="{StaticResource IMaoEyebrowStyle}" /><TextBlock Text="设置" Style="{StaticResource IMaoPageTitleStyle}" /><TextBlock Text="把显示、运行和操作习惯调整到适合你的状态。" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
         <Border Style="{StaticResource IMaoCardStyle}">
             <StackPanel Spacing="12">
-                <TextBlock Text="性能优化" Style="{StaticResource IMaoSectionTitleStyle}" />
-                <ToggleSwitch x:Name="OcrGpuAcceleration" Header="GPU 加速（OCR 坐标识别）" OnContent="使用 GPU" OffContent="使用 CPU" Toggled="OcrGpuAcceleration_Toggled" />
-                <TextBlock Text="将坐标识别交给 GPU，减轻 CPU 负担。可能增加显卡占用；不支持时自动回退到 CPU。更改后需从托盘完全退出并重新打开软件。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <TextBlock x:Name="OcrBackendState" Style="{StaticResource IMaoBodyTextStyle}" TextWrapping="Wrap" />
-                <InfoBar x:Name="OcrPerformanceMessage" IsOpen="False" IsClosable="True" />
-            </StackPanel>
-        </Border>
-        <Border Style="{StaticResource IMaoCardStyle}">
-            <StackPanel Spacing="12">
                 <TextBlock Text="版本与地图资源" Style="{StaticResource IMaoSectionTitleStyle}" />
                 <TextBlock x:Name="UpdateVersions" Style="{StaticResource IMaoBodyTextStyle}" />
                 <TextBlock x:Name="UpdateLastChecked" Style="{StaticResource IMaoSecondaryTextStyle}" />
@@ -208,6 +199,15 @@
                 <InfoBar x:Name="RangeMessage" IsOpen="False" IsClosable="True" />
                 <TextBlock Text="范围内有两个以上点位、且它们的图标在小地图上互相压住时，会先列出这些点让你选一个；图标没有压在一起时直接用最近的那个，不再多问一步。查看攻略只是打开窗口，不会改动任何进度。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <TextBlock Text="「刷怪采集自动标记范围」只在路线工具栏打开「刷怪采集」后生效：走到目标这么近的地方停留约半秒，程序就把采集物和敌人替你标成已完成（默认 30）。它会一次标记范围内当前路线的所有目标，收集物永远不受影响，这些标记每天凌晨四点自动清空，也不会同步到库街区。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+            </StackPanel>
+        </Border>
+        <Border Style="{StaticResource IMaoCardStyle}">
+            <StackPanel Spacing="12">
+                <TextBlock Text="性能优化" Style="{StaticResource IMaoSectionTitleStyle}" />
+                <ToggleSwitch x:Name="OcrGpuAcceleration" Header="GPU 加速（OCR 坐标识别）" OnContent="使用 GPU" OffContent="使用 CPU" Toggled="OcrGpuAcceleration_Toggled" />
+                <TextBlock Text="将坐标识别交给 GPU，减轻 CPU 负担。可能增加显卡占用；不支持时自动回退到 CPU。更改后需从托盘完全退出并重新打开软件。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock x:Name="OcrBackendState" Style="{StaticResource IMaoBodyTextStyle}" TextWrapping="Wrap" />
+                <InfoBar x:Name="OcrPerformanceMessage" IsOpen="False" IsClosable="True" />
             </StackPanel>
         </Border>
         <Expander Header="本地点位记录本" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
