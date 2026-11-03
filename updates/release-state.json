@@ -13,7 +13,10 @@
     "artifactId": 13245310699,
     "id": "426c660f93a845948b626e8cd76b1ec4",
     "tag": "v2026.11.3.1",
-    "version": "2026.11.3.1"
+    "version": "2026.11.3.1",
+    "requestId": "198097bca51291da726596fe8ece1e18300523515b05f7309fd47d4be7d53793",
+    "requestArtifactId": 13244008011,
+    "requestArtifactDigest": "a97cff33808e6173a941b614a47c3a7bd0e914594eca479649c5037c4c4fb25d"
   },
   "completed": [
     {
