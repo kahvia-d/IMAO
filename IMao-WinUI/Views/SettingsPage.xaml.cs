@@ -72,6 +72,7 @@ public sealed partial class SettingsPage : Page
             RenderLocalAccounts();
             RenderSyncLedger();
             _ = RestoreKuroSyncAsync();
+            if (!string.IsNullOrWhiteSpace(RequestedCategory)) { ApplySettingsCategory(RequestedCategory!); RequestedCategory = null; }
         };
         Unloaded += (_, _) =>
         {
@@ -1616,10 +1617,15 @@ public sealed partial class SettingsPage : Page
         RuntimeMessage.IsOpen = true;
     }
 
+    // 允许从总览页深链直达指定设置工作台（如 "sync" 或 "display"）
+    public static string? RequestedCategory { get; set; }
+
     // 切换设置页五大功能模块视图（全部模块 / 显示与叠加 / 键鼠与手柄 / 记录本与同步 / 版本与地图资源 / 性能与兼容）
-    private void SettingsCategory_Click(object sender, RoutedEventArgs e)
+    private void SettingsCategory_Click(object sender, RoutedEventArgs e) =>
+        ApplySettingsCategory((sender as Button)?.Tag as string ?? "sync");
+
+    public void ApplySettingsCategory(string key)
     {
-        string key = (sender as Button)?.Tag as string ?? "all";
         bool showAll = key == "all";
         SettingsGroup_Display.Visibility = showAll || key == "display" ? Visibility.Visible : Visibility.Collapsed;
         SettingsGroup_Input.Visibility = showAll || key == "input" ? Visibility.Visible : Visibility.Collapsed;

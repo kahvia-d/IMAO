@@ -3,22 +3,28 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:controls="using:CommunityToolkit.WinUI.Controls"
       NavigationCacheMode="Enabled">
-    <StackPanel Spacing="18" Padding="0,4,0,24">
-        <!-- 顶部寰宇星图探索指南标题栏 -->
-        <StackPanel Spacing="4">
-            <TextBlock Text="AETHERIA FIELD CODEX // 寰宇星图探索手册与数据修复" Style="{StaticResource IMaoEyebrowStyle}" />
-            <TextBlock Text="帮助" Style="{StaticResource IMaoPageTitleStyle}" />
-            <TextBlock Text="从第一次连接，到完成一条自己的探索路线。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-        </StackPanel>
+    <StackPanel Spacing="16" Padding="0,2,0,20">
+        <!-- 顶部寰宇星图探索百科标题栏 -->
+        <Grid ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="3">
+                <TextBlock Text="AETHERIA FIELD CODEX // 寰宇星图探索百科与历史档案迁移" Style="{StaticResource IMaoEyebrowStyle}" />
+                <TextBlock Text="探索百科" Style="{StaticResource IMaoPageTitleStyle}" />
+                <TextBlock Text="三步快速启航、手柄与键鼠战术速查，以及旧版本地点位数据的无损扫描与恢复。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+            </StackPanel>
+            <controls:WrapPanel Grid.Column="1" HorizontalSpacing="8" VerticalSpacing="8" VerticalAlignment="Center">
+                <Button Content="前往路线" Click="OpenFunctions_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
+                <Button Content="操作设置" Click="OpenSettings_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+            </controls:WrapPanel>
+        </Grid>
 
-        <!-- 三步快速上手领航舱 -->
+        <!-- 第一层：三步星图启航 Bento 卡片组 -->
         <Border Style="{StaticResource IMaoHeroCardStyle}">
-            <StackPanel Spacing="16">
-                <StackPanel Spacing="3">
-                    <TextBlock Text="01 // QUICK ONBOARDING · 三步星图启航" Style="{StaticResource IMaoEyebrowStyle}" />
-                    <TextBlock Text="开始探索，只需三步" Style="{StaticResource IMaoSectionTitleStyle}" />
-                </StackPanel>
-
+            <StackPanel Spacing="12">
+                <TextBlock Text="01 // QUICK ONBOARDING · 开始探索，只需三步" Style="{StaticResource IMaoEyebrowStyle}" />
                 <Grid ColumnSpacing="12" RowSpacing="12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -26,106 +32,129 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <Border Grid.Column="0" Style="{StaticResource IMaoSubCardStyle}" BorderBrush="{StaticResource IMaoAccentBorderBrush}">
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="STEP 01" FontSize="11" FontWeight="Bold" CharacterSpacing="100" Foreground="{StaticResource IMaoAccentBrush}" />
-                            <TextBlock Text="01   连接游戏" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" />
-                            <TextBlock Text="在概览页启动叠加，进入普通探索画面，等待小地图位置确认。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="STEP 01 · 连接游戏" FontSize="11" FontWeight="Bold" CharacterSpacing="80" Foreground="{StaticResource IMaoAccentBrush}" />
+                            <TextBlock Text="在星图总览页点击「开始探索」，进入游戏普通探索画面，等待左上角小地图完成自动定位。" Style="{StaticResource IMaoBodyTextStyle}" />
                         </StackPanel>
                     </Border>
                     <Border Grid.Column="1" Style="{StaticResource IMaoSubCardStyle}" BorderBrush="{StaticResource IMaoCyanBorderBrush}">
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="STEP 02" FontSize="11" FontWeight="Bold" CharacterSpacing="100" Foreground="{StaticResource IMaoCyanBrush}" />
-                            <TextBlock Text="02   选择想找的点" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" />
-                            <TextBlock Text="在点位筛选页按类型、角色或武器查找。勾选自动保存，不影响已完成记录。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="STEP 02 · 选择想找的点" FontSize="11" FontWeight="Bold" CharacterSpacing="80" Foreground="{StaticResource IMaoCyanBrush}" />
+                            <TextBlock Text="在「点位典藏」按分类、角色或武器勾选目标。修改即时保存，随时可切换显示或隐藏。" Style="{StaticResource IMaoBodyTextStyle}" />
                         </StackPanel>
                     </Border>
                     <Border Grid.Column="2" Style="{StaticResource IMaoSubCardStyle}" BorderBrush="{StaticResource IMaoAccentBorderBrush}">
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="STEP 03" FontSize="11" FontWeight="Bold" CharacterSpacing="100" Foreground="{StaticResource IMaoAccentBrush}" />
-                            <TextBlock Text="03   按路线逐个收集" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" />
-                            <TextBlock Text="打开游戏大地图选点，生成预览后开始导航。到达目标后确认完成，或打开攻略查看图片。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="STEP 03 · 按路线逐个收集" FontSize="11" FontWeight="Bold" CharacterSpacing="80" Foreground="{StaticResource IMaoAccentBrush}" />
+                            <TextBlock Text="打开游戏大地图框选成线并开始指引；抵达目标后按快捷键标记完成，或呼出图文攻略核对。" Style="{StaticResource IMaoBodyTextStyle}" />
                         </StackPanel>
                     </Border>
                 </Grid>
-
-                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
-                    <Button Content="前往路线" Click="OpenFunctions_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
-                    <Button Content="操作设置" Click="OpenSettings_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
-                </controls:WrapPanel>
             </StackPanel>
         </Border>
 
-        <!-- 手柄与键鼠专题折叠速查 -->
-        <Expander Header="手柄速查" IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-            <StackPanel Spacing="12">
-                <TextBlock Text="Xbox / PlayStation 按键位置：A / B / X / Y 对应 × / ○ / □ / △；LB / RB 对应 L1 / R1；LT / RT 对应 L2 / R2；LS / RS 对应 L3 / R3；Start / Back 对应 Options / Share 或 Create。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <TextBlock Text="游戏大地图" Style="{StaticResource IMaoSectionTitleStyle}" />
-                <TextBlock Text="LB · 地图工具台     RB · 点位助手&#x0a;将游戏白色光标圈对准标记后按 RB；圈内点优先显示，A 查看详情，详情页按住 A 0.6 秒完成所选点。&#x0a;左摇杆 / 方向键 · 选择     A · 确认     B · 逐级返回，根层返回游戏&#x0a;框选或套索：左摇杆移动光标，按住 A 拖动，松开提交。筛选搜索文字使用键盘输入。" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock Text="普通探索与攻略" Style="{StaticResource IMaoSectionTitleStyle}" />
-                <TextBlock Text="先按 LB，再按 B · 完成附近点     先按 LB，再按 X · 打开附近攻略&#x0a;组合键全部松开后执行一次；完成范围内有多个点时，先选择，再按 A 完成所选点。附近攻略只查询当前筛选中的未完成点；附近范围内没有点位、而路线正在导航时，改为打开当前路线目标的攻略。&#x0a;攻略内 LB / RB · 翻图     右摇杆 · 滚动     X · 放大     B · 返回游戏焦点&#x0a;详情页按住 A / × 0.6 秒，只完成当前展示的点；当前路线目标攻略长按 Y / △ 0.6 秒可跳过。独立攻略打开时仍由游戏聚焦，LS / L3 切换焦点；B / ○ 返回游戏焦点，LB＋X / L1＋□ 关闭攻略。" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock Text="进入工具后先松开按键；断连后需释放再重新操作。组合键是否与游戏其他状态冲突仍以实际游戏响应为准。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-            </StackPanel>
-        </Expander>
+        <!-- 第二层：双栏战术速查（左「手柄战术速查」 + 右「键鼠、攻略与路线机制」） -->
+        <Grid ColumnSpacing="16" RowSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
 
-        <Expander Header="攻略与点位完成" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-            <StackPanel Spacing="12">
-                <TextBlock x:Name="GuideShortcutDescription" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock x:Name="GuideSkipShortcutDescription" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock x:Name="GuideCompletionShortcutDescription" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock x:Name="GuideImageShortcutDescription" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock Text="普通大地图左键点击具体标记查看攻略；重叠点先展开，再选其中一个。右键切换该点完成状态。选点模式中的左键增删路线目标，不能批量完成。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <TextBlock Text="完成成功保存后关闭攻略，失败时保留窗口与错误提示。完成快捷键不会撤销已经完成的记录。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-            </StackPanel>
-        </Expander>
+            <!-- 左舱：Xbox / PlayStation 手柄速查 -->
+            <Border Grid.Column="0" Style="{StaticResource IMaoCardStyle}">
+                <StackPanel Spacing="10">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="02 // GAMEPAD TACTICAL MATRIX · 手柄速查" Style="{StaticResource IMaoEyebrowStyle}" />
+                        <TextBlock Text="Xbox / PlayStation 手柄操作" Style="{StaticResource IMaoSectionTitleStyle}" />
+                        <TextBlock Text="A/B/X/Y 对应 ×/○/□/△ · LB/RB 对应 L1/R1 · LS/RS 对应 L3/R3" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                    </StackPanel>
 
-        <Expander Header="路线：选点、预览与导航" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-            <StackPanel Spacing="12">
-                <TextBlock Text="选点：新建自动路线后，可直接点击点位切换选中，也可在游戏大地图框选、套索或加入当前视野，最多 500 个目标。再次点击可移除已选点位；选多了可撤销或逐点移除，缺少可靠位置时可指定起点。" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock Text="预览：生成后查看访问顺序，再开始导航。新预览不会替换现有活动路线，直到你启用它。" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock Text="导航：确认完成后推进当前目标；跳过只改变这条路线，可以撤销。偏离后可手动重算，也可在路线页开启自动重排。" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock Text="暂停保留静态路线，继续后恢复指引；退出导航结束活动选择，保存的路线文件仍在。加载路线后需手动继续。删除路线不删除点位完成记录。" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock Text="路线按平面距离组织，不能代替游戏中的绕路、攀爬或洞穴入口判断。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-            </StackPanel>
-        </Expander>
+                    <Border Style="{StaticResource IMaoSubCardStyle}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="大地图工具台与点位助手" FontSize="12.5" FontWeight="Bold" Foreground="{StaticResource IMaoAccentBrush}" />
+                            <TextBlock Text="· LB / L1：打开地图工具台（筛选点位、路线规划）&#x0a;· RB / R1：打开点位助手（光标圈对准标记后按 RB 查看详情，长按 A 0.6 秒完成点位）&#x0a;· 左摇杆 + 按住 A 拖动：矩形框选或自由套索选点" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                        </StackPanel>
+                    </Border>
 
-        <Expander Header="鼠标与取消操作" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-            <StackPanel Spacing="12">
-                <TextBlock Text="Shift＋左键拖拽：临时矩形框选，可从标记上开始。&#x0a;Esc：先取消未完成选区，没有选区时返回移动地图。&#x0a;滚轮：交给游戏缩放地图。失焦或地图变换会取消未提交选区，已选目标保留。" Style="{StaticResource IMaoBodyTextStyle}" />
-            </StackPanel>
-        </Expander>
-
-        <Expander Header="旧版本地数据修复" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-            <StackPanel Spacing="12">
-                <TextBlock Text="如果你在很早的版本里标记过很多点位，升级后地图上却看不到，问题多半在这里：那些数据写在「还没有记录本这个概念」的旧位置上，新版本不会主动去找它。" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock Text="什么算旧数据&#x0a;· 旧版单文件 SavedPoints\account_1.json：本工具还没有记录本、也没有库街区同步时，所有已完成点位都写在程序目录下的这一个文件里。只有当它就放在当前程序目录、而且「默认」记录本还没有进度文件时，程序才会自动读它——换过安装目录就永远读不到。&#x0a;· 没有登记进记录本的进度文档：记录本列表只在第一次运行时从 SavedPoints\profiles 播种一次，之后放进去的进度文件（拷贝进来的、从 deleted 恢复的）在界面上看不见。&#x0a;· 被「删除」移走的记录本：删除只是把进度和路线移进 SavedPoints\deleted\&lt;时间&gt;-&lt;id&gt;\，不会真的抹掉。" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock Text="恢复不会修改或删除任何原始文件：旧版单文件被复制进一本新记录本；没登记的进度文档直接登记在它原来的位置；deleted 里的副本复制回来。恢复出来的记录本不会自动绑定库街区账号——这些点位属于哪个账号由你决定，猜错会把点位写到别人的账号上。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
-                    <Button x:Name="LegacyScanButton" Content="扫描旧数据" Click="LegacyScan_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
-                    <Button x:Name="LegacyRecoverButton" Content="数据恢复" Click="LegacyRecover_Click" IsEnabled="False" Style="{StaticResource IMaoPrimaryButtonStyle}" />
-                </controls:WrapPanel>
-                <TextBlock x:Name="LegacyScanSummary" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                <StackPanel x:Name="LegacyScanList" Spacing="6" />
-                <InfoBar x:Name="LegacyMessage" IsOpen="False" IsClosable="True" />
-            </StackPanel>
-        </Expander>
-
-        <!-- 关于 IMao 铭牌舱 -->
-        <Border Style="{StaticResource IMaoRouteCardStyle}">
-            <StackPanel Spacing="10">
-                <StackPanel Spacing="3">
-                    <TextBlock Text="ABOUT IMAO // AETHERIA ATLAS EDITION" Style="{StaticResource IMaoEyebrowStyle}" Foreground="{StaticResource IMaoCyanBrush}" />
-                    <TextBlock Text="关于 IMao" Style="{StaticResource IMaoSectionTitleStyle}" />
+                    <Border Style="{StaticResource IMaoSubCardStyle}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="普通探索与图文攻略窗口" FontSize="12.5" FontWeight="Bold" Foreground="{StaticResource IMaoCyanBrush}" />
+                            <TextBlock Text="· 先按 LB 再按 B：完成小地图附近点位&#x0a;· 先按 LB 再按 X：打开附近点或当前路线目标的攻略&#x0a;· 攻略内 LB / RB 翻图 · 右摇杆滚动 · X 放大 · 长按 A 0.6 秒完成当前点 · 长按 Y 0.6 秒跳过路线目标" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
-                <TextBlock x:Name="VersionLabel" Style="{StaticResource IMaoBodyTextStyle}" Foreground="{StaticResource IMaoAccentBrush}" FontWeight="SemiBold" />
-                <TextBlock Text="鸣潮地图探索辅助工具。地图、路线和完成进度在清晰的操作下协作，最终行动由你决定。" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock x:Uid="SettingsPage_ProjectIntroduction" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <TextBlock Text="使用 OpenCV、PaddleOCR、Win32CaptureSample、ImGui、nlohmann/json、CommunityToolkit 与 WinUI。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
-                    <HyperlinkButton Content="项目源码" NavigateUri="https://github.com/kahvia-d/WWMAP-TOOLS" />
-                    <HyperlinkButton Content="版本发布" NavigateUri="https://github.com/kahvia-d/WWMAP-TOOLS/releases" />
-                    <HyperlinkButton Content="原项目" NavigateUri="https://github.com/Yepin2022/IMao-Wuthering-Waves" />
-                </controls:WrapPanel>
-            </StackPanel>
-        </Border>
+            </Border>
+
+            <!-- 右舱：键鼠快捷键与路线规则 -->
+            <Border Grid.Column="1" Style="{StaticResource IMaoRouteCardStyle}">
+                <StackPanel Spacing="10">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="03 // KEYBOARD &amp; ROUTE MECHANICS · 键鼠与攻略机制" Style="{StaticResource IMaoEyebrowStyle}" Foreground="{StaticResource IMaoCyanBrush}" />
+                        <TextBlock Text="当前快捷键与大地图交互" Style="{StaticResource IMaoSectionTitleStyle}" />
+                    </StackPanel>
+
+                    <Border Style="{StaticResource IMaoSubCardStyle}" BorderBrush="{StaticResource IMaoCyanBorderBrush}">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="GuideShortcutDescription" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" />
+                            <TextBlock x:Name="GuideSkipShortcutDescription" Style="{StaticResource IMaoBodyTextStyle}" />
+                            <TextBlock x:Name="GuideCompletionShortcutDescription" Style="{StaticResource IMaoBodyTextStyle}" />
+                            <TextBlock x:Name="GuideImageShortcutDescription" Style="{StaticResource IMaoBodyTextStyle}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource IMaoSubCardStyle}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="鼠标选点与完成规则" FontSize="12.5" FontWeight="Bold" Foreground="{StaticResource IMaoAccentBrush}" />
+                            <TextBlock Text="· 普通大地图：左键点击标记看攻略，右键直接切换该点完成状态。&#x0a;· Shift + 左键拖拽：临时矩形框选；Esc 取消未提交选区。&#x0a;· 路线平面连线仅代表直线顺序，不代替攀爬或洞穴入口判断；删除路线绝不影响点位完成进度。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 第三层：左「旧版本地数据修复舱」 + 右「关于 IMao 铭牌舱」 -->
+        <Grid ColumnSpacing="16" RowSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.2*" />
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource IMaoCardStyle}">
+                <StackPanel Spacing="10">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="04 // LEGACY ARCHIVE RECOVERY · 旧版本地数据无损修复" Style="{StaticResource IMaoEyebrowStyle}" />
+                        <TextBlock Text="旧版本地数据修复" Style="{StaticResource IMaoSectionTitleStyle}" />
+                        <TextBlock Text="扫描早期单文件 SavedPoints\account_1.json、未登记进度文件或已归档的 deleted 记录本，并无损恢复为独立记录本。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                    </StackPanel>
+
+                    <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
+                        <Button x:Name="LegacyScanButton" Content="扫描旧数据" Click="LegacyScan_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                        <Button x:Name="LegacyRecoverButton" Content="数据恢复" Click="LegacyRecover_Click" IsEnabled="False" Style="{StaticResource IMaoPrimaryButtonStyle}" />
+                    </controls:WrapPanel>
+
+                    <TextBlock x:Name="LegacyScanSummary" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <StackPanel x:Name="LegacyScanList" Spacing="6" />
+                    <InfoBar x:Name="LegacyMessage" IsOpen="False" IsClosable="True" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Style="{StaticResource IMaoHeroCardStyle}">
+                <StackPanel Spacing="10">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="05 // ABOUT IMAO · AETHERIA ATLAS EDITION" Style="{StaticResource IMaoEyebrowStyle}" />
+                        <TextBlock Text="关于 IMao" Style="{StaticResource IMaoSectionTitleStyle}" />
+                    </StackPanel>
+                    <TextBlock x:Name="VersionLabel" Style="{StaticResource IMaoBodyTextStyle}" Foreground="{StaticResource IMaoAccentBrush}" FontWeight="Bold" />
+                    <TextBlock Text="鸣潮地图探索辅助工具。地图、路线和完成进度在清晰的操作下协作，最终行动由你决定。" Style="{StaticResource IMaoBodyTextStyle}" />
+                    <TextBlock x:Uid="SettingsPage_ProjectIntroduction" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                    <TextBlock Text="基于 OpenCV、PaddleOCR、Win32CaptureSample、ImGui、nlohmann/json、CommunityToolkit 与 WinUI 构建。" Style="{StaticResource IMaoSecondaryTextStyle}" FontSize="11.5" />
+                    <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="6">
+                        <HyperlinkButton Content="项目源码" NavigateUri="https://github.com/kahvia-d/WWMAP-TOOLS" />
+                        <HyperlinkButton Content="版本发布" NavigateUri="https://github.com/kahvia-d/WWMAP-TOOLS/releases" />
+                        <HyperlinkButton Content="原项目" NavigateUri="https://github.com/Yepin2022/IMao-Wuthering-Waves" />
+                    </controls:WrapPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
     </StackPanel>
 </Page>

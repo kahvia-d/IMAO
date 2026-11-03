@@ -13,7 +13,7 @@ public sealed partial class StartPage : Page
 {
     private readonly CoreHostService coreHost;
     private bool subscribed;
-    private bool loadingQuickChecks;
+    private bool loadingQuickToggles;
     public StartViewModel ViewModel { get; }
 
     public StartPage()
@@ -36,12 +36,12 @@ public sealed partial class StartPage : Page
         }
         UpdateCoreStatus(coreHost.Status);
         RenderRoute(coreHost.RoutePlanning);
-        SyncQuickOverlayChecks();
+        SyncQuickOverlayToggles();
         await coreHost.EnsureStartedAsync();
         if (IsLoaded)
         {
             UpdateCoreStatus(coreHost.Status);
-            SyncQuickOverlayChecks();
+            SyncQuickOverlayToggles();
         }
     }
 
@@ -59,8 +59,7 @@ public sealed partial class StartPage : Page
         Start_Button.IsEnabled = false;
         try
         {
-            // 与手柄/键盘快捷键走同一份实现（CoreHostService.ToggleExplorationAsync），
-            // 这样"快捷键等同于这个按钮"是结构上成立的，而不是靠两处代码保持一致。
+            // 与手柄/键盘快捷键走同一份实现（CoreHostService.ToggleExplorationAsync）
             var result = await coreHost.ToggleExplorationAsync(GameWindow.CheckGameWindowSize());
             if (result == ExplorationToggleResult.WindowSizeRejected)
             {
@@ -89,37 +88,47 @@ public sealed partial class StartPage : Page
     private void CoreHost_RoutePlanningChanged(object? sender, RoutePlanningState state) => RenderRoute(state);
     private void CoreHost_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (IsLoaded) SyncQuickOverlayChecks();
+        if (IsLoaded) SyncQuickOverlayToggles();
     }
 
-    // 同步首页快捷叠加层勾选框与当前记录本徽标
-    private void SyncQuickOverlayChecks()
+    // 同步首页 2×3 叠加层即时快控矩阵与当前记录本名称
+    private void SyncQuickOverlayToggles()
     {
-        loadingQuickChecks = true;
+        loadingQuickToggles = true;
         try
         {
-            var configuration = coreHost.Configuration;
-            QuickMinimapCheck.IsChecked = configuration.MinMapEnabled;
-            QuickWorldMapCheck.IsChecked = configuration.MapEnabled;
-            QuickCompletedCheck.IsChecked = configuration.SavedPointsEnabled;
+            var cfg = coreHost.Configuration;
+            QuickMinimapToggle.IsOn = cfg.MinMapEnabled;
+            QuickWorldMapToggle.IsOn = cfg.MapEnabled;
+            QuickCompletedToggle.IsOn = cfg.SavedPointsEnabled;
+            QuickMinimapBarToggle.IsOn = cfg.StatusBarEnabled;
+            QuickWorldMapBarToggle.IsOn = cfg.MapStatusBarEnabled;
+            QuickAutoReplanToggle.IsOn = cfg.AutoReplanEnabled;
+
             string accountName = coreHost.ActiveLocalAccount?.Name ?? "默认记录";
-            OverviewAccountBadgeText.Text = $"记录本 · {accountName}";
+            string boundInfo = coreHost.ActiveLocalAccount is { IsBound: true } bound
+                ? $"（已绑定库街区 {bound.KuroAccountId}）"
+                : "（本地独立记录）";
+            OverviewAccountBadgeText.Text = $"当前记录本 · {accountName} {boundInfo}";
         }
         finally
         {
-            loadingQuickChecks = false;
+            loadingQuickToggles = false;
         }
     }
 
-    // 首页直接切换小地图/大地图/已完成点位显示，与设置页共享同一套核心配置
-    private async void QuickOverlayCheck_Click(object sender, RoutedEventArgs e)
+    // 首页 2×3 开关矩阵即时写入核心配置，失败时自动恢复原状态
+    private async void QuickOverlayToggle_Toggled(object sender, RoutedEventArgs e)
     {
-        if (loadingQuickChecks) return;
-        bool minimap = QuickMinimapCheck.IsChecked == true;
-        bool worldMap = QuickWorldMapCheck.IsChecked == true;
-        bool completed = QuickCompletedCheck.IsChecked == true;
-        await coreHost.ConfigureAsync(minMapEnabled: minimap, mapEnabled: worldMap, savedPointsEnabled: completed);
-        if (IsLoaded) SyncQuickOverlayChecks();
+        if (loadingQuickToggles || !IsLoaded) return;
+        await coreHost.ConfigureAsync(
+            minMapEnabled: QuickMinimapToggle.IsOn,
+            mapEnabled: QuickWorldMapToggle.IsOn,
+            savedPointsEnabled: QuickCompletedToggle.IsOn,
+            statusBarEnabled: QuickMinimapBarToggle.IsOn,
+            mapStatusBarEnabled: QuickWorldMapBarToggle.IsOn,
+            autoReplanEnabled: QuickAutoReplanToggle.IsOn);
+        if (IsLoaded) SyncQuickOverlayToggles();
     }
 
     private void UpdateCoreStatus(CoreRuntimeStatus status)
@@ -146,7 +155,7 @@ public sealed partial class StartPage : Page
         OverviewMarkerSummary.Text = status.IsRunning
             ? $"小地图 {status.MinimapMarkers} 个点位  ·  大地图 {status.MapMarkers} 个点位"
             : "启动后显示当前地图点位数量。";
-        SyncQuickOverlayChecks();
+        SyncQuickOverlayToggles();
     }
 
     private void RenderRoute(RoutePlanningState state)
@@ -168,12 +177,22 @@ public sealed partial class StartPage : Page
         OverviewReplanStatus.Text = state.AutoReplanLabel;
     }
 
+    // 窄窗口自适应折叠罗盘装饰列，确保 800×500 下主控区宽敞不拥挤
+    private void StartPage_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        AstrolabeVisualPanel.Visibility = e.NewSize.Width < 680 ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     private void Navigate_Click(object sender, RoutedEventArgs e)
     {
-        var type = ((sender as Button)?.Tag as string) switch
+        string? tag = (sender as Button)?.Tag as string;
+        if (tag == "settings-display") SettingsPage.RequestedCategory = "display";
+        else if (tag == "settings") SettingsPage.RequestedCategory = "sync";
+        var type = tag switch
         {
             "filter" => typeof(FilterViewModel), "routes" => typeof(FunctionViewModel),
-            "settings" => typeof(SettingsViewModel), "diagnostics" => typeof(DiagnosticsViewModel),
+            "settings" or "settings-display" => typeof(SettingsViewModel),
+            "diagnostics" => typeof(DiagnosticsViewModel),
             _ => typeof(UsageGuideViewModel)
         };
         App.GetService<INavigationService>().NavigateTo(type.FullName!);
