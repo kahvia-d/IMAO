@@ -13,6 +13,7 @@ struct CapturedFrame {
     RECT clientRect{};
     std::chrono::steady_clock::time_point capturedAt{};
     std::chrono::milliseconds maximumAge{500};
+    std::uint64_t geometryRevision=0;
 };
 
 // Session-only evidence for the already projected, north-up minimap layout.
@@ -45,6 +46,7 @@ struct OverlayFrame {
     // Empty for legacy full-size pixels; otherwise motionImage is tracking-size color.
     cv::Size motionSourceSize{};
     std::uint64_t positionFrameId = 0;
+    std::uint64_t geometryRevision=0;
 
     bool Fresh(std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now()) const {
         return frameId != 0 && now >= capturedAt && now - capturedAt < maximumAge;
@@ -57,7 +59,7 @@ struct OverlayFrame {
 };
 
 inline bool RetainAcceptedMinimapAnchor(OverlayFrame& pending, const OverlayFrame& previous) {
-    if (!pending.minimapVisible || pending.mapVisible || !previous.minimapVisible || previous.mapVisible ||
+    if (pending.geometryRevision!=previous.geometryRevision || !pending.minimapVisible || pending.mapVisible || !previous.minimapVisible || previous.mapVisible ||
         pending.minimapReadout.active || previous.minimapReadout.active ||
         !pending.focused || !previous.focused || !previous.minimapMotion.reliable ||
         previous.motionImage.empty() || pending.positionFrameId == 0 ||
@@ -86,7 +88,7 @@ inline bool RetainAcceptedMinimapAnchor(OverlayFrame& pending, const OverlayFram
 inline bool CanRetainOverlayAnchor(const OverlayFrame& previous, const OverlayFrame& pending,
     bool mapRequested, bool minimapRequested,
     std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now()) {
-    return previous.Drawable(now) && previous.focused && pending.focused && !previous.motionImage.empty() &&
+    return previous.geometryRevision==pending.geometryRevision && previous.Drawable(now) && previous.focused && pending.focused && !previous.motionImage.empty() &&
         previous.clientRect.right == pending.clientRect.right && previous.clientRect.bottom == pending.clientRect.bottom &&
         ((mapRequested && previous.mapVisible && previous.mapMotion.generation == pending.mapMotion.generation) ||
             // Readout publication is authorized by its own original fix. Never

@@ -782,3 +782,11 @@ add_test(NAME IMaoStateVisibilityTests COMMAND IMaoStateVisibilityTests)
 
 add_executable(IMaoPositionDisplayTests IMao-Core/tests/PositionDisplayTests.cpp)
 add_test(NAME IMaoPositionDisplayTests COMMAND IMaoPositionDisplayTests)
+
+# Browser capture uses UI Automation only for visible document/video geometry.
+target_link_libraries(${DEMO_NAME} PRIVATE uiautomationcore oleaut32)
+add_executable(IMaoGameCaptureTargetTests IMao-Core/tests/GameCaptureTargetTests.cpp)
+target_include_directories(IMaoGameCaptureTargetTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+target_link_libraries(IMaoGameCaptureTargetTests PRIVATE user32)
+set_target_properties(IMaoGameCaptureTargetTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
+add_test(NAME IMaoGameCaptureTargetTests COMMAND IMaoGameCaptureTargetTests)

@@ -2,6 +2,8 @@
 #include <corecrt.h>
 #include <windows.h>
 #include <string>
+#include "Runtime/GameCaptureTarget.h"
+int StartWithCaptureTarget(std::optional<GameCaptureTarget::Selection> target);
 extern HINSTANCE g_hDllInstance;
 
 extern "C" _declspec(dllexport) void GetMyMessage(char* buffer, int bufferSize);

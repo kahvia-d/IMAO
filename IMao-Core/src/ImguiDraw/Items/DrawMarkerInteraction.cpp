@@ -2,6 +2,7 @@
 #define NOMINMAX
 #endif
 #include "DrawMarkerInteraction.h"
+#include "../../Runtime/GameCaptureTarget.h"
 #include "../../Runtime/MarkerLayout.h"
 #include "../../Runtime/StructuredLogger.h"
 #include "../../Diagnostics/Diagnostics.h"
@@ -1429,7 +1430,7 @@ void DrawMarkerInteraction::DrawMapToolsLauncher(const RECT& rect, HWND gameWind
     const double scale = std::max(1.0, GetDpiForWindow(gameWindow) / 96.0);
     const double radius = 28 * scale, x = rect.right / 2.0, y = rect.bottom - (24 + 28) * scale;
     if (x < radius || y < radius) return;
-    POINT origin{}; ClientToScreen(gameWindow, &origin);
+    POINT origin{}; if (!GameCaptureTarget::Origin(gameWindow, origin)) return;
     auto* draw = ImGui::GetForegroundDrawList();
     const ImVec2 center(static_cast<float>(x), static_cast<float>(y));
     draw->AddCircleFilled(ImVec2(center.x, center.y + static_cast<float>(3 * scale)), static_cast<float>(radius), IM_COL32(0, 0, 0, 80));
@@ -1576,7 +1577,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         planningNotice=*gapFillPending==GapFillFilter::Enabled()?"查漏补缺设置已更新":"查漏补缺设置未生效，请重试";gapFillPending.reset();
     }
     const float radius = std::max(9.0f, rect.right * 0.0135f / 2);
-    POINT origin{}; ClientToScreen(gameWindow, &origin);
+    POINT origin{}; if (!GameCaptureTarget::Origin(gameWindow, origin)) return;
     POINT cursor{}; GetCursorPos(&cursor);
     const double mouseX = cursor.x - origin.x, mouseY = cursor.y - origin.y;
     const auto previousPlanning = RoutePlanningService::View();

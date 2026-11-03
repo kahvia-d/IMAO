@@ -4,6 +4,10 @@
 - [坐标 YOLO 研究续接](CoordinateYoloResume_zh-Hans.md)：当前权重谱系、有效原图/标签、环境与训练、导出、回归入口。
 - [不可探测点位新视频工作流](MarkerDetectabilityWorkflow_zh-Hans.md)：新批次隔离、时间轴与身份审核、名录维护及已完成媒体清理。
 
+- [云鸣潮捕获验证记录](CloudWutheringCaptureValidation_20261103.md)：独立 WGC 采样工具、自绘窗口验证及用户手动采样步骤。
+
+- [云鸣潮网页版适配实现计划](CloudWutheringAdaptationPlan_20261103.md)：最新 main 基线、捕获目标与视口设计、浏览器有效性门禁、实现记录、自动游戏区域与验收范围。
+
 - [WGC 客户端裁剪修正](ClientCaptureCropFix_20261024.md)：真实窗口起点、局部回读同步、回归与测试树交付。
 
 - [短时完整诊断复现采集](DiagnosticReproCapture_20261023.md)：采集设计、关联格式、实现计划与测试树实测。
@@ -241,3 +245,5 @@
 - [106 OCR结果消费延迟诊断计划](OcrDelayPlan_20261101.md)
 
 - [107 异步楼层分类与 OCR GPU 设置](OcrAsyncFloorPlan_20261101.md)
+
+- [云鸣潮网页版使用与测试](CloudWuthering_zh-Hans.md)：窗口选择、自动区域及本轮测试要点。

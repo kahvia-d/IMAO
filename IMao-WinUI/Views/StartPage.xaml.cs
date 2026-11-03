@@ -57,6 +57,13 @@ public sealed partial class StartPage : Page
         }
         finally { if (IsLoaded) UpdateCoreStatus(coreHost.Status); }
     }
+    private async void SelectCaptureWindow_Click(object sender, RoutedEventArgs e)
+    {
+        SelectCaptureWindowButton.IsEnabled = false;
+        try { await CaptureWindowDialog.ShowAsync(XamlRoot, coreHost); }
+        catch (Exception error) { coreHost.ReportUserError("无法选择游戏窗口：" + error.Message); }
+        finally { if (IsLoaded) UpdateCoreStatus(coreHost.Status); }
+    }
     private async void RestartCore_Click(object sender, RoutedEventArgs e)
     {
         await coreHost.RestartAsync();
@@ -70,6 +77,8 @@ public sealed partial class StartPage : Page
         Start_TextBlock_CoreDetail.Text = status.Message;
         bool busy = status.CoreState is "connecting" or "loading" or "startingOverlay" or "stopping";
         Start_Button.IsEnabled = !busy;
+        SelectCaptureWindowButton.IsEnabled = !busy && !status.IsRunning;
+        CaptureSourceSummary.Text = coreHost.SelectedCaptureTarget is null ? "游戏来源 · 本地客户端" : "游戏来源 · 云鸣潮浏览器窗口（自动识别游戏区域）";
         Start_Button_Icon.Glyph = status.IsRunning ? "\uE71A" : "\uE768";
         Start_Button_Text.Text = busy ? (status.CoreState == "stopping" ? "正在停止…" : "正在准备…") : status.IsRunning ? "停止探索" : "开始探索";
         Start_InfoBar_FindNotTargetProcess.IsOpen = status.CoreState == "waitingForGame";

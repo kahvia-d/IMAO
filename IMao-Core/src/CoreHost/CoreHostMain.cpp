@@ -1,4 +1,5 @@
 #include "../DLL_API.h"
+#include "../Runtime/BrowserCapture.h"
 #include "../Diagnostics/Diagnostics.h"
 #include "../Diagnostics/ReproCapture.h"
 #include "../Runtime/RuntimeStatus.h"
@@ -330,8 +331,8 @@ GamepadCursorTargets::View ReadCursorTargets(const GamepadContextRead& current) 
     auto read = [&](const GamepadContextRead& state) {
         const auto window = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(state.view.gameHwnd));
         RECT client{}; POINT origin{};
-        const bool live = state.data.at("available").get<bool>() && window && GetClientRect(window, &client) &&
-            ClientToScreen(window, &origin) && DrawItemBase::IsMarkerDisplayContext(window);
+        const bool live = state.data.at("available").get<bool>() && window && GameCaptureTarget::Client(window, client) &&
+            GameCaptureTarget::Origin(window, origin) && DrawItemBase::IsMarkerDisplayContext(window);
         return targets.Read(state.view, DrawItemBase::MarkerFilterRevision(), client, origin, live);
     };
     if (!current.data.at("bigMap").get<bool>()) { targets.Clear("请返回游戏大地图读取圆环点位"); return read(current); }
@@ -519,7 +520,9 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
         if (type.starts_with("marker")) {
             try {
                 json result;
-                if (type == "markerSetGuideWindow") {
+                if (type == "markerCaptureWindowPreview") {
+                    result={{"accepted",true},{"data",BrowserCapture::Preview(command.at("captureTarget"))}};
+                } else if (type == "markerSetGuideWindow") {
                     auto registration = MarkerGuideProtocol::Registration(command, DrawItemBase::MarkerProfile());
                     if (command.contains("assistantGeneration"))
                         registration["assistantGeneration"] = MarkerGuideProtocol::Integer(command.at("assistantGeneration"), false);
@@ -656,6 +659,12 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
                     json data = {{"available", false}};
                     if (TryGetGameWindowClientBounds(&bounds)) data = {{"available", true},
                         {"left", bounds.left}, {"top", bounds.top}, {"right", bounds.right}, {"bottom", bounds.bottom}};
+                    if (data.value("available",false)) {
+                        RECT client{};POINT origin{};
+                        const auto target=GameCaptureTarget::Read();
+                        if(target && GameCaptureTarget::Client(target->window,client) && GameCaptureTarget::Origin(target->window,origin))
+                            data["gameViewport"]={{"left",origin.x},{"top",origin.y},{"right",origin.x+client.right},{"bottom",origin.y+client.bottom}};
+                    }
                     result = {{"accepted", true}, {"data", std::move(data)}};
                 } else if (type == "markerGetNearbyGuide") {
                     if (command.value("profileId", std::string{}) != DrawItemBase::MarkerProfile())
@@ -692,7 +701,8 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
             return true;
         }
         if (type == "start") {
-            const bool accepted = Start() != 0;
+            const bool accepted = (command.contains("captureTarget")
+                ? StartWithCaptureTarget(BrowserCapture::Parse(command.at("captureTarget"))) : Start()) != 0;
             if (!accepted) RuntimeStatus::SetCoreState("waitingForGame", "未找到可用的游戏窗口");
             // What the host costs with no game attached: the floor under every measurement that follows.
             Diagnostics::RecordMemory(accepted ? "start-accepted" : "start-no-game-window");

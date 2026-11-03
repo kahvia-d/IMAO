@@ -11,7 +11,8 @@
 #
 # This script copies only binaries, and only the ones that actually differ, so `Assets/` - including
 # the deliberately absent Assets/Updates/baseline-files.json of the no-base test tree - is left as it
-# is. The one exception is the layered-floor sidecar data (`<region>/layered-floors/`), which is
+# is. Model/runtime payloads are materialized and hash-checked so diagnostic-directory cleanup
+# cannot disable OCR. Another exception is the layered-floor sidecar data (`<region>/layered-floors/`), which is
 # synced from the shared tree below: that data is edited in the repo while the run root holds a COPY,
 # so without the sync a pack fix lands in Assets and the tree under test keeps the broken version -
 # which is what happened to 隐海试验场's coordinate transform on 2026-09-26.
@@ -68,7 +69,13 @@ if ($running.Count -gt 0 -and -not $DryRun) {
     throw ("the test tree is running (pid {0}); close it first, its binaries are locked" -f ($running.Id -join ', '))
 }
 
-# Only top-level FILES: directories (and therefore Assets/) are never touched.
+. (Join-Path $PSScriptRoot 'MapTestModelPayload.ps1')
+# Models are executable runtime dependencies too. Old test trees linked them into
+# disposable diagnostic payloads; cleaning those silently disabled OCR.
+$modelSource = Join-Path $SourceRoot 'x64/Release/Assets/models'
+Sync-MapTestModels -ModelsRoot $modelSource -RunRoot $RunRoot -DryRun:$DryRun
+
+# Program binaries are synced at the top level; model resources were checked above.
 $copied = New-Object System.Collections.ArrayList
 foreach ($entry in @(Get-ChildItem -LiteralPath $binaryRoot -Force -File)) {
     $destination = Join-Path $RunRoot $entry.Name

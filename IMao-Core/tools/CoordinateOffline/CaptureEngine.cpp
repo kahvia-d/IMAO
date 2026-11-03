@@ -29,6 +29,7 @@ cv::Rect ClientScreen(HWND window) {
 
 struct WgcSampler::State {
     HWND target = nullptr;
+    std::optional<cv::Rect> gameArea;
     DWORD processId = 0;
     bool fixture = false;
     int intervalMs = 500;
@@ -132,8 +133,10 @@ struct WgcSampler::State {
                 return;
             }
             geometryNotice.clear();
-            const auto source = SampleEnvelope(client.size());
-            const auto minimapSource = SampleMinimapEnvelope(client.size());
+            const auto game = gameArea.value_or(cv::Rect(0,0,client.width,client.height));
+            if ((game & cv::Rect(0,0,client.width,client.height)) != game) throw std::runtime_error("game area outside current client");
+            auto source = SampleEnvelope(game.size());source.x+=game.x;source.y+=game.y;
+            auto minimapSource = SampleMinimapEnvelope(game.size());minimapSource.x+=game.x;minimapSource.y+=game.y;
             const cv::Rect textureRegion(source.x+mapped.x,source.y+mapped.y,source.width,source.height);
             auto access = frame.Surface().as<Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>();
             winrt::com_ptr<ID3D11Texture2D> texture;
@@ -155,9 +158,10 @@ struct WgcSampler::State {
     }
 };
 
-WgcSampler::WgcSampler(HWND target, bool fixture, int intervalMilliseconds, std::shared_ptr<SampleStore> store)
+WgcSampler::WgcSampler(HWND target, bool fixture, int intervalMilliseconds, std::shared_ptr<SampleStore> store, std::optional<cv::Rect> gameArea)
     : state_(std::make_shared<State>()) {
     if (!GraphicsCaptureSession::IsSupported()) throw std::runtime_error("Windows Graphics Capture is unavailable");
+    state_->gameArea=gameArea;
     state_->target = target; state_->fixture = fixture; state_->intervalMs = intervalMilliseconds; state_->store = std::move(store);
     GetWindowThreadProcessId(target, &state_->processId);
     winrt::check_hresult(D3D11CreateDevice(nullptr,D3D_DRIVER_TYPE_HARDWARE,nullptr,D3D11_CREATE_DEVICE_BGRA_SUPPORT,

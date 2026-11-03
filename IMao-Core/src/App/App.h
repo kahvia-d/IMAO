@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "..\ImageProcessing\ImageProcessing.h"
 #include "..\Feature\Match\FeatureMatch.h"
 #include "..\WindowsCapture\WindowsGraphicsCapture\CaptureSnapshot.h"
@@ -254,6 +254,7 @@ private:
 
 	HWND hwnd;
 	RECT rect = { 0,0,0,0 };
+    std::uint64_t snapshotGeometryRevision=0;
 
 	std::atomic_bool isWindowFocused = false;
 	std::atomic_bool isOpenMap = false;

@@ -1,4 +1,5 @@
-﻿#include "DLL_API.h"
+#include "DLL_API.h"
+#include "Runtime/GameCaptureTarget.h"
 #include "Runtime/RoutePlanningService.h"
 #include <iostream>
 #include"App/App.h"
@@ -197,7 +198,7 @@ void RuntimeMain(std::stop_token stopToken) {
 		RuntimeStatus::SetCoreState("startingOverlay", "正在初始化游戏叠加层");
 
 		RECT clientRect{};
-		if (!GetUsableClientRect(hwnd, clientRect)) {
+		if (!GetUsableClientRect(hwnd, clientRect) || !GameCaptureTarget::Client(hwnd, clientRect)) {
 			Diagnostics::Initialize();
 			Diagnostics::Record("core-start-rejected", "game window was no longer usable when startup began");
 			std::scoped_lock lock(runtimeMutex);
@@ -214,8 +215,9 @@ void RuntimeMain(std::stop_token stopToken) {
 		// device context, and its cost sits on the frame pool's own thread. A machine where it cannot
 		// start at all (protected window, driver, older Windows) must still get an overlay, so a failed
 		// WGC attempt retries with BitBlt before the player is told that the overlay failed.
-		const bool requestedGraphicsCapture = CaptureWay.load() != 0;
-		const int captureAttempts = requestedGraphicsCapture ? 2 : 1;
+		const bool cloudCapture = GameCaptureTarget::Read().has_value();
+		const bool requestedGraphicsCapture = cloudCapture || CaptureWay.load() != 0;
+		const int captureAttempts = requestedGraphicsCapture && !cloudCapture ? 2 : 1;
 		for (int captureAttempt = 0; !started && captureAttempt < captureAttempts; ++captureAttempt) {
 			const bool useGraphicsCapture = requestedGraphicsCapture && captureAttempt == 0;
 			try {
@@ -295,13 +297,20 @@ void Initi()
 	RuntimeStatus::SetCoreState("ready", "核心已就绪，等待游戏启动");
 }
 
-int Start() {
-    const HWND gameWindow = GetWindowHandleByProcessName(L"Client-Win64-Shipping.exe");
+int Start() { return StartWithCaptureTarget(std::nullopt); }
+
+int StartWithCaptureTarget(std::optional<GameCaptureTarget::Selection> target) {
+    const HWND gameWindow = target ? target->window : GetWindowHandleByProcessName(L"Client-Win64-Shipping.exe");
     RECT clientRect{};
 	std::scoped_lock lock(runtimeMutex);
-    if (runtimeInitialized && !shutdownRequested && (runtimeRunning || runRequested)) return 1;
-    if (runtimeInitialized && gameWindow && GetUsableClientRect(gameWindow, clientRect) &&
+    if (runtimeInitialized && !shutdownRequested && (runtimeRunning || runRequested)) {
+        const auto active=GameCaptureTarget::Read();
+        return gameWindow==requestedWindow && active.has_value()==target.has_value() &&
+            (!target || (active->window==target->window && active->process==target->process && active->created==target->created)) ? 1 : 0;
+    }
+    if (runtimeInitialized && gameWindow && (!target || (GameCaptureTarget::Matches(*target) && GameCaptureTarget::ProcessCreated(target->process)==target->created)) && GetUsableClientRect(gameWindow, clientRect) &&
 		!runtimeRunning && !runRequested && !shutdownRequested) {
+		GameCaptureTarget::Set(target);
 		requestedWindow = gameWindow;
         GetWindowThreadProcessId(gameWindow, &requestedProcessId);
 		runRequested = true;

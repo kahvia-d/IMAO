@@ -482,6 +482,10 @@ void TestAsyncVisualEnvelope() {
  Check(result.Fresh(1,7,50,t+2s,rect,t+2s),"slow current-generation visual inference must remain eligible beyond 250ms");
  Check(result.frame==42&&result.capturedAt==t,"accepting slow inference must not refresh its original frame or capture time");
  Check(!result.Fresh(1,7,50,t+2s,rect,t-1ms),"future visual evidence must be rejected even when capture envelope is newer");
+ result.geometryRevision=12;
+ Check(result.Fresh(1,7,44,t+66ms,rect,t+80ms,12),"matching cloud geometry accepts original probe");
+ Check(!result.Fresh(1,7,44,t+66ms,rect,t+80ms,13),"same-size moved viewport rejects old async evidence");
+ result.geometryRevision=0;
  auto invalid=result;invalid.frame=0;
  Check(!invalid.Fresh(1,7,50,t+2s,rect,t+2s),"missing visual frame identity must remain invalid");
  invalid=result;invalid.capturedAt={};

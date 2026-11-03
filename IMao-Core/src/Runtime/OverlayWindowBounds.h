@@ -1,10 +1,11 @@
 #pragma once
 #include <Windows.h>
+#include "GameCaptureTarget.h"
 
 namespace OverlayWindowBounds {
 inline bool GameClient(HWND game, RECT& physical) {
     RECT client{}; POINT origin{};
-    if (!GetClientRect(game, &client) || !ClientToScreen(game, &origin) || client.right <= 0 || client.bottom <= 0) return false;
+    if (!GameCaptureTarget::Client(game, client) || !GameCaptureTarget::Origin(game, origin) || client.right <= 0 || client.bottom <= 0) return false;
     physical = {origin.x, origin.y, origin.x + client.right, origin.y + client.bottom}; return true;
 }
 inline bool Synchronize(HWND overlay, const RECT& physical) {
