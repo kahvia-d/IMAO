@@ -14,6 +14,14 @@
 
 ## 配置与使用
 
+### 正式版与测试包的版本号
+
+- 正式发布前必须单独核定 `Version.props`，不得把测试客户端或测试差量包的编号直接当作正式版本号，也不得从误用的测试编号继续递增。
+- 正式版本采用发布日期与当日发布序号：`年.月.日.序号`，当日首版从 `1` 开始；同日已有正式版时继续递增，已发布版本不可覆盖。
+- `2026.11.1.104`～`2026.11.1.107` 属于本地测试包编号。线上已存在的 `2026.11.1.108` 不作为后续正式版末段递增的依据，也不修改或重新发布它。
+- 本次 `2026-11-03` 的首个正式候选是 `2026.11.3.1`，不是 `2026.11.3.109`。版本按四段数字比较，新日期的 `.1` 高于 `2026.11.1.108`。
+- 公告标题、`confirm_version` 与实际候选产物必须一致。发布清单的 `sequence` 是独立的事务计数，不能混用为程序版本的末段。
+
 SDK 由 global.json 固定；.github/dependencies.lock.json 固定官方 Paddle/OpenCV 下载 URL、版本、完整下载摘要和 VGG 补丁摘要。只缓存经重新验 hash 的下载包及 NuGet 缓存，不缓存本机 CMakeCache 或编译目录。安装 ZIP、资源包、分片与签名请求 ZIP 使用固定顺序及 ZIP 时间戳；Publisher 固定 .NET 8.0.30 runtime 防止离线 ZIP 配方随 Runner runtime 改变，构建时间以源码提交时间为准。可复现性还差两处最容易漏掉的输入：native 编译/链接用 `/Brepro` 并加 `/d1trimfile:<仓库根>`（MSVC 把匿名命名空间的 `?A0x…` 按源目录哈希，不加这个开关换目录就改字节；用 `-DCMAKE_C_FLAGS`/`-DCMAKE_CXX_FLAGS` 覆盖时必须显式带回 MSVC 默认开关，否则 CMake 默认值被整体替换）；托管侧关闭 CsWinRT AOT 优化器（`CsWinRTAotOptimizerEnabled=false`，它生成的 `VtableClasses`/`GenericHelpers` 类型集合不确定）。
 
 管理员运行 `pwsh ./scripts/Configure-CiReleaseEnvironments.ps1 -MirrorChyanTokenFile <上传 Token 文件路径>`：production 仅 main、人工 reviewer 为 kahvia-d、允许该维护者确认自己的发布、禁止管理员绕过；gitee 与 mirrorchyan 独立 main Environment。Gitee Token 从本地已有文件迁移；Mirror酱必须提供上传 Token 的文件，不能用消费端 CDK。成功写入 Environment 后才删除旧仓库级 Mirror Secret。生产签名密钥完全不参与此配置。
