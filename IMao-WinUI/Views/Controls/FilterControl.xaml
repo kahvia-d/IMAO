@@ -19,11 +19,11 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <!-- 顶部点位典藏检索与分类筛选控制台（兼顾桌面页与游戏内 300 DIP 紧凑停靠模式） -->
+        <!-- 顶部点位筛选检索与分类控制台（兼顾桌面页与游戏内 300 DIP 紧凑停靠模式） -->
         <ScrollViewer x:Name="FilterToolbarScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="FilterToolbar" Spacing="8">
-                <TextBlock x:Name="FilterEyebrow" Text="AETHERIA POINT ATLAS // 星图万物点位典藏库" Style="{StaticResource IMaoEyebrowStyle}" />
-                <TextBlock x:Name="FilterTitle" Text="点位典藏" Style="{StaticResource IMaoPageTitleStyle}" />
+                <TextBlock x:Name="FilterEyebrow" Visibility="Collapsed" />
+                <TextBlock x:Name="FilterTitle" Text="点位筛选" Style="{StaticResource IMaoPageTitleStyle}" />
                 <TextBlock x:Name="FilterDescription" Style="{StaticResource IMaoSecondaryTextStyle}" />
 
                 <InfoBar x:Name="FilterWarning" IsOpen="False" IsClosable="True" Severity="Warning" />

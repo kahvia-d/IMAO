@@ -7,93 +7,34 @@
         <helpers:RouteKindIconConverter x:Key="RouteKindIcon" />
         <helpers:BoolToVisibilityConverter x:Key="FlagToVisibility" />
     </Page.Resources>
-    <StackPanel x:Name="ContentArea" Spacing="16" Padding="0,2,0,20">
-        <!-- 顶部航线工坊标题栏与右上角弹出式操作速查 -->
-        <Grid ColumnSpacing="16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Spacing="3">
-                <TextBlock Text="AETHERIA ROUTE STUDIO // 星图航线工坊与合集矩阵" Style="{StaticResource IMaoEyebrowStyle}" />
-                <TextBlock Text="路线" Style="{StaticResource IMaoPageTitleStyle}" />
-                <TextBlock Text="按合集归档、拖拽排序或批量导入导出路线；选点、手绘与开始指引均在游戏内大地图直接完成。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-            </StackPanel>
-
-            <!-- 右上角操作速查与完整帮助按钮组（把冗长说明收进精致弹出层，让主界面保持纯粹） -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <Button Content="游戏内操作速查" Style="{StaticResource IMaoSecondaryButtonStyle}">
-                    <Button.Flyout>
-                        <Flyout Placement="BottomEdgeAlignedRight">
-                            <ScrollViewer MaxHeight="420" Width="400" HorizontalScrollBarVisibility="Disabled">
-                                <StackPanel Spacing="10" Padding="4">
-                                    <TextBlock Text="IN-GAME ROUTE MANUAL · 游戏内路线操作速查" Style="{StaticResource IMaoEyebrowStyle}" />
-                                    <TextBlock Text="选点画布就是游戏的大地图，下面这些全部在游戏里做，两种操作方式都能用：" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" />
-                                    <Border Style="{StaticResource IMaoSubCardStyle}" BorderBrush="{StaticResource IMaoAccentBorderBrush}">
-                                        <TextBlock Text="· 键鼠：打开大地图，点底部中央那个圆形按钮（浅蓝描边的小圆）进入「地图工具台 → 路径自动规划」。&#x0a;· 手柄：打开大地图后按 LB，进入同一个工具台；按 RB 是点位助手（看攻略、完成点位），与路线分工不同。"
-                                                   Style="{StaticResource IMaoSecondaryTextStyle}" />
-                                    </Border>
-                                    <Border Style="{StaticResource IMaoSubCardStyle}">
-                                        <StackPanel Spacing="3">
-                                            <TextBlock Text="01 · 大地图选点" FontSize="11" FontWeight="Bold" Foreground="{StaticResource IMaoAccentBrush}" />
-                                            <TextBlock Text="选点：单点选择 · 矩形框选 · 自由套索 · 加入当前视野 · 指定起点。框选和套索用鼠标拖动画，Shift + 左键拖拽是临时框选，Esc 取消还没提交的选区；最多 500 个目标，点过的点再点一次就移除。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource IMaoSubCardStyle}">
-                                        <StackPanel Spacing="3">
-                                            <TextBlock Text="02 · 成线与预览" FontSize="11" FontWeight="Bold" Foreground="{StaticResource IMaoCyanBrush}" />
-                                            <TextBlock Text="成线：生成预览看清访问顺序，再点开始指引。按平面距离排列，不代表可通行路径，也不含爬升或绕行距离；新预览不会顶掉正在走的路线。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource IMaoSubCardStyle}">
-                                        <StackPanel Spacing="3">
-                                            <TextBlock Text="03 · 实时导航与刷怪采集" FontSize="11" FontWeight="Bold" Foreground="{StaticResource IMaoAccentBrush}" />
-                                            <TextBlock Text="导航：程序画实线指向当前目标；到了就确认完成，不想去就跳过（可撤销）。偏离路线后可以重新规划或让实时规划自己重排。走怪点/采集物路线时，打开「刷怪采集」就能在目标附近自动标记，这个开关记在路线自己身上。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource IMaoSubCardStyle}">
-                                        <StackPanel Spacing="3">
-                                            <TextBlock Text="04 · 自由手绘路线" FontSize="11" FontWeight="Bold" Foreground="{StaticResource IMaoCyanBrush}" />
-                                            <TextBlock Text="手绘：单击空白新增自由点，点击可见点位加入画布；从一个点按住左键拖到另一个点建立或修改路线方向。悬停点位后连续按两次退格键可移除，Ctrl+Z 撤销，Esc 结束编辑并保留待保存草稿。已有手绘路线可在游戏内路线列表选中后点击顶部「修改路线」。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                            </ScrollViewer>
-                        </Flyout>
-                    </Button.Flyout>
-                </Button>
-                <Button Content="查看操作帮助" Click="UsageGuide_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
-            </StackPanel>
-        </Grid>
+    <StackPanel x:Name="ContentArea" Spacing="14" Padding="0,2,0,20">
+        <!-- 页面标题 -->
+        <StackPanel Spacing="3">
+            <TextBlock Text="路线导航" Style="{StaticResource IMaoPageTitleStyle}" />
+            <TextBlock Text="按合集管理、拖拽排序或批量导入导出已保存的探索路线。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+        </StackPanel>
 
         <InfoBar x:Name="AutoRouteMessage" IsOpen="False" IsClosable="True" />
 
         <ContentControl x:Name="AutoRouteActions" HorizontalContentAlignment="Stretch">
             <StackPanel Spacing="14">
-                <!-- 顶部实时领航遥测横幅 -->
-                <Border Style="{StaticResource IMaoRouteCardStyle}" Padding="16,12">
+                <!-- 当前活动路线状态横幅 -->
+                <Border Style="{StaticResource IMaoSubCardStyle}" Padding="16,12">
                     <Grid ColumnSpacing="12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Border Width="34" Height="34" CornerRadius="9" Background="{StaticResource IMaoCyanSoftBrush}"
-                                BorderBrush="{StaticResource IMaoCyanBorderBrush}" BorderThickness="1" VerticalAlignment="Center">
-                            <FontIcon Glyph="&#xE707;" FontSize="15" Foreground="{StaticResource IMaoCyanBrush}"
-                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Text="LIVE NAVIGATION TELEMETRY · 当前活动路线状态" FontSize="10" FontWeight="Bold"
-                                       CharacterSpacing="90" Foreground="{StaticResource IMaoCyanBrush}" />
-                            <TextBlock x:Name="AutoRouteListSummary" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                        </StackPanel>
+                        <FontIcon Glyph="&#xE816;" FontSize="15" Foreground="{StaticResource IMaoAccentBrush}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" x:Name="AutoRouteListSummary" Style="{StaticResource IMaoBodyTextStyle}"
+                                   FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
                     </Grid>
                 </Border>
 
-                <!-- 路线合集与列表主工作台 -->
-                <Border Style="{StaticResource IMaoHeroCardStyle}">
+                <!-- 路线合集与列表主卡片 -->
+                <Border Style="{StaticResource IMaoCardStyle}">
                     <StackPanel Spacing="14">
-                        <!-- 合集导航条与合集管理按钮同行对齐 -->
+                        <!-- 合集切换栏与合集操作按钮 -->
                         <Border Style="{StaticResource IMaoSubCardStyle}" Padding="14,12">
                             <StackPanel Spacing="10">
                                 <Grid ColumnSpacing="12">
@@ -102,8 +43,8 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="COLLECTIONS · 路线合集舱" Style="{StaticResource IMaoEyebrowStyle}" />
-                                        <TextBlock Text="游戏内新保存的自动路线与手绘路线将自动归入当前选中的合集。" Style="{StaticResource IMaoSecondaryTextStyle}" FontSize="12" />
+                                        <TextBlock Text="路线合集" Style="{StaticResource IMaoSectionTitleStyle}" FontSize="14.5" />
+                                        <TextBlock Text="游戏内保存的新路线将自动归入当前选中的合集" Style="{StaticResource IMaoSecondaryTextStyle}" />
                                     </StackPanel>
                                     <controls:WrapPanel Grid.Column="1" HorizontalSpacing="6" VerticalSpacing="6" VerticalAlignment="Center">
                                         <Button x:Name="RouteCollectionNew" Content="新建合集" Click="RouteCollectionNew_Click" />
@@ -115,7 +56,7 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- 批量操作浮动工具条 -->
+                        <!-- 批量操作工具条 -->
                         <StackPanel x:Name="RouteBatchBar" Spacing="8" Visibility="Collapsed">
                             <TextBlock x:Name="RouteBatchSummary" Style="{StaticResource IMaoSecondaryTextStyle}"
                                        Foreground="{StaticResource IMaoAccentBrush}" FontWeight="SemiBold" TextWrapping="Wrap" />
@@ -132,19 +73,19 @@
                             </Grid>
                         </StackPanel>
 
-                        <!-- 路线卡片列表与窗口内指针拖拽排序画布 -->
+                        <!-- 路线列表与窗口内拖拽排序画布 -->
                         <Grid x:Name="RouteSortSurface">
-                            <ListView x:Name="AutoRouteSavedRoutes" MaxHeight="420" SelectionMode="Single" HorizontalContentAlignment="Stretch">
+                            <ListView x:Name="AutoRouteSavedRoutes" MaxHeight="440" SelectionMode="Single" HorizontalContentAlignment="Stretch">
                                 <ListView.ItemContainerTransitions><TransitionCollection /></ListView.ItemContainerTransitions>
                                 <ListView.ItemsPanel><ItemsPanelTemplate><StackPanel /></ItemsPanelTemplate></ListView.ItemsPanel>
                                 <ListView.ItemTemplate>
                                     <DataTemplate>
                                         <Border Background="{StaticResource IMaoRaisedSurfaceBrush}" BorderBrush="{StaticResource IMaoBorderBrush}"
-                                                BorderThickness="1" CornerRadius="10" Padding="14,10" Margin="0,3">
+                                                BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,3">
                                             <StackPanel Spacing="5">
                                                 <CheckBox Content="{Binding DisplayLabel}" IsChecked="{Binding Selected, Mode=TwoWay}" Click="RouteRowCheck_Click"
-                                                          FontSize="15.5" FontWeight="Bold" Visibility="{Binding Batch, Converter={StaticResource FlagToVisibility}}" />
-                                                <TextBlock Text="{Binding DisplayLabel}" FontSize="15.5" FontWeight="Bold" Foreground="{StaticResource IMaoTextBrush}"
+                                                          FontSize="15" FontWeight="SemiBold" Visibility="{Binding Batch, Converter={StaticResource FlagToVisibility}}" />
+                                                <TextBlock Text="{Binding DisplayLabel}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}"
                                                            TextWrapping="Wrap" Visibility="{Binding Batch, Converter={StaticResource FlagToVisibility}, ConverterParameter=invert}" />
                                                 <TextBlock Text="{Binding DetailLabel}" FontSize="12.5" TextWrapping="Wrap" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                                 <TextBlock Text="{Binding Kinds, Converter={StaticResource RouteKindIcon}, ConverterParameter=empty}" FontSize="12.5"
@@ -173,7 +114,7 @@
                                 </ListView.ItemTemplate>
                             </ListView>
                             <Canvas IsHitTestVisible="False">
-                                <Border x:Name="RouteDragHighlight" Background="#26E5C17B" BorderBrush="#FFE5C17B" BorderThickness="2" CornerRadius="10" Visibility="Collapsed" />
+                                <Border x:Name="RouteDragHighlight" Background="#26E5C17B" BorderBrush="#FFE5C17B" BorderThickness="2" CornerRadius="8" Visibility="Collapsed" />
                                 <Border x:Name="RouteDragInsertion" Background="#FFF4EFE6" Height="4" CornerRadius="2" Visibility="Collapsed" />
                                 <Border x:Name="RouteDragHint" Background="#F2101622" BorderBrush="#FFE5C17B" BorderThickness="1" CornerRadius="6" Padding="10,4" Visibility="Collapsed">
                                     <TextBlock x:Name="RouteDragHintText" Foreground="#FFE5C17B" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
@@ -182,10 +123,10 @@
                         </Grid>
 
                         <TextBlock x:Name="AutoRouteEmptyHint"
-                                   Text="当前合集还没有保存的路线。可在游戏内大地图框选生成预览后保存，或直接手绘一条新路线，也可点击下方「导入路线包」载入外部路线。"
+                                   Text="当前合集还没有保存的路线。可在游戏内大地图框选生成预览后保存，或点击下方「导入路线包」载入外部路线。"
                                    Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" Visibility="Collapsed" />
 
-                        <!-- 底部五联核心操作坞（保持 Auto 五列不截断按钮文字） -->
+                        <!-- 底部操作按钮行（保持 Auto 五列不截断按钮文字） -->
                         <Border Style="{StaticResource IMaoSubCardStyle}" Padding="12,10">
                             <Grid x:Name="RouteActions" ColumnSpacing="8" HorizontalAlignment="Left">
                                 <Grid.ColumnDefinitions>

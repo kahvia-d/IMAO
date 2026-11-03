@@ -101,7 +101,8 @@ public sealed partial class FilterControl : UserControl
     {
         AttributionText.MaxWidth = Math.Max(1, ActualWidth - 20);
         bool compact = CompactMode || height < 460;
-        FilterEyebrow.Visibility = FilterDescription.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        FilterEyebrow.Visibility = Visibility.Collapsed;
+        FilterDescription.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         FilterTitle.Visibility = CompactMode ? Visibility.Collapsed : Visibility.Visible;
         FilterToolbar.Spacing = compact ? 6 : 10;
         FilterWarning.IsOpen = !compact && selection.CatalogWarning.Length > 0;

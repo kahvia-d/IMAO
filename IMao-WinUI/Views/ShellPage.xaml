@@ -1,253 +1,159 @@
-<Page x:Class="IMao_WinUI.Views.ShellPage"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:helpers="using:IMao_WinUI.Helpers"
-      Loaded="OnLoaded"
-      SizeChanged="ShellPage_SizeChanged">
-    <Grid Background="{StaticResource IMaoCanvasBrush}">
+<Page
+    x:Class="IMao_WinUI.Views.ShellPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:helpers="using:IMao_WinUI.Helpers"
+    xmlns:views="using:IMao_WinUI.Views"
+    Loaded="OnLoaded"
+    SizeChanged="ShellPage_SizeChanged"
+    Background="{StaticResource IMaoCanvasBrush}"
+    mc:Ignorable="d">
+
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="46" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- 顶部黑海岸高定星图标题栏与全局实时遥测胶囊 -->
-        <Grid x:Name="AppTitleBar" Background="#090D15" Padding="16,0,152,0"
-              BorderBrush="{StaticResource IMaoBorderBrush}" BorderThickness="0,0,0,1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+        <!-- 隐藏保留 NavigationViewControl，仅用于兼容 NavigationViewService 底层导航栈 -->
+        <NavigationView
+            x:Name="NavigationViewControl"
+            Visibility="Collapsed"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            DisplayModeChanged="NavigationViewControl_DisplayModeChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem x:Uid="Shell_Main" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.StartViewModel" />
+                <NavigationViewItem x:Uid="Shell_Function" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.FunctionViewModel" />
+                <NavigationViewItem x:Uid="Shell_Filter" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.FilterViewModel" />
+            </NavigationView.MenuItems>
+            <NavigationView.FooterMenuItems>
+                <NavigationViewItem x:Uid="Shell_Settings" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.SettingsViewModel">
+                    <NavigationViewItem.InfoBadge>
+                        <InfoBadge x:Name="UpdatesBadge" Visibility="Collapsed" Style="{ThemeResource AttentionDotInfoBadgeStyle}" />
+                    </NavigationViewItem.InfoBadge>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="Shell_Diagnostics" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.DiagnosticsViewModel" />
+                <NavigationViewItem x:Uid="Shell_Help" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.UsageGuideViewModel" />
+            </NavigationView.FooterMenuItems>
+        </NavigationView>
 
-            <!-- 左侧品牌徽记 -->
-            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <Border Width="28" Height="28" CornerRadius="8" Background="{StaticResource IMaoAccentSoftBrush}"
-                        BorderBrush="{StaticResource IMaoAccentBorderBrush}" BorderThickness="1">
-                    <Image Source="/Assets/WindowIcon.ico" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <TextBlock x:Name="AppTitleBarText" Text="IMao" FontSize="14" FontWeight="Bold" CharacterSpacing="40"
-                           Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
-                <Border Style="{StaticResource IMaoPillBadgeStyle}" Padding="8,2" VerticalAlignment="Center">
-                    <TextBlock Text="AETHERIA ATLAS · 寰宇星图高定终端" FontSize="10" FontWeight="Bold" CharacterSpacing="80"
-                               Foreground="{StaticResource IMaoAccentBrush}" />
-                </Border>
-            </StackPanel>
+        <!-- 顶部标题栏：左品牌名称，右简明状态胶囊 -->
+        <Border Grid.Row="0" Background="{StaticResource IMaoSidebarBrush}" BorderBrush="{StaticResource IMaoBorderBrush}" BorderThickness="0,0,0,1">
+            <Grid x:Name="AppTitleBar" Padding="16,0,148,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-            <!-- 右侧全局遥测胶囊条（仅展示状态，不阻断标题栏拖拽） -->
-            <StackPanel x:Name="TitleBarTelemetryStrip" Grid.Column="2" Orientation="Horizontal" Spacing="8"
-                        VerticalAlignment="Center" IsHitTestVisible="False">
-                <Border CornerRadius="999" Padding="10,3" Background="{StaticResource IMaoRaisedSurfaceBrush}"
-                        BorderBrush="{StaticResource IMaoBorderBrush}" BorderThickness="1">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xE77B;" FontSize="11" Foreground="{StaticResource IMaoAccentBrush}" />
-                        <TextBlock x:Name="ShellAccountCapsuleText" Text="记录本 · 默认" FontSize="11.5" Foreground="{StaticResource IMaoTextBrush}" />
-                    </StackPanel>
-                </Border>
-                <Border CornerRadius="999" Padding="10,3" Background="{StaticResource IMaoRaisedSurfaceBrush}"
-                        BorderBrush="{StaticResource IMaoCyanBorderBrush}" BorderThickness="1">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xE81D;" FontSize="11" Foreground="{StaticResource IMaoCyanBrush}" />
-                        <TextBlock x:Name="ShellLocationCapsuleText" Text="定位 · 待命" FontSize="11.5" Foreground="{StaticResource IMaoCyanBrush}" />
-                    </StackPanel>
-                </Border>
-                <Border CornerRadius="999" Padding="10,3" Background="{StaticResource IMaoRaisedSurfaceBrush}"
-                        BorderBrush="{StaticResource IMaoBorderBrush}" BorderThickness="1">
-                    <TextBlock x:Name="ShellMarkersCapsuleText" Text="小地图 0 · 大地图 0" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                </Border>
-            </StackPanel>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <Image Source="/Assets/WindowIcon.ico" Width="20" Height="20" VerticalAlignment="Center" />
+                    <TextBlock x:Name="AppTitleBarText" VerticalAlignment="Center" FontSize="13.5" FontWeight="SemiBold"
+                               Foreground="{StaticResource IMaoTextBrush}" />
+                </StackPanel>
 
-            <Border Grid.ColumnSpan="3" Height="1" VerticalAlignment="Bottom"
-                    Background="{StaticResource IMaoGoldHairlineBrush}" IsHitTestVisible="False" />
-        </Grid>
+                <StackPanel x:Name="TitleBarTelemetryStrip" Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Border Background="{StaticResource IMaoSurfaceBrush}" BorderBrush="{StaticResource IMaoBorderBrush}"
+                            BorderThickness="1" CornerRadius="999" Padding="10,4">
+                        <TextBlock x:Name="ShellAccountCapsuleText" Text="记录本 · 默认" FontSize="11.5"
+                                   Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                    </Border>
+                    <Border Background="{StaticResource IMaoSurfaceBrush}" BorderBrush="{StaticResource IMaoBorderBrush}"
+                            BorderThickness="1" CornerRadius="999" Padding="10,4">
+                        <TextBlock x:Name="ShellLocationCapsuleText" Text="定位 · 待命" FontSize="11.5"
+                                   Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                    </Border>
+                    <Border Background="{StaticResource IMaoSurfaceBrush}" BorderBrush="{StaticResource IMaoBorderBrush}"
+                            BorderThickness="1" CornerRadius="999" Padding="10,4">
+                        <TextBlock x:Name="ShellMarkersCapsuleText" Text="小地图 0 · 大地图 0" FontSize="11.5"
+                                   Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
 
-        <!-- 主体布局：左侧定制高定星图侧边舱 + 右侧工作台视口 -->
+        <!-- 主体布局：左侧简洁导航栏 + 右侧主内容区 -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="SidebarColumn" Width="216" />
+                <ColumnDefinition x:Name="SidebarColumn" Width="176" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- 隐藏的原生 NavigationView：保留供 NavigationViewService 与自动化契约绑定，视觉完全由定制侧边栏接管 -->
-            <NavigationView x:Name="NavigationViewControl" Visibility="Collapsed" IsBackButtonVisible="Collapsed"
-                IsBackEnabled="{x:Bind ViewModel.IsBackEnabled, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.Selected, Mode=OneWay}"
-                IsSettingsVisible="False" DisplayModeChanged="NavigationViewControl_DisplayModeChanged">
-                <NavigationView.MenuItems>
-                    <NavigationViewItem Content="首页" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.StartViewModel" />
-                    <NavigationViewItem Content="路线" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.FunctionViewModel" />
-                    <NavigationViewItem Content="点位筛选" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.FilterViewModel" />
-                </NavigationView.MenuItems>
-                <NavigationView.FooterMenuItems>
-                    <NavigationViewItem Content="设置" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.SettingsViewModel">
-                        <NavigationViewItem.InfoBadge><InfoBadge x:Name="UpdatesBadge" Visibility="Collapsed" /></NavigationViewItem.InfoBadge>
-                    </NavigationViewItem>
-                    <NavigationViewItem Content="诊断" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.DiagnosticsViewModel" />
-                    <NavigationViewItem Content="帮助" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.UsageGuideViewModel" />
-                </NavigationView.FooterMenuItems>
-            </NavigationView>
-
-            <!-- 定制左侧高定星图指令轨（Aetheria Command Rail） -->
+            <!-- 左侧简洁导航栏 -->
             <Border x:Name="AetheriaSidebar" Grid.Column="0" Background="{StaticResource IMaoSidebarBrush}"
-                    BorderBrush="{StaticResource IMaoBorderBrush}" BorderThickness="0,0,1,0" Padding="12,14">
-                <Grid RowSpacing="14">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
-                    <!-- 侧边栏顶部：全局探索点火控制舱（在任何页面均可一键启停探索） -->
-                    <Border x:Name="SidebarIgnitionPod" Grid.Row="0" Style="{StaticResource IMaoHeroCardStyle}" Padding="12,12" CornerRadius="12">
-                        <StackPanel Spacing="9">
-                            <Grid ColumnSpacing="8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Ellipse x:Name="SidebarStatusDot" Width="8" Height="8" Fill="{StaticResource IMaoAccentBrush}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="SidebarCoreStateText" Grid.Column="1" Text="正在连接核心" FontSize="12.5" FontWeight="Bold"
-                                           Foreground="{StaticResource IMaoTextBrush}" TextTrimming="CharacterEllipsis" />
-                            </Grid>
-                            <TextBlock x:Name="SidebarCaptureModeText" Text="本地客户端 · 实时感知" FontSize="11"
-                                       Foreground="{StaticResource IMaoSecondaryTextBrush}" TextTrimming="CharacterEllipsis" />
-                            <Button x:Name="SidebarQuickToggleBtn" Click="SidebarQuickToggle_Click"
-                                    Style="{StaticResource IMaoPrimaryButtonStyle}" HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center" Padding="10,7">
-                                <StackPanel Orientation="Horizontal" Spacing="7">
-                                    <FontIcon x:Name="SidebarQuickToggleIcon" Glyph="&#xE768;" FontSize="13" />
-                                    <TextBlock x:Name="SidebarQuickToggleText" Text="开始探索" FontSize="12.5" FontWeight="Bold" />
-                                </StackPanel>
-                            </Button>
+                    BorderBrush="{StaticResource IMaoBorderBrush}" BorderThickness="0,0,1,0" Padding="10,14">
+                <StackPanel Spacing="4">
+                    <Button x:Name="SidebarBtn_Start" Tag="IMao_WinUI.ViewModels.StartViewModel"
+                            Click="SidebarNav_Click" Style="{StaticResource IMaoSidebarNavActiveButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <FontIcon Glyph="&#xE80F;" FontSize="15" Foreground="{StaticResource IMaoAccentBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="首页" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
                         </StackPanel>
-                    </Border>
+                    </Button>
 
-                    <!-- 侧边栏中部：双层结构化导航区 -->
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Spacing="16">
-                            <!-- 探索核心导航组 -->
-                            <StackPanel Spacing="4">
-                                <TextBlock x:Name="SidebarGroupLabel1" Text="EXPLORATION · 探索与领航" FontSize="10" FontWeight="Bold"
-                                           CharacterSpacing="100" Foreground="{StaticResource IMaoMutedTextBrush}" Margin="8,0,0,4" />
+                    <Button x:Name="SidebarBtn_Routes" Tag="IMao_WinUI.ViewModels.FunctionViewModel"
+                            Click="SidebarNav_Click" Style="{StaticResource IMaoSidebarNavButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <FontIcon Glyph="&#xE816;" FontSize="15" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="路线导航" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
 
-                                <Button x:Name="SidebarBtn_Start" Tag="IMao_WinUI.ViewModels.StartViewModel" Click="SidebarNav_Click"
-                                        Style="{StaticResource IMaoSidebarNavActiveButtonStyle}">
-                                    <Grid ColumnSpacing="10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon Glyph="&#xE80F;" FontSize="15" Foreground="{StaticResource IMaoAccentBrush}" />
-                                        <StackPanel Grid.Column="1" Spacing="1">
-                                            <TextBlock Text="星图总览" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}" />
-                                            <TextBlock Text="COMMAND DECK" FontSize="9.5" CharacterSpacing="60" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Button>
+                    <Button x:Name="SidebarBtn_Filter" Tag="IMao_WinUI.ViewModels.FilterViewModel"
+                            Click="SidebarNav_Click" Style="{StaticResource IMaoSidebarNavButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <FontIcon Glyph="&#xE71C;" FontSize="15" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="点位筛选" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
 
-                                <Button x:Name="SidebarBtn_Routes" Tag="IMao_WinUI.ViewModels.FunctionViewModel" Click="SidebarNav_Click"
-                                        Style="{StaticResource IMaoSidebarNavButtonStyle}">
-                                    <Grid ColumnSpacing="10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon Glyph="&#xE707;" FontSize="15" Foreground="{StaticResource IMaoCyanBrush}" />
-                                        <StackPanel Grid.Column="1" Spacing="1">
-                                            <TextBlock Text="路线工坊" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}" />
-                                            <TextBlock Text="ROUTE STUDIO" FontSize="9.5" CharacterSpacing="60" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Button>
+                    <Border Height="1" Background="{StaticResource IMaoBorderBrush}" Margin="6,8" />
 
-                                <Button x:Name="SidebarBtn_Filter" Tag="IMao_WinUI.ViewModels.FilterViewModel" Click="SidebarNav_Click"
-                                        Style="{StaticResource IMaoSidebarNavButtonStyle}">
-                                    <Grid ColumnSpacing="10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon Glyph="&#xE71C;" FontSize="15" Foreground="{StaticResource IMaoAccentBrush}" />
-                                        <StackPanel Grid.Column="1" Spacing="1">
-                                            <TextBlock Text="点位典藏" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}" />
-                                            <TextBlock Text="POINT ATLAS" FontSize="9.5" CharacterSpacing="60" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Button>
+                    <Button x:Name="SidebarBtn_Settings" Tag="IMao_WinUI.ViewModels.SettingsViewModel"
+                            Click="SidebarNav_Click" Style="{StaticResource IMaoSidebarNavButtonStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE713;" FontSize="15" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                <TextBlock Text="设置" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
                             </StackPanel>
+                            <Ellipse x:Name="SidebarUpdateDot" Grid.Column="1" Width="8" Height="8"
+                                     Fill="{StaticResource IMaoAccentBrush}" Visibility="Collapsed" VerticalAlignment="Center" />
+                        </Grid>
+                    </Button>
 
-                            <Border Height="1" Background="{StaticResource IMaoBorderBrush}" Margin="6,0" />
-
-                            <!-- 档案与系统导航组 -->
-                            <StackPanel Spacing="4">
-                                <TextBlock x:Name="SidebarGroupLabel2" Text="ARCHIVES &amp; SYSTEM · 档案与系统" FontSize="10" FontWeight="Bold"
-                                           CharacterSpacing="100" Foreground="{StaticResource IMaoMutedTextBrush}" Margin="8,0,0,4" />
-
-                                <Button x:Name="SidebarBtn_Settings" Tag="IMao_WinUI.ViewModels.SettingsViewModel" Click="SidebarNav_Click"
-                                        Style="{StaticResource IMaoSidebarNavButtonStyle}">
-                                    <Grid ColumnSpacing="10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon Glyph="&#xE713;" FontSize="15" Foreground="{StaticResource IMaoAccentBrush}" />
-                                        <StackPanel Grid.Column="1" Spacing="1">
-                                            <TextBlock Text="档案与设置" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}" />
-                                            <TextBlock Text="SYNC &amp; CONFIG" FontSize="9.5" CharacterSpacing="60" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                        </StackPanel>
-                                        <Ellipse x:Name="SidebarUpdateDot" Grid.Column="2" Width="8" Height="8"
-                                                 Fill="{StaticResource IMaoAccentBrush}" Visibility="Collapsed" VerticalAlignment="Center" />
-                                    </Grid>
-                                </Button>
-
-                                <Button x:Name="SidebarBtn_Diagnostics" Tag="IMao_WinUI.ViewModels.DiagnosticsViewModel" Click="SidebarNav_Click"
-                                        Style="{StaticResource IMaoSidebarNavButtonStyle}">
-                                    <Grid ColumnSpacing="10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon Glyph="&#xE9D9;" FontSize="15" Foreground="{StaticResource IMaoCyanBrush}" />
-                                        <StackPanel Grid.Column="1" Spacing="1">
-                                            <TextBlock Text="遥测黑匣子" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}" />
-                                            <TextBlock Text="TELEMETRY &amp; LOGS" FontSize="9.5" CharacterSpacing="60" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Button>
-
-                                <Button x:Name="SidebarBtn_Help" Tag="IMao_WinUI.ViewModels.UsageGuideViewModel" Click="SidebarNav_Click"
-                                        Style="{StaticResource IMaoSidebarNavButtonStyle}">
-                                    <Grid ColumnSpacing="10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon Glyph="&#xE897;" FontSize="15" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                        <StackPanel Grid.Column="1" Spacing="1">
-                                            <TextBlock Text="探索百科" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}" />
-                                            <TextBlock Text="FIELD CODEX" FontSize="9.5" CharacterSpacing="60" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Button>
-                            </StackPanel>
+                    <Button x:Name="SidebarBtn_Diagnostics" Tag="IMao_WinUI.ViewModels.DiagnosticsViewModel"
+                            Click="SidebarNav_Click" Style="{StaticResource IMaoSidebarNavButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <FontIcon Glyph="&#xE9D9;" FontSize="15" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="运行诊断" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
                         </StackPanel>
-                    </ScrollViewer>
+                    </Button>
 
-                    <!-- 侧边栏底部铭牌 -->
-                    <Border Grid.Row="2" CornerRadius="8" Padding="10,7" Background="{StaticResource IMaoDeepInsetBrush}"
-                            BorderBrush="{StaticResource IMaoBorderBrush}" BorderThickness="1">
-                        <StackPanel Spacing="2">
-                            <TextBlock Text="BLACK SHORES // AETHERIA" FontSize="9.5" FontWeight="Bold" CharacterSpacing="80"
-                                       Foreground="{StaticResource IMaoAccentBrush}" />
-                            <TextBlock Text="索拉里斯全境频谱连接正常" FontSize="11" Foreground="{StaticResource IMaoMutedTextBrush}" />
+                    <Button x:Name="SidebarBtn_Help" Tag="IMao_WinUI.ViewModels.UsageGuideViewModel"
+                            Click="SidebarNav_Click" Style="{StaticResource IMaoSidebarNavButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <FontIcon Glyph="&#xE897;" FontSize="15" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="帮助文档" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
                         </StackPanel>
-                    </Border>
-                </Grid>
+                    </Button>
+                </StackPanel>
             </Border>
 
-            <!-- 右侧主工作台视口 -->
-            <ScrollViewer x:Name="PageScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <Frame x:Name="NavigationFrame" Navigated="NavigationFrame_Navigated"
-                       Padding="24,18,24,24" MaxWidth="1360" HorizontalAlignment="Stretch" />
+            <!-- 右侧主工作区画布 -->
+            <ScrollViewer
+                x:Name="PageScrollViewer"
+                Grid.Column="1"
+                Background="{StaticResource IMaoCanvasBrush}"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <Frame x:Name="NavigationFrame" Padding="24,18,24,24" Navigated="NavigationFrame_Navigated" />
             </ScrollViewer>
         </Grid>
     </Grid>

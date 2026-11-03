@@ -7,7 +7,6 @@ using IMao_WinUI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using Windows.System;
 
 namespace IMao_WinUI.Views;
@@ -32,7 +31,7 @@ public sealed partial class ShellPage : Page
         ViewModel.NavigationService.Frame = NavigationFrame;
         ViewModel.NavigationViewService.Initialize(NavigationViewControl);
 
-        // 自定义标题栏承载品牌徽记与全局遥测胶囊
+        // 自定义标题栏
         App.MainWindow.ExtendsContentIntoTitleBar = true;
         App.MainWindow.SetTitleBar(AppTitleBar);
         App.MainWindow.Activated += MainWindow_Activated;
@@ -76,7 +75,7 @@ public sealed partial class ShellPage : Page
         if (IsLoaded) SyncShellTelemetry(coreHost.Status);
     }
 
-    // 同步顶栏全局遥测胶囊与左侧边栏全局点火控制舱状态
+    // 同步顶栏状态胶囊显示
     private void SyncShellTelemetry(CoreRuntimeStatus status)
     {
         string accountName = coreHost.ActiveLocalAccount?.Name ?? "默认";
@@ -96,44 +95,9 @@ public sealed partial class ShellPage : Page
         });
         ShellLocationCapsuleText.Text = $"定位 · {locText}";
         ShellMarkersCapsuleText.Text = $"小地图 {status.MinimapMarkers} · 大地图 {status.MapMarkers}";
-
-        SidebarCoreStateText.Text = status.DisplayState;
-        SidebarCaptureModeText.Text = coreHost.SelectedCaptureTarget is null ? "本地客户端 · 实时感知" : "云鸣潮窗口 · 自动识别";
-
-        bool busy = status.CoreState is "connecting" or "loading" or "startingOverlay" or "stopping";
-        SidebarQuickToggleBtn.IsEnabled = !busy;
-        SidebarQuickToggleIcon.Glyph = status.IsRunning ? "\uE71A" : "\uE768";
-        SidebarQuickToggleText.Text = busy
-            ? (status.CoreState == "stopping" ? "停止中…" : "准备中…")
-            : (status.IsRunning ? "停止探索" : "开始探索");
-
-        var dotBrushKey = status.IsRunning ? "IMaoSuccessBrush" : (busy ? "IMaoWarningBrush" : "IMaoAccentBrush");
-        if (Application.Current.Resources.TryGetValue(dotBrushKey, out var brushObj) && brushObj is Brush dotBrush)
-        {
-            SidebarStatusDot.Fill = dotBrush;
-        }
     }
 
-    // 侧边栏全局一键启停探索按钮
-    private async void SidebarQuickToggle_Click(object sender, RoutedEventArgs e)
-    {
-        SidebarQuickToggleBtn.IsEnabled = false;
-        try
-        {
-            var result = await coreHost.ToggleExplorationAsync(GameWindow.CheckGameWindowSize());
-            if (result == ExplorationToggleResult.WindowSizeRejected)
-            {
-                // 若窗口尺寸不满足要求，跳转到星图总览页展示详细提醒
-                App.GetService<INavigationService>().NavigateTo(typeof(StartViewModel).FullName!);
-            }
-        }
-        finally
-        {
-            if (IsLoaded) SyncShellTelemetry(coreHost.Status);
-        }
-    }
-
-    // 定制侧边栏导航点击
+    // 侧边栏导航点击
     private void SidebarNav_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: string pageKey } && !string.IsNullOrWhiteSpace(pageKey))
@@ -151,8 +115,8 @@ public sealed partial class ShellPage : Page
 
     private void NavigationFrame_Navigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
-        // 点位典藏页与遥测诊断页拥有独立的内部虚拟化滚动视口，禁用外层滚动
-        bool ownsScroll = e.Content is FilterPage or DiagnosticsPage;
+        // 点位筛选、运行诊断与内置帮助文档拥有独立的内部滚动视口，禁用外层滚动
+        bool ownsScroll = e.Content is FilterPage or DiagnosticsPage or UsageGuidePage;
         PageScrollViewer.VerticalScrollBarVisibility = ownsScroll ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
         PageScrollViewer.VerticalScrollMode = ownsScroll ? ScrollMode.Disabled : ScrollMode.Auto;
         PageScrollViewer.ChangeView(0, 0, null, disableAnimation: true);
@@ -184,13 +148,13 @@ public sealed partial class ShellPage : Page
         }
     }
 
-    // 响应式窗口宽度适配：小尺寸窗口自动收窄侧边栏并折叠顶栏遥测胶囊，确保 800×500 零横向滚动
+    // 响应式窗口宽度适配
     private void ShellPage_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool compact = e.NewSize.Width < 920;
-        SidebarColumn.Width = new GridLength(compact ? 168 : 216);
-        TitleBarTelemetryStrip.Visibility = e.NewSize.Width < 860 ? Visibility.Collapsed : Visibility.Visible;
-        NavigationFrame.Padding = compact ? new Thickness(16, 14, 16, 18) : new Thickness(24, 18, 24, 24);
+        bool compact = e.NewSize.Width < 900;
+        SidebarColumn.Width = new GridLength(compact ? 148 : 176);
+        TitleBarTelemetryStrip.Visibility = e.NewSize.Width < 820 ? Visibility.Collapsed : Visibility.Visible;
+        NavigationFrame.Padding = compact ? new Thickness(16, 14, 16, 18) : new Thickness(22, 16, 22, 20);
     }
 
     private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)

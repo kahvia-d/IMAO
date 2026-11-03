@@ -1,50 +1,48 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- 06 / 寰宇星图 × 黑海岸高定（AETHERIA ATLAS 2.0）全局色彩系统 -->
-    <SolidColorBrush x:Key="IMaoCanvasBrush" Color="#070A10" />
-    <SolidColorBrush x:Key="IMaoSidebarBrush" Color="#0B0F18" />
-    <SolidColorBrush x:Key="IMaoSurfaceBrush" Color="#101622" />
-    <SolidColorBrush x:Key="IMaoRaisedSurfaceBrush" Color="#161E2E" />
-    <SolidColorBrush x:Key="IMaoDeepInsetBrush" Color="#0A0E16" />
+    <!-- 全局色彩系统：深邃夜空底色 + 温和暖金强调色，克制干净 -->
+    <SolidColorBrush x:Key="IMaoCanvasBrush" Color="#090C12" />
+    <SolidColorBrush x:Key="IMaoSidebarBrush" Color="#0C1018" />
+    <SolidColorBrush x:Key="IMaoSurfaceBrush" Color="#111722" />
+    <SolidColorBrush x:Key="IMaoRaisedSurfaceBrush" Color="#171F2E" />
+    <SolidColorBrush x:Key="IMaoDeepInsetBrush" Color="#0B0F17" />
     <SolidColorBrush x:Key="IMaoAccentBrush" Color="#E5C17B" />
-    <SolidColorBrush x:Key="IMaoAccentSoftBrush" Color="#22E5C17B" />
-    <SolidColorBrush x:Key="IMaoAccentBorderBrush" Color="#58E5C17B" />
-    <SolidColorBrush x:Key="IMaoCyanBrush" Color="#4CE0D2" />
-    <SolidColorBrush x:Key="IMaoCyanSoftBrush" Color="#1F4CE0D2" />
-    <SolidColorBrush x:Key="IMaoCyanBorderBrush" Color="#504CE0D2" />
-    <SolidColorBrush x:Key="IMaoTextBrush" Color="#F4EFE6" />
-    <SolidColorBrush x:Key="IMaoSecondaryTextBrush" Color="#8E9BAE" />
-    <SolidColorBrush x:Key="IMaoMutedTextBrush" Color="#5C697C" />
-    <SolidColorBrush x:Key="IMaoBorderBrush" Color="#232E40" />
-    <SolidColorBrush x:Key="IMaoSuccessBrush" Color="#4CE0B3" />
-    <SolidColorBrush x:Key="IMaoWarningBrush" Color="#F0B85B" />
-    <SolidColorBrush x:Key="IMaoDangerBrush" Color="#F26D6D" />
+    <SolidColorBrush x:Key="IMaoAccentSoftBrush" Color="#1FE5C17B" />
+    <SolidColorBrush x:Key="IMaoAccentBorderBrush" Color="#44E5C17B" />
+    <SolidColorBrush x:Key="IMaoCyanBrush" Color="#56D4C8" />
+    <SolidColorBrush x:Key="IMaoCyanSoftBrush" Color="#1A56D4C8" />
+    <SolidColorBrush x:Key="IMaoCyanBorderBrush" Color="#3D56D4C8" />
+    <SolidColorBrush x:Key="IMaoTextBrush" Color="#F2EFE9" />
+    <SolidColorBrush x:Key="IMaoSecondaryTextBrush" Color="#9AA6B8" />
+    <SolidColorBrush x:Key="IMaoMutedTextBrush" Color="#687588" />
+    <SolidColorBrush x:Key="IMaoBorderBrush" Color="#222C3C" />
+    <SolidColorBrush x:Key="IMaoSuccessBrush" Color="#4CC99B" />
+    <SolidColorBrush x:Key="IMaoWarningBrush" Color="#EAB354" />
+    <SolidColorBrush x:Key="IMaoDangerBrush" Color="#EE6B6B" />
 
-    <!-- 高定斜向星图舱体渐变与顶部流光金线 -->
+    <!-- 柔和卡片背景渐变 -->
     <LinearGradientBrush x:Key="IMaoHeroSurfaceBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#192334" Offset="0.0" />
-        <GradientStop Color="#101723" Offset="0.55" />
-        <GradientStop Color="#0C111B" Offset="1.0" />
+        <GradientStop Color="#161F2E" Offset="0.0" />
+        <GradientStop Color="#111722" Offset="1.0" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="IMaoRouteSurfaceBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#132332" Offset="0.0" />
-        <GradientStop Color="#0F1724" Offset="0.6" />
-        <GradientStop Color="#0B1019" Offset="1.0" />
+        <GradientStop Color="#141E2C" Offset="0.0" />
+        <GradientStop Color="#111722" Offset="1.0" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="IMaoGoldHairlineBrush" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#C8E5C17B" Offset="0.0" />
-        <GradientStop Color="#554CE0D2" Offset="0.5" />
-        <GradientStop Color="#00E5C17B" Offset="1.0" />
+        <GradientStop Color="#66E5C17B" Offset="0.0" />
+        <GradientStop Color="#222C3C" Offset="0.5" />
+        <GradientStop Color="#00222C3C" Offset="1.0" />
     </LinearGradientBrush>
 
-    <!-- WinUI 系统强调色统一覆盖为黑海岸曜金 -->
+    <!-- WinUI 系统强调色统一覆盖 -->
     <Color x:Key="SystemAccentColor">#E5C17B</Color>
     <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#E5C17B" />
     <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#D4AF67" />
     <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush" Color="#E5C17B" />
-    <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush" Color="#070A10" />
-    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="#070A10" />
-    <SolidColorBrush x:Key="NavigationViewTopPaneBackground" Color="#0B0F18" />
-    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#0B0F18" />
+    <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush" Color="#090C12" />
+    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="#090C12" />
+    <SolidColorBrush x:Key="NavigationViewTopPaneBackground" Color="#0C1018" />
+    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#0C1018" />
     <SolidColorBrush x:Key="InfoBarInformationalSeverityIconBackground" Color="#E5C17B" />
     <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="#E5C17B" />
     <SolidColorBrush x:Key="ListViewItemSelectionIndicatorBrush" Color="#E5C17B" />
@@ -53,32 +51,30 @@
     <SolidColorBrush x:Key="AccentButtonBackground" Color="#E5C17B" />
     <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#F2D494" />
     <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#C8A25A" />
-    <SolidColorBrush x:Key="AccentButtonForeground" Color="#070A10" />
-    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#070A10" />
-    <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#070A10" />
+    <SolidColorBrush x:Key="AccentButtonForeground" Color="#090C12" />
+    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#090C12" />
+    <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#090C12" />
     <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#E5C17B" />
     <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#F2D494" />
     <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#C8A25A" />
     <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#E5C17B" />
-    <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#070A10" />
-    <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#070A10" />
-    <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#070A10" />
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#090C12" />
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#090C12" />
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#090C12" />
     <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillChecked" Color="#E5C17B" />
     <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeChecked" Color="#E5C17B" />
-    <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked" Color="#070A10" />
+    <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked" Color="#090C12" />
 
-    <!-- 排版层级系统 -->
+    <!-- 统一、清晰、易读的四级排版系统（不再混用花哨字号与五颜六色的标签） -->
     <Style x:Key="IMaoPageTitleStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontSize" Value="20" />
         <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="CharacterSpacing" Value="15" />
         <Setter Property="Foreground" Value="{StaticResource IMaoTextBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
     <Style x:Key="IMaoSectionTitleStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="16" />
-        <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="CharacterSpacing" Value="10" />
+        <Setter Property="FontSize" Value="15.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource IMaoTextBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
@@ -92,47 +88,45 @@
         <Setter Property="Foreground" Value="{StaticResource IMaoSecondaryTextBrush}" />
     </Style>
     <Style x:Key="IMaoEyebrowStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="10.5" />
-        <Setter Property="CharacterSpacing" Value="130" />
-        <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="Foreground" Value="{StaticResource IMaoAccentBrush}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource IMaoSecondaryTextBrush}" />
     </Style>
 
-    <!-- Bento 舱体与水平设置行样式 -->
+    <!-- 卡片与水平设置行样式 -->
     <Style x:Key="IMaoCardStyle" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource IMaoSurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource IMaoBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="CornerRadius" Value="12" />
         <Setter Property="Padding" Value="18,16" />
     </Style>
     <Style x:Key="IMaoHeroCardStyle" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource IMaoHeroSurfaceBrush}" />
-        <Setter Property="BorderBrush" Value="{StaticResource IMaoAccentBorderBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource IMaoBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="14" />
-        <Setter Property="Padding" Value="20,18" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="18,16" />
     </Style>
     <Style x:Key="IMaoRouteCardStyle" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource IMaoRouteSurfaceBrush}" />
-        <Setter Property="BorderBrush" Value="{StaticResource IMaoCyanBorderBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource IMaoBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="14" />
-        <Setter Property="Padding" Value="20,18" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="18,16" />
     </Style>
     <Style x:Key="IMaoSubCardStyle" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource IMaoRaisedSurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource IMaoBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="10" />
-        <Setter Property="Padding" Value="14,11" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="14,10" />
     </Style>
-    <!-- 现代化水平设置行：左文案、右紧凑控件 -->
     <Style x:Key="IMaoSettingRowStyle" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource IMaoRaisedSurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource IMaoBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Padding" Value="14,10" />
     </Style>
     <Style x:Key="IMaoPillBadgeStyle" TargetType="Border">
@@ -150,7 +144,7 @@
         <Setter Property="Padding" Value="10,3" />
     </Style>
 
-    <!-- 紧凑无文字开关：彻底摒弃 WinUI 默认带 "开/关" 文本与 154px 最小宽度的臃肿外观 -->
+    <!-- 紧凑无文字开关 -->
     <Style x:Key="IMaoCompactToggleStyle" TargetType="ToggleSwitch">
         <Setter Property="OnContent" Value="" />
         <Setter Property="OffContent" Value="" />
@@ -160,7 +154,7 @@
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
-    <!-- 按钮与分段导航样式 -->
+    <!-- 按钮样式 -->
     <Style x:Key="IMaoSecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
         <Setter Property="Padding" Value="13,7" />
         <Setter Property="CornerRadius" Value="8" />
@@ -174,24 +168,26 @@
         <Setter Property="CornerRadius" Value="8" />
         <Setter Property="HorizontalAlignment" Value="Left" />
         <Setter Property="FontSize" Value="13.5" />
-        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
-    <!-- 定制侧边栏导航按钮样式 -->
+    <!-- 简洁侧边栏导航按钮样式 -->
     <Style x:Key="IMaoSidebarNavButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-        <Setter Property="Padding" Value="12,9" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Padding" Value="14,8" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style x:Key="IMaoSidebarNavActiveButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-        <Setter Property="Padding" Value="12,9" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Padding" Value="14,8" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Background" Value="{StaticResource IMaoAccentSoftBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource IMaoAccentBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />

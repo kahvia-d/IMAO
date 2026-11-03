@@ -3,34 +3,23 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:controls="using:CommunityToolkit.WinUI.Controls">
     <StackPanel Spacing="16" Padding="0,2,0,20">
-        <!-- 顶部中枢标题与五维分段工作台导航条 -->
+        <!-- 页面标题与分类切换栏 -->
         <StackPanel Spacing="12">
-            <Grid ColumnSpacing="16">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Spacing="3">
-                    <TextBlock Text="AETHERIA ARCHIVES &amp; SYSTEM MATRIX // 档案同步与系统中枢" Style="{StaticResource IMaoEyebrowStyle}" />
-                    <TextBlock Text="档案与设置" Style="{StaticResource IMaoPageTitleStyle}" />
-                    <TextBlock Text="采用水平对齐控件与双栏 Bento 舱体架构，告别冗长列表，点击上方分区即可直达对应工作台。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                </StackPanel>
-            </Grid>
+            <TextBlock Text="设置" Style="{StaticResource IMaoPageTitleStyle}" />
 
-            <!-- 五大独立工作台切换栏（默认聚焦「01 档案与云同步」，一屏尽览无滚动噪音） -->
-            <Border Style="{StaticResource IMaoSubCardStyle}" Padding="8,7" BorderBrush="{StaticResource IMaoAccentBorderBrush}">
+            <Border Style="{StaticResource IMaoSubCardStyle}" Padding="8,7">
                 <controls:WrapPanel x:Name="SettingsCategoryBar" HorizontalSpacing="6" VerticalSpacing="6">
-                    <Button x:Name="CategoryBtn_Sync" Content="01 · 档案与云同步" Tag="sync" Click="SettingsCategory_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" Padding="14,7" />
-                    <Button x:Name="CategoryBtn_Display" Content="02 · 捕获与叠加显示" Tag="display" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
-                    <Button x:Name="CategoryBtn_Input" Content="03 · 快捷键与手柄" Tag="input" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
-                    <Button x:Name="CategoryBtn_Updates" Content="04 · 版本与地图区域" Tag="updates" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
-                    <Button x:Name="CategoryBtn_System" Content="05 · 数据目录与兼容" Tag="system" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
+                    <Button x:Name="CategoryBtn_Sync" Content="记录本与云同步" Tag="sync" Click="SettingsCategory_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" Padding="14,7" />
+                    <Button x:Name="CategoryBtn_Display" Content="捕获与叠加显示" Tag="display" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
+                    <Button x:Name="CategoryBtn_Input" Content="快捷键与手柄" Tag="input" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
+                    <Button x:Name="CategoryBtn_Updates" Content="版本与地图区域" Tag="updates" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
+                    <Button x:Name="CategoryBtn_System" Content="数据目录与兼容" Tag="system" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
                     <Button x:Name="CategoryBtn_All" Content="展开全部" Tag="all" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="12,7" />
                 </controls:WrapPanel>
             </Border>
         </StackPanel>
 
-        <!-- ==================== 工作台 01：档案与库街区云同步（默认首屏双栏 Bento） ==================== -->
+        <!-- ==================== 分区 1：记录本与库街区云同步 ==================== -->
         <StackPanel x:Name="SettingsGroup_Sync" Spacing="16" Visibility="Visible">
             <Grid ColumnSpacing="16" RowSpacing="16">
                 <Grid.ColumnDefinitions>
@@ -38,13 +27,12 @@
                     <ColumnDefinition Width="1.15*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- 左舱：本地点位记录本 -->
-                <Border Grid.Column="0" Style="{StaticResource IMaoHeroCardStyle}">
-                    <StackPanel Spacing="14">
+                <!-- 左卡：本地点位记录本 -->
+                <Border Grid.Column="0" Style="{StaticResource IMaoCardStyle}">
+                    <StackPanel Spacing="12">
                         <StackPanel Spacing="3">
-                            <TextBlock Text="01A // LOCAL RECORD LEDGERS · 本地档案库" Style="{StaticResource IMaoEyebrowStyle}" />
                             <TextBlock Text="本地点位记录本" Style="{StaticResource IMaoSectionTitleStyle}" />
-                            <TextBlock Text="地图仅投射当前选中的记录本；每个记录本可独立绑定一个库街区账号。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                            <TextBlock Text="地图仅显示当前选中的记录本；每个记录本可独立绑定一个库街区账号。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                         </StackPanel>
 
                         <Border Style="{StaticResource IMaoSubCardStyle}">
@@ -61,35 +49,25 @@
                             <Button Content="导出体检" Click="LocalAccountDiagnostics_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                             <Button Content="打开目录" Click="OpenPoints_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                         </controls:WrapPanel>
-
-                        <Border Style="{StaticResource IMaoSubCardStyle}" Padding="12,8">
-                            <TextBlock Text="安全保障：删除记录本只会将其移至 SavedPoints\deleted 归档保留，绝不物理抹除数据。"
-                                       Style="{StaticResource IMaoSecondaryTextStyle}" FontSize="11.5" />
-                        </Border>
                     </StackPanel>
                 </Border>
 
-                <!-- 右舱：库街区点位进度同步 -->
-                <Border Grid.Column="1" Style="{StaticResource IMaoRouteCardStyle}">
+                <!-- 右卡：库街区点位进度同步 -->
+                <Border Grid.Column="1" Style="{StaticResource IMaoCardStyle}">
                     <StackPanel Spacing="12">
                         <StackPanel Spacing="3">
-                            <TextBlock Text="01B // KURO BBS CLOUD BRIDGE · 库街区双向并集同步" Style="{StaticResource IMaoEyebrowStyle}" Foreground="{StaticResource IMaoCyanBrush}" />
                             <TextBlock Text="库街区点位进度同步" Style="{StaticResource IMaoSectionTitleStyle}" />
-                            <TextBlock Text="通过浏览器扩展连接桌面端后，将库街区账号 ID 绑定至左侧记录本即可双向同步。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                            <TextBlock Text="通过浏览器扩展连接桌面端并将账号 ID 绑定至左侧记录本后即可双向同步。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                         </StackPanel>
 
-                        <Border Style="{StaticResource IMaoSubCardStyle}" BorderBrush="{StaticResource IMaoCyanBorderBrush}">
-                            <TextBlock x:Name="KuroSyncLedger" TextWrapping="Wrap" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" />
+                        <Border Style="{StaticResource IMaoSubCardStyle}">
+                            <TextBlock x:Name="KuroSyncLedger" TextWrapping="Wrap" Style="{StaticResource IMaoBodyTextStyle}" />
                         </Border>
 
-                        <!-- 同步范围与水平开关行 -->
                         <Border Style="{StaticResource IMaoSettingRowStyle}">
                             <Grid ColumnSpacing="12">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
-                                <StackPanel Spacing="1" VerticalAlignment="Center">
-                                    <TextBlock Text="同步地图区域范围" FontSize="13.5" FontWeight="SemiBold" />
-                                    <TextBlock Text="默认同步全部区域，也可单独指定国家或地区" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                </StackPanel>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="210" /></Grid.ColumnDefinitions>
+                                <TextBlock Text="同步地图区域范围" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <ComboBox x:Name="KuroSyncState" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectionChanged="KuroSyncState_SelectionChanged" />
                             </Grid>
                         </Border>
@@ -97,9 +75,9 @@
                         <Border Style="{StaticResource IMaoSettingRowStyle}">
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                <StackPanel Spacing="1" VerticalAlignment="Center">
-                                    <TextBlock Text="自动同步（标记后立即推送）" FontSize="13.5" FontWeight="SemiBold" />
-                                    <TextBlock Text="游戏内完成点位立刻写回库街区，并每 10 分钟补齐" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="自动同步" FontSize="13.5" FontWeight="SemiBold" />
+                                    <TextBlock Text="游戏内完成点位立即推送，并每 10 分钟自动补齐" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                 </StackPanel>
                                 <ToggleSwitch x:Name="KuroSyncAutoSync" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="KuroSyncAutoSync_Toggled" />
                             </Grid>
@@ -110,14 +88,14 @@
                             <Border Grid.Column="0" Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <TextBlock Text="显示已同步数" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Text="显示已同步数" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ToggleSwitch x:Name="KuroSyncShowSynced" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="KuroSyncShowSynced_Toggled" />
                                 </Grid>
                             </Border>
                             <Border Grid.Column="1" Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <TextBlock Text="显示无差异区域" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Text="显示无差异区域" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ToggleSwitch x:Name="KuroSyncShowAll" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="KuroSyncShowAll_Toggled" />
                                 </Grid>
                             </Border>
@@ -151,7 +129,7 @@
             </Grid>
         </StackPanel>
 
-        <!-- ==================== 工作台 02：捕获管线与叠加显示（双栏 Bento） ==================== -->
+        <!-- ==================== 分区 2：捕获与叠加显示 ==================== -->
         <StackPanel x:Name="SettingsGroup_Display" Spacing="16" Visibility="Collapsed">
             <ContentControl x:Name="RuntimeSettings" HorizontalContentAlignment="Stretch">
                 <Grid ColumnSpacing="16" RowSpacing="16">
@@ -160,22 +138,15 @@
                         <ColumnDefinition Width="1*" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- 左舱：地图叠加层与领航显示开关 -->
-                    <Border Grid.Column="0" Style="{StaticResource IMaoHeroCardStyle}">
+                    <!-- 左卡：地图显示与路线重排开关 -->
+                    <Border Grid.Column="0" Style="{StaticResource IMaoCardStyle}">
                         <StackPanel Spacing="10">
-                            <StackPanel Spacing="3" Margin="0,0,0,4">
-                                <TextBlock Text="02A // HUD OVERLAY LAYERS · 地图叠加层显示" Style="{StaticResource IMaoEyebrowStyle}" />
-                                <TextBlock Text="地图显示与自动重排" Style="{StaticResource IMaoSectionTitleStyle}" />
-                                <TextBlock Text="控制游戏画面上叠加的标点、状态条与偏航重算行为。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                            </StackPanel>
+                            <TextBlock Text="地图显示与自动重排" Style="{StaticResource IMaoSectionTitleStyle}" Margin="0,0,0,2" />
 
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Text="小地图点位" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="在左上角雷达小地图上实时投射附近点位" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                    </StackPanel>
+                                    <TextBlock Text="显示小地图点位" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ToggleSwitch x:Name="Setting_MinMapShowItem" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="ToggleSwitch_MinMapShowItem" />
                                 </Grid>
                             </Border>
@@ -183,10 +154,7 @@
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Text="大地图点位" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="打开游戏全屏大地图时投射收集物与路线连线" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                    </StackPanel>
+                                    <TextBlock Text="显示大地图点位" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ToggleSwitch x:Name="Setting_MapShowItem" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="ToggleSwitch_MapShowItem" />
                                 </Grid>
                             </Border>
@@ -194,10 +162,7 @@
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Text="显示已完成点" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="在地图上保留已标记完成的点位以便核对" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                    </StackPanel>
+                                    <TextBlock Text="显示已完成点位" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ToggleSwitch x:Name="Setting_SetVisibleSavedPoints" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="ToggleSwitch_SetVisibleSavedPoints" />
                                 </Grid>
                             </Border>
@@ -205,10 +170,7 @@
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Text="状态条 · 小地图" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="在小地图旁显示定位状态与帧率遥测条" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                    </StackPanel>
+                                    <TextBlock Text="小地图状态条" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ToggleSwitch x:Name="ToggleSwitch_StatusBar" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="ToggleSwitch_StatusBar_Toggled" />
                                 </Grid>
                             </Border>
@@ -216,10 +178,7 @@
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Text="状态条 · 大地图" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="在大地图画面顶部显示当前区域与定位状态" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                    </StackPanel>
+                                    <TextBlock Text="大地图状态条" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ToggleSwitch x:Name="ToggleSwitch_MapStatusBar" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="ToggleSwitch_MapStatusBar_Toggled" />
                                 </Grid>
                             </Border>
@@ -227,42 +186,32 @@
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Text="小地图状态球" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="显示轻量化圆球指示器" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                    </StackPanel>
+                                    <TextBlock Text="小地图状态球" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ToggleSwitch x:Name="ToggleSwitch_StatusBall" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="ToggleSwitch_StatusBall_Toggled" />
                                 </Grid>
                             </Border>
 
-                            <Border Style="{StaticResource IMaoSettingRowStyle}" BorderBrush="{StaticResource IMaoCyanBorderBrush}">
+                            <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Text="偏离路线时自动重排剩余目标" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoCyanBrush}" />
-                                        <TextBlock Text="在有活动路线、可靠定位且未暂停时自动重算" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                    </StackPanel>
+                                    <TextBlock Text="偏离路线时自动重排剩余目标" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ToggleSwitch x:Name="AutomaticReplan" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="AutomaticReplan_Toggled" />
                                 </Grid>
                             </Border>
                         </StackPanel>
                     </Border>
 
-                    <!-- 右舱：画面捕获管线、合成呈现与刷新周期 -->
+                    <!-- 右卡：画面捕获、呈现与刷新率 -->
                     <Border Grid.Column="1" Style="{StaticResource IMaoCardStyle}">
                         <StackPanel Spacing="10">
-                            <StackPanel Spacing="3" Margin="0,0,0,4">
-                                <TextBlock Text="02B // CAPTURE &amp; COMPOSITOR · 捕获与合成管线" Style="{StaticResource IMaoEyebrowStyle}" Foreground="{StaticResource IMaoCyanBrush}" />
-                                <TextBlock Text="捕获、呈现与刷新率" Style="{StaticResource IMaoSectionTitleStyle}" />
-                                <TextBlock Text="停止探索状态下可切换捕获方式与叠加呈现后端。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                            </StackPanel>
+                            <TextBlock Text="捕获、呈现与刷新率" Style="{StaticResource IMaoSectionTitleStyle}" Margin="0,0,0,2" />
 
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="210" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="1" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="205" /></Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="画面捕获方式" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="停止叠加后可切换 BitBlt 或 WGC" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        <TextBlock Text="停止探索后可切换" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                     </StackPanel>
                                     <ComboBox x:Name="ComboBox_CaptureMethod" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectionChanged="CaptureMethod_SelectionChanged">
                                         <x:String>BitBlt</x:String>
@@ -273,10 +222,10 @@
 
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="210" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="1" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="205" /></Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="叠加层呈现方式" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="推荐使用默认「分层窗口」以保证稳定帧率" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        <TextBlock Text="停止探索后可切换" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                     </StackPanel>
                                     <ComboBox x:Name="ComboBox_PresentMethod" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectionChanged="PresentMethod_SelectionChanged">
                                         <x:String>分层窗口（默认）</x:String>
@@ -287,10 +236,10 @@
 
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="1" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="小地图刷新间隔（毫秒）" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="范围 16 ~ 1000 ms，越小更新越快" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        <TextBlock Text="范围 16 ~ 1000 ms" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                     </StackPanel>
                                     <NumberBox x:Name="UpdateMinMapItemDataCycle" Grid.Column="1" Minimum="16" Maximum="1000" SmallChange="10"
                                                SpinButtonPlacementMode="Compact" VerticalAlignment="Center" ValueChanged="UpdateMinMapItemDataCycle_ValueChanged" />
@@ -299,30 +248,27 @@
 
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="1" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="大地图刷新间隔（毫秒）" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="范围 16 ~ 1000 ms，控制大地图重绘周期" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        <TextBlock Text="范围 16 ~ 1000 ms" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                     </StackPanel>
                                     <NumberBox x:Name="UpdateMapItemDataCycle" Grid.Column="1" Minimum="16" Maximum="1000" SmallChange="10"
                                                SpinButtonPlacementMode="Compact" VerticalAlignment="Center" ValueChanged="UpdateMapItemDataCycle_ValueChanged" />
                                 </Grid>
                             </Border>
 
-                            <Border Height="1" Background="{StaticResource IMaoBorderBrush}" Margin="0,4" />
-
-                            <!-- OCR 硬件加速同舱整合 -->
-                            <Border Style="{StaticResource IMaoSettingRowStyle}" BorderBrush="{StaticResource IMaoAccentBorderBrush}">
+                            <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <StackPanel Spacing="6">
                                     <Grid ColumnSpacing="12">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="1" VerticalAlignment="Center">
-                                            <TextBlock Text="GPU 加速（OCR 坐标识别）" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource IMaoAccentBrush}" />
-                                            <TextBlock Text="使用 DirectML 分担 CPU 负担，重启软件生效" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="GPU 加速（OCR 坐标识别）" FontSize="13.5" FontWeight="SemiBold" />
+                                            <TextBlock Text="使用 DirectML 分担 CPU 负担，重启软件后生效" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                         </StackPanel>
                                         <ToggleSwitch x:Name="OcrGpuAcceleration" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="OcrGpuAcceleration_Toggled" />
                                     </Grid>
-                                    <TextBlock x:Name="OcrBackendState" Style="{StaticResource IMaoSecondaryTextStyle}" FontSize="12" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="OcrBackendState" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                             <InfoBar x:Name="OcrPerformanceMessage" IsOpen="False" IsClosable="True" />
@@ -333,34 +279,30 @@
             <InfoBar x:Name="RuntimeMessage" IsOpen="False" IsClosable="True" />
         </StackPanel>
 
-        <!-- ==================== 工作台 03：快捷键与手柄控制（双栏 Bento） ==================== -->
+        <!-- ==================== 分区 3：快捷键与手柄 ==================== -->
         <StackPanel x:Name="SettingsGroup_Input" Spacing="16" Visibility="Collapsed">
             <Grid ColumnSpacing="16" RowSpacing="16">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.1*" />
+                    <ColumnDefinition Width="1.08*" />
                     <ColumnDefinition Width="1*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- 左舱：键盘快捷键水平映射表 -->
-                <Border Grid.Column="0" Style="{StaticResource IMaoHeroCardStyle}">
+                <!-- 左卡：键盘快捷键 -->
+                <Border Grid.Column="0" Style="{StaticResource IMaoCardStyle}">
                     <StackPanel Spacing="10">
                         <StackPanel Spacing="3">
-                            <TextBlock Text="03A // KEYBOARD HOTKEYS · 键盘快捷键映射" Style="{StaticResource IMaoEyebrowStyle}" />
                             <TextBlock Text="键盘快捷键" Style="{StaticResource IMaoSectionTitleStyle}" />
-                            <TextBlock Text="修改后点击下方「保存快捷键」统一生效（M、F10 保留不可分配）。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                            <TextBlock Text="修改后点击下方「保存快捷键」生效（M、F10 为保留键不可分配）。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                         </StackPanel>
 
-                        <Border Style="{StaticResource IMaoSubCardStyle}" BorderBrush="{StaticResource IMaoAccentBorderBrush}" Padding="12,8">
-                            <TextBlock x:Name="CurrentBindings" Style="{StaticResource IMaoBodyTextStyle}" Foreground="{StaticResource IMaoAccentBrush}" FontWeight="SemiBold" />
+                        <Border Style="{StaticResource IMaoSubCardStyle}" Padding="12,8">
+                            <TextBlock x:Name="CurrentBindings" Style="{StaticResource IMaoSecondaryTextStyle}" />
                         </Border>
 
                         <Border Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                             <Grid ColumnSpacing="10">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
-                                <StackPanel Spacing="1" VerticalAlignment="Center">
-                                    <TextBlock Text="完成点位" FontSize="13" FontWeight="SemiBold" />
-                                    <TextBlock Text="标记小地图最近点或当前攻略展示点" FontSize="11" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                </StackPanel>
+                                <TextBlock Text="完成点位" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <ComboBox x:Name="NearestCompletionKey" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
                             </Grid>
                         </Border>
@@ -368,10 +310,7 @@
                         <Border Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                             <Grid ColumnSpacing="10">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
-                                <StackPanel Spacing="1" VerticalAlignment="Center">
-                                    <TextBlock Text="打开或关闭攻略" FontSize="13" FontWeight="SemiBold" />
-                                    <TextBlock Text="查看附近未完成点或当前路线目标图文攻略" FontSize="11" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                </StackPanel>
+                                <TextBlock Text="打开 / 关闭攻略" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <ComboBox x:Name="CurrentTargetGuideKey" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
                             </Grid>
                         </Border>
@@ -379,10 +318,7 @@
                         <Border Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                             <Grid ColumnSpacing="10">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
-                                <StackPanel Spacing="1" VerticalAlignment="Center">
-                                    <TextBlock Text="开始 / 停止探索" FontSize="13" FontWeight="SemiBold" />
-                                    <TextBlock Text="等同于点击首页「开始探索 / 停止探索」" FontSize="11" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                </StackPanel>
+                                <TextBlock Text="开始 / 停止探索" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <ComboBox x:Name="ToggleEnabledKey" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
                             </Grid>
                         </Border>
@@ -390,10 +326,7 @@
                         <Border Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                             <Grid ColumnSpacing="10">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
-                                <StackPanel Spacing="1" VerticalAlignment="Center">
-                                    <TextBlock Text="记录手绘线段端点" FontSize="13" FontWeight="SemiBold" />
-                                    <TextBlock Text="在探索中按当前坐标记下手绘路线节点" FontSize="11" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                </StackPanel>
+                                <TextBlock Text="记录手绘线段端点" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <ComboBox x:Name="ManualRouteKey" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
                             </Grid>
                         </Border>
@@ -401,10 +334,7 @@
                         <Border Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                             <Grid ColumnSpacing="10">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
-                                <StackPanel Spacing="1" VerticalAlignment="Center">
-                                    <TextBlock Text="攻略内长按跳过当前路线目标" FontSize="13" FontWeight="SemiBold" />
-                                    <TextBlock Text="在攻略窗口内长按跳过当前导航站" FontSize="11" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                </StackPanel>
+                                <TextBlock Text="攻略内长按跳过目标" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <ComboBox x:Name="GuideSkipKey" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
                             </Grid>
                         </Border>
@@ -414,14 +344,14 @@
                             <Border Grid.Column="0" Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="105" /></Grid.ColumnDefinitions>
-                                    <TextBlock Text="攻略上一张" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Text="攻略上一张" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ComboBox x:Name="GuidePreviousImageKey" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
                                 </Grid>
                             </Border>
                             <Border Grid.Column="1" Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="105" /></Grid.ColumnDefinitions>
-                                    <TextBlock Text="攻略下一张" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Text="攻略下一张" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ComboBox x:Name="GuideNextImageKey" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
                                 </Grid>
                             </Border>
@@ -435,22 +365,18 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 右舱：上「操作触发半径与图标聚合」 + 下「Xbox / PlayStation 手柄」 -->
+                <!-- 右栏：上「触发范围与聚合」 + 下「手柄设置」 -->
                 <StackPanel Grid.Column="1" Spacing="16">
                     <Border Style="{StaticResource IMaoCardStyle}">
                         <StackPanel Spacing="10">
-                            <StackPanel Spacing="3">
-                                <TextBlock Text="03B // PROXIMITY &amp; CLUSTERING · 触发半径与图标聚合" Style="{StaticResource IMaoEyebrowStyle}" Foreground="{StaticResource IMaoCyanBrush}" />
-                                <TextBlock Text="操作优化" Style="{StaticResource IMaoSectionTitleStyle}" />
-                                <TextBlock Text="调节小地图快捷键感应半径（像素）与标点重叠聚合阈值，修改立即生效。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                            </StackPanel>
+                            <TextBlock Text="触发范围与图标聚合" Style="{StaticResource IMaoSectionTitleStyle}" />
 
                             <Border Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                                 <Grid ColumnSpacing="10">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="130" /></Grid.ColumnDefinitions>
                                     <StackPanel Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Text="完成点位触发范围（像素）" FontSize="13" FontWeight="SemiBold" />
-                                        <TextBlock Text="小地图玩家箭头附近感应半径 · 默认 15" FontSize="11" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        <TextBlock Text="完成点位触发范围（像素）" FontSize="13.5" FontWeight="SemiBold" />
+                                        <TextBlock Text="默认 15" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                     </StackPanel>
                                     <NumberBox x:Name="CompletionRangePixels" Grid.Column="1" Minimum="5" Maximum="120" SmallChange="5" SpinButtonPlacementMode="Compact" VerticalAlignment="Center" ValueChanged="CompletionRange_ValueChanged" />
                                 </Grid>
@@ -460,8 +386,8 @@
                                 <Grid ColumnSpacing="10">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="130" /></Grid.ColumnDefinitions>
                                     <StackPanel Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Text="查看攻略触发范围（像素）" FontSize="13" FontWeight="SemiBold" />
-                                        <TextBlock Text="附近未完成点攻略感应半径 · 默认 15" FontSize="11" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        <TextBlock Text="查看攻略触发范围（像素）" FontSize="13.5" FontWeight="SemiBold" />
+                                        <TextBlock Text="默认 15" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                     </StackPanel>
                                     <NumberBox x:Name="GuideRangePixels" Grid.Column="1" Minimum="5" Maximum="120" SmallChange="5" SpinButtonPlacementMode="Compact" VerticalAlignment="Center" ValueChanged="GuideRange_ValueChanged" />
                                 </Grid>
@@ -471,8 +397,8 @@
                                 <Grid ColumnSpacing="10">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="130" /></Grid.ColumnDefinitions>
                                     <StackPanel Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Text="刷怪采集自动标记范围（像素）" FontSize="13" FontWeight="SemiBold" />
-                                        <TextBlock Text="开启路线「刷怪采集」后靠近自动完成 · 默认 30" FontSize="11" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        <TextBlock Text="刷怪采集自动标记范围（像素）" FontSize="13.5" FontWeight="SemiBold" />
+                                        <TextBlock Text="默认 30" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                     </StackPanel>
                                     <NumberBox x:Name="FarmRangePixels" Grid.Column="1" Minimum="5" Maximum="120" SmallChange="5" SpinButtonPlacementMode="Compact" VerticalAlignment="Center" ValueChanged="FarmRange_ValueChanged" />
                                 </Grid>
@@ -482,8 +408,8 @@
                                 <Grid ColumnSpacing="10">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="130" /></Grid.ColumnDefinitions>
                                     <StackPanel Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Text="图标合并重叠阈值（%）" FontSize="13" FontWeight="SemiBold" />
-                                        <TextBlock Text="1 接触即合并 · 50 半重叠 · 100 完全重叠" FontSize="11" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        <TextBlock Text="图标合并重叠阈值（%）" FontSize="13.5" FontWeight="SemiBold" />
+                                        <TextBlock Text="1 接触即合并 · 50 半重叠 · 100 完全重叠" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                     </StackPanel>
                                     <NumberBox x:Name="MarkerMergeOverlapPercent" Grid.Column="1" Minimum="1" Maximum="100" SmallChange="1" LargeChange="10" SpinButtonPlacementMode="Compact" VerticalAlignment="Center" ValueChanged="MarkerMergeOverlap_ValueChanged" />
                                 </Grid>
@@ -497,17 +423,14 @@
                         <StackPanel Spacing="10">
                             <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                <StackPanel Spacing="2">
-                                    <TextBlock Text="03C // GAMEPAD CONTROLLER · 手柄控制" Style="{StaticResource IMaoEyebrowStyle}" />
-                                    <TextBlock Text="Xbox / PlayStation 手柄" Style="{StaticResource IMaoSectionTitleStyle}" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Content="刷新手柄列表" Click="RefreshGamepads_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" VerticalAlignment="Center" />
+                                <TextBlock Text="手柄设置" Style="{StaticResource IMaoSectionTitleStyle}" VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Content="刷新设备" Click="RefreshGamepads_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" VerticalAlignment="Center" />
                             </Grid>
 
                             <Border Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                                 <Grid ColumnSpacing="10">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <TextBlock Text="启用手柄操作" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Text="启用手柄操作" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ToggleSwitch x:Name="GamepadEnabled" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="GamepadEnabled_Toggled" />
                                 </Grid>
                             </Border>
@@ -515,7 +438,7 @@
                             <Border Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                                 <Grid ColumnSpacing="10">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="190" /></Grid.ColumnDefinitions>
-                                    <TextBlock Text="使用的手柄设备" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Text="使用的手柄设备" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ComboBox x:Name="GamepadDevice" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectionChanged="GamepadDevice_SelectionChanged">
                                         <x:String>自动选择首个连接的手柄</x:String><x:String>手柄 1</x:String><x:String>手柄 2</x:String><x:String>手柄 3</x:String><x:String>手柄 4</x:String>
                                     </ComboBox>
@@ -525,7 +448,7 @@
                             <Border Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
                                 <Grid ColumnSpacing="10">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="190" /></Grid.ColumnDefinitions>
-                                    <TextBlock Text="按键提示布局" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Text="按键提示布局" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <ComboBox x:Name="GamepadLayout" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectionChanged="GamepadLayout_SelectionChanged">
                                         <x:String>自动识别</x:String><x:String>Xbox</x:String><x:String>PlayStation</x:String>
                                     </ComboBox>
@@ -533,9 +456,10 @@
                             </Border>
 
                             <Border Style="{StaticResource IMaoSubCardStyle}" Padding="12,8">
-                                <StackPanel Spacing="4">
-                                    <TextBlock x:Name="GamepadStatus" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" />
-                                    <TextBlock x:Name="GamepadInstructions" Style="{StaticResource IMaoSecondaryTextStyle}" FontSize="11.5" />
+                                <StackPanel Spacing="2">
+                                    <TextBlock x:Name="GamepadStatus" Style="{StaticResource IMaoBodyTextStyle}" />
+                                    <!-- 冗长的手柄教程已归入左侧「帮助文档」，此处隐藏兼容字段 -->
+                                    <TextBlock x:Name="GamepadInstructions" Visibility="Collapsed" />
                                 </StackPanel>
                             </Border>
                             <InfoBar x:Name="GamepadMessage" IsOpen="False" IsClosable="True" />
@@ -545,7 +469,7 @@
             </Grid>
         </StackPanel>
 
-        <!-- ==================== 工作台 04：版本更新、下载源与地图区域（上双栏 + 下区域矩阵） ==================== -->
+        <!-- ==================== 分区 4：版本与地图区域 ==================== -->
         <StackPanel x:Name="SettingsGroup_Updates" Spacing="16" Visibility="Collapsed">
             <Grid ColumnSpacing="16" RowSpacing="16">
                 <Grid.ColumnDefinitions>
@@ -553,13 +477,10 @@
                     <ColumnDefinition Width="1*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- 左上舱：版本与地图资源更新 -->
-                <Border Grid.Column="0" Style="{StaticResource IMaoHeroCardStyle}">
+                <!-- 左上卡：版本与地图资源更新 -->
+                <Border Grid.Column="0" Style="{StaticResource IMaoCardStyle}">
                     <StackPanel Spacing="12">
-                        <StackPanel Spacing="3">
-                            <TextBlock Text="04A // VERSION &amp; SNAPSHOT UPDATES · 版本与地图资源" Style="{StaticResource IMaoEyebrowStyle}" />
-                            <TextBlock Text="版本与地图资源" Style="{StaticResource IMaoSectionTitleStyle}" />
-                        </StackPanel>
+                        <TextBlock Text="版本与地图资源" Style="{StaticResource IMaoSectionTitleStyle}" />
 
                         <Border Style="{StaticResource IMaoSubCardStyle}">
                             <StackPanel Spacing="4">
@@ -571,9 +492,9 @@
                         <Border Style="{StaticResource IMaoSettingRowStyle}">
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                <StackPanel Spacing="1" VerticalAlignment="Center">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
                                     <TextBlock Text="启动后检查更新" FontSize="13.5" FontWeight="SemiBold" />
-                                    <TextBlock Text="每天最多自动检查一次，由你决定是否安装" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                    <TextBlock Text="每天最多自动检查一次，由你决定是否安装" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                 </StackPanel>
                                 <ToggleSwitch x:Name="AutomaticUpdateCheck" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="AutomaticUpdateCheck_Toggled" />
                             </Grid>
@@ -600,30 +521,27 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 右上舱：下载源与连通性管理 -->
+                <!-- 右上卡：下载源管理 -->
                 <Border Grid.Column="1" Style="{StaticResource IMaoCardStyle}">
                     <StackPanel Spacing="12">
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <StackPanel Spacing="2">
-                                <TextBlock Text="04B // MIRROR &amp; GITHUB CHANNELS · 下载源通道" Style="{StaticResource IMaoEyebrowStyle}" Foreground="{StaticResource IMaoCyanBrush}" />
-                                <TextBlock Text="下载源管理" Style="{StaticResource IMaoSectionTitleStyle}" />
-                            </StackPanel>
+                            <TextBlock Text="下载源管理" Style="{StaticResource IMaoSectionTitleStyle}" VerticalAlignment="Center" />
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                 <Border x:Name="GitHubSourceChip" CornerRadius="6" Padding="8,4" Background="{StaticResource IMaoRaisedSurfaceBrush}" BorderThickness="1" BorderBrush="{StaticResource IMaoBorderBrush}">
                                     <StackPanel Orientation="Horizontal" Spacing="5">
                                         <FontIcon FontSize="11" Glyph="&#xE774;" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
-                                        <TextBlock Text="GitHub" FontSize="11.5" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
+                                        <TextBlock Text="GitHub" FontSize="12" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
                                         <FontIcon x:Name="GitHubSourceMark" FontSize="10" VerticalAlignment="Center" />
-                                        <TextBlock x:Name="GitHubSourceStatus" Text="未检测" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                        <TextBlock x:Name="GitHubSourceStatus" Text="未检测" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Border>
                                 <Border x:Name="MirrorSourceChip" CornerRadius="6" Padding="8,4" Background="{StaticResource IMaoRaisedSurfaceBrush}" BorderThickness="1" BorderBrush="{StaticResource IMaoBorderBrush}">
                                     <StackPanel Orientation="Horizontal" Spacing="5">
                                         <FontIcon FontSize="11" Glyph="&#xE896;" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
-                                        <TextBlock Text="Mirror酱" FontSize="11.5" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
+                                        <TextBlock Text="Mirror酱" FontSize="12" Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
                                         <FontIcon x:Name="MirrorSourceMark" FontSize="10" VerticalAlignment="Center" />
-                                        <TextBlock x:Name="MirrorSourceStatus" Text="未填 CDK" FontSize="11.5" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                        <TextBlock x:Name="MirrorSourceStatus" Text="未填 CDK" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Border>
                                 <Button x:Name="RefreshConnectivityButton" Click="RefreshConnectivity_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="8,5" ToolTipService.ToolTip="重新检测各下载源的连通性">
@@ -638,7 +556,7 @@
                                 <RadioButton x:Name="SourceGitHubOption" GroupName="DownloadSourceOption" MinWidth="0" Margin="0" VerticalAlignment="Top" Checked="DownloadSourceOption_Checked">
                                     <StackPanel Spacing="2">
                                         <TextBlock Text="GitHub 官方源" FontWeight="SemiBold" />
-                                        <TextBlock Text="免费直连，取决于网络环境" Style="{StaticResource IMaoSecondaryTextStyle}" FontSize="11.5" />
+                                        <TextBlock Text="免费直连" Style="{StaticResource IMaoSecondaryTextStyle}" />
                                     </StackPanel>
                                 </RadioButton>
                             </Border>
@@ -646,7 +564,7 @@
                                 <RadioButton x:Name="SourceMirrorOption" GroupName="DownloadSourceOption" MinWidth="0" Margin="0" VerticalAlignment="Top" Checked="DownloadSourceOption_Checked">
                                     <StackPanel Spacing="2">
                                         <TextBlock Text="Mirror酱 高速源" FontWeight="SemiBold" />
-                                        <TextBlock Text="国内高速节点，需配置 CDK" Style="{StaticResource IMaoSecondaryTextStyle}" FontSize="11.5" />
+                                        <TextBlock Text="国内高速节点，需配置 CDK" Style="{StaticResource IMaoSecondaryTextStyle}" />
                                     </StackPanel>
                                 </RadioButton>
                             </Border>
@@ -659,25 +577,24 @@
                             <Button x:Name="OpenMirrorChyanButton" Content="前往 Mirror酱" Click="OpenMirrorChyan_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                         </controls:WrapPanel>
                         <TextBlock x:Name="MirrorChyanCdkState" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                        <TextBlock x:Name="ConnectivitySummary" Style="{StaticResource IMaoSecondaryTextStyle}" FontSize="11.5" />
+                        <TextBlock x:Name="ConnectivitySummary" Style="{StaticResource IMaoSecondaryTextStyle}" />
                     </StackPanel>
                 </Border>
             </Grid>
 
-            <!-- 下舱：地图区域特征包管理 -->
+            <!-- 下卡：地图区域特征包管理 -->
             <Border Style="{StaticResource IMaoCardStyle}">
                 <StackPanel Spacing="12">
                     <Grid ColumnSpacing="12">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                         <StackPanel Spacing="2">
-                            <TextBlock Text="04C // REGIONAL FEATURE PACKS · 索拉里斯区域特征包矩阵" Style="{StaticResource IMaoEyebrowStyle}" />
-                            <TextBlock Text="地图区域" Style="{StaticResource IMaoSectionTitleStyle}" />
-                            <TextBlock Text="按国家分组管理区域定位包；关闭不需要的区域可减小内存占用，点国家标题可折叠整组。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                            <TextBlock Text="地图区域管理" Style="{StaticResource IMaoSectionTitleStyle}" />
+                            <TextBlock Text="按国家分组管理区域定位包；关闭不需要的区域可减少内存占用。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                         </StackPanel>
                         <Border Grid.Column="1" Style="{StaticResource IMaoSubCardStyle}" VerticalAlignment="Top" Padding="12,8">
                             <StackPanel Spacing="2">
                                 <TextBlock x:Name="RegionSummary" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" />
-                                <TextBlock x:Name="RegionCoreState" Style="{StaticResource IMaoSecondaryTextStyle}" FontSize="11.5" />
+                                <TextBlock x:Name="RegionCoreState" Style="{StaticResource IMaoSecondaryTextStyle}" />
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -690,7 +607,7 @@
             </Border>
         </StackPanel>
 
-        <!-- ==================== 工作台 05：数据目录与系统兼容（双栏 Bento） ==================== -->
+        <!-- ==================== 分区 5：数据目录与系统兼容 ==================== -->
         <StackPanel x:Name="SettingsGroup_System" Spacing="16" Visibility="Collapsed">
             <Grid ColumnSpacing="16" RowSpacing="16">
                 <Grid.ColumnDefinitions>
@@ -698,12 +615,11 @@
                     <ColumnDefinition Width="1*" />
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Style="{StaticResource IMaoHeroCardStyle}">
+                <Border Grid.Column="0" Style="{StaticResource IMaoCardStyle}">
                     <StackPanel Spacing="12">
                         <StackPanel Spacing="3">
-                            <TextBlock Text="05A // LOCAL STORAGE DIRECTORIES · 本地数据目录" Style="{StaticResource IMaoEyebrowStyle}" />
-                            <TextBlock Text="本地进度与路线存储" Style="{StaticResource IMaoSectionTitleStyle}" />
-                            <TextBlock Text="所有点位完成记录、记录本档案与路线合集均保存在本机目录，随时可备份或查阅。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                            <TextBlock Text="本地进度与路线目录" Style="{StaticResource IMaoSectionTitleStyle}" />
+                            <TextBlock Text="点位完成记录与路线合集均保存在本机目录，可随时备份或查阅。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                         </StackPanel>
                         <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
                             <Button Content="点位进度目录" Click="OpenPoints_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
@@ -715,9 +631,8 @@
                 <Border Grid.Column="1" Style="{StaticResource IMaoCardStyle}">
                     <StackPanel Spacing="12">
                         <StackPanel Spacing="3">
-                            <TextBlock Text="05B // GRAPHICS COMPATIBILITY · 图形捕获兼容设置" Style="{StaticResource IMaoEyebrowStyle}" Foreground="{StaticResource IMaoCyanBrush}" />
                             <TextBlock Text="Windows 窗口兼容设置" Style="{StaticResource IMaoSectionTitleStyle}" />
-                            <TextBlock Text="若使用 BitBlt 捕获出现黑屏或画面静止，可应用 Windows 窗口交换链兼容设置；不需要时可随时恢复默认。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                            <TextBlock Text="使用 BitBlt 捕获出现黑屏或画面静止时，可应用窗口兼容设置。" Style="{StaticResource IMaoSecondaryTextStyle}" />
                         </StackPanel>
                         <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
                             <Button Content="应用窗口兼容设置" Click="ApplyWindowCompatibility_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
