@@ -380,8 +380,8 @@
                         <Border Style="{StaticResource IMaoSubCardStyle}" Padding="16,12">
                             <StackPanel Spacing="6">
                                 <TextBlock Text="地图底图、点位坐标、分类目录及图文攻略内容均来自库街区（KuroBbs）公开接口。" Style="{StaticResource DocSubtleStyle}" />
-                                <HyperlinkButton Content="访问 GitHub 开源仓库（WWMAP-TOOLS / IMao）"
-                                                 NavigateUri="https://github.com/God-ok/IMao-Wuthering-Waves"
+                                <HyperlinkButton Content="访问 GitHub 开源仓库（IMAO）"
+                                                 NavigateUri="https://github.com/kahvia-d/IMAO"
                                                  Padding="0" />
                             </StackPanel>
                         </Border>

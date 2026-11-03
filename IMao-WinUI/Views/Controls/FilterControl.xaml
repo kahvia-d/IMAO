@@ -29,13 +29,17 @@
                 <InfoBar x:Name="FilterWarning" IsOpen="False" IsClosable="True" Severity="Warning" />
 
                 <!-- 检索框与分类筛选同行整合 -->
-                <Grid ColumnSpacing="8">
+                <Grid x:Name="SearchFilterGrid" ColumnSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="260" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition x:Name="SearchColumn" Width="260" />
+                        <ColumnDefinition x:Name="CategoryColumn" Width="*" />
                     </Grid.ColumnDefinitions>
                     <TextBox x:Name="SearchBox" Grid.Column="0" TextChanging="SearchBox_TextChanging" VerticalAlignment="Center" />
-                    <controls:WrapPanel Grid.Column="1" Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="8" VerticalAlignment="Center">
+                    <controls:WrapPanel x:Name="CategoryTools" Grid.Column="1" Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="8" VerticalAlignment="Center">
                         <ComboBox x:Name="CategoryPicker" Width="196" DisplayMemberPath="Name"
                                   SelectionChanged="CategoryPicker_SelectionChanged" />
                         <ComboBox x:Name="PresetPicker" Width="210" DisplayMemberPath="Name"

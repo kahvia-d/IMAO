@@ -99,6 +99,15 @@ public sealed partial class FilterControl : UserControl
     private void FilterControl_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateCompactLayout(e.NewSize.Height);
     private void UpdateCompactLayout(double height)
     {
+        bool narrow = ActualWidth < 520;
+        SearchColumn.Width = narrow ? new GridLength(1, GridUnitType.Star) : new GridLength(260);
+        CategoryColumn.Width = narrow ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        Grid.SetColumn(CategoryTools, narrow ? 0 : 1);
+        Grid.SetRow(CategoryTools, narrow ? 1 : 0);
+        SearchFilterGrid.ColumnSpacing = narrow ? 0 : 8;
+        SearchFilterGrid.RowSpacing = narrow ? 8 : 0;
+        CategoryPicker.Width = Math.Min(196, Math.Max(1, ActualWidth));
+        PresetPicker.Width = Math.Min(210, Math.Max(1, ActualWidth));
         AttributionText.MaxWidth = Math.Max(1, ActualWidth - 20);
         bool compact = CompactMode || height < 460;
         FilterEyebrow.Visibility = Visibility.Collapsed;

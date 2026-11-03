@@ -43,6 +43,12 @@ public sealed partial class StartPage : Page
     private RegionalMapIndex? loadedIndex;
     private string lastCompletionSignature = "";
     private string lastNotifiedCoreState = "";
+    private readonly RegionalProgressReader progressReader = new();
+    private readonly DispatcherTimer progressTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private RegionalProgressReader.Snapshot? progressSnapshot;
+    private long progressVersion, loadGeneration;
+    private bool progressReadRunning, progressReadPending, progressForcePending;
+    private string progressReadError = "";
 
     public StartViewModel ViewModel { get; }
 
@@ -51,6 +57,7 @@ public sealed partial class StartPage : Page
         ViewModel = App.GetService<StartViewModel>();
         coreHost = App.GetService<CoreHostService>();
         InitializeComponent();
+        progressTimer.Tick += (_, _) => RequestProgressRefresh();
         Loaded += StartPage_Loaded;
         Unloaded += StartPage_Unloaded;
     }
@@ -62,9 +69,15 @@ public sealed partial class StartPage : Page
             coreHost.StatusChanged += CoreHost_StatusChanged;
             coreHost.RoutePlanningChanged += CoreHost_RoutePlanningChanged;
             coreHost.PropertyChanged += CoreHost_PropertyChanged;
+            coreHost.MarkerEvent += CoreHost_MarkerEvent;
             subscribed = true;
         }
         lastCompletionSignature = "";
+        ++loadGeneration;
+        progressSnapshot = null;
+        progressReadError = "";
+        progressTimer.Start();
+        RequestProgressRefresh(force: true);
         UpdateCoreStatus(coreHost.Status);
         RenderRoute(coreHost.RoutePlanning);
         UpdateAccountSummary();
@@ -80,10 +93,13 @@ public sealed partial class StartPage : Page
 
     private void StartPage_Unloaded(object sender, RoutedEventArgs e)
     {
+        ++loadGeneration;
+        progressTimer.Stop();
         if (!subscribed) return;
         coreHost.StatusChanged -= CoreHost_StatusChanged;
         coreHost.RoutePlanningChanged -= CoreHost_RoutePlanningChanged;
         coreHost.PropertyChanged -= CoreHost_PropertyChanged;
+        coreHost.MarkerEvent -= CoreHost_MarkerEvent;
         subscribed = false;
     }
 
@@ -129,8 +145,7 @@ public sealed partial class StartPage : Page
     {
         if (!IsLoaded) return;
         UpdateCoreStatus(status);
-        // 状态心跳仅在完成点数或记录本实际变化时才刷新完成度，避免进度条反复重绘
-        RefreshRegionalCompletionUI(force: false);
+        // 进度由独立的后台缓存刷新，不在 200ms 核心心跳中读取文件。
     }
 
     private void CoreHost_RoutePlanningChanged(object? sender, RoutePlanningState state)
@@ -145,8 +160,71 @@ public sealed partial class StartPage : Page
         UpdateAccountSummary();
         if (e.PropertyName is nameof(CoreHostService.ActiveLocalAccount) or nameof(CoreHostService.LedgerCatalog))
         {
+            ++loadGeneration;
+            progressSnapshot = null;
+            progressReadError = "";
             RefreshRegionalCompletionUI(force: true);
+            RequestProgressRefresh(force: true);
         }
+    }
+
+    private void CoreHost_MarkerEvent(object? sender, JsonElement value)
+    {
+        if (value.TryGetProperty("type", out var type) &&
+            type.GetString() is "markerCompletionChanged" or "markerProfileChanged")
+            RequestProgressRefresh(force: true);
+    }
+
+    private string? ActiveProgressPath() => coreHost.LedgerCatalog is { } catalog
+        ? catalog.ProgressPath(catalog.ActiveId) : null;
+
+    private async void RequestProgressRefresh(bool force = false)
+    {
+        if (!IsLoaded) return;
+        progressReadPending = true;
+        progressForcePending |= force;
+        if (progressReadRunning) return;
+        progressReadRunning = true;
+        try
+        {
+            // Coalesce ticks/events and never allow an earlier account read to overwrite a newer one.
+            while (IsLoaded && progressReadPending)
+            {
+                progressReadPending = false;
+                bool forceRead = progressForcePending;
+                progressForcePending = false;
+                long generation = loadGeneration;
+                string? path = ActiveProgressPath();
+                try
+                {
+                    var snapshot = await progressReader.ReadAsync(path, forceRead);
+                    if (!IsLoaded) break;
+                    if (generation != loadGeneration || path != ActiveProgressPath())
+                    {
+                        progressReadPending = true;
+                        continue;
+                    }
+                    bool changed = !ReferenceEquals(progressSnapshot, snapshot) || progressReadError.Length > 0;
+                    progressSnapshot = snapshot;
+                    progressReadError = "";
+                    if (changed)
+                    {
+                        ++progressVersion;
+                        RefreshRegionalCompletionUI(force: true);
+                    }
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException)
+                {
+                    if (IsLoaded && generation == loadGeneration && path == ActiveProgressPath())
+                    {
+                        progressSnapshot = null;
+                        progressReadError = "暂时无法读取当前记录本的进度，正在重试。";
+                        RefreshRegionalCompletionUI(force: true);
+                    }
+                }
+            }
+        }
+        finally { progressReadRunning = false; }
     }
 
     // 更新当前记录本显示
@@ -265,9 +343,9 @@ public sealed partial class StartPage : Page
     {
         if (loadedIndex is null || !IsLoaded) return;
 
-        var completedKeys = ReadActiveCompletedPointKeys();
+        var completedKeys = progressSnapshot?.CompletedKeys;
         string activeLedgerId = coreHost.LedgerCatalog?.ActiveId ?? coreHost.ActiveLocalAccount?.Id ?? "default";
-        string signature = $"{selectedCountryId}|{selectedRegionId}|{activeLedgerId}|{completedKeys.Count}";
+        string signature = $"{selectedCountryId}|{selectedRegionId}|{activeLedgerId}|{progressVersion}";
         if (!force && string.Equals(signature, lastCompletionSignature, StringComparison.Ordinal))
         {
             return;
@@ -287,12 +365,23 @@ public sealed partial class StartPage : Page
                 btn.Style = isCurrent ? activeStyle : normalStyle;
         }
 
+        if (completedKeys is null)
+        {
+            ClearRegionalCompletion(progressReadError.Length > 0 ? progressReadError : "正在读取当前记录本的进度…");
+            return;
+        }
+
         // 2. 筛选当前国度下含有收集物的子区域列表
         var countryRegions = loadedIndex.Regions
             .Where(r => r.CountryId == selectedCountryId && CountRegionProgress(r.Id, completedKeys).Total > 0)
             .OrderBy(r => r.Order)
             .ToList();
-        if (countryRegions.Count == 0) return;
+        if (countryRegions.Count == 0)
+        {
+            selectedRegionId = "all";
+            ClearRegionalCompletion("该国度暂无可用的收集物数据，请检查地图资源是否完整。");
+            return;
+        }
 
         if (selectedRegionId != "all" && countryRegions.All(r => r.Id != selectedRegionId))
             selectedRegionId = "all";
@@ -420,7 +509,23 @@ public sealed partial class StartPage : Page
         return btn;
     }
 
-    private (int Done, int Total) CountRegionProgress(string regionId, HashSet<string> completedKeys)
+    private void ClearRegionalCompletion(string message)
+    {
+        SubRegionTabsPanel.Children.Clear();
+        RegionCollectibleItemsControl.ItemsSource = Array.Empty<CollectibleProgressRow>();
+        SelectedRegionTitleText.Text = selectedCountryId switch
+        {
+            1 => "瑝珑", 900 => "黑海岸", 3 => "黎那汐塔", 4 => "罗伊冰原", _ => "当前国度"
+        };
+        SelectedRegionFractionText.Text = "暂无统计";
+        SelectedRegionPercentText.Text = "—";
+        SelectedRegionFillCol.Width = new GridLength(0);
+        SelectedRegionRemainCol.Width = new GridLength(1, GridUnitType.Star);
+        RegionCollectibleEmptyText.Text = message;
+        RegionCollectibleEmptyText.Visibility = Visibility.Visible;
+    }
+
+    private (int Done, int Total) CountRegionProgress(string regionId, IReadOnlySet<string> completedKeys)
     {
         if (loadedIndex is null || !loadedIndex.GroupsByRegion.TryGetValue(regionId, out var groups))
             return (0, 0);
@@ -453,37 +558,6 @@ public sealed partial class StartPage : Page
         {
             return null;
         }
-    }
-
-    // 读取当前记录本中所有已标记完成的点位键（"<stateId>:<pointId>"）
-    private HashSet<string> ReadActiveCompletedPointKeys()
-    {
-        var result = new HashSet<string>(StringComparer.Ordinal);
-        try
-        {
-            var catalog = coreHost.LedgerCatalog;
-            if (catalog is null) return result;
-            string path = catalog.ProgressPath(catalog.ActiveId);
-            if (!File.Exists(path)) return result;
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            using var doc = JsonDocument.Parse(stream);
-            if (!doc.RootElement.TryGetProperty("points", out var points) || points.ValueKind != JsonValueKind.Object)
-                return result;
-            foreach (var prop in points.EnumerateObject())
-            {
-                if (prop.Value.ValueKind == JsonValueKind.Object &&
-                    prop.Value.TryGetProperty("completed", out var flag) &&
-                    flag.ValueKind == JsonValueKind.True)
-                {
-                    result.Add(prop.Name);
-                }
-            }
-        }
-        catch
-        {
-            // 读取异常时静默返回空集，不阻断首页渲染
-        }
-        return result;
     }
 
     // 统一规范官方收集物 ID（与 MapFilterCatalog 保持一致）
