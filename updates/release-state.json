@@ -5,7 +5,7 @@
     "buildRunId": 41659723032,
     "sequence": 51,
     "artifactDigest": "b257012f4a13bc1759a142994d808bb707bf8f3f9c8ca5cb183f313d83e11f6b",
-    "releaseId": null,
+    "releaseId": 432890728,
     "previousStableSha256": "a76b39d207787982aa209433cf6b6866e9848a4c502c00aff9a2dae16ca9fffe",
     "sourceCommit": "6a4d0e140445b625db600b238ab4dfb66de5a3a7",
     "status": "publishing",
