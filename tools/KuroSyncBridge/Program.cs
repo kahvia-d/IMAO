@@ -3,7 +3,7 @@ using IMao_WinUI.Core.KuroSync;
 
 var origin = args.FirstOrDefault(value => value.StartsWith("chrome-extension://", StringComparison.Ordinal));
 var settings = BridgeSettings.Load(AppContext.BaseDirectory);
-if (origin is null || !string.Equals(origin, settings.AllowedOrigin, StringComparison.Ordinal)) return;
+if (origin is null || !settings.IsAllowed(origin)) return;
 
 using var input = Console.OpenStandardInput();
 using var output = Console.OpenStandardOutput();
@@ -35,8 +35,14 @@ while (true)
     }
 }
 
-sealed record BridgeSettings(string AllowedOrigin)
+sealed record BridgeSettings(string? AllowedOrigin, string[]? AllowedOrigins = null)
 {
+    // An explicit list takes precedence; an empty list permits no extensions.
+    // Legacy installations and custom development IDs still use the single field.
+    public bool IsAllowed(string origin) => AllowedOrigins is not null
+        ? AllowedOrigins.Contains(origin, StringComparer.Ordinal)
+        : string.Equals(origin, AllowedOrigin, StringComparison.Ordinal);
+
     public static BridgeSettings Load(string directory)
     {
         string path = Path.Combine(directory, "KuroSyncBridge.settings.json");
@@ -48,11 +54,12 @@ sealed record BridgeSettings(string AllowedOrigin)
         try
         {
             var value = JsonSerializer.Deserialize<BridgeSettings>(File.ReadAllText(path));
-            if (value is not null && value.AllowedOrigin.StartsWith("chrome-extension://", StringComparison.Ordinal)) return value;
+            if (value is not null && (value.AllowedOrigins is not null ||
+                value.AllowedOrigin?.StartsWith("chrome-extension://", StringComparison.Ordinal) == true)) return value;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException) { }
         try { File.WriteAllText(path, KuroNativeBridgeHost.SettingsJson()); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
-        return new BridgeSettings(KuroNativeBridgeHost.Origin);
+        return new BridgeSettings(KuroNativeBridgeHost.Origin, KuroNativeBridgeHost.AllowedOrigins);
     }
 }

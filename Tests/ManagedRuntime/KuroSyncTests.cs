@@ -226,6 +226,14 @@ internal static class KuroSyncTests
         check(KuroNativeBridgeHost.HostManifestJson(@"C:\x\KuroSyncBridge.exe").Contains("\"allowed_origins\"") &&
             KuroNativeBridgeHost.SettingsJson().Contains(KuroNativeBridgeHost.Origin),
             "the host manifest and bridge settings carry the extension origin");
+        using (var hostManifest = JsonDocument.Parse(KuroNativeBridgeHost.HostManifestJson(@"C:\x\KuroSyncBridge.exe")))
+        {
+            check(hostManifest.RootElement.GetProperty("allowed_origins").EnumerateArray()
+                .Select(value => value.GetString()).ToHashSet().SetEquals([
+                    "chrome-extension://ohmikfaeobbffhlhoocklplniobcfdbg/",
+                    "chrome-extension://elhbnijeefmmmempajadehknbckaopge/"
+                ]), "browser registration allows exactly the Edge and Chrome store extensions");
+        }
 
         // Automatic sync must fire soon after start-up, then settle on the normal
         // interval, and it must not hammer a failing endpoint.
