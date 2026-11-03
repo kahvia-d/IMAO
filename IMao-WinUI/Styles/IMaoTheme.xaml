@@ -15,6 +15,7 @@
     <SolidColorBrush x:Key="IMaoSecondaryTextBrush" Color="#9AA6B8" />
     <SolidColorBrush x:Key="IMaoMutedTextBrush" Color="#687588" />
     <SolidColorBrush x:Key="IMaoBorderBrush" Color="#222C3C" />
+    <SolidColorBrush x:Key="IMaoBorderStrongBrush" Color="#304052" />
     <SolidColorBrush x:Key="IMaoSuccessBrush" Color="#4CC99B" />
     <SolidColorBrush x:Key="IMaoWarningBrush" Color="#EAB354" />
     <SolidColorBrush x:Key="IMaoDangerBrush" Color="#EE6B6B" />

@@ -146,8 +146,8 @@
                         <Border Height="6" CornerRadius="3" Background="#1D2736">
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition x:Name="SelectedRegionFillCol" Width="0*" />
-                                    <ColumnDefinition x:Name="SelectedRegionRemainCol" Width="100*" />
+                                    <ColumnDefinition x:Name="SelectedRegionFillCol" Width="0" />
+                                    <ColumnDefinition x:Name="SelectedRegionRemainCol" Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <Border Grid.Column="0" Height="6" CornerRadius="3" Background="{StaticResource IMaoAccentBrush}" />
                             </Grid>

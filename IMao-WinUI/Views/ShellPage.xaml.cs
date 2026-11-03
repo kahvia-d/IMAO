@@ -29,6 +29,7 @@ public sealed partial class ShellPage : Page
     {
         ViewModel = viewModel;
         InitializeComponent();
+        AppToast.RegisterPresenter(ShowFloatingToast);
         updates = App.GetService<UpdateUiController>();
         coreHost = App.GetService<CoreHostService>();
 

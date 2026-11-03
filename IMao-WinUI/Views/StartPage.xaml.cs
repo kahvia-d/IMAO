@@ -366,8 +366,21 @@ public sealed partial class StartPage : Page
         SelectedRegionTitleText.Text = regionDisplayName;
         SelectedRegionFractionText.Text = $"已收集 {totalDone} / {totalCount}";
         SelectedRegionPercentText.Text = $"{totalPct:F1}%";
-        SelectedRegionFillCol.Width = new GridLength(totalPct, GridUnitType.Star);
-        SelectedRegionRemainCol.Width = new GridLength(Math.Max(0.0, 100.0 - totalPct), GridUnitType.Star);
+        if (totalPct <= 0.0001)
+        {
+            SelectedRegionFillCol.Width = new GridLength(0, GridUnitType.Pixel);
+            SelectedRegionRemainCol.Width = new GridLength(1, GridUnitType.Star);
+        }
+        else if (totalPct >= 99.9999)
+        {
+            SelectedRegionFillCol.Width = new GridLength(1, GridUnitType.Star);
+            SelectedRegionRemainCol.Width = new GridLength(0, GridUnitType.Pixel);
+        }
+        else
+        {
+            SelectedRegionFillCol.Width = new GridLength(totalPct, GridUnitType.Star);
+            SelectedRegionRemainCol.Width = new GridLength(100.0 - totalPct, GridUnitType.Star);
+        }
 
         var rows = mergedGroups.Values
             .Where(v => v.Total > 0)
