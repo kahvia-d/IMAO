@@ -89,6 +89,8 @@ string root = Path.Combine(Path.GetTempPath(), "imao-managed-test-" + Guid.NewGu
 Directory.CreateDirectory(root);
 try
 {
+    RegionalProgressTests.Run(root, Check);
+    if (args.Contains("--regional-progress")) return;
     MapFilterCatalogTests.Run(root, Check);
     LocalMarkerProfileTests.Run(root, Check);
     LocalAccountCatalogTests.Run(root, Check);

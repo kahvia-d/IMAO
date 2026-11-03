@@ -28,11 +28,61 @@ public sealed partial class UsageGuidePage : Page
     private void RenderBindings()
     {
         var c = coreHost.Configuration;
-        GuideShortcutDescription.Text = $"攻略开关：{RuntimeConfiguration.HotkeyName(c.CurrentTargetGuideKey)}。打开附近小范围内最近的未完成点位攻略；范围内没有点位而路线正在导航时，打开当前路线目标的攻略；仅紧邻点位需要选择，再次按下可关闭。";
-        GuideSkipShortcutDescription.Text = $"攻略跳过：只有当前导航目标的攻略才提供。键鼠在攻略窗口按住 {RuntimeConfiguration.HotkeyName(c.GuideSkipKey)} 0.6 秒，或直接单击「跳过」按钮（按钮是单击，不需要按住）；手柄长按 Y 0.6 秒（在别处 Y 仍是路线菜单）。跳过只改变这条路线的进度，不修改点位完成记录，可以在路线页撤销。";
-        GuideCompletionShortcutDescription.Text = $"点位完成：{RuntimeConfiguration.HotkeyName(c.NearestCompletionKey)}。游戏前台处理小地图附近点，攻略前台只处理当前展示点；多个候选必须先选择。";
-        GuideImageShortcutDescription.Text = $"图片上一张：{RuntimeConfiguration.HotkeyName(c.GuidePreviousImageKey)}；下一张：{RuntimeConfiguration.HotkeyName(c.GuideNextImageKey)}。攻略显示时，在游戏或攻略前台均可翻页；隐藏时不接管。放大图片：Enter（攻略窗口里按一次放大、再按一次收起）；退出大图：Enter 或 Esc（Esc 是固定按键，不可修改）。手柄在攻略窗口按 X 放大，大图里按 B 返回攻略。";
+        string toggleEnabledKey = RuntimeConfiguration.HotkeyName(c.ToggleEnabledKey);
+        string completeKey = RuntimeConfiguration.HotkeyName(c.NearestCompletionKey);
+        string guideKey = RuntimeConfiguration.HotkeyName(c.CurrentTargetGuideKey);
+        string manualRouteKey = RuntimeConfiguration.HotkeyName(c.ManualRouteKey);
+        string skipKey = RuntimeConfiguration.HotkeyName(c.GuideSkipKey);
+        string prevImgKey = RuntimeConfiguration.HotkeyName(c.GuidePreviousImageKey);
+        string nextImgKey = RuntimeConfiguration.HotkeyName(c.GuideNextImageKey);
+
+        DocKey_ToggleEnabled.Text = toggleEnabledKey;
+        DocKey_Complete.Text = completeKey;
+        DocKey_Guide.Text = guideKey;
+        DocKey_ManualRoute.Text = manualRouteKey;
+        DocKey_GuideSkip.Text = $"按住 {skipKey} 0.6s";
+        DocKey_GuideImages.Text = $"{prevImgKey} / {nextImgKey}";
+
+        GuideShortcutDescription.Text = $"攻略开关：{guideKey}。打开附近小范围内最近的未完成点位攻略；范围内没有点位而路线正在导航时，打开当前路线目标的攻略；仅紧邻点位需要选择，再次按下可关闭。";
+        GuideSkipShortcutDescription.Text = $"攻略跳过：只有当前导航目标的攻略才提供。键鼠在攻略窗口按住 {skipKey} 0.6 秒，或直接单击「跳过」按钮（按钮是单击，不需要按住）；手柄长按 Y 0.6 秒（在别处 Y 仍是路线菜单）。跳过只改变这条路线的进度，不修改点位完成记录，可以在路线页撤销。";
+        GuideCompletionShortcutDescription.Text = $"点位完成：{completeKey}。游戏前台处理小地图附近点，攻略前台只处理当前展示点；多个候选必须先选择。";
+        GuideImageShortcutDescription.Text = $"图片上一张：{prevImgKey}；下一张：{nextImgKey}。攻略显示时，在游戏或攻略前台均可翻页；隐藏时不接管。放大图片：Enter（攻略窗口里按一次放大、再按一次收起）；退出大图：Enter 或 Esc（Esc 是固定按键，不可修改）。手柄在攻略窗口按 X 放大，大图里按 B 返回攻略。";
     }
+
+    // 切换左侧帮助文档章节目录并重置右侧阅读滚动位置
+    private void DocNav_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button clicked || clicked.Tag is not string sectionTag)
+        {
+            return;
+        }
+
+        var sections = new (Button Nav, FrameworkElement Panel, string Tag)[]
+        {
+            (DocNav_1, DocSection_1, "doc1"),
+            (DocNav_2, DocSection_2, "doc2"),
+            (DocNav_3, DocSection_3, "doc3"),
+            (DocNav_4, DocSection_4, "doc4"),
+            (DocNav_5, DocSection_5, "doc5"),
+            (DocNav_6, DocSection_6, "doc6"),
+        };
+
+        Style? activeStyle = Application.Current.Resources.TryGetValue("IMaoSidebarNavActiveButtonStyle", out var a) ? a as Style : null;
+        Style? normalStyle = Application.Current.Resources.TryGetValue("IMaoSidebarNavButtonStyle", out var n) ? n as Style : null;
+
+        foreach (var (nav, panel, tag) in sections)
+        {
+            bool isSelected = string.Equals(tag, sectionTag, StringComparison.Ordinal);
+            panel.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
+            if (activeStyle != null && normalStyle != null)
+            {
+                nav.Style = isSelected ? activeStyle : normalStyle;
+            }
+        }
+
+        DocReaderScroll?.ChangeView(0, 0, null, true);
+    }
+
     private void OpenFunctions_Click(object sender, RoutedEventArgs e) => App.GetService<INavigationService>().NavigateTo(typeof(FunctionViewModel).FullName!);
     private void OpenSettings_Click(object sender, RoutedEventArgs e) => App.GetService<INavigationService>().NavigateTo(typeof(SettingsViewModel).FullName!);
 
@@ -155,5 +205,6 @@ public sealed partial class UsageGuidePage : Page
         LegacyMessage.Severity = severity;
         LegacyMessage.Message = message;
         LegacyMessage.IsOpen = true;
+        AppToast.Show(message, severity);
     }
 }

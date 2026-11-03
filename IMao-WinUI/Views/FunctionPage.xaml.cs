@@ -1,4 +1,4 @@
-using IMao_WinUI.Contracts.Services;
+﻿using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Helpers;
 using IMao_WinUI.Models;
 using IMao_WinUI.Services;
@@ -836,6 +836,7 @@ public sealed partial class FunctionPage : Page
         AutoRouteMessage.Severity = severity;
         AutoRouteMessage.Message = message;
         AutoRouteMessage.IsOpen = true;
+        IMao_WinUI.Helpers.AppToast.Show(message, severity);
     }
 
     private void AutoRouteSavedRoutes_SelectionChanged(object sender, SelectionChangedEventArgs e) { }

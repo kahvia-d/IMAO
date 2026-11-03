@@ -5,6 +5,7 @@
     xmlns:controls="using:CommunityToolkit.WinUI.Controls"
     SizeChanged="FilterControl_SizeChanged">
     <UserControl.Resources>
+        <!-- 06 寰宇星图筛选器切换按钮与焦点强调色 -->
         <StaticResource x:Key="ToggleButtonBackgroundChecked" ResourceKey="IMaoAccentBrush" />
         <StaticResource x:Key="ToggleButtonBackgroundCheckedPointerOver" ResourceKey="IMaoAccentBrush" />
         <StaticResource x:Key="ToggleButtonBackgroundCheckedPressed" ResourceKey="IMaoAccentBrush" />
@@ -18,36 +19,63 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+        <!-- 顶部点位筛选检索与分类控制台（兼顾桌面页与游戏内 300 DIP 紧凑停靠模式） -->
         <ScrollViewer x:Name="FilterToolbarScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel x:Name="FilterToolbar" Spacing="10">
-            <TextBlock x:Name="FilterEyebrow" Text="POINT LIBRARY" Style="{StaticResource IMaoEyebrowStyle}" /><TextBlock x:Name="FilterTitle" Text="点位筛选" Style="{StaticResource IMaoPageTitleStyle}" />
-            <TextBlock x:Name="FilterDescription" Style="{StaticResource IMaoSecondaryTextStyle}" />
+            <StackPanel x:Name="FilterToolbar" Spacing="8">
+                <TextBlock x:Name="FilterEyebrow" Visibility="Collapsed" />
+                <TextBlock x:Name="FilterTitle" Text="点位筛选" Style="{StaticResource IMaoPageTitleStyle}" />
+                <TextBlock x:Name="FilterDescription" Style="{StaticResource IMaoSecondaryTextStyle}" />
 
-            <InfoBar x:Name="FilterWarning" IsOpen="False" IsClosable="True" Severity="Warning" />
-            <TextBox x:Name="SearchBox" TextChanging="SearchBox_TextChanging" />
-            <controls:WrapPanel Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="8">
-                <ComboBox x:Name="CategoryPicker" Width="210" DisplayMemberPath="Name"
-                          SelectionChanged="CategoryPicker_SelectionChanged" />
-                <ComboBox x:Name="PresetPicker" Width="240" DisplayMemberPath="Name"
-                          Visibility="Collapsed" SelectionChanged="PresetPicker_SelectionChanged" />
-                <ToggleButton x:Name="SelectedOnly" Click="SelectedOnly_Click" />
-                <ContentControl x:Name="AdditionalToolHost" Visibility="Collapsed" VerticalContentAlignment="Center" />
-                <Button x:Name="CatalogNotice" Content="筛选提示" Visibility="Collapsed"><Button.Flyout><Flyout><TextBlock x:Name="CatalogNoticeText" MaxWidth="340" TextWrapping="Wrap" /></Flyout></Button.Flyout></Button>
-            </controls:WrapPanel>
-            <controls:WrapPanel Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="8">
-                <Button x:Name="SelectResults" Click="SelectResults_Click" />
-                <Button x:Name="ClearResults" Click="ClearResults_Click" />
-                <TextBlock x:Name="SelectionSummary" VerticalAlignment="Center" Margin="4,0" TextWrapping="Wrap" />
-            </controls:WrapPanel>
-            <controls:WrapPanel Orientation="Horizontal" HorizontalSpacing="12" VerticalSpacing="4">
-                <TextBlock x:Name="SyncStatus" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center" />
-                <Button x:Name="RetrySync" Content="重试同步" Click="RetrySync_Click" Visibility="Collapsed" />
-                <TextBlock x:Name="AttributionText" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center" Margin="8,0,0,0" Foreground="{StaticResource IMaoSecondaryTextBrush}" Visibility="Collapsed" />
-            </controls:WrapPanel>
-            <TextBlock x:Name="AdditionalFilterStatus" FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource IMaoWarningBrush}" Visibility="Collapsed" />
-            <TextBlock x:Name="GamepadHint" Visibility="Collapsed" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-        </StackPanel>
+                <InfoBar x:Name="FilterWarning" IsOpen="False" IsClosable="True" Severity="Warning" />
+
+                <!-- 检索框与分类筛选同行整合 -->
+                <Grid x:Name="SearchFilterGrid" ColumnSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="SearchColumn" Width="260" />
+                        <ColumnDefinition x:Name="CategoryColumn" Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="SearchBox" Grid.Column="0" TextChanging="SearchBox_TextChanging" VerticalAlignment="Center" />
+                    <controls:WrapPanel x:Name="CategoryTools" Grid.Column="1" Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="8" VerticalAlignment="Center">
+                        <ComboBox x:Name="CategoryPicker" Width="196" DisplayMemberPath="Name"
+                                  SelectionChanged="CategoryPicker_SelectionChanged" />
+                        <ComboBox x:Name="PresetPicker" Width="210" DisplayMemberPath="Name"
+                                  Visibility="Collapsed" SelectionChanged="PresetPicker_SelectionChanged" />
+                        <ToggleButton x:Name="SelectedOnly" Click="SelectedOnly_Click" CornerRadius="8" />
+                        <ContentControl x:Name="AdditionalToolHost" Visibility="Collapsed" VerticalContentAlignment="Center" />
+                        <Button x:Name="CatalogNotice" Content="筛选提示" Visibility="Collapsed">
+                            <Button.Flyout>
+                                <Flyout><TextBlock x:Name="CatalogNoticeText" MaxWidth="340" TextWrapping="Wrap" /></Flyout>
+                            </Button.Flyout>
+                        </Button>
+                    </controls:WrapPanel>
+                </Grid>
+
+                <!-- 批量勾选、统计胶囊与实时同步状态同行整合 -->
+                <controls:WrapPanel Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="6">
+                    <Button x:Name="SelectResults" Click="SelectResults_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="12,5" />
+                    <Button x:Name="ClearResults" Click="ClearResults_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="12,5" />
+                    <Border Style="{StaticResource IMaoPillBadgeStyle}" VerticalAlignment="Center">
+                        <TextBlock x:Name="SelectionSummary" VerticalAlignment="Center" FontSize="12"
+                                   Foreground="{StaticResource IMaoAccentBrush}" FontWeight="Bold" TextWrapping="Wrap" />
+                    </Border>
+                    <TextBlock x:Name="SyncStatus" FontSize="12.5" TextWrapping="Wrap" VerticalAlignment="Center" Margin="6,0,0,0" />
+                    <Button x:Name="RetrySync" Content="重试同步" Click="RetrySync_Click" Visibility="Collapsed" />
+                    <TextBlock x:Name="AttributionText" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"
+                               Margin="6,0,0,0" Foreground="{StaticResource IMaoSecondaryTextBrush}" Visibility="Collapsed" />
+                </controls:WrapPanel>
+
+                <TextBlock x:Name="AdditionalFilterStatus" FontSize="12.5" TextWrapping="Wrap"
+                           Foreground="{StaticResource IMaoWarningBrush}" Visibility="Collapsed" />
+                <TextBlock x:Name="GamepadHint" Visibility="Collapsed" FontSize="12" TextWrapping="Wrap"
+                           Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+            </StackPanel>
         </ScrollViewer>
+
+        <!-- 虚拟化点位典藏矩阵（严格保持 224×88 与 8px 间距以匹配手柄网格列数计算） -->
         <Grid Grid.Row="1">
             <GridView x:Name="FilterItems" SelectionMode="None" IsItemClickEnabled="False"
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -65,21 +93,26 @@
                 </GridView.ItemContainerStyle>
                 <GridView.ItemTemplate>
                     <DataTemplate>
-                        <Border Width="224" Height="88" CornerRadius="10" Padding="10,4"
-                                Background="{StaticResource IMaoSurfaceBrush}"
+                        <Border Width="224" Height="88" CornerRadius="12" Padding="10,4"
+                                Background="{StaticResource IMaoHeroSurfaceBrush}"
                                 BorderBrush="{StaticResource IMaoBorderBrush}" BorderThickness="1">
                             <CheckBox IsChecked="{Binding IsEnabled, Mode=OneWay}" Tag="{Binding}"
                                       Click="Item_Click"
                                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                                       AutomationProperties.Name="{Binding Name}" ToolTipService.ToolTip="{Binding Detail}">
-                                <Grid ColumnSpacing="8" Width="160">
+                                <Grid ColumnSpacing="9" Width="160">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="28" />
+                                        <ColumnDefinition Width="34" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" />
+                                    <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource IMaoDeepInsetBrush}"
+                                            BorderBrush="{StaticResource IMaoAccentBorderBrush}" BorderThickness="1" VerticalAlignment="Center">
+                                        <Image Source="{Binding IconPath}" Width="24" Height="24" Stretch="Uniform"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
                                     <TextBlock Grid.Column="1" Text="{Binding Name}" TextWrapping="Wrap"
-                                               MaxLines="3" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FontSize="15" />
+                                               Foreground="{StaticResource IMaoTextBrush}" FontWeight="SemiBold"
+                                               MaxLines="3" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FontSize="13.5" />
                                 </Grid>
                             </CheckBox>
                         </Border>

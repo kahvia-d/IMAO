@@ -1,10 +1,19 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Drawing;
 
+// 本地客户端游戏窗口状态枚举，用于区分“未启动”、“已最小化”与“窗口过小”
+public enum GameWindowCheckResult
+{
+    Ready,
+    ProcessNotFound,
+    WindowMinimizedOrHidden,
+    WindowTooSmall
+}
+
 class WindowClientSizeGetter
 {
-    // 引入Windows API
+    // 引入 Windows API
     [DllImport("user32.dll")]
     private static extern bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
 
@@ -32,12 +41,11 @@ class WindowClientSizeGetter
     }
 
     /// <summary>
-    /// 通过进程名获取窗口客户区大小（不含非客户区域）
+    /// 检测目标进程窗口的详细状态及最大可见客户区尺寸
     /// </summary>
-    /// <param name="processName">进程名（不含.exe）</param>
-    /// <returns>客户区大小，未找到返回Size.Empty</returns>
-    public static Size GetClientSizeByProcessName(string processName)
+    public static GameWindowCheckResult InspectProcessWindow(string processName, out Size largestClientSize)
     {
+        largestClientSize = Size.Empty;
         try
         {
             var processIds = Process.GetProcessesByName(processName)
@@ -45,55 +53,112 @@ class WindowClientSizeGetter
                 .ToHashSet();
             if (processIds.Count == 0)
             {
-                return Size.Empty;
+                return GameWindowCheckResult.ProcessNotFound;
             }
 
-            Size largestClientSize = Size.Empty;
-            long largestClientArea = 0;
+            long largestValidArea = 0;
+            long largestVisibleArea = 0;
+            Size largestVisibleSize = Size.Empty;
+            bool hasMinimizedWindow = false;
+            Size localLargestValid = Size.Empty;
 
             EnumWindows((hWnd, lParam) =>
             {
                 GetWindowThreadProcessId(hWnd, out uint processId);
+                if (!processIds.Contains(processId))
+                {
+                    return true;
+                }
 
-                if (processIds.Contains(processId) && IsWindowVisible(hWnd) && !IsIconic(hWnd) &&
-                    GetClientRect(hWnd, out RECT clientRect))
+                if (IsIconic(hWnd))
+                {
+                    hasMinimizedWindow = true;
+                    return true;
+                }
+
+                if (IsWindowVisible(hWnd) && GetClientRect(hWnd, out RECT clientRect))
                 {
                     int width = clientRect.Right - clientRect.Left;
                     int height = clientRect.Bottom - clientRect.Top;
                     long area = (long)width * height;
-                    if (width >= 640 && height >= 360 && area > largestClientArea)
+                    if (width > 0 && height > 0 && area > largestVisibleArea)
                     {
-                        largestClientSize = new Size(width, height);
-                        largestClientArea = area;
+                        largestVisibleArea = area;
+                        largestVisibleSize = new Size(width, height);
+                    }
+                    if (width >= 640 && height >= 360 && area > largestValidArea)
+                    {
+                        localLargestValid = new Size(width, height);
+                        largestValidArea = area;
                     }
                 }
                 return true;
             }, IntPtr.Zero);
 
-            return largestClientSize;
+            if (localLargestValid != Size.Empty)
+            {
+                largestClientSize = localLargestValid;
+                return GameWindowCheckResult.Ready;
+            }
+
+            if (largestVisibleSize != Size.Empty)
+            {
+                largestClientSize = largestVisibleSize;
+                return GameWindowCheckResult.WindowTooSmall;
+            }
+
+            return hasMinimizedWindow
+                ? GameWindowCheckResult.WindowMinimizedOrHidden
+                : GameWindowCheckResult.ProcessNotFound;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"GetClientSizeByProcessName: {ex.Message}");
-            return Size.Empty;
+            Console.WriteLine($"InspectProcessWindow: {ex.Message}");
+            return GameWindowCheckResult.ProcessNotFound;
         }
     }
 
+    /// <summary>
+    /// 通过进程名获取窗口客户区大小（不含非客户区域）
+    /// </summary>
+    /// <param name="processName">进程名（不含.exe）</param>
+    /// <returns>客户区大小，未找到返回Size.Empty</returns>
+    public static Size GetClientSizeByProcessName(string processName)
+    {
+        return InspectProcessWindow(processName, out Size size) == GameWindowCheckResult.Ready
+            ? size
+            : Size.Empty;
+    }
 }
 
 class GameWindow()
 {
     /// <summary>
-    /// 游戏窗口现在能不能开始探索：目标进程在跑，并且有一个可见、未最小化、客户区不小于 640x360
-    /// 的游戏窗口（尺寸下限与"取最大的那个窗口"都在 <see cref="WindowClientSizeGetter"/> 里）。
-    ///
-    /// 这里**不再看画面比例**。HUD 裁剪已经改成按游戏自己的 HUD 缩放加贴边锚定来定位
-    /// （原生 <c>IMao-Core/src/Coordinate/HudLayout.h</c>：<c>scale = min(宽/1600, 高/900)</c>，
-    /// 每个控件再贴上/下/左/右某一条边），16:9、16:10、21:9 走的是同一套规则，原生侧也早就
-    /// 删掉了坐标识别的分辨率白名单。原来那条 <c>1.76 &lt; 宽高比 &lt; 1.78</c> 的窄带是最后一个
-    /// "只有 16:9 能用" 的关卡：2560x1600、3840x2160 的玩家点「开始探索」会直接拿到
-    /// <c>ExplorationToggleResult.WindowSizeRejected</c>，首页按钮、手柄和快捷键三处一样被拒。
+    /// 游戏窗口现在能不能开始探索：目标进程在跑，并且有一个可见、未最小化、客户区不小于 640x360 的游戏窗口。
     /// </summary>
     public static bool CheckGameWindowSize()
         => WindowClientSizeGetter.GetClientSizeByProcessName("Client-Win64-Shipping") != Size.Empty;
+
+    /// <summary>
+    /// 返回本地游戏客户端窗口的精确检测结果，用于向玩家给出准确的错误提示
+    /// </summary>
+    public static GameWindowCheckResult InspectGameWindow(out Size clientSize)
+        => WindowClientSizeGetter.InspectProcessWindow("Client-Win64-Shipping", out clientSize);
+
+    /// <summary>
+    /// 根据窗口检测结果生成对应场景的提示标题与说明
+    /// </summary>
+    public static (string Title, string Message) DescribeFailure(GameWindowCheckResult checkResult) => checkResult switch
+    {
+        GameWindowCheckResult.ProcessNotFound => (
+            "未检测到游戏窗口",
+            "请确认《鸣潮》已启动；若正在使用浏览器游玩云鸣潮，请先点击「选择游戏窗口」。"),
+        GameWindowCheckResult.WindowMinimizedOrHidden => (
+            "游戏窗口未显示",
+            "检测到《鸣潮》正在运行，但窗口处于最小化或隐藏状态，请先恢复游戏窗口后再开始探索。"),
+        GameWindowCheckResult.WindowTooSmall => (
+            "游戏窗口过小",
+            "当前游戏画面尺寸过小，为保证地图识别精度，请将游戏窗口分辨率调整到至少 1280×720。"),
+        _ => ("无法开始探索", "请确认游戏窗口已正常显示。")
+    };
 }

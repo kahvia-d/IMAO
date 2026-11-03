@@ -327,6 +327,22 @@ public partial class App : Application
             Check(Boxes().All(b=>b.IsChecked==true)&&saved.Values.All(v=>v),"failed save preserves checked boxes and persisted selection");
             reject=false;filters.SetEnabled(["a"],false);await Task.Delay(100);
             Check(Boxes().Single(b=>((FilterSelectionRow)b.Tag).Id=="a").IsChecked==false,"external selection change updates realized checkbox");
+            // Constrain the production control in DIPs, independently of the desktop DPI.
+            foreach (double width in new[] { 160d, 300d, 390d, 480d, 519d, 520d, 900d })
+            {
+                control.Width = width;
+                control.HorizontalAlignment = HorizontalAlignment.Left;
+                await Task.Delay(120);
+                foreach (string name in new[] { "SearchBox", "CategoryPicker", "PresetPicker", "SelectedOnly" })
+                {
+                    var element = (FrameworkElement)control.FindName(name);
+                    // The preset is normally shown after selecting a character/weapon category.
+                    if (name == "PresetPicker") { element.Visibility = Visibility.Visible; await Task.Delay(80); }
+                    var bounds = element.TransformToVisual(control).TransformBounds(new Windows.Foundation.Rect(0, 0, element.ActualWidth, element.ActualHeight));
+                    Check(bounds.Left >= -1 && bounds.Right <= control.ActualWidth + 1,
+                        $"{width} DIP: {name} remains horizontally reachable ({bounds.Left:F0}..{bounds.Right:F0})");
+                }
+            }
             log.WriteLine("ALL FILTER BULK CHECKS PASSED");Environment.ExitCode=0;
             List<CheckBox> Boxes()=>Descendants(control).OfType<CheckBox>().Where(b=>b.Tag is FilterSelectionRow).ToList();
             void Invoke(string label){var button=Descendants(control).OfType<Button>().Single(b=>Equals(b.Content,label));((IInvokeProvider)new ButtonAutomationPeer(button).GetPattern(PatternInterface.Invoke)).Invoke();}

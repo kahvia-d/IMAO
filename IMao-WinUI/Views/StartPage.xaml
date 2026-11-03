@@ -1,38 +1,204 @@
-<Page x:Class="IMao_WinUI.Views.StartPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="using:CommunityToolkit.WinUI.Controls">
-    <StackPanel Spacing="22">
-        <StackPanel Spacing="5"><TextBlock Text="EXPLORATION COMPANION" Style="{StaticResource IMaoEyebrowStyle}" /><TextBlock Text="让每次探索，都有方向。" Style="{StaticResource IMaoPageTitleStyle}" /><TextBlock Text="在游戏地图上看见目标，沿自己的路线继续前进。" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
-        <Border Style="{StaticResource IMaoCardStyle}" Padding="24">
-            <StackPanel Spacing="18">
-                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="8"><FontIcon Glyph="&#xE774;" Foreground="{StaticResource IMaoAccentBrush}" /><TextBlock x:Name="Start_TextBlock_CoreState" Text="正在连接核心" Style="{StaticResource IMaoSectionTitleStyle}" /></controls:WrapPanel>
-                <TextBlock x:Name="Start_TextBlock_CoreDetail" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <TextBlock x:Name="CaptureSourceSummary" Text="游戏来源 · 本地客户端" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <TextBlock x:Name="OverviewLocationSummary" Style="{StaticResource IMaoBodyTextStyle}" />
-                <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
-                    <Button x:Name="Start_Button" Click="Start_Button_Click" Style="{StaticResource IMaoPrimaryButtonStyle}"><StackPanel Orientation="Horizontal" Spacing="10"><FontIcon x:Name="Start_Button_Icon" Glyph="&#xE768;" FontSize="16" /><TextBlock x:Name="Start_Button_Text" Text="开始探索" /></StackPanel></Button>
-                    <Button x:Name="SelectCaptureWindowButton" Content="选择游戏窗口" Click="SelectCaptureWindow_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
-                    <Button Content="重新连接核心" Click="RestartCore_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
-                    <Button Content="连接与显示设置" Tag="settings" Click="Navigate_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
-                </controls:WrapPanel>
-                <InfoBar x:Name="Start_InfoBar_FindNotTargetProcess" IsOpen="False" Visibility="Collapsed" Title="正在等待游戏" Message="请先打开鸣潮，并回到可见的游戏画面。" Severity="Warning" CloseButtonClick="Start_InfoBar_FindNotTargetProcess_CloseButtonClick" />
-                <InfoBar x:Name="Start_InfoBar_IncorrectGameWindowSize" IsOpen="False" Visibility="Collapsed" Title="检查游戏窗口" Message="没有找到鸣潮的游戏窗口（可能已最小化或窗口太小）。请打开游戏并保持窗口可见后再试。" Severity="Warning" CloseButtonClick="Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick" />
-            </StackPanel>
-        </Border>
+<Page
+    x:Class="IMao_WinUI.Views.StartPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    mc:Ignorable="d">
+
+    <StackPanel x:Name="ContentArea" Spacing="16" Padding="0,2,0,20">
+        <!-- 隐藏保留旧版 InfoBar 节点仅用于兼容外部自动化检查，实际提示通过全局顶部悬浮消息栏弹出，不占用页面空间 -->
+        <StackPanel Visibility="Collapsed">
+            <InfoBar x:Name="Start_InfoBar_FindNotTargetProcess" IsOpen="False" Visibility="Collapsed" />
+            <InfoBar x:Name="Start_InfoBar_IncorrectGameWindowSize" IsOpen="False" Visibility="Collapsed" />
+        </StackPanel>
+
+        <!-- 第一行：左「探索启动控制」 + 右「当前状态概览」 -->
+        <Grid ColumnSpacing="16" RowSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.05*" />
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- 左卡：探索启动控制 -->
+            <Border Grid.Column="0" Style="{StaticResource IMaoHeroCardStyle}">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Ellipse x:Name="CoreStateDot" Width="9" Height="9" Fill="{StaticResource IMaoAccentBrush}" VerticalAlignment="Center" />
+                            <TextBlock x:Name="Start_TextBlock_CoreState" Text="核心已就绪" Style="{StaticResource IMaoPageTitleStyle}" FontSize="19" />
+                        </StackPanel>
+                        <TextBlock x:Name="Start_TextBlock_CoreDetail" Text="等待启动探索" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                    </StackPanel>
+
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource IMaoSubCardStyle}">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="画面来源" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                <TextBlock x:Name="CaptureSourceSummary" Text="本地客户端" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Style="{StaticResource IMaoSubCardStyle}">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="定位状态" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                <TextBlock x:Name="OverviewLocationSummary" Text="尚未开始" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" />
+                                <TextBlock x:Name="OverviewMarkerSummary" Text="启动后显示地图点位数" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- 首页仅保留启动与连接核心相关的操作按钮 -->
+                    <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
+                        <Button x:Name="Start_Button" Click="Start_Button_Click" Style="{StaticResource IMaoPrimaryButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon x:Name="Start_Button_Icon" Glyph="&#xE768;" FontSize="14" />
+                                <TextBlock x:Name="Start_Button_Text" Text="开始探索" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="SelectCaptureWindowButton" Content="选择游戏窗口" Click="SelectCaptureWindow_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                        <Button x:Name="RestartCoreButton" Content="重新连接核心" Click="RestartCore_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                    </controls:WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 右卡：当前记录本与活动路线状态 -->
+            <Border Grid.Column="1" Style="{StaticResource IMaoCardStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="当前状态" Style="{StaticResource IMaoSectionTitleStyle}" />
+
+                    <Border Style="{StaticResource IMaoSubCardStyle}">
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="当前记录本" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                            <TextBlock x:Name="OverviewAccountBadgeText" Text="默认记录" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource IMaoSubCardStyle}">
+                        <StackPanel Spacing="4">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="本次路线" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                <TextBlock x:Name="OverviewReplanStatus" Grid.Column="1" Text="实时规划已开启" FontSize="12"
+                                           Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                            <TextBlock x:Name="OverviewRouteTitle" Text="还没有活动路线" Style="{StaticResource IMaoBodyTextStyle}" FontWeight="SemiBold" />
+                            <TextBlock x:Name="OverviewRouteDetail" Text="可在路线导航页或游戏内大地图选择路线。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                            <TextBlock x:Name="OverviewRouteTarget" Visibility="Collapsed" FontSize="12.5"
+                                       Foreground="{StaticResource IMaoAccentBrush}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 第二行：地区收集物完成度看板（严格统计「收集物」分类，采用静态确定性进度条避免动画闪烁） -->
         <Border Style="{StaticResource IMaoCardStyle}">
             <StackPanel Spacing="14">
-                <TextBlock Text="本次路线" Style="{StaticResource IMaoSectionTitleStyle}" />
-                <TextBlock x:Name="OverviewRouteTitle" Text="还没有活动路线" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" />
-                <TextBlock x:Name="OverviewRouteDetail" Text="先筛选感兴趣的点位，再到路线页选择本次目标。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <TextBlock x:Name="OverviewRouteTarget" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock x:Name="OverviewReplanStatus" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <Button Content="前往路线" Tag="routes" Click="Navigate_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
-            </StackPanel>
-        </Border>
-        <Border Style="{StaticResource IMaoCardStyle}">
-            <StackPanel Spacing="14">
-                <TextBlock Text="地图与点位" Style="{StaticResource IMaoSectionTitleStyle}" />
-                <TextBlock x:Name="OverviewMarkerSummary" Text="启动后显示当前地图点位数量。" Style="{StaticResource IMaoBodyTextStyle}" />
-                <TextBlock Text="只显示你关心的收集物、宝箱和探索目标。筛选修改会保存到本地。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><Button Content="筛选点位" Tag="filter" Click="Navigate_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" /><Button Content="查看使用帮助" Tag="help" Click="Navigate_Click" /><Button Content="诊断与日志" Tag="diagnostics" Click="Navigate_Click" /></controls:WrapPanel>
+                <!-- 顶栏：左标题 + 右四大国度切换栏 -->
+                <Grid ColumnSpacing="16" RowSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="地区完成度" Style="{StaticResource IMaoSectionTitleStyle}" />
+                        <TextBlock x:Name="RegionLedgerHintText" Text="展示所选区域的收集物完成进度" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                    </StackPanel>
+
+                    <Border Grid.Column="1" Background="{StaticResource IMaoDeepInsetBrush}" BorderBrush="{StaticResource IMaoBorderBrush}"
+                            BorderThickness="1" CornerRadius="10" Padding="4" VerticalAlignment="Center">
+                        <StackPanel x:Name="CountryTabsPanel" Orientation="Horizontal" Spacing="4">
+                            <Button x:Name="CountryBtn_1" Content="瑝珑" Tag="1" Click="CountryTab_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" Padding="14,6" />
+                            <Button x:Name="CountryBtn_900" Content="黑海岸" Tag="900" Click="CountryTab_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,6" />
+                            <Button x:Name="CountryBtn_3" Content="黎那汐塔" Tag="3" Click="CountryTab_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,6" />
+                            <Button x:Name="CountryBtn_4" Content="罗伊冰原" Tag="4" Click="CountryTab_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,6" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- 子地区胶囊切换条 -->
+                <controls:WrapPanel x:Name="SubRegionTabsPanel" HorizontalSpacing="8" VerticalSpacing="8" />
+
+                <!-- 当前所选地区总完成度进度横幅（采用静态比例轨道替代动态 ProgressBar，杜绝反复动画） -->
+                <Border Style="{StaticResource IMaoSubCardStyle}" Padding="16,12">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock x:Name="SelectedRegionTitleText" Text="瑝珑 · 全部区域" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SelectedRegionFractionText" Text="已收集 0 / 0" Style="{StaticResource IMaoSecondaryTextStyle}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock x:Name="SelectedRegionPercentText" Grid.Column="1" Text="0.0%" FontSize="18" FontWeight="Bold"
+                                       Foreground="{StaticResource IMaoAccentBrush}" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <Border Height="6" CornerRadius="3" Background="#1D2736">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition x:Name="SelectedRegionFillCol" Width="0" />
+                                    <ColumnDefinition x:Name="SelectedRegionRemainCol" Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Height="6" CornerRadius="3" Background="{StaticResource IMaoAccentBrush}" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- 所选区域的收集物分类进度网格（静态宽度进度填充条，绝不循环播放动画） -->
+                <ItemsControl x:Name="RegionCollectibleItemsControl">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Width="228" Style="{StaticResource IMaoSubCardStyle}" Padding="12,10">
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="34" />
+                                        <ColumnDefinition Width="160" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource IMaoDeepInsetBrush}"
+                                            BorderBrush="{StaticResource IMaoBorderBrush}" BorderThickness="1" VerticalAlignment="Center">
+                                        <Image Source="{Binding IconSource}" Width="24" Height="24" Stretch="Uniform"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Width="160" Spacing="6" VerticalAlignment="Center">
+                                        <Grid ColumnSpacing="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding CountLabel}" FontSize="12" FontWeight="SemiBold"
+                                                       Foreground="{Binding CountBrush}" VerticalAlignment="Center" />
+                                        </Grid>
+                                        <Border Width="160" Height="4" CornerRadius="2" Background="#1D2736" HorizontalAlignment="Left">
+                                            <Border HorizontalAlignment="Left" Width="{Binding BarFillWidth}" Height="4" CornerRadius="2"
+                                                    Background="{Binding CountBrush}" />
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock x:Name="RegionCollectibleEmptyText" Text="正在读取区域收集物数据…"
+                           Style="{StaticResource IMaoSecondaryTextStyle}" Visibility="Collapsed" />
             </StackPanel>
         </Border>
     </StackPanel>

@@ -1,4 +1,4 @@
-using IMao_WinUI.Contracts.Services;
+﻿using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Helpers;
 using IMao_WinUI.Models;
 using IMao_WinUI.Services;
@@ -72,6 +72,7 @@ public sealed partial class SettingsPage : Page
             RenderLocalAccounts();
             RenderSyncLedger();
             _ = RestoreKuroSyncAsync();
+            if (!string.IsNullOrWhiteSpace(RequestedCategory)) { ApplySettingsCategory(RequestedCategory!); RequestedCategory = null; }
         };
         Unloaded += (_, _) =>
         {
@@ -918,6 +919,7 @@ public sealed partial class SettingsPage : Page
         LocalAccountMessage.Severity = severity;
         LocalAccountMessage.Message = message;
         LocalAccountMessage.IsOpen = true;
+        IMao_WinUI.Helpers.AppToast.Show(message, severity);
     }
 
     private void RefreshLedgerSurfaces()
@@ -1411,7 +1413,10 @@ public sealed partial class SettingsPage : Page
     {
         KuroSyncMessage.Severity = severity;
         KuroSyncMessage.Message = message;
+        bool isPreviewSummary = message.StartsWith("预览完成：", StringComparison.Ordinal);
+        KuroSyncMessage.Visibility = isPreviewSummary ? Visibility.Visible : Visibility.Collapsed;
         KuroSyncMessage.IsOpen = true;
+        if (!isPreviewSummary) IMao_WinUI.Helpers.AppToast.Show(message, severity);
     }
 
     private int SelectedKuroSyncStateId() =>
@@ -1614,5 +1619,36 @@ public sealed partial class SettingsPage : Page
         RuntimeMessage.Severity = ok ? InfoBarSeverity.Success : InfoBarSeverity.Error;
         RuntimeMessage.Message = ok ? "已恢复 Windows 图形默认设置，重启游戏后生效。" : error;
         RuntimeMessage.IsOpen = true;
+    }
+
+    // 允许从总览页深链直达指定设置工作台（如 "sync" 或 "display"）
+    public static string? RequestedCategory { get; set; }
+
+    // 切换设置页五大功能模块视图（全部模块 / 显示与叠加 / 键鼠与手柄 / 记录本与同步 / 版本与地图资源 / 性能与兼容）
+    private void SettingsCategory_Click(object sender, RoutedEventArgs e) =>
+        ApplySettingsCategory((sender as Button)?.Tag as string ?? "sync");
+
+    public void ApplySettingsCategory(string key)
+    {
+        bool showAll = key == "all";
+        SettingsGroup_Display.Visibility = showAll || key == "display" ? Visibility.Visible : Visibility.Collapsed;
+        SettingsGroup_Input.Visibility = showAll || key == "input" ? Visibility.Visible : Visibility.Collapsed;
+        SettingsGroup_Sync.Visibility = showAll || key == "sync" ? Visibility.Visible : Visibility.Collapsed;
+        SettingsGroup_Updates.Visibility = showAll || key == "updates" ? Visibility.Visible : Visibility.Collapsed;
+        SettingsGroup_System.Visibility = showAll || key == "system" ? Visibility.Visible : Visibility.Collapsed;
+
+        var primaryStyle = Application.Current.Resources["IMaoPrimaryButtonStyle"] as Style;
+        var secondaryStyle = Application.Current.Resources["IMaoSecondaryButtonStyle"] as Style;
+        foreach (var child in SettingsCategoryBar.Children)
+        {
+            if (child is Button button)
+            {
+                bool active = Equals(button.Tag as string, key);
+                if (primaryStyle is not null && secondaryStyle is not null)
+                {
+                    button.Style = active ? primaryStyle : secondaryStyle;
+                }
+            }
+        }
     }
 }
