@@ -14,7 +14,7 @@
             <TextBlock Text="按合集管理、拖拽排序或批量导入导出已保存的探索路线。" Style="{StaticResource IMaoSecondaryTextStyle}" />
         </StackPanel>
 
-        <InfoBar x:Name="AutoRouteMessage" IsOpen="False" IsClosable="True" />
+        <InfoBar x:Name="AutoRouteMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
 
         <ContentControl x:Name="AutoRouteActions" HorizontalContentAlignment="Stretch">
             <StackPanel Spacing="14">

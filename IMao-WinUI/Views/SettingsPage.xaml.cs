@@ -1,4 +1,4 @@
-using IMao_WinUI.Contracts.Services;
+﻿using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Helpers;
 using IMao_WinUI.Models;
 using IMao_WinUI.Services;
@@ -919,6 +919,7 @@ public sealed partial class SettingsPage : Page
         LocalAccountMessage.Severity = severity;
         LocalAccountMessage.Message = message;
         LocalAccountMessage.IsOpen = true;
+        IMao_WinUI.Helpers.AppToast.Show(message, severity);
     }
 
     private void RefreshLedgerSurfaces()
@@ -1412,7 +1413,10 @@ public sealed partial class SettingsPage : Page
     {
         KuroSyncMessage.Severity = severity;
         KuroSyncMessage.Message = message;
+        bool isPreviewSummary = message.StartsWith("预览完成：", StringComparison.Ordinal);
+        KuroSyncMessage.Visibility = isPreviewSummary ? Visibility.Visible : Visibility.Collapsed;
         KuroSyncMessage.IsOpen = true;
+        if (!isPreviewSummary) IMao_WinUI.Helpers.AppToast.Show(message, severity);
     }
 
     private int SelectedKuroSyncStateId() =>

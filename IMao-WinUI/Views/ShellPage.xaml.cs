@@ -4,9 +4,11 @@ using IMao_WinUI.Helpers;
 using IMao_WinUI.Models;
 using IMao_WinUI.Services;
 using IMao_WinUI.ViewModels;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Windows.System;
 
 namespace IMao_WinUI.Views;
@@ -15,7 +17,11 @@ public sealed partial class ShellPage : Page
 {
     private readonly UpdateUiController updates;
     private readonly CoreHostService coreHost;
+    private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer toastTimer;
+    private readonly List<(DependencyObject Target, DependencyProperty Prop, long Token)> infoBarSubscriptions = [];
     private bool subscribed;
+    private bool isPointerOverToast;
+    private string lastObservedFault = "";
 
     public ShellViewModel ViewModel { get; }
 
@@ -25,6 +31,19 @@ public sealed partial class ShellPage : Page
         InitializeComponent();
         updates = App.GetService<UpdateUiController>();
         coreHost = App.GetService<CoreHostService>();
+
+        // 4 秒自动消失计时器：鼠标未悬停在消息栏上时倒计时 4 秒自动收起
+        toastTimer = DispatcherQueue.CreateTimer();
+        toastTimer.Interval = TimeSpan.FromSeconds(4);
+        toastTimer.IsRepeating = false;
+        toastTimer.Tick += (_, _) =>
+        {
+            if (!isPointerOverToast)
+            {
+                ToastOverlayHost.Visibility = Visibility.Collapsed;
+            }
+        };
+
         Loaded += ShellPage_Loaded;
         Unloaded += ShellPage_Unloaded;
 
@@ -40,22 +59,23 @@ public sealed partial class ShellPage : Page
 
     private void ShellPage_Loaded(object sender, RoutedEventArgs e)
     {
+        AppToast.RegisterPresenter(ShowFloatingToast);
         if (!subscribed)
         {
             updates.PropertyChanged += UpdatesChanged;
-            coreHost.StatusChanged += CoreHost_StatusChanged;
             coreHost.PropertyChanged += CoreHost_PropertyChanged;
             subscribed = true;
         }
         UpdatesChanged(null, new(""));
-        SyncShellTelemetry(coreHost.Status);
     }
 
     private void ShellPage_Unloaded(object sender, RoutedEventArgs e)
     {
+        AppToast.RegisterPresenter(null);
+        DetachPageInfoBarRelays();
+        toastTimer.Stop();
         if (!subscribed) return;
         updates.PropertyChanged -= UpdatesChanged;
-        coreHost.StatusChanged -= CoreHost_StatusChanged;
         coreHost.PropertyChanged -= CoreHost_PropertyChanged;
         subscribed = false;
     }
@@ -65,36 +85,156 @@ public sealed partial class ShellPage : Page
         TitleBarHelper.UpdateTitleBar(RequestedTheme);
         KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu));
         KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.GoBack));
-        SyncShellTelemetry(coreHost.Status);
     }
-
-    private void CoreHost_StatusChanged(object? sender, CoreRuntimeStatus status) => SyncShellTelemetry(status);
 
     private void CoreHost_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (IsLoaded) SyncShellTelemetry(coreHost.Status);
+        if (e.PropertyName == nameof(CoreHostService.LastFault))
+        {
+            string fault = coreHost.LastFault ?? "";
+            if (fault.Length > 0 && !string.Equals(fault, lastObservedFault, StringComparison.Ordinal))
+            {
+                lastObservedFault = fault;
+                ShowFloatingToast(fault, InfoBarSeverity.Error, null);
+            }
+            else if (fault.Length == 0)
+            {
+                lastObservedFault = "";
+            }
+        }
     }
 
-    // 同步顶栏状态胶囊显示
-    private void SyncShellTelemetry(CoreRuntimeStatus status)
+    // 展示或覆盖全局顶部悬浮提示栏，并重置 4 秒自动关闭倒计时
+    private void ShowFloatingToast(string message, InfoBarSeverity severity, string? title)
     {
-        string accountName = coreHost.ActiveLocalAccount?.Name ?? "默认";
-        ShellAccountCapsuleText.Text = $"记录本 · {accountName}";
-
-        string locText = !status.IsRunning ? "待命" : (status.Localization switch
+        if (!DispatcherQueue.HasThreadAccess)
         {
-            "waiting" => "等待地图画面",
-            "tracking" => "已定位",
-            "lost" => "重定位中",
-            "recovering" => "恢复定位中",
-            "mapLocating" => "识别大地图",
-            "mapTracking" => "大地图已定位",
-            "stale" => "等待画面更新",
-            "stable" => "定位稳定",
-            _ => "等待位置"
-        });
-        ShellLocationCapsuleText.Text = $"定位 · {locText}";
-        ShellMarkersCapsuleText.Text = $"小地图 {status.MinimapMarkers} · 大地图 {status.MapMarkers}";
+            DispatcherQueue.TryEnqueue(() => ShowFloatingToast(message, severity, title));
+            return;
+        }
+
+        var (brushKey, glyph) = severity switch
+        {
+            InfoBarSeverity.Error => ("IMaoDangerBrush", "\uEA39"),
+            InfoBarSeverity.Warning => ("IMaoWarningBrush", "\uE7BA"),
+            InfoBarSeverity.Success => ("IMaoSuccessBrush", "\uE73E"),
+            _ => ("IMaoAccentBrush", "\uE946")
+        };
+
+        if (Application.Current.Resources.TryGetValue(brushKey, out var obj) && obj is Brush accent)
+        {
+            ToastAccentBar.Background = accent;
+            ToastIcon.Foreground = accent;
+        }
+        ToastIcon.Glyph = glyph;
+
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            ToastTitleText.Text = title;
+            ToastTitleText.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            ToastTitleText.Text = "";
+            ToastTitleText.Visibility = Visibility.Collapsed;
+        }
+
+        ToastMessageText.Text = message;
+        ToastOverlayHost.Visibility = Visibility.Visible;
+
+        toastTimer.Stop();
+        if (!isPointerOverToast)
+        {
+            toastTimer.Start();
+        }
+    }
+
+    private void ToastOverlayHost_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        isPointerOverToast = true;
+        toastTimer.Stop();
+    }
+
+    private void ToastOverlayHost_PointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        isPointerOverToast = false;
+        if (ToastOverlayHost.Visibility == Visibility.Visible)
+        {
+            toastTimer.Stop();
+            toastTimer.Start();
+        }
+    }
+
+    private void ToastClose_Click(object sender, RoutedEventArgs e)
+    {
+        isPointerOverToast = false;
+        toastTimer.Stop();
+        ToastOverlayHost.Visibility = Visibility.Collapsed;
+    }
+
+    // 将子页面内的瞬态错误/警告 InfoBar 转发至顶部全局悬浮消息栏（排除「预览同步」内联对比摘要）
+    private void AttachPageInfoBarRelays(object? content)
+    {
+        DetachPageInfoBarRelays();
+        if (content is not FrameworkElement page) return;
+
+        string[] transientNames = content switch
+        {
+            FunctionPage => ["AutoRouteMessage"],
+            SettingsPage => ["LocalAccountMessage", "RuntimeMessage", "ShortcutMessage", "RangeMessage", "GamepadMessage", "RegionMessage", "OcrPerformanceMessage", "KuroSyncMessage"],
+            _ => []
+        };
+
+        foreach (string name in transientNames)
+        {
+            if (page.FindName(name) is not InfoBar bar) continue;
+            bool isKuroSync = name == "KuroSyncMessage";
+            if (!isKuroSync)
+            {
+                bar.Visibility = Visibility.Collapsed;
+            }
+
+            void RelayIfOpen(DependencyObject sender, DependencyProperty dp)
+            {
+                if (sender is not InfoBar current || !current.IsOpen || string.IsNullOrWhiteSpace(current.Message))
+                {
+                    if (isKuroSync && sender is InfoBar closedSync)
+                    {
+                        closedSync.Visibility = Visibility.Collapsed;
+                    }
+                    return;
+                }
+
+                // 「预览同步」产出的对比摘要保持在点位同步卡片内部展示，不转为顶部悬浮提示
+                if (isKuroSync && current.Message.StartsWith("预览完成：", StringComparison.Ordinal))
+                {
+                    current.Visibility = Visibility.Visible;
+                    return;
+                }
+
+                if (isKuroSync)
+                {
+                    current.Visibility = Visibility.Collapsed;
+                }
+
+                ShowFloatingToast(current.Message, current.Severity, string.IsNullOrWhiteSpace(current.Title) ? null : current.Title);
+            }
+
+            long t1 = bar.RegisterPropertyChangedCallback(InfoBar.IsOpenProperty, RelayIfOpen);
+            long t2 = bar.RegisterPropertyChangedCallback(InfoBar.MessageProperty, RelayIfOpen);
+            infoBarSubscriptions.Add((bar, InfoBar.IsOpenProperty, t1));
+            infoBarSubscriptions.Add((bar, InfoBar.MessageProperty, t2));
+        }
+    }
+
+    private void DetachPageInfoBarRelays()
+    {
+        foreach (var (target, prop, token) in infoBarSubscriptions)
+        {
+            try { target.UnregisterPropertyChangedCallback(prop, token); }
+            catch { }
+        }
+        infoBarSubscriptions.Clear();
     }
 
     // 侧边栏导航点击
@@ -122,6 +262,7 @@ public sealed partial class ShellPage : Page
         PageScrollViewer.ChangeView(0, 0, null, disableAnimation: true);
 
         UpdateSidebarSelection(e.Content);
+        AttachPageInfoBarRelays(e.Content);
     }
 
     // 根据当前激活页面同步侧边栏高亮样式
@@ -153,7 +294,6 @@ public sealed partial class ShellPage : Page
     {
         bool compact = e.NewSize.Width < 900;
         SidebarColumn.Width = new GridLength(compact ? 148 : 176);
-        TitleBarTelemetryStrip.Visibility = e.NewSize.Width < 820 ? Visibility.Collapsed : Visibility.Visible;
         NavigationFrame.Padding = compact ? new Thickness(16, 14, 16, 18) : new Thickness(22, 16, 22, 20);
     }
 

@@ -14,7 +14,6 @@
                     <Button x:Name="CategoryBtn_Input" Content="快捷键与手柄" Tag="input" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
                     <Button x:Name="CategoryBtn_Updates" Content="版本与地图区域" Tag="updates" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
                     <Button x:Name="CategoryBtn_System" Content="数据目录与兼容" Tag="system" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
-                    <Button x:Name="CategoryBtn_All" Content="展开全部" Tag="all" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="12,7" />
                 </controls:WrapPanel>
             </Border>
         </StackPanel>
@@ -39,7 +38,7 @@
                             <Grid x:Name="LocalAccountGrid" ColumnSpacing="14" RowSpacing="6" />
                         </Border>
 
-                        <InfoBar x:Name="LocalAccountMessage" IsOpen="False" IsClosable="True" />
+                        <InfoBar x:Name="LocalAccountMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
 
                         <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
                             <Button Content="新增" Click="LocalAccountCreate_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
@@ -271,12 +270,12 @@
                                     <TextBlock x:Name="OcrBackendState" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
-                            <InfoBar x:Name="OcrPerformanceMessage" IsOpen="False" IsClosable="True" />
+                            <InfoBar x:Name="OcrPerformanceMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
                         </StackPanel>
                     </Border>
                 </Grid>
             </ContentControl>
-            <InfoBar x:Name="RuntimeMessage" IsOpen="False" IsClosable="True" />
+            <InfoBar x:Name="RuntimeMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
         </StackPanel>
 
         <!-- ==================== 分区 3：快捷键与手柄 ==================== -->
@@ -361,7 +360,7 @@
                             <Button x:Name="SaveShortcuts" Content="保存快捷键" Click="SaveShortcuts_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
                             <Button x:Name="ResetShortcuts" Content="恢复默认" Click="ResetShortcuts_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                         </controls:WrapPanel>
-                        <InfoBar x:Name="ShortcutMessage" IsOpen="False" IsClosable="True" />
+                        <InfoBar x:Name="ShortcutMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
                     </StackPanel>
                 </Border>
 
@@ -415,7 +414,7 @@
                                 </Grid>
                             </Border>
 
-                            <InfoBar x:Name="RangeMessage" IsOpen="False" IsClosable="True" />
+                            <InfoBar x:Name="RangeMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
                         </StackPanel>
                     </Border>
 
@@ -462,7 +461,7 @@
                                     <TextBlock x:Name="GamepadInstructions" Visibility="Collapsed" />
                                 </StackPanel>
                             </Border>
-                            <InfoBar x:Name="GamepadMessage" IsOpen="False" IsClosable="True" />
+                            <InfoBar x:Name="GamepadMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -602,7 +601,7 @@
                     <TextBlock x:Name="RegionHint" Style="{StaticResource IMaoSecondaryTextStyle}" />
                     <ProgressBar x:Name="RegionProgress" Minimum="0" Maximum="100" Visibility="Collapsed" />
                     <TextBlock x:Name="RegionProgressText" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                    <InfoBar x:Name="RegionMessage" IsOpen="False" IsClosable="True" />
+                    <InfoBar x:Name="RegionMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
                 </StackPanel>
             </Border>
         </StackPanel>

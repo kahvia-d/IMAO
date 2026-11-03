@@ -372,7 +372,7 @@
                                 </controls:WrapPanel>
                                 <TextBlock x:Name="LegacyScanSummary" Text="点击「扫描旧数据」查找本机可恢复的旧版点位文件。" Style="{StaticResource DocSubtleStyle}" />
                                 <StackPanel x:Name="LegacyScanList" Spacing="8" />
-                                <InfoBar x:Name="LegacyMessage" IsOpen="False" IsClosable="True" />
+                                <InfoBar x:Name="LegacyMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
                             </StackPanel>
                         </Border>
 

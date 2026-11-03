@@ -59,12 +59,12 @@ public sealed partial class UsageGuidePage : Page
 
         var sections = new (Button Nav, FrameworkElement Panel, string Tag)[]
         {
-            (DocNav_1, DocSection_1, "1"),
-            (DocNav_2, DocSection_2, "2"),
-            (DocNav_3, DocSection_3, "3"),
-            (DocNav_4, DocSection_4, "4"),
-            (DocNav_5, DocSection_5, "5"),
-            (DocNav_6, DocSection_6, "6"),
+            (DocNav_1, DocSection_1, "doc1"),
+            (DocNav_2, DocSection_2, "doc2"),
+            (DocNav_3, DocSection_3, "doc3"),
+            (DocNav_4, DocSection_4, "doc4"),
+            (DocNav_5, DocSection_5, "doc5"),
+            (DocNav_6, DocSection_6, "doc6"),
         };
 
         Style? activeStyle = Application.Current.Resources.TryGetValue("IMaoSidebarNavActiveButtonStyle", out var a) ? a as Style : null;
@@ -205,5 +205,6 @@ public sealed partial class UsageGuidePage : Page
         LegacyMessage.Severity = severity;
         LegacyMessage.Message = message;
         LegacyMessage.IsOpen = true;
+        AppToast.Show(message, severity);
     }
 }

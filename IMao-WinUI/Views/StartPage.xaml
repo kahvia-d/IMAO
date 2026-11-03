@@ -8,29 +8,13 @@
     mc:Ignorable="d">
 
     <StackPanel x:Name="ContentArea" Spacing="16" Padding="0,2,0,20">
-        <!-- 窗口状态与分辨率提示栏 -->
-        <StackPanel Spacing="8">
-            <InfoBar
-                x:Name="Start_InfoBar_FindNotTargetProcess"
-                IsOpen="False"
-                IsClosable="True"
-                Severity="Warning"
-                Visibility="Collapsed"
-                Title="暂未检测到《鸣潮》窗口"
-                Message="请先启动本地客户端，或点击「选择游戏窗口」绑定云鸣潮浏览器窗口。"
-                CloseButtonClick="Start_InfoBar_FindNotTargetProcess_CloseButtonClick" />
-            <InfoBar
-                x:Name="Start_InfoBar_IncorrectGameWindowSize"
-                IsOpen="False"
-                IsClosable="True"
-                Severity="Error"
-                Visibility="Collapsed"
-                Title="游戏窗口过小"
-                Message="为保证地图识别精度，请将游戏画面调整到至少 1280×720。"
-                CloseButtonClick="Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick" />
+        <!-- 隐藏保留旧版 InfoBar 节点仅用于兼容外部自动化检查，实际提示通过全局顶部悬浮消息栏弹出，不占用页面空间 -->
+        <StackPanel Visibility="Collapsed">
+            <InfoBar x:Name="Start_InfoBar_FindNotTargetProcess" IsOpen="False" Visibility="Collapsed" />
+            <InfoBar x:Name="Start_InfoBar_IncorrectGameWindowSize" IsOpen="False" Visibility="Collapsed" />
         </StackPanel>
 
-        <!-- 第一行：左「探索启动控制」 + 右「当前状态概览」（无冗余跳转按钮） -->
+        <!-- 第一行：左「探索启动控制」 + 右「当前状态概览」 -->
         <Grid ColumnSpacing="16" RowSpacing="16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1.05*" />
@@ -82,7 +66,7 @@
                 </StackPanel>
             </Border>
 
-            <!-- 右卡：当前记录本与活动路线状态（纯状态展示，不堆砌入口按钮） -->
+            <!-- 右卡：当前记录本与活动路线状态 -->
             <Border Grid.Column="1" Style="{StaticResource IMaoCardStyle}">
                 <StackPanel Spacing="12">
                     <TextBlock Text="当前状态" Style="{StaticResource IMaoSectionTitleStyle}" />
@@ -115,7 +99,7 @@
             </Border>
         </Grid>
 
-        <!-- 第二行：地区收集物完成度看板（支持按国度与子地区流畅切换） -->
+        <!-- 第二行：地区收集物完成度看板（严格统计「收集物」分类，采用静态确定性进度条避免动画闪烁） -->
         <Border Style="{StaticResource IMaoCardStyle}">
             <StackPanel Spacing="14">
                 <!-- 顶栏：左标题 + 右四大国度切换栏 -->
@@ -143,7 +127,7 @@
                 <!-- 子地区胶囊切换条 -->
                 <controls:WrapPanel x:Name="SubRegionTabsPanel" HorizontalSpacing="8" VerticalSpacing="8" />
 
-                <!-- 当前所选地区总完成度进度横幅 -->
+                <!-- 当前所选地区总完成度进度横幅（采用静态比例轨道替代动态 ProgressBar，杜绝反复动画） -->
                 <Border Style="{StaticResource IMaoSubCardStyle}" Padding="16,12">
                     <StackPanel Spacing="8">
                         <Grid ColumnSpacing="12">
@@ -153,16 +137,25 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <TextBlock x:Name="SelectedRegionTitleText" Text="瑝珑 · 全部区域" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <TextBlock x:Name="SelectedRegionFractionText" Text="已完成 0 / 0" Style="{StaticResource IMaoSecondaryTextStyle}" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SelectedRegionFractionText" Text="已收集 0 / 0" Style="{StaticResource IMaoSecondaryTextStyle}" VerticalAlignment="Center" />
                             </StackPanel>
                             <TextBlock x:Name="SelectedRegionPercentText" Grid.Column="1" Text="0.0%" FontSize="18" FontWeight="Bold"
                                        Foreground="{StaticResource IMaoAccentBrush}" VerticalAlignment="Center" />
                         </Grid>
-                        <ProgressBar x:Name="SelectedRegionProgressBar" Minimum="0" Maximum="100" Value="0" Height="6" CornerRadius="3" />
+
+                        <Border Height="6" CornerRadius="3" Background="#1D2736">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition x:Name="SelectedRegionFillCol" Width="0*" />
+                                    <ColumnDefinition x:Name="SelectedRegionRemainCol" Width="100*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Height="6" CornerRadius="3" Background="{StaticResource IMaoAccentBrush}" />
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Border>
 
-                <!-- 所选区域的收集物分类进度网格 -->
+                <!-- 所选区域的收集物分类进度网格（静态宽度进度填充条，绝不循环播放动画） -->
                 <ItemsControl x:Name="RegionCollectibleItemsControl">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -175,14 +168,14 @@
                                 <Grid ColumnSpacing="10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="34" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="160" />
                                     </Grid.ColumnDefinitions>
                                     <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource IMaoDeepInsetBrush}"
                                             BorderBrush="{StaticResource IMaoBorderBrush}" BorderThickness="1" VerticalAlignment="Center">
                                         <Image Source="{Binding IconSource}" Width="24" Height="24" Stretch="Uniform"
                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     </Border>
-                                    <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center">
+                                    <StackPanel Grid.Column="1" Width="160" Spacing="6" VerticalAlignment="Center">
                                         <Grid ColumnSpacing="6">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
@@ -193,7 +186,10 @@
                                             <TextBlock Grid.Column="1" Text="{Binding CountLabel}" FontSize="12" FontWeight="SemiBold"
                                                        Foreground="{Binding CountBrush}" VerticalAlignment="Center" />
                                         </Grid>
-                                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding Percent}" Height="4" CornerRadius="2" />
+                                        <Border Width="160" Height="4" CornerRadius="2" Background="#1D2736" HorizontalAlignment="Left">
+                                            <Border HorizontalAlignment="Left" Width="{Binding BarFillWidth}" Height="4" CornerRadius="2"
+                                                    Background="{Binding CountBrush}" />
+                                        </Border>
                                     </StackPanel>
                                 </Grid>
                             </Border>

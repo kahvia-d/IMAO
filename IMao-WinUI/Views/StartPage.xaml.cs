@@ -13,7 +13,7 @@ namespace IMao_WinUI.Views;
 
 public sealed partial class StartPage : Page
 {
-    // 单个收集物分类的完成度视图模型
+    // 单个收集物分类的完成度视图模型（采用静态像素宽度 BarFillWidth 避免 ProgressBar 控件反复动画）
     public sealed class CollectibleProgressRow
     {
         public string Name { get; init; } = "";
@@ -21,6 +21,7 @@ public sealed partial class StartPage : Page
         public int Completed { get; init; }
         public int Total { get; init; }
         public double Percent => Total > 0 ? Completed * 100.0 / Total : 0.0;
+        public double BarFillWidth => Math.Clamp(Percent / 100.0 * 160.0, 0.0, 160.0);
         public string CountLabel => $"{Completed} / {Total}";
         public Brush CountBrush { get; init; } = null!;
     }
@@ -40,6 +41,8 @@ public sealed partial class StartPage : Page
     private int selectedCountryId = 1;
     private string selectedRegionId = "all";
     private RegionalMapIndex? loadedIndex;
+    private string lastCompletionSignature = "";
+    private string lastNotifiedCoreState = "";
 
     public StartViewModel ViewModel { get; }
 
@@ -61,6 +64,7 @@ public sealed partial class StartPage : Page
             coreHost.PropertyChanged += CoreHost_PropertyChanged;
             subscribed = true;
         }
+        lastCompletionSignature = "";
         UpdateCoreStatus(coreHost.Status);
         RenderRoute(coreHost.RoutePlanning);
         UpdateAccountSummary();
@@ -70,7 +74,7 @@ public sealed partial class StartPage : Page
         {
             UpdateCoreStatus(coreHost.Status);
             UpdateAccountSummary();
-            RefreshRegionalCompletionUI();
+            RefreshRegionalCompletionUI(force: false);
         }
     }
 
@@ -88,12 +92,20 @@ public sealed partial class StartPage : Page
         Start_Button.IsEnabled = false;
         try
         {
-            // 与手柄/键盘快捷键走同一份实现（CoreHostService.ToggleExplorationAsync）
-            var result = await coreHost.ToggleExplorationAsync(GameWindow.CheckGameWindowSize());
+            // 先精确检查本地客户端窗口状态（区分“未启动”、“已最小化”与“窗口过小”）
+            var windowCheck = global::GameWindow.InspectGameWindow(out _);
+            bool canStart = windowCheck == GameWindowCheckResult.Ready;
+            var result = await coreHost.ToggleExplorationAsync(canStart);
             if (result == ExplorationToggleResult.WindowSizeRejected)
             {
+                var (title, msg) = global::GameWindow.DescribeFailure(windowCheck);
+                var severity = windowCheck == GameWindowCheckResult.WindowTooSmall
+                    ? InfoBarSeverity.Error
+                    : InfoBarSeverity.Warning;
+                Start_InfoBar_IncorrectGameWindowSize.Title = title;
+                Start_InfoBar_IncorrectGameWindowSize.Message = msg;
                 Start_InfoBar_IncorrectGameWindowSize.IsOpen = true;
-                Start_InfoBar_IncorrectGameWindowSize.Visibility = Visibility.Visible;
+                AppToast.Show(msg, severity, title);
             }
         }
         finally { if (IsLoaded) UpdateCoreStatus(coreHost.Status); }
@@ -117,7 +129,8 @@ public sealed partial class StartPage : Page
     {
         if (!IsLoaded) return;
         UpdateCoreStatus(status);
-        RefreshRegionalCompletionUI();
+        // 状态心跳仅在完成点数或记录本实际变化时才刷新完成度，避免进度条反复重绘
+        RefreshRegionalCompletionUI(force: false);
     }
 
     private void CoreHost_RoutePlanningChanged(object? sender, RoutePlanningState state)
@@ -130,7 +143,10 @@ public sealed partial class StartPage : Page
     {
         if (!IsLoaded) return;
         UpdateAccountSummary();
-        RefreshRegionalCompletionUI();
+        if (e.PropertyName is nameof(CoreHostService.ActiveLocalAccount) or nameof(CoreHostService.LedgerCatalog))
+        {
+            RefreshRegionalCompletionUI(force: true);
+        }
     }
 
     // 更新当前记录本显示
@@ -154,8 +170,14 @@ public sealed partial class StartPage : Page
         CaptureSourceSummary.Text = coreHost.SelectedCaptureTarget is null ? "本地客户端" : "云鸣潮浏览器窗口";
         Start_Button_Icon.Glyph = status.IsRunning ? "\uE71A" : "\uE768";
         Start_Button_Text.Text = busy ? (status.CoreState == "stopping" ? "正在停止…" : "正在准备…") : status.IsRunning ? "停止探索" : "开始探索";
-        Start_InfoBar_FindNotTargetProcess.IsOpen = status.CoreState == "waitingForGame";
-        Start_InfoBar_FindNotTargetProcess.Visibility = Start_InfoBar_FindNotTargetProcess.IsOpen ? Visibility.Visible : Visibility.Collapsed;
+
+        bool waitingForGame = status.CoreState == "waitingForGame";
+        Start_InfoBar_FindNotTargetProcess.IsOpen = waitingForGame;
+        if (waitingForGame && lastNotifiedCoreState != "waitingForGame")
+        {
+            AppToast.Show("请先启动《鸣潮》客户端，或点击「选择游戏窗口」绑定云鸣潮浏览器窗口。", InfoBarSeverity.Warning, "暂未检测到游戏窗口");
+        }
+        lastNotifiedCoreState = status.CoreState ?? "";
 
         string dotKey = status.IsRunning ? "IMaoSuccessBrush" : (busy ? "IMaoWarningBrush" : "IMaoAccentBrush");
         if (Application.Current.Resources.TryGetValue(dotKey, out var brushObj) && brushObj is Brush dotBrush)
@@ -209,7 +231,7 @@ public sealed partial class StartPage : Page
             RegionCollectibleEmptyText.Visibility = loadedIndex is null ? Visibility.Visible : Visibility.Collapsed;
             sharedIndexTask ??= Task.Run(BuildRegionalMapIndex);
             loadedIndex = await sharedIndexTask;
-            if (IsLoaded) RefreshRegionalCompletionUI();
+            if (IsLoaded) RefreshRegionalCompletionUI(force: true);
         }
         catch
         {
@@ -227,7 +249,7 @@ public sealed partial class StartPage : Page
         if (selectedCountryId == countryId && selectedRegionId == "all") return;
         selectedCountryId = countryId;
         selectedRegionId = "all";
-        RefreshRegionalCompletionUI();
+        RefreshRegionalCompletionUI(force: true);
     }
 
     private void SubRegionTab_Click(object sender, RoutedEventArgs e)
@@ -235,13 +257,22 @@ public sealed partial class StartPage : Page
         if (sender is not Button { Tag: string regionId } || string.IsNullOrWhiteSpace(regionId)) return;
         if (selectedRegionId == regionId) return;
         selectedRegionId = regionId;
-        RefreshRegionalCompletionUI();
+        RefreshRegionalCompletionUI(force: true);
     }
 
-    // 根据当前选中的国度、子地区与当前记录本刷新完成度看板
-    private void RefreshRegionalCompletionUI()
+    // 根据当前选中的国度、子地区与当前记录本刷新完成度看板（具有幂等签名守卫，防止无变化时重建 UI）
+    private void RefreshRegionalCompletionUI(bool force)
     {
         if (loadedIndex is null || !IsLoaded) return;
+
+        var completedKeys = ReadActiveCompletedPointKeys();
+        string activeLedgerId = coreHost.LedgerCatalog?.ActiveId ?? coreHost.ActiveLocalAccount?.Id ?? "default";
+        string signature = $"{selectedCountryId}|{selectedRegionId}|{activeLedgerId}|{completedKeys.Count}";
+        if (!force && string.Equals(signature, lastCompletionSignature, StringComparison.Ordinal))
+        {
+            return;
+        }
+        lastCompletionSignature = signature;
 
         var activeStyle = Application.Current.Resources["IMaoPrimaryButtonStyle"] as Style;
         var normalStyle = Application.Current.Resources["IMaoSecondaryButtonStyle"] as Style;
@@ -256,12 +287,9 @@ public sealed partial class StartPage : Page
                 btn.Style = isCurrent ? activeStyle : normalStyle;
         }
 
-        // 2. 读取当前记录本已完成的点位集合
-        var completedKeys = ReadActiveCompletedPointKeys();
-
-        // 3. 筛选当前国度下的子区域列表
+        // 2. 筛选当前国度下含有收集物的子区域列表
         var countryRegions = loadedIndex.Regions
-            .Where(r => r.CountryId == selectedCountryId)
+            .Where(r => r.CountryId == selectedCountryId && CountRegionProgress(r.Id, completedKeys).Total > 0)
             .OrderBy(r => r.Order)
             .ToList();
         if (countryRegions.Count == 0) return;
@@ -271,7 +299,7 @@ public sealed partial class StartPage : Page
 
         string countryName = countryRegions[0].CountryName;
 
-        // 4. 构建子地区胶囊切换栏（附带各子区域完成率）
+        // 3. 构建子地区胶囊切换栏（附带各子区域完成率）
         SubRegionTabsPanel.Children.Clear();
         int countryDone = 0, countryTotal = 0;
         foreach (var reg in countryRegions)
@@ -299,7 +327,7 @@ public sealed partial class StartPage : Page
                 normalStyle));
         }
 
-        // 5. 聚合当前所选区域（或整个国度）的各收集物分类完成度
+        // 4. 聚合当前所选区域（或整个国度）的「收集物」分类完成度
         var targetRegionIds = selectedRegionId == "all"
             ? countryRegions.Select(r => r.Id).ToArray()
             : [selectedRegionId];
@@ -329,7 +357,7 @@ public sealed partial class StartPage : Page
 
         int totalDone = mergedGroups.Values.Sum(v => v.Done);
         int totalCount = mergedGroups.Values.Sum(v => v.Total);
-        double totalPct = totalCount > 0 ? totalDone * 100.0 / totalCount : 0.0;
+        double totalPct = totalCount > 0 ? Math.Clamp(totalDone * 100.0 / totalCount, 0.0, 100.0) : 0.0;
 
         string regionDisplayName = selectedRegionId == "all"
             ? $"{countryName} · 全部区域"
@@ -338,7 +366,8 @@ public sealed partial class StartPage : Page
         SelectedRegionTitleText.Text = regionDisplayName;
         SelectedRegionFractionText.Text = $"已收集 {totalDone} / {totalCount}";
         SelectedRegionPercentText.Text = $"{totalPct:F1}%";
-        SelectedRegionProgressBar.Value = totalPct;
+        SelectedRegionFillCol.Width = new GridLength(totalPct, GridUnitType.Star);
+        SelectedRegionRemainCol.Width = new GridLength(Math.Max(0.0, 100.0 - totalPct), GridUnitType.Star);
 
         var rows = mergedGroups.Values
             .Where(v => v.Total > 0)
@@ -444,7 +473,15 @@ public sealed partial class StartPage : Page
         return result;
     }
 
-    // 后台一次性构建各地区与收集物点位索引
+    // 统一规范官方收集物 ID（与 MapFilterCatalog 保持一致）
+    private static string NormalizeOfficialId(string id) => id switch
+    {
+        "sx·qq" => "sx_qq",
+        "sx·lgn" => "sx_lgn",
+        _ => id
+    };
+
+    // 后台一次性构建各地区与「收集物」分类点位索引
     private static RegionalMapIndex BuildRegionalMapIndex()
     {
         string mapRoot = ResourceSessionPaths.MapDataRoot;
@@ -469,9 +506,9 @@ public sealed partial class StartPage : Page
                         string full = Path.GetFullPath(Path.Combine(baseDir, rel));
                         if (File.Exists(full))
                         {
+                            string normKey = NormalizeOfficialId(prop.Name);
+                            icons.TryAdd(normKey, full);
                             icons.TryAdd(prop.Name, full);
-                            if (prop.Name == "sx·qq") icons.TryAdd("sx_qq", full);
-                            if (prop.Name == "sx·lgn") icons.TryAdd("sx_lgn", full);
                         }
                     }
                 }
@@ -479,12 +516,14 @@ public sealed partial class StartPage : Page
             catch { }
         }
 
-        // 2. 读取收集物分类目录（按官方顺序排列）
+        // 2. 严格读取「收集物」分类下的条目（绝不混入探索、采集物、敌人等其他类别）
         var collectibleCatalog = new Dictionary<string, (string Name, int Order)>(StringComparer.Ordinal);
         string catalogsDir = Path.Combine(mapRoot, "catalogs");
         if (Directory.Exists(catalogsDir))
         {
-            foreach (string file in Directory.GetFiles(catalogsDir, "catalog-*.json").OrderBy(f => f, StringComparer.Ordinal))
+            foreach (string file in Directory.GetFiles(catalogsDir, "catalog-*.json")
+                .OrderBy(path => Path.GetFileName(path) == "catalog-8.json" ? 0 : 1)
+                .ThenBy(path => Path.GetFileName(path), StringComparer.Ordinal))
             {
                 try
                 {
@@ -497,13 +536,14 @@ public sealed partial class StartPage : Page
                         if (!cat.TryGetProperty("children", out var children) || children.ValueKind != JsonValueKind.Array) continue;
                         foreach (var item in children.EnumerateArray())
                         {
-                            string id = item.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+                            string rawId = item.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
                             string name = item.TryGetProperty("name", out var nEl) ? nEl.GetString() ?? "" : "";
-                            if (id.Length == 0 || name.Length == 0) continue;
-                            int order = collectibleCatalog.Count;
-                            collectibleCatalog.TryAdd(id, (name, order));
-                            if (id == "sx·qq") collectibleCatalog.TryAdd("sx_qq", (name, order));
-                            if (id == "sx·lgn") collectibleCatalog.TryAdd("sx_lgn", (name, order));
+                            if (rawId.Length == 0 || name.Length == 0) continue;
+                            string normId = NormalizeOfficialId(rawId);
+                            if (!collectibleCatalog.ContainsKey(normId))
+                            {
+                                collectibleCatalog[normId] = (name, collectibleCatalog.Count);
+                            }
                         }
                     }
                 }
@@ -511,14 +551,7 @@ public sealed partial class StartPage : Page
             }
         }
 
-        // 3. 读取区域名称表
-        var countryNames = new Dictionary<int, string>
-        {
-            [1] = "瑝珑",
-            [900] = "黑海岸",
-            [3] = "黎那汐塔",
-            [4] = "罗伊冰原"
-        };
+        // 3. 地区定义表
         var regions = new List<RegionDefinition>
         {
             new("jinzhou", "今州", 1, "瑝珑", 1),
@@ -577,7 +610,7 @@ public sealed partial class StartPage : Page
             catch { }
         }
 
-        // 5. 遍历 states/state-*.json 归集各区域的收集物点位
+        // 5. 遍历 states/state-*.json，仅归集属于「收集物」分类的点位
         var bucket = new Dictionary<string, Dictionary<string, (string Name, int Order, List<string> Keys)>>(StringComparer.Ordinal);
         foreach (var r in regions) bucket[r.Id] = new(StringComparer.Ordinal);
 
@@ -590,20 +623,15 @@ public sealed partial class StartPage : Page
                 {
                     using var doc = JsonDocument.Parse(File.ReadAllBytes(stateFile));
                     if (doc.RootElement.ValueKind != JsonValueKind.Array) continue;
-                    bool isTimeRift = Path.GetFileName(stateFile).Equals("state-910.json", StringComparison.OrdinalIgnoreCase);
 
                     foreach (var group in doc.RootElement.EnumerateArray())
                     {
-                        string typeId = group.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
-                        string groupName = group.TryGetProperty("name", out var nEl) ? nEl.GetString() ?? typeId : typeId;
-                        if (typeId.Length == 0) continue;
+                        string rawTypeId = group.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+                        if (rawTypeId.Length == 0) continue;
+                        string typeId = NormalizeOfficialId(rawTypeId);
 
-                        bool isCollectible = collectibleCatalog.TryGetValue(typeId, out var catMeta);
-                        // 时隙废都（state-910）若无传统收集物分类，则展示该子区域的探索/采集目标
-                        if (!isCollectible && !isTimeRift) continue;
-
-                        string displayName = isCollectible ? catMeta.Name : groupName;
-                        int order = isCollectible ? catMeta.Order : 500;
+                        // 严格过滤：只统计「收集物」分类下的条目
+                        if (!collectibleCatalog.TryGetValue(typeId, out var catMeta)) continue;
 
                         if (!group.TryGetProperty("location", out var locs) || locs.ValueKind != JsonValueKind.Array) continue;
                         foreach (var loc in locs.EnumerateArray())
@@ -611,15 +639,15 @@ public sealed partial class StartPage : Page
                             string pid = loc.TryGetProperty("id", out var pEl) ? pEl.GetString() ?? "" : "";
                             if (pid.Length == 0) continue;
                             int sid = loc.TryGetProperty("stateId", out var sEl) && sEl.TryGetInt32(out int sv) ? sv : 8;
-                            int cid = loc.TryGetProperty("countryId", out var cEl) && cEl.TryGetInt32(out int cv) ? cv : 1;
+                            int cid = loc.TryGetProperty("countryId", out var cEl) && sEl.ValueKind != JsonValueKind.Null && cEl.TryGetInt32(out int cv) ? cv : 1;
                             double x = loc.TryGetProperty("x", out var xEl) && xEl.TryGetDouble(out double xv) ? xv : 0;
                             double y = loc.TryGetProperty("y", out var yEl) && yEl.TryGetDouble(out double yv) ? yv : 0;
 
-                            string regionId = ResolveRegionId(sid, cid, x, y, overworldAnchors);
+                            string regionId = ResolveRegionId(typeId, sid, cid, x, y, overworldAnchors);
                             if (!bucket.TryGetValue(regionId, out var regGroups)) continue;
                             if (!regGroups.TryGetValue(typeId, out var entry))
                             {
-                                entry = (displayName, order, []);
+                                entry = (catMeta.Name, catMeta.Order, []);
                                 regGroups[typeId] = entry;
                             }
                             entry.Keys.Add($"{sid}:{pid}");
@@ -648,24 +676,34 @@ public sealed partial class StartPage : Page
     }
 
     private static string ResolveRegionId(
+        string normalizedTypeId,
         int stateId,
         int countryId,
         double x,
         double y,
         Dictionary<int, List<(double X, double Y, string RegionId)>> overworldAnchors)
     {
-        return stateId switch
+        if (stateId != 8)
         {
-            900 => "tethys",
-            902 => "lowervault",
-            903 => "avinoleum",
-            905 => "fabricatorium",
-            906 => "lahai",
-            909 => "darkplain",
-            910 => "timeriftruins",
-            912 => "mengshutianluo",
-            _ => ResolveOverworldRegion(countryId, x, y, overworldAnchors)
-        };
+            return stateId switch
+            {
+                900 => "tethys",
+                902 => "lowervault",
+                903 => "avinoleum",
+                905 => "fabricatorium",
+                906 => "lahai",
+                909 => "darkplain",
+                910 => "timeriftruins",
+                912 => "mengshutianluo",
+                _ => "jinzhou"
+            };
+        }
+
+        // 修正库街区大世界数据中少量「声匣·拉古那」与「声匣·七丘」countryId 误标为 1 的情况
+        if (normalizedTypeId == "sx_lgn") return "laguna";
+        if (normalizedTypeId == "sx_qq") return "qiqiu";
+
+        return ResolveOverworldRegion(countryId, x, y, overworldAnchors);
     }
 
     private static string ResolveOverworldRegion(
@@ -699,7 +737,4 @@ public sealed partial class StartPage : Page
             _ => "jinzhou"
         };
     }
-
-    private void Start_InfoBar_FindNotTargetProcess_CloseButtonClick(InfoBar sender, object args) => sender.Visibility = Visibility.Collapsed;
-    private void Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick(InfoBar sender, object args) => sender.Visibility = Visibility.Collapsed;
 }
