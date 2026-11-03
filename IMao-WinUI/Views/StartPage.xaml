@@ -5,9 +5,11 @@
             <StackPanel Spacing="18">
                 <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="8"><FontIcon Glyph="&#xE774;" Foreground="{StaticResource IMaoAccentBrush}" /><TextBlock x:Name="Start_TextBlock_CoreState" Text="正在连接核心" Style="{StaticResource IMaoSectionTitleStyle}" /></controls:WrapPanel>
                 <TextBlock x:Name="Start_TextBlock_CoreDetail" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                <TextBlock x:Name="CaptureSourceSummary" Text="游戏来源 · 本地客户端" Style="{StaticResource IMaoSecondaryTextStyle}" />
                 <TextBlock x:Name="OverviewLocationSummary" Style="{StaticResource IMaoBodyTextStyle}" />
                 <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
                     <Button x:Name="Start_Button" Click="Start_Button_Click" Style="{StaticResource IMaoPrimaryButtonStyle}"><StackPanel Orientation="Horizontal" Spacing="10"><FontIcon x:Name="Start_Button_Icon" Glyph="&#xE768;" FontSize="16" /><TextBlock x:Name="Start_Button_Text" Text="开始探索" /></StackPanel></Button>
+                    <Button x:Name="SelectCaptureWindowButton" Content="选择游戏窗口" Click="SelectCaptureWindow_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                     <Button Content="重新连接核心" Click="RestartCore_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                     <Button Content="连接与显示设置" Tag="settings" Click="Navigate_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                 </controls:WrapPanel>

@@ -15,6 +15,12 @@ static void Check(bool passed, string message)
     Console.WriteLine("PASS " + message);
 }
 
+if (args.FirstOrDefault() == "cloud-preview")
+{
+    await CloudPreviewIpcTests.RunAsync(Path.GetFullPath(args[1]), int.Parse(args[2]));
+    return;
+}
+
 // Backends are reported by CoreHost, never inferred from the launch button.
 Check(new RuntimeConfiguration().ResolveOcrBackend(null) == "cpu", "OCR defaults to CPU");
 Check(new RuntimeConfiguration().ResolveOcrBackend("directml") == "directml", "Unset OCR preference honors test launcher");

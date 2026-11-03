@@ -1,8 +1,10 @@
-﻿#include "../Runtime/CaptureContinuity.h"
+#include "../Runtime/CaptureContinuity.h"
+#include "../Runtime/GameCaptureTarget.h"
 #include "ScreenMotionTracker.h"
 #include "../Runtime/PositionDisplayPolicy.h"
 #include "../Feature/Match/SceneMapFeatures.h"
 #include "App.h"
+#include "../Runtime/BrowserContentArea.h"
 #include "MapViewportSearchGate.h"
 #include "../Runtime/GamepadWorldActions.h"
 #include "../Runtime/GuideHotkeyRouting.h"
@@ -225,15 +227,32 @@ void App::Thread_Capture() {
         // outside - both leave the overlay waiting for a game frame forever - so the two reasons are
         // counted separately and reported next to the achieved rate.
         uint64_t emptyCaptures = 0, unpublishedCaptures = 0;
+        auto surfaceRefreshAt=std::chrono::steady_clock::time_point{};
+        std::uint64_t surfaceRevision=GameCaptureTarget::Revision();
         while (!allThreadStopFlag.load()) {
             const auto start = std::chrono::steady_clock::now();
-            RECT captureRect{};
-            if (!GetClientRect(hwnd, &captureRect)) {
-                capturedFrames.Publish({});
-                allThreadStopFlag = true;
-                RuntimeStatus::SetCoreState("faulted", "游戏窗口已关闭或不可用");
-                break;
+            if (GameCaptureTarget::Read() && start-surfaceRefreshAt>=std::chrono::milliseconds(250)) {
+                std::string surfaceError;const bool ready=GameCaptureTarget::RefreshBrowserSurface(surfaceError);
+                surfaceRefreshAt=std::chrono::steady_clock::now();
+                if (!ready) RuntimeStatus::SetMessage(surfaceError);
             }
+            const auto revision=GameCaptureTarget::Revision();
+            if (revision!=surfaceRevision) {
+                coordinateSuspendRequested=true;mapViewportResetRequested=true;
+                overlayFrames.Publish({});overlayVisibility.Publish({});capturedFrames.Publish({});
+                surfaceRevision=revision;
+            }
+            RECT captureRect{};
+            if (!GameCaptureTarget::Client(hwnd, captureRect)) {
+                capturedFrames.Publish({});overlayVisibility.Publish({});
+                coordinateSuspendRequested=true;mapViewportResetRequested=true;
+                if (GameCaptureTarget::Read() && IsWindow(hwnd)) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));continue;
+                }
+                allThreadStopFlag=true;
+                RuntimeStatus::SetCoreState("faulted", "游戏窗口已关闭或不可用");break;
+            }
+            const auto geometryRevision=GameCaptureTarget::Revision();
             cv::Mat image;
             uint64_t sequence = 0;
             auto capturedAt = start;
@@ -251,7 +270,7 @@ void App::Thread_Capture() {
             if (slowCapture) ++slowCaptures;
             // The game can resize between our client-rect read and the capture
             // backend's read. Never publish pixels with incompatible geometry.
-            if (image.empty() || image.cols != captureRect.right || image.rows != captureRect.bottom)
+            if (image.empty() || image.cols != captureRect.right || image.rows != captureRect.bottom || geometryRevision!=GameCaptureTarget::Revision())
             {
                 ++emptyCaptures;
                 capturedFrames.Publish({});
@@ -264,7 +283,7 @@ void App::Thread_Capture() {
                         {"sourceSequence", sequence}, {"stage", "capture-published"}});
                     ReproCapture::Record("capture-published", {{"capturedSteadyMs",
                         std::chrono::duration_cast<std::chrono::milliseconds>(capturedAt.time_since_epoch()).count()}});
-                    capturedFrames.Publish({frameId, std::move(image), captureRect, capturedAt, std::chrono::milliseconds(250)});
+                    capturedFrames.Publish({frameId, std::move(image), captureRect, capturedAt, std::chrono::milliseconds(250),geometryRevision});
                     localizationSignal->NotifyCapture();
                     ++published;
                     // Once per session, after a real frame has travelled the whole capture path: this is the
@@ -397,19 +416,21 @@ winrt::IAsyncAction App::Start() {
         bool minimapPositionKnown = false, minimapFilterRan = false;
         lastLocalizedFrame = snapshotFrameId = captured.frameId;
         snapshotCapturedAt = captured.capturedAt;
+        const bool geometryChanged=snapshotGeometryRevision!=captured.geometryRevision;
+        snapshotGeometryRevision=captured.geometryRevision;
         rect = captured.clientRect;
         const Mat currentSnapshot = captured.image;
         MapViewportPrediction renderedViewport;
-        const bool captureFresh = !currentSnapshot.empty() &&
+        const bool captureFresh = captured.geometryRevision==GameCaptureTarget::Revision() && !currentSnapshot.empty() &&
             std::chrono::steady_clock::now() - captured.capturedAt < captured.maximumAge;
 
-		if (coordinateSuspendRequested.exchange(false)) {
+		if (coordinateSuspendRequested.exchange(false) || geometryChanged) {
 			SuspendPlayerLocationForMapTransition();
 		}
 		if (coordinateResumeRequested.exchange(false)) {
 			BeginMinimapReacquisition();
 		}
-		if (mapViewportResetRequested.exchange(false)) {
+		if (mapViewportResetRequested.exchange(false) || geometryChanged) {
 			ResetMapViewport();
 		}
 		if (mapViewportStartRequested.exchange(false)) {
@@ -787,11 +808,37 @@ winrt::IAsyncAction App::GetMatSnapshot(bool isTaketAsync, Mat& result, uint64_t
             geometry.frameBounds.bottom-geometry.frameBounds.top,
             geometry.clientRect.right,geometry.clientRect.bottom,geometryError);
         if (!desired) { rejectCrop(geometryError);co_return; }
+        if(const auto cloud=GameCaptureTarget::Read()) {
+            if(capturedAt && *capturedAt<cloud->validSince) {rejectCrop("frame predates browser geometry");co_return;}
+            auto rawClient=ClientCapture::Resolve(geometry,temp.cols,temp.rows,geometry.clientRect.right,geometry.clientRect.bottom,geometryError);
+            if(!rawClient || readbackInfo.value("partial",false)) {rejectCrop("browser geometry requires full frame");co_return;}
+            const auto& surface=cloud->surface;
+            if(geometry.clientRect.right!=cloud->width || geometry.clientRect.bottom!=cloud->height ||
+                GetDpiForWindow(hwnd)!=cloud->dpi || temp.depth()!=CV_8U || temp.channels()<3 ||
+                !GameCaptureTarget::ValidArea(surface,cloud->width,cloud->height) ||
+                !BrowserContentArea::FitsFrame(surface,rawClient->x,rawClient->y,temp.cols,temp.rows)) {
+                rejectCrop("browser surface changed before pixel read");co_return;
+            }
+            auto content=BrowserContentArea::Detect(surface.right-surface.left,surface.bottom-surface.top,[&](int x,int y) {
+                const auto* pixel=temp.ptr<unsigned char>(rawClient->y+surface.top+y)+(rawClient->x+surface.left+x)*temp.channels();
+                return (std::max)({pixel[0],pixel[1],pixel[2]});
+            });
+            if(GameCaptureTarget::RefineContent(*cloud,content,*sequenceOutput)) {
+                coordinateSuspendRequested=true;mapViewportResetRequested=true;
+                overlayFrames.Publish({});overlayVisibility.Publish({});capturedFrames.Publish({});
+                rejectCrop("automatic video bounds changed");co_return;
+            }
+        }
+        RECT gameArea{};
+        if (!GameCaptureTarget::Area(hwnd,gameArea)) { rejectCrop("selected game area invalidated");co_return; }
+        const ClientCapture::Crop desiredGame{desired->x+gameArea.left,desired->y+gameArea.top,gameArea.right-gameArea.left,gameArea.bottom-gameArea.top};
+        if (desiredGame.width!=captureRect.right || desiredGame.height!=captureRect.bottom) { rejectCrop("game viewport size changed");co_return; }
         if (auto capture = graphicsCapture->Getcapture())
-            capture->SetClientGeometry(desired->x,desired->y,desired->width,desired->height);
-        const auto crop = ClientCapture::Resolve(geometry,temp.cols,temp.rows,
-            captureRect.right,captureRect.bottom,geometryError);
+            capture->SetClientGeometry(desiredGame.x,desiredGame.y,desiredGame.width,desiredGame.height);
+        auto crop = ClientCapture::Resolve(geometry,temp.cols,temp.rows,
+            geometry.clientRect.right,geometry.clientRect.bottom,geometryError);
         if (!crop) { rejectCrop(geometryError);co_return; }
+        crop=ClientCapture::Crop{crop->x+gameArea.left,crop->y+gameArea.top,desiredGame.width,desiredGame.height};
         std::optional<ClientCapture::Crop> configured;
         const auto prior = readbackInfo.find("configuredClient");
         if (prior != readbackInfo.end() && prior->is_array() && prior->size() == 4)
@@ -1110,7 +1157,7 @@ void App::Thread_DetectGameState() {
 		// waits for it. The isolation bit forces the old whole-client readback for comparison or rollback.
 		if (graphicsCapture) {
 			if (auto capture = graphicsCapture->Getcapture()) {
-				capture->SetRoiReadback(!Isolation::Enabled(Isolation::kForceFullReadback) && !isOpenMap &&
+				capture->SetRoiReadback(!GameCaptureTarget::Read() && !Isolation::Enabled(Isolation::kForceFullReadback) && !isOpenMap &&
 					!mapControlsVisible && !compassVisible && isExistMinMap);
 			}
 		}
@@ -1988,7 +2035,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
         auto center = RelativeCoordinates::ImgMapCoordToROC(lastPlayerImgMapCoordinate, playerCurrentSceneId);
         DrawItemOnMinMap::UpdatePlayerNearItemsData(rect, center, minMapImg.rows / 2.0f,
             playerCurrentSceneId, minimapTerrainScale);
-        PublishOverlayFrame({snapshotFrameId, snapshot, rect, snapshotCapturedAt, std::chrono::milliseconds(250)}, {});
+        PublishOverlayFrame({snapshotFrameId, snapshot, rect, snapshotCapturedAt, std::chrono::milliseconds(250),snapshotGeometryRevision}, {});
     }
 	auto acceptVisualResult = [&]() -> bool {
         LocalizationLatencyTrace::Scope phase(localizationLatency, "global-result", snapshotFrameId);
@@ -2283,7 +2330,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
             const auto consumedAt = CoordinateHandoff::Clock::now();
             if (!probeError.empty()) Diagnostics::Record("readout-visual-probe", "error=" + probeError);
             else if (!probe.source.Fresh(coordinateSessionId, coordinateUiGeneration, snapshotFrameId,
-                snapshotCapturedAt, rect, consumedAt) || probe.source.scene != playerCurrentSceneId) {
+                snapshotCapturedAt, rect, consumedAt, GameCaptureTarget::Revision()) || probe.source.scene != playerCurrentSceneId) {
                 Diagnostics::Record("readout-visual-probe", "accepted=false reason=stale-envelope");
             } else {
                 normalizedMinimap = probe.normalized;
@@ -2311,7 +2358,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
                     observeVisualFailure(CoordinateHandoff::VisualSource::Local, probe.source.frame, probe.source.capturedAt);
                 if (committed) {
                     readoutVisualAnchor = CapturedFrame{probe.source.frame, probe.source.snapshot,
-                        probe.source.clientRect, probe.source.capturedAt, std::chrono::milliseconds(250)};
+                        probe.source.clientRect, probe.source.capturedAt, std::chrono::milliseconds(250), probe.source.geometryRevision};
                     readoutVisualAnchorGeneration = coordinateUiGeneration;
                 }
                 if (coordinateHandoff.ReadoutActive() && probe.prepared && !visualRequestInFlight &&
@@ -2354,6 +2401,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
             ReadoutVisualRequest request;
             request.session = coordinateSessionId; request.generation = coordinateUiGeneration;
             request.frame = snapshotFrameId; request.capturedAt = snapshotCapturedAt; request.clientRect = rect;
+            request.geometryRevision = snapshotGeometryRevision;
             request.scene = playerCurrentSceneId; request.center = lastPlayerImgMapCoordinate;
             request.terrainScale = minimapTerrainScale; request.resources = featureResources;
             request.snapshot = snapshot; request.minimap = minMapImg.clone();
@@ -3162,10 +3210,10 @@ bool App::TryGetRoutePoint(Coordinate& point, int& sceneId) {    const auto pres
     if (!presented->Fresh() || !presented->mapVisible || !overlayVisibility.Read()->AllowsMap(frame->frameId) || !IsWindowFocused(hwnd) ||
         frame->viewportScene <= 0 || frame->mapMotion.pixelsPerUnit <= 0.0) return false;
     RECT current{};
-    if (!GetClientRect(hwnd, &current) || current.right != frame->clientRect.right ||
+    if (frame->geometryRevision!=GameCaptureTarget::Revision() || !GameCaptureTarget::Client(hwnd, current) || current.right != frame->clientRect.right ||
         current.bottom != frame->clientRect.bottom) return false;
     POINT cursor{};
-    if (!GetCursorPos(&cursor) || !ScreenToClient(hwnd, &cursor)) return false;
+    if (!GetCursorPos(&cursor) || !GameCaptureTarget::ScreenToGame(hwnd, cursor)) return false;
     const auto capturedPoint = presented->motion.Inverse(Coordinate(cursor.x, cursor.y));
     const Coordinate mapPoint(frame->viewportCenter.x +
         (capturedPoint.x - frame->mapMotion.screenCenter.x) / frame->mapMotion.pixelsPerUnit,
@@ -3331,6 +3379,7 @@ void App::PublishOverlayFrame(const CapturedFrame& requestedCapture, const MapVi
     ReproCapture::Scope reproLayout({{"captureRun", coordinateSessionId}, {"frameId", captured.frameId},
         {"stage", "overlay-layout"}});
     OverlayFrame frame;
+    frame.geometryRevision=captured.geometryRevision;
     frame.frameId = captured.frameId; frame.clientRect = captured.clientRect; frame.capturedAt = captured.capturedAt;
     frame.positionFrameId = routeFixSequence;
     frame.maximumAge = std::chrono::milliseconds(std::max(500, 2 * std::max(

@@ -1350,8 +1350,9 @@ public sealed class MarkerGuideCoordinator : IDisposable
             RectInt32? gameBounds = null;
             if (bounds.TryGetProperty("available", out var available) && available.ValueKind == JsonValueKind.True)
             {
-                int left = Integer(bounds, "left"), top = Integer(bounds, "top");
-                int right = Integer(bounds, "right"), bottom = Integer(bounds, "bottom");
+                var areaBounds = bounds.TryGetProperty("gameViewport", out var viewport) ? viewport : bounds;
+                int left = Integer(areaBounds, "left"), top = Integer(areaBounds, "top");
+                int right = Integer(areaBounds, "right"), bottom = Integer(areaBounds, "bottom");
                 long width = (long)right - left, height = (long)bottom - top;
                 if (width is > 0 and <= 100000 && height is > 0 and <= 100000)
                     gameBounds = new RectInt32(left, top, (int)width, (int)height);

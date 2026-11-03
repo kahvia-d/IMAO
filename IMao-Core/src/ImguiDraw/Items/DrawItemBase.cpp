@@ -1,3 +1,4 @@
+#include "../../Runtime/GameCaptureTarget.h"
 #include "DrawItemBase.h"
 #include <fstream>
 #include "../../DLL_API.h"
@@ -916,8 +917,9 @@ json DrawItemBase::VisibleGuideWindow() {
     return markerGuideWindow && IsWindow(markerGuideWindow) && IsWindowVisible(markerGuideWindow) && !IsIconic(markerGuideWindow)
         ? markerGuideRegistration : json::object();
 }
-bool DrawItemBase::IsMarkerGameFocused(HWND game) { return game && GetForegroundWindow() == game; }
+bool DrawItemBase::IsMarkerGameFocused(HWND game) { RECT client{};return game && GameCaptureTarget::Client(game,client) && GetForegroundWindow() == game; }
 bool DrawItemBase::IsMarkerDisplayContext(HWND game) {
+    RECT client{};if(!game || !GameCaptureTarget::Client(game,client))return false;
     const auto foreground = GetForegroundWindow();
     if (game && foreground == game) return true;
     if (MapToolsBridge::Shared().FocusedHost(game, MarkerProfile())) return true;

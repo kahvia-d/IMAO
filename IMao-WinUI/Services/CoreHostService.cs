@@ -13,7 +13,7 @@ using IMao_WinUI.Core.Updates;
 namespace IMao_WinUI.Services;
 
 /// <summary>「开始探索 / 停止探索」一次切换的结果，供界面决定提示什么。</summary>
-public enum ExplorationToggleResult { Started, Stopped, WindowSizeRejected }
+public enum ExplorationToggleResult { Started, Stopped, WindowSizeRejected, StartRejected }
 
 
 public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
@@ -202,7 +202,29 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         }
     }
 
-    public Task StartRuntimeAsync(CancellationToken cancellationToken = default) => SendCommandAsync("start", null, cancellationToken);
+    public BrowserCaptureSelection? SelectedCaptureTarget { get; private set; }
+    public void SelectCaptureTarget(BrowserCaptureSelection? target)
+    {
+        if (Status.IsRunning || Status.CoreState is "loading" or "startingOverlay" or "stopping")
+            throw new InvalidOperationException("请先停止探索，再切换游戏窗口。");
+        _ = target?.ToPayload();
+        SelectedCaptureTarget = target;
+    }
+    public Task StartRuntimeAsync(CancellationToken cancellationToken = default) => StartSelectedRuntimeAsync(cancellationToken);
+    private async Task<bool> StartSelectedRuntimeAsync(CancellationToken cancellationToken)
+    {
+        await lifecycleLock.WaitAsync(cancellationToken);
+        try
+        {
+            var session = await EnsureStartedLockedAsync(cancellationToken);
+            if (session is null) return false;
+            var target = SelectedCaptureTarget;
+            return await SendLockedAsync(session, "start", target is null ? null : new() { ["captureTarget"] = target.ToPayload() }, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception error) { ReportUserError("无法开始探索：" + error.Message); return false; }
+        finally { lifecycleLock.Release(); }
+    }
     public Task StopRuntimeAsync(CancellationToken cancellationToken = default) => SendCommandAsync("stop", null, cancellationToken);
 
     /// <summary>
@@ -219,9 +241,8 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
             await StopRuntimeAsync(cancellationToken);
             return ExplorationToggleResult.Stopped;
         }
-        if (!canStart) return ExplorationToggleResult.WindowSizeRejected;
-        await StartRuntimeAsync(cancellationToken);
-        return ExplorationToggleResult.Started;
+        if (!canStart && SelectedCaptureTarget is null) return ExplorationToggleResult.WindowSizeRejected;
+        return await StartSelectedRuntimeAsync(cancellationToken) ? ExplorationToggleResult.Started : ExplorationToggleResult.StartRejected;
     }
 
     public async Task<JsonElement> ExecuteMarkerAsync(string operation, object arguments, CancellationToken cancellationToken = default)

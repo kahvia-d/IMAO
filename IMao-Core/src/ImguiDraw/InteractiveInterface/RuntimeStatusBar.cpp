@@ -1,3 +1,4 @@
+#include "../../Runtime/GameCaptureTarget.h"
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -48,7 +49,7 @@ float RuntimeStatusBar::ToolbarTop() { return layout.visible ? layout.bounds.bot
 
 void RuntimeStatusBar::Prepare(HWND gameWindow, bool bigMap) {
     layout = {};
-    RECT client{}; if (!GetClientRect(gameWindow, &client)) return;
+    RECT client{}; if (!GameCaptureTarget::Client(gameWindow, client)) return;
     layout.scale = OverlayPanel::Scale(static_cast<float>(GetDpiForWindow(gameWindow)),
         static_cast<float>(client.right), static_cast<float>(client.bottom));
     const auto status = RuntimeStatus::Snapshot();

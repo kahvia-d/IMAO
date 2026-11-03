@@ -1,4 +1,4 @@
-﻿#include <wil/resource.h>
+#include <wil/resource.h>
 #include "ImGuiOverWindows.h"
 #include "../App/App.h"
 #define STB_IMAGE_IMPLEMENTATION
@@ -361,7 +361,7 @@ int ImGuiOverWindows::start()
     });
     if (!::RegisterClassExW(&wc)) return 1;
     RECT initialClient{}; POINT initialOrigin{};
-    if (!GetClientRect(h_window, &initialClient) || !ClientToScreen(h_window, &initialOrigin) ||
+    if (!GameCaptureTarget::Client(h_window, initialClient) || !GameCaptureTarget::Origin(h_window, initialOrigin) ||
         initialClient.right <= 0 || initialClient.bottom <= 0) return 1;
     // Every overlay session starts at the real physical game bounds. A cache
     // from the previous HWND must never size the new swap chain or viewport.
@@ -580,7 +580,14 @@ int ImGuiOverWindows::start()
         auto frameStart = std::chrono::steady_clock::now();
 
         RECT GameRect{};
-        if (!GetClientRect(h_window, &GameRect)) break;
+        if (!GameCaptureTarget::Client(h_window, GameRect)) {
+            if(GameCaptureTarget::Read() && IsWindow(h_window)) {
+                ShowWindow(overWindowsHwnd,SW_HIDE);overlayWindowHidden=true;
+                if(!pump(maxWait))break;
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));continue;
+            }
+            break;
+        }
         // Decide whether this frame may be held before anything is rendered. A held frame is only ever
         // one that has nothing to show but the status bar, and the frame that stops having markers is
         // the one that has to reach the screen and clear them - so the previous frame's need for
@@ -611,7 +618,7 @@ int ImGuiOverWindows::start()
             : foreground == h_window ? OverlayPacing::FocusHandoffForeground::Game
             : foreground == nullptr ? OverlayPacing::FocusHandoffForeground::None
             : OverlayPacing::FocusHandoffForeground::Other;
-        const bool mapReady = markerFrame && markerFrame->Drawable(frameStart) && markerFrame->focused &&
+        const bool mapReady = markerFrame && markerFrame->geometryRevision==GameCaptureTarget::Revision() && markerFrame->Drawable(frameStart) && markerFrame->focused &&
             markerFrame->mapVisible && markerFrame->clientRect.right == GameRect.right &&
             markerFrame->clientRect.bottom == GameRect.bottom &&
             app.ReadOverlayVisibility()->AllowsMap(markerFrame->frameId) &&
@@ -752,7 +759,7 @@ int ImGuiOverWindows::start()
         // keeps the meaning it has today, and only what falls outside the minimap stops being shown.
         if (miniOverlay) {
             RECT client{};
-            if (!GetClientRect(h_window, &client) || client.right <= 0 || client.bottom <= 0) miniOverlay = false;
+            if (!GameCaptureTarget::Client(h_window, client) || client.right <= 0 || client.bottom <= 0) miniOverlay = false;
             else {
                 GameRect = {0, 0, client.right, client.bottom};
                 // Re-derived from the same fresh client size the drawing will use, so the offset and
@@ -904,7 +911,7 @@ int ImGuiOverWindows::start()
             bool mapEligible = false, minimapEligible = false;
             PresentedOverlayFrame presented{frame, {}, false, false, frameStart};
             presented.capture = capture;
-            const bool sourceFresh = frame->Drawable();
+            const bool sourceFresh = frame->Drawable() && frame->geometryRevision==GameCaptureTarget::Revision() && capture->geometryRevision==frame->geometryRevision;
             if (frame->mapVisible) ++mapRequestedFrames;
             if (frame->minimapVisible) ++minimapRequestedFrames;
             if (sourceFresh && DrawItemBase::IsMarkerDisplayContext(h_window) &&

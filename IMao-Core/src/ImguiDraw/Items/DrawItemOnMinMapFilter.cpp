@@ -1,3 +1,4 @@
+#include "../../Runtime/GameCaptureTarget.h"
 #include "DrawItemOnMinMap.h"
 #include "../../Diagnostics/Diagnostics.h"
 #include "../../Runtime/RuntimeStatus.h"
@@ -44,7 +45,7 @@ std::shared_ptr<const vector<ItemsDatas>> DrawItemOnMinMap::itemsDatas_StoragePt
 
 void DrawItemOnMinMap::UpdatePlayerNearItemsData(HWND& hwnd, Coordinate& playerROC, float minMapRadius, int SceneId, double terrainScale) {
     RECT rect{};
-    if (GetClientRect(hwnd, &rect)) UpdatePlayerNearItemsData(rect, playerROC, minMapRadius, SceneId, terrainScale);
+    if (GameCaptureTarget::Client(hwnd, rect)) UpdatePlayerNearItemsData(rect, playerROC, minMapRadius, SceneId, terrainScale);
 }
 
 void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & playerROC,float minMapRadius, int SceneId, double terrainScale) {
