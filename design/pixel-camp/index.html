@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#141f26"><title>IMAO · 漂泊者营地</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<aside class="sidebar">
+ <a class="brand" href="#camp" aria-label="IMAO 首页"><span class="cat-logo">▟</span><span>IMAO<small>EXPLORER'S GUILD</small></span></a>
+ <div class="nav-label">世界很大，慢慢探索。</div>
+ <nav aria-label="主导航"></nav>
+ <div class="sidebar-bottom"><div class="companion"><canvas id="cat" width="56" height="48" aria-label="像素猫咪伙伴"></canvas><div>阿猫，随时待命<small>YOUR LITTLE COMPANION</small></div></div><span class="version">UI EXPEDITION / CONCEPT 01</span></div>
+</aside>
+<div class="workspace">
+ <header><div class="breadcrumb">IMAO 的小小世界 <span>/</span> <b id="crumb">冒险营地</b></div><div class="header-right"><span class="demo-badge">概念演示 · 模拟数据</span><button id="theme" class="quiet" aria-pressed="false">☾ 夜幕模式</button></div></header>
+ <main id="main"></main>
+ <footer><span><i class="status-dot"></i> 一个陪伴探索的小小营地</span><span>MADE OF PIXELS & CURIOSITY <b>✦</b></span></footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<dialog id="detail"><button class="close quiet" aria-label="关闭详情">×</button><div id="detail-content"></div></dialog>
+<script src="app.js"></script>
+</body></html>

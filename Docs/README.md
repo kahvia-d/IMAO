@@ -1,5 +1,9 @@
 # 文档索引
 
+- [UI 功能盘点与草图信息结构](UIFunctionInventory_20261103.md)：现有桌面及游戏内入口、功能分组、文字简化建议与六种风格（含 06 寰宇星图高定版）对比依据。
+
+- [像素营地 UI 探索](PixelCampUIExploration_20261103.md)：六个游戏场景式模块的离线 HTML 交互原型与设计说明。
+
 - [研究成果保留与恢复入口](ResearchArtifactRetention_zh-Hans.md)：最终成果、有效素材与流程留档；清理范围、保留清单及恢复边界。
 - [坐标 YOLO 研究续接](CoordinateYoloResume_zh-Hans.md)：当前权重谱系、有效原图/标签、环境与训练、导出、回归入口。
 - [不可探测点位新视频工作流](MarkerDetectabilityWorkflow_zh-Hans.md)：新批次隔离、时间轴与身份审核、名录维护及已完成媒体清理。
