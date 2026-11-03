@@ -1,40 +1,95 @@
-<Page x:Class="IMao_WinUI.Views.DiagnosticsPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="using:CommunityToolkit.WinUI.Controls">
-    <Grid RowSpacing="14">
-        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-        <StackPanel Spacing="5"><TextBlock Text="RUNTIME INSIGHT" Style="{StaticResource IMaoEyebrowStyle}" /><TextBlock Text="诊断" Style="{StaticResource IMaoPageTitleStyle}" /><TextBlock Text="查看运行状态，保留排查问题需要的线索。" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
+<Page x:Class="IMao_WinUI.Views.DiagnosticsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:controls="using:CommunityToolkit.WinUI.Controls">
+    <!-- 保持顶部行紧凑，确保 800×500 最小窗口下底部实时事件列表拥有充足视口高度 -->
+    <Grid RowSpacing="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 顶部寰宇星图遥测诊断标题栏与诊断工具弹出面板 -->
+        <Grid Grid.Row="0" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="3">
+                <TextBlock Text="AETHERIA TELEMETRY &amp; BLACKBOX // 运行遥测与诊断黑匣子" Style="{StaticResource IMaoEyebrowStyle}" />
+                <TextBlock Text="诊断" Style="{StaticResource IMaoPageTitleStyle}" />
+                <TextBlock Text="查看运行状态，保留排查问题需要的线索。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+            </StackPanel>
+
+            <Button Grid.Column="1" Content="诊断工具" VerticalAlignment="Center" Style="{StaticResource IMaoSecondaryButtonStyle}">
+                <Button.Flyout>
+                    <Flyout>
+                        <ScrollViewer MaxHeight="320" Width="340" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="事件日志始终保存。短时完整采集仅在手动开始后运行。" Style="{StaticResource IMaoSecondaryTextStyle}" />
+                                <ToggleSwitch x:Name="Diagnostics_OverlayHiddenToggle" Header="隐藏叠加层窗口（仅采集）" AutomationProperties.Name="隐藏叠加层窗口" Toggled="Diagnostics_OverlayHiddenToggle_Toggled" />
+                                <TextBlock Text="隐藏后叠加层不再显示，但画面采集与定位仍在运行：用它对比帧率，可以判断掉帧是否来自叠加层窗口本身。修改会在下次点击「开始探索」后完全生效。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                                <ToggleSwitch x:Name="Diagnostics_HoldPresentToggle" Header="暂停叠加层画面更新（窗口仍显示）" AutomationProperties.Name="暂停叠加层画面更新" Toggled="Diagnostics_HoldPresentToggle_Toggled" />
+                                <TextBlock Text="窗口继续显示，但只有状态条时约每 3 秒才更新一次。与前一项分别测试，可以看出代价主要来自「窗口在场」还是「每次刷新画面」。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                                <NumberBox x:Name="Diagnostics_IsolationBox" Header="隔离开关（逐项定位代价）" AutomationProperties.Name="隔离开关" Minimum="0" Maximum="1023" SpinButtonPlacementMode="Compact" ValueChanged="Diagnostics_IsolationBox_ValueChanged" />
+                                <TextBlock Text="按位关闭或切换每帧工作，用来单独量出每一部分的代价：1=关闭画面采集，2=关闭游戏状态检测，4=关闭定位，8=关闭覆盖层绘制，16=关闭覆盖层整屏清屏，32=关闭窗口几何同步，64=改用 DirectComposition 呈现，128=强制整帧回读（默认只回读小地图那几块区域），256=强制整屏覆盖层（与默认的小地图窗口做对照），512=停用标记鼠标钩子（保留标记绘制和定位，用于鼠标卡顿对照）。0 表示全部开启（正常）。脚本 Measure-WorkIsolation.ps1 会提示你逐段设置这个值。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                                <TextBlock Text="注意：64 改变的是叠加层「怎么贴到屏幕上」，需要在下次点击「开始探索」时才生效。512 在已接管的拖动释放后生效，期间无法点击覆盖标记；恢复为 0 即恢复标记鼠标交互。128 与 256 立即生效；开大地图时总会用整屏覆盖层与整帧回读。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                                <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
+                                    <Button Content="打开日志" Click="OpenLogs_Click" />
+                                    <Button Content="复制诊断摘要" Click="CopySummary_Click" />
+                                    <Button Content="打开崩溃报告" Click="OpenCrashes_Click" />
+                                </controls:WrapPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+        </Grid>
+
+        <!-- 核心实时状态条 -->
         <InfoBar Grid.Row="1" x:Name="Diagnostics_Status" IsOpen="True" IsClosable="False" Severity="Informational" CornerRadius="10">
-            <StackPanel Spacing="4"><TextBlock x:Name="Diagnostics_StatusTitle" FontWeight="SemiBold" TextWrapping="Wrap" /><TextBlock x:Name="Diagnostics_StatusDetail" TextWrapping="Wrap" /><TextBlock x:Name="Diagnostics_OcrBackend" TextWrapping="Wrap" /><TextBlock x:Name="Diagnostics_CoreVersion" Style="{StaticResource IMaoSecondaryTextStyle}" /></StackPanel>
+            <StackPanel Spacing="3">
+                <TextBlock x:Name="Diagnostics_StatusTitle" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock x:Name="Diagnostics_StatusDetail" TextWrapping="Wrap" />
+                <TextBlock x:Name="Diagnostics_OcrBackend" TextWrapping="Wrap" />
+                <TextBlock x:Name="Diagnostics_CoreVersion" Style="{StaticResource IMaoSecondaryTextStyle}" />
+            </StackPanel>
         </InfoBar>
-        <Border Grid.Row="2" Style="{StaticResource IMaoCardStyle}" Padding="14">
-            <StackPanel Spacing="10">
+
+        <!-- 短时完整采集控制舱 -->
+        <Border Grid.Row="2" Style="{StaticResource IMaoHeroCardStyle}" Padding="14,12">
+            <StackPanel Spacing="8">
                 <TextBlock Text="短时完整采集" Style="{StaticResource IMaoSectionTitleStyle}" />
-                <TextBlock Text="记录问题发生时的画面和识别结果，最多 3 分钟，可提前停止。采集可能增加磁盘占用和运行负担。结束后发送整个采集文件夹。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                <TextBlock Text="记录问题发生时的画面和识别结果，最多 3 分钟，可提前停止。采集可能增加磁盘占用和运行负担。结束后发送整个采集文件夹。"
+                           Style="{StaticResource IMaoSecondaryTextStyle}" FontSize="13" TextWrapping="Wrap" />
                 <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
-                    <Button x:Name="Diagnostics_CaptureStart" Content="开始 3 分钟采集" Click="CaptureStart_Click" IsEnabled="False" />
-                    <Button x:Name="Diagnostics_CaptureStop" Content="提前停止" Click="CaptureStop_Click" IsEnabled="False" />
-                    <Button x:Name="Diagnostics_CaptureOpen" Content="打开采集文件夹" Click="CaptureOpen_Click" IsEnabled="False" />
+                    <Button x:Name="Diagnostics_CaptureStart" Content="开始 3 分钟采集" Click="CaptureStart_Click" IsEnabled="False" Style="{StaticResource IMaoPrimaryButtonStyle}" Padding="14,7" />
+                    <Button x:Name="Diagnostics_CaptureStop" Content="提前停止" Click="CaptureStop_Click" IsEnabled="False" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
+                    <Button x:Name="Diagnostics_CaptureOpen" Content="打开采集文件夹" Click="CaptureOpen_Click" IsEnabled="False" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
                 </controls:WrapPanel>
                 <ProgressBar x:Name="Diagnostics_CaptureProgress" Minimum="0" Maximum="100" Value="0" AutomationProperties.Name="采集进度" />
                 <InfoBar x:Name="Diagnostics_CaptureStatus" IsOpen="True" IsClosable="False" Severity="Informational" Title="采集暂不可用" />
             </StackPanel>
         </Border>
-        <Button Grid.Row="3" Content="诊断工具" HorizontalAlignment="Left"><Button.Flyout><Flyout><ScrollViewer MaxHeight="300" Width="320" HorizontalScrollBarVisibility="Disabled">
 
-                <StackPanel Spacing="12">
-                    <TextBlock Text="事件日志始终保存。短时完整采集仅在手动开始后运行。" Style="{StaticResource IMaoSecondaryTextStyle}" />
-                    <ToggleSwitch x:Name="Diagnostics_OverlayHiddenToggle" Header="隐藏叠加层窗口（仅采集）" AutomationProperties.Name="隐藏叠加层窗口" Toggled="Diagnostics_OverlayHiddenToggle_Toggled" />
-                    <TextBlock Text="隐藏后叠加层不再显示，但画面采集与定位仍在运行：用它对比帧率，可以判断掉帧是否来自叠加层窗口本身。修改会在下次点击「开始探索」后完全生效。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                    <ToggleSwitch x:Name="Diagnostics_HoldPresentToggle" Header="暂停叠加层画面更新（窗口仍显示）" AutomationProperties.Name="暂停叠加层画面更新" Toggled="Diagnostics_HoldPresentToggle_Toggled" />
-                    <TextBlock Text="窗口继续显示，但只有状态条时约每 3 秒才更新一次。与前一项分别测试，可以看出代价主要来自「窗口在场」还是「每次刷新画面」。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                    <NumberBox x:Name="Diagnostics_IsolationBox" Header="隔离开关（逐项定位代价）" AutomationProperties.Name="隔离开关" Minimum="0" Maximum="1023" SpinButtonPlacementMode="Compact" ValueChanged="Diagnostics_IsolationBox_ValueChanged" />
-                    <TextBlock Text="按位关闭或切换每帧工作，用来单独量出每一部分的代价：1=关闭画面采集，2=关闭游戏状态检测，4=关闭定位，8=关闭覆盖层绘制，16=关闭覆盖层整屏清屏，32=关闭窗口几何同步，64=改用 DirectComposition 呈现，128=强制整帧回读（默认只回读小地图那几块区域），256=强制整屏覆盖层（与默认的小地图窗口做对照），512=停用标记鼠标钩子（保留标记绘制和定位，用于鼠标卡顿对照）。0 表示全部开启（正常）。脚本 Measure-WorkIsolation.ps1 会提示你逐段设置这个值。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                    <TextBlock Text="注意：64 改变的是叠加层「怎么贴到屏幕上」，需要在下次点击「开始探索」时才生效。512 在已接管的拖动释放后生效，期间无法点击覆盖标记；恢复为 0 即恢复标记鼠标交互。128 与 256 立即生效；开大地图时总会用整屏覆盖层与整帧回读。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                    <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8"><Button Content="打开日志" Click="OpenLogs_Click" /><Button Content="复制诊断摘要" Click="CopySummary_Click" /><Button Content="打开崩溃报告" Click="OpenCrashes_Click" /></controls:WrapPanel>
-                </StackPanel>
-            </ScrollViewer>
-        </Flyout></Button.Flyout></Button>
-        <Border Grid.Row="4" Style="{StaticResource IMaoCardStyle}" Padding="14" MinHeight="80">
-            <Grid RowSpacing="10"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions><TextBlock Text="实时事件" Style="{StaticResource IMaoSectionTitleStyle}" /><ListView Grid.Row="1" x:Name="Diagnostics_LogList" SelectionMode="None" ScrollViewer.HorizontalScrollBarVisibility="Disabled"><ListView.ItemTemplate><DataTemplate><TextBlock Text="{Binding DisplayText}" TextWrapping="Wrap" Margin="0,5" FontSize="14" /></DataTemplate></ListView.ItemTemplate></ListView></Grid>
+        <!-- 实时事件流列表 -->
+        <Border Grid.Row="3" Style="{StaticResource IMaoCardStyle}" Padding="14,12" MinHeight="80">
+            <Grid RowSpacing="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Text="实时事件" Style="{StaticResource IMaoSectionTitleStyle}" />
+                <ListView Grid.Row="1" x:Name="Diagnostics_LogList" SelectionMode="None" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayText}" TextWrapping="Wrap" Margin="0,4" FontSize="13" Foreground="{StaticResource IMaoTextBrush}" />
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
         </Border>
     </Grid>
 </Page>

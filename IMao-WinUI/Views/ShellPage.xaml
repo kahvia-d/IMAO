@@ -1,31 +1,68 @@
 <Page x:Class="IMao_WinUI.Views.ShellPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:helpers="using:IMao_WinUI.Helpers" Loaded="OnLoaded">
     <Grid Background="{StaticResource IMaoCanvasBrush}">
-        <Grid.RowDefinitions><RowDefinition Height="48" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-        <Grid x:Name="AppTitleBar" Background="{StaticResource IMaoCanvasBrush}" Padding="20,0,140,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 顶部黑海岸高定星图标题栏 -->
+        <Grid x:Name="AppTitleBar" Background="#0B0F17" Padding="18,0,148,0"
+              BorderBrush="{StaticResource IMaoBorderBrush}" BorderThickness="0,0,0,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <Image Source="/Assets/WindowIcon.ico" Width="22" Height="22" />
-                <TextBlock x:Name="AppTitleBarText" Text="IMao" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <TextBlock Text="探索有迹可循" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                <Border Width="28" Height="28" CornerRadius="7" Background="{StaticResource IMaoAccentSoftBrush}"
+                        BorderBrush="{StaticResource IMaoAccentBorderBrush}" BorderThickness="1" Padding="4">
+                    <Image Source="/Assets/WindowIcon.ico" Width="18" Height="18" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Border>
+                <TextBlock x:Name="AppTitleBarText" Text="IMao" FontSize="14" FontWeight="Bold" CharacterSpacing="30"
+                           Foreground="{StaticResource IMaoTextBrush}" VerticalAlignment="Center" />
+                <Border Style="{StaticResource IMaoPillBadgeStyle}" Padding="8,2" VerticalAlignment="Center">
+                    <TextBlock Text="AETHERIA ATLAS · 星图高定终端" FontSize="10" FontWeight="Bold" CharacterSpacing="80"
+                               Foreground="{StaticResource IMaoAccentBrush}" />
+                </Border>
+                <TextBlock Text="索拉里斯全境点位 · 自动路线 · 实时同步" FontSize="12"
+                           Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
             </StackPanel>
+            <Border Grid.ColumnSpan="2" Height="1" VerticalAlignment="Bottom"
+                    Background="{StaticResource IMaoGoldHairlineBrush}" IsHitTestVisible="False" />
         </Grid>
+
+        <!-- 左侧星图导航栏与主内容工作区 -->
         <NavigationView x:Name="NavigationViewControl" Grid.Row="1" IsBackButtonVisible="Collapsed"
             IsBackEnabled="{x:Bind ViewModel.IsBackEnabled, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.Selected, Mode=OneWay}"
-            IsSettingsVisible="False" OpenPaneLength="178" CompactPaneLength="52" ExpandedModeThresholdWidth="1000"
+            IsSettingsVisible="False" OpenPaneLength="182" CompactPaneLength="52" ExpandedModeThresholdWidth="1000"
             CompactModeThresholdWidth="640" PaneDisplayMode="Auto" IsPaneToggleButtonVisible="True"
             Background="{StaticResource IMaoCanvasBrush}" DisplayModeChanged="NavigationViewControl_DisplayModeChanged">
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="概览" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.StartViewModel"><NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;" /></NavigationViewItem.Icon></NavigationViewItem>
-                <NavigationViewItem Content="点位筛选" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.FilterViewModel"><NavigationViewItem.Icon><FontIcon Glyph="&#xE71C;" /></NavigationViewItem.Icon></NavigationViewItem>
-                <NavigationViewItem Content="路线" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.FunctionViewModel"><NavigationViewItem.Icon><FontIcon Glyph="&#xE707;" /></NavigationViewItem.Icon></NavigationViewItem>
+                <NavigationViewItem Content="首页" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.StartViewModel">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="路线" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.FunctionViewModel">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE707;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="点位筛选" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.FilterViewModel">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE71C;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem Content="设置" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.SettingsViewModel"><NavigationViewItem.Icon><FontIcon Glyph="&#xE713;" /></NavigationViewItem.Icon><NavigationViewItem.InfoBadge><InfoBadge x:Name="UpdatesBadge" Visibility="Collapsed" /></NavigationViewItem.InfoBadge></NavigationViewItem>
-                <NavigationViewItem Content="帮助" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.UsageGuideViewModel"><NavigationViewItem.Icon><FontIcon Glyph="&#xE897;" /></NavigationViewItem.Icon></NavigationViewItem>
-                <NavigationViewItem Content="诊断" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.DiagnosticsViewModel"><NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;" /></NavigationViewItem.Icon></NavigationViewItem>
+                <NavigationViewItem Content="设置" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.SettingsViewModel">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE713;" /></NavigationViewItem.Icon>
+                    <NavigationViewItem.InfoBadge><InfoBadge x:Name="UpdatesBadge" Visibility="Collapsed" /></NavigationViewItem.InfoBadge>
+                </NavigationViewItem>
+                <NavigationViewItem Content="诊断" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.DiagnosticsViewModel">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="帮助" helpers:NavigationHelper.NavigateTo="IMao_WinUI.ViewModels.UsageGuideViewModel">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE897;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.FooterMenuItems>
             <ScrollViewer x:Name="PageScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <Frame x:Name="NavigationFrame" Navigated="NavigationFrame_Navigated" Margin="{StaticResource NavigationViewPageContentMargin}" MaxWidth="1240" HorizontalAlignment="Stretch" />
+                <Frame x:Name="NavigationFrame" Navigated="NavigationFrame_Navigated"
+                       Margin="{StaticResource NavigationViewPageContentMargin}" MaxWidth="1280" HorizontalAlignment="Stretch" />
             </ScrollViewer>
         </NavigationView>
     </Grid>

@@ -75,10 +75,19 @@ if ($running.Count -gt 0 -and -not $DryRun) {
 $modelSource = Join-Path $SourceRoot 'x64/Release/Assets/models'
 Sync-MapTestModels -ModelsRoot $modelSource -RunRoot $RunRoot -DryRun:$DryRun
 
-# Program binaries are synced at the top level; model resources were checked above.
+# 同步顶层程序二进制、resources.pri 以及 Styles/Views 下的编译期 XBF 界面二进制与 .kuro-bridge 子目录
 $copied = New-Object System.Collections.ArrayList
-foreach ($entry in @(Get-ChildItem -LiteralPath $binaryRoot -Force -File)) {
-    $destination = Join-Path $RunRoot $entry.Name
+$syncCandidates = New-Object System.Collections.Generic.List[System.IO.FileInfo]
+foreach ($f in @(Get-ChildItem -LiteralPath $binaryRoot -Force -File)) { $syncCandidates.Add($f) }
+foreach ($sub in @('Styles', 'Views', '.kuro-bridge')) {
+    $subPath = Join-Path $binaryRoot $sub
+    if (Test-Path -LiteralPath $subPath) {
+        foreach ($f in @(Get-ChildItem -LiteralPath $subPath -Recurse -Force -File)) { $syncCandidates.Add($f) }
+    }
+}
+foreach ($entry in $syncCandidates) {
+    $relPath = $entry.FullName.Substring($binaryRoot.Length).TrimStart('\', '/')
+    $destination = Join-Path $RunRoot $relPath
     if (-not (Test-Path -LiteralPath $destination)) { continue }
     $existing = Get-Item -LiteralPath $destination -Force
     if ($entry.Length -eq $existing.Length -and
@@ -86,7 +95,7 @@ foreach ($entry in @(Get-ChildItem -LiteralPath $binaryRoot -Force -File)) {
         (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash) { continue }
     if (-not $DryRun) { Copy-Item -LiteralPath $entry.FullName -Destination $destination -Force }
     [void]$copied.Add([pscustomobject]@{
-            Name = $entry.Name
+            Name = $relPath
             From = $existing.LastWriteTime.ToString('MM-dd HH:mm:ss')
             To = $entry.LastWriteTime.ToString('MM-dd HH:mm:ss')
             Size = ('{0} -> {1}' -f $existing.Length, $entry.Length)

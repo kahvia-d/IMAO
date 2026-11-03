@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Helpers;
 using IMao_WinUI.Models;
@@ -12,7 +13,9 @@ public sealed partial class StartPage : Page
 {
     private readonly CoreHostService coreHost;
     private bool subscribed;
+    private bool loadingQuickChecks;
     public StartViewModel ViewModel { get; }
+
     public StartPage()
     {
         ViewModel = App.GetService<StartViewModel>();
@@ -21,26 +24,36 @@ public sealed partial class StartPage : Page
         Loaded += StartPage_Loaded;
         Unloaded += StartPage_Unloaded;
     }
+
     private async void StartPage_Loaded(object sender, RoutedEventArgs e)
     {
         if (!subscribed)
         {
             coreHost.StatusChanged += CoreHost_StatusChanged;
             coreHost.RoutePlanningChanged += CoreHost_RoutePlanningChanged;
+            coreHost.PropertyChanged += CoreHost_PropertyChanged;
             subscribed = true;
         }
         UpdateCoreStatus(coreHost.Status);
         RenderRoute(coreHost.RoutePlanning);
+        SyncQuickOverlayChecks();
         await coreHost.EnsureStartedAsync();
-        if (IsLoaded) UpdateCoreStatus(coreHost.Status);
+        if (IsLoaded)
+        {
+            UpdateCoreStatus(coreHost.Status);
+            SyncQuickOverlayChecks();
+        }
     }
+
     private void StartPage_Unloaded(object sender, RoutedEventArgs e)
     {
         if (!subscribed) return;
         coreHost.StatusChanged -= CoreHost_StatusChanged;
         coreHost.RoutePlanningChanged -= CoreHost_RoutePlanningChanged;
+        coreHost.PropertyChanged -= CoreHost_PropertyChanged;
         subscribed = false;
     }
+
     private async void Start_Button_Click(object sender, RoutedEventArgs e)
     {
         Start_Button.IsEnabled = false;
@@ -57,6 +70,7 @@ public sealed partial class StartPage : Page
         }
         finally { if (IsLoaded) UpdateCoreStatus(coreHost.Status); }
     }
+
     private async void SelectCaptureWindow_Click(object sender, RoutedEventArgs e)
     {
         SelectCaptureWindowButton.IsEnabled = false;
@@ -64,13 +78,50 @@ public sealed partial class StartPage : Page
         catch (Exception error) { coreHost.ReportUserError("无法选择游戏窗口：" + error.Message); }
         finally { if (IsLoaded) UpdateCoreStatus(coreHost.Status); }
     }
+
     private async void RestartCore_Click(object sender, RoutedEventArgs e)
     {
         await coreHost.RestartAsync();
         if (IsLoaded) UpdateCoreStatus(coreHost.Status);
     }
+
     private void CoreHost_StatusChanged(object? sender, CoreRuntimeStatus status) => UpdateCoreStatus(status);
     private void CoreHost_RoutePlanningChanged(object? sender, RoutePlanningState state) => RenderRoute(state);
+    private void CoreHost_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (IsLoaded) SyncQuickOverlayChecks();
+    }
+
+    // 同步首页快捷叠加层勾选框与当前记录本徽标
+    private void SyncQuickOverlayChecks()
+    {
+        loadingQuickChecks = true;
+        try
+        {
+            var configuration = coreHost.Configuration;
+            QuickMinimapCheck.IsChecked = configuration.MinMapEnabled;
+            QuickWorldMapCheck.IsChecked = configuration.MapEnabled;
+            QuickCompletedCheck.IsChecked = configuration.SavedPointsEnabled;
+            string accountName = coreHost.ActiveLocalAccount?.Name ?? "默认记录";
+            OverviewAccountBadgeText.Text = $"记录本 · {accountName}";
+        }
+        finally
+        {
+            loadingQuickChecks = false;
+        }
+    }
+
+    // 首页直接切换小地图/大地图/已完成点位显示，与设置页共享同一套核心配置
+    private async void QuickOverlayCheck_Click(object sender, RoutedEventArgs e)
+    {
+        if (loadingQuickChecks) return;
+        bool minimap = QuickMinimapCheck.IsChecked == true;
+        bool worldMap = QuickWorldMapCheck.IsChecked == true;
+        bool completed = QuickCompletedCheck.IsChecked == true;
+        await coreHost.ConfigureAsync(minMapEnabled: minimap, mapEnabled: worldMap, savedPointsEnabled: completed);
+        if (IsLoaded) SyncQuickOverlayChecks();
+    }
+
     private void UpdateCoreStatus(CoreRuntimeStatus status)
     {
         Start_TextBlock_CoreState.Text = status.DisplayState;
@@ -79,6 +130,9 @@ public sealed partial class StartPage : Page
         Start_Button.IsEnabled = !busy;
         SelectCaptureWindowButton.IsEnabled = !busy && !status.IsRunning;
         CaptureSourceSummary.Text = coreHost.SelectedCaptureTarget is null ? "游戏来源 · 本地客户端" : "游戏来源 · 云鸣潮浏览器窗口（自动识别游戏区域）";
+        OverviewTelemetryBadgeText.Text = status.IsRunning
+            ? $"实时叠加 · {status.DisplayState}"
+            : (coreHost.SelectedCaptureTarget is null ? "本地客户端 · 待命" : "云鸣潮窗口 · 待命");
         Start_Button_Icon.Glyph = status.IsRunning ? "\uE71A" : "\uE768";
         Start_Button_Text.Text = busy ? (status.CoreState == "stopping" ? "正在停止…" : "正在准备…") : status.IsRunning ? "停止探索" : "开始探索";
         Start_InfoBar_FindNotTargetProcess.IsOpen = status.CoreState == "waitingForGame";
@@ -92,7 +146,9 @@ public sealed partial class StartPage : Page
         OverviewMarkerSummary.Text = status.IsRunning
             ? $"小地图 {status.MinimapMarkers} 个点位  ·  大地图 {status.MapMarkers} 个点位"
             : "启动后显示当前地图点位数量。";
+        SyncQuickOverlayChecks();
     }
+
     private void RenderRoute(RoutePlanningState state)
     {
         if (state.Active is not { } route)
@@ -111,6 +167,7 @@ public sealed partial class StartPage : Page
         }
         OverviewReplanStatus.Text = state.AutoReplanLabel;
     }
+
     private void Navigate_Click(object sender, RoutedEventArgs e)
     {
         var type = ((sender as Button)?.Tag as string) switch
@@ -121,6 +178,7 @@ public sealed partial class StartPage : Page
         };
         App.GetService<INavigationService>().NavigateTo(type.FullName!);
     }
+
     private void Start_InfoBar_FindNotTargetProcess_CloseButtonClick(InfoBar sender, object args) => sender.Visibility = Visibility.Collapsed;
     private void Start_InfoBar_IncorrectGameWindowSize_CloseButtonClick(InfoBar sender, object args) => sender.Visibility = Visibility.Collapsed;
 }

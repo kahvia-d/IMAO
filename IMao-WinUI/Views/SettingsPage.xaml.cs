@@ -1615,4 +1615,30 @@ public sealed partial class SettingsPage : Page
         RuntimeMessage.Message = ok ? "已恢复 Windows 图形默认设置，重启游戏后生效。" : error;
         RuntimeMessage.IsOpen = true;
     }
+
+    // 切换设置页五大功能模块视图（全部模块 / 显示与叠加 / 键鼠与手柄 / 记录本与同步 / 版本与地图资源 / 性能与兼容）
+    private void SettingsCategory_Click(object sender, RoutedEventArgs e)
+    {
+        string key = (sender as Button)?.Tag as string ?? "all";
+        bool showAll = key == "all";
+        SettingsGroup_Display.Visibility = showAll || key == "display" ? Visibility.Visible : Visibility.Collapsed;
+        SettingsGroup_Input.Visibility = showAll || key == "input" ? Visibility.Visible : Visibility.Collapsed;
+        SettingsGroup_Sync.Visibility = showAll || key == "sync" ? Visibility.Visible : Visibility.Collapsed;
+        SettingsGroup_Updates.Visibility = showAll || key == "updates" ? Visibility.Visible : Visibility.Collapsed;
+        SettingsGroup_System.Visibility = showAll || key == "system" ? Visibility.Visible : Visibility.Collapsed;
+
+        var primaryStyle = Application.Current.Resources["IMaoPrimaryButtonStyle"] as Style;
+        var secondaryStyle = Application.Current.Resources["IMaoSecondaryButtonStyle"] as Style;
+        foreach (var child in SettingsCategoryBar.Children)
+        {
+            if (child is Button button)
+            {
+                bool active = Equals(button.Tag as string, key);
+                if (primaryStyle is not null && secondaryStyle is not null)
+                {
+                    button.Style = active ? primaryStyle : secondaryStyle;
+                }
+            }
+        }
+    }
 }
