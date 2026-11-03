@@ -6,7 +6,7 @@ namespace IMao_WinUI.Helpers;
 public sealed record KuroBridgeStatus(bool Registered, bool BridgeFound, string BridgePath, bool ManifestWritten, string Detail);
 
 /// <summary>
-/// Registers the Native Messaging host that lets the Edge extension hand the Kuro
+/// Registers the Native Messaging host that lets the Edge/Chrome extensions hand the Kuro
 /// session to IMao. Everything stays inside the current user: the bridge binary
 /// and its host manifest live under %LOCALAPPDATA%\IMao-WinUI, and only HKCU keys
 /// are written, so no admin rights and no machine-wide change are involved.
@@ -92,7 +92,7 @@ public static class KuroBridgeRegistration
 
     private static string Describe(bool bridge, bool manifest, bool registered)
     {
-        if (registered) return $"浏览器桥接已注册（扩展 ID {KuroNativeBridgeHost.ExtensionId}）";
+        if (registered) return "浏览器桥接已注册";
         if (!bridge) return "浏览器桥接未安装：未找到 KuroSyncBridge.exe";
         if (!manifest) return "浏览器桥接未注册：宿主清单缺失";
         return "浏览器桥接未注册：注册表项缺失";

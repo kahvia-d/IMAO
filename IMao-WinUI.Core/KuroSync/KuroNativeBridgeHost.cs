@@ -6,20 +6,21 @@ using System.Text.Json;
 namespace IMao_WinUI.Core.KuroSync;
 
 /// <summary>
-/// Contract of the browser-side bridge registration. The extension ID is the one
-/// Edge assigns to the published add-on; deriving it from the public key that is
-/// also embedded in the extension manifest keeps both sides impossible to drift.
+/// Contract of the browser-side bridge registration. Edge and Chrome assign
+/// separate store IDs; the unpacked extension retains the Edge public key.
 /// </summary>
 public static class KuroNativeBridgeHost
 {
     public const string HostName = "com.imao.kuro_sync";
     public const string Description = "IMao KuroMap Sync bridge";
     public const string ExtensionId = "ohmikfaeobbffhlhoocklplniobcfdbg";
+    public const string ChromeExtensionId = "elhbnijeefmmmempajadehknbckaopge";
     public const string BridgeExecutable = "KuroSyncBridge.exe";
     public const string HostManifestFile = HostName + ".json";
     public const string SettingsFile = "KuroSyncBridge.settings.json";
 
     public static string Origin => $"chrome-extension://{ExtensionId}/";
+    public static string[] AllowedOrigins => [Origin, $"chrome-extension://{ChromeExtensionId}/"];
 
     public static string HostManifestJson(string bridgeExecutable) => JsonSerializer.Serialize(new
     {
@@ -27,11 +28,12 @@ public static class KuroNativeBridgeHost
         description = Description,
         path = bridgeExecutable,
         type = "stdio",
-        allowed_origins = new[] { Origin }
+        allowed_origins = AllowedOrigins
     }, new JsonSerializerOptions { WriteIndented = true });
 
     public static string SettingsJson() =>
-        JsonSerializer.Serialize(new { AllowedOrigin = Origin }, new JsonSerializerOptions { WriteIndented = true });
+        // Keep the legacy field so older bridge binaries still accept Edge.
+        JsonSerializer.Serialize(new { AllowedOrigin = Origin, AllowedOrigins }, new JsonSerializerOptions { WriteIndented = true });
 
     /// <summary>
     /// Derives a Chrome/Edge extension id from a manifest "key" value: the first
