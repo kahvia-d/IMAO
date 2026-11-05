@@ -1,6 +1,7 @@
 """Rebuild the manually transcribed, fixed-frame local video validation set."""
 import argparse
 import csv
+import hashlib
 import json
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -58,16 +59,73 @@ def score(manifest, predictions):
     return conditions
 
 
+def crops(sign_regression, row):
+    offsets = [(f"offset-{dx}-{dy}", 32+dx, 1405+dy, 608, 33) for dx, dy in OFFSETS]
+    if sign_regression:
+        if int(row["x"]) < 0:
+            return offsets
+        centered = []
+        for factor in (1., 1.02, 1.04, 1.06):
+            width, height = round(608*factor), round(33*factor)
+            centered.append((f"centered-{factor}", 32+(608-width)//2, 1405+(33-height)//2, width, height))
+        return centered
+    for factor in (.85, 1.15):
+        width, height = round(608*factor), round(33*factor)
+        top = 1405 + (33-height)//2
+        offsets.append((f"scale-{factor}", 32, top, width, height))
+        for dx, dy in ((-3, -2), (3, 2)):
+            offsets.append((f"combined-{factor}-{dx}-{dy}", 32+dx, top+dy, width, height))
+    return offsets
+
+
+def source_frames(rows, recordings):
+    # Some desktop recordings have variable frame timing. Random seeking to a
+    # displayed index can return its neighbour; reproduce continuous-frame
+    # failures by decoding the sequence in order and checking the crop pixels.
+    groups = defaultdict(list)
+    for row in rows:
+        groups[row["video"]].append(row)
+    for video, items in groups.items():
+        category = "Desktop" if video.startswith("Desktop") else "Wuthering Waves"
+        capture = cv2.VideoCapture(str(recordings / category / video))
+        try:
+            next_index = 0
+            for row in items:
+                index = int(row["frame"])
+                if row.get("decode") == "sequential":
+                    if index < next_index:
+                        raise ValueError("Sequential source indices must increase")
+                    while next_index < index:
+                        if not capture.grab():
+                            raise ValueError(f"Short video while reading {row}")
+                        next_index += 1
+                else:
+                    capture.set(cv2.CAP_PROP_POS_FRAMES, index)
+                ok, image = capture.read()
+                if not ok or image.shape[:2] != (1440, 2560):
+                    raise ValueError(f"Cannot decode expected 1440p source {row}")
+                next_index = index + 1
+                if row.get("nominal_sha256"):
+                    pixels = image[1405:1438,32:640].tobytes()
+                    if hashlib.sha256(pixels).hexdigest() != row["nominal_sha256"]:
+                        raise ValueError(f"Coordinate crop differs from the transcribed source {row['id']}")
+                yield row, image
+        finally:
+            capture.release()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("recordings", type=Path, nargs="?", help="Root containing the Desktop and Wuthering Waves recording directories")
     parser.add_argument("--score", type=Path, metavar="REPORT", help="Score a native recognize report against the generated manifest")
     parser.add_argument("--continuous", type=Path, metavar="VIDEO", help="Extract the 10 Hz sequence from a native 1440p game capture")
+    parser.add_argument("--sign-regression", action="store_true", help="Use the inspected sign-loss frames and positive-X controls")
     args = parser.parse_args()
     if args.continuous:
         continuous(args.continuous)
         return
-    folder = OUT / "video-holdout"
+    suite = "video-sign-regression" if args.sign_regression else "video-holdout"
+    folder = OUT / suite
     if args.score:
         manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
         predictions = json.loads(args.score.read_text(encoding="utf-8"))
@@ -77,27 +135,11 @@ def main():
         parser.error("a recordings directory or --score REPORT is required")
     folder.mkdir(exist_ok=True)
     manifest = []
-    source = Path(__file__).with_name("video-holdout.csv")
+    source = Path(__file__).with_name(suite + ".csv")
     with source.open(encoding="utf-8-sig") as stream:
-        for row in csv.DictReader(stream):
-            category = "Desktop" if row["video"].startswith("Desktop") else "Wuthering Waves"
-            capture = cv2.VideoCapture(str(args.recordings / category / row["video"]))
-            try:
-                capture.set(cv2.CAP_PROP_POS_FRAMES, int(row["frame"]))
-                ok, image = capture.read()
-                if not ok or image.shape[:2] != (1440, 2560):
-                    raise ValueError(f"Cannot decode expected 1440p source {row}")
-            finally:
-                capture.release()
-            conditions = [(f"offset-{dx}-{dy}", 32+dx, 1405+dy, 608, 33) for dx, dy in OFFSETS]
-            for factor in (.85, 1.15):
-                width, height = round(608*factor), round(33*factor)
-                top = 1405 + (33-height)//2
-                conditions.append((f"scale-{factor}", 32, top, width, height))
-                for dx, dy in ((-3, -2), (3, 2)):
-                    conditions.append((f"combined-{factor}-{dx}-{dy}", 32+dx, top+dy, width, height))
+        for row, image in source_frames(csv.DictReader(stream), args.recordings):
             expected = [int(row["x"]), int(row["y"])] if row["label"] == "present" else None
-            for name, left, top, width, height in conditions:
+            for name, left, top, width, height in crops(args.sign_regression, row):
                 crop = image[top:top+height, left:left+width]
                 if crop.shape[:2] != (height, width):
                     continue
@@ -105,7 +147,7 @@ def main():
                 if not cv2.imwrite(str(path), crop):
                     raise OSError(path)
                 manifest.append(dict(id=row["id"]+"/"+name, crop=str(path), expected=expected,
-                                     label=row["label"], calibrated=name=="offset-0-0"))
+                                     label=row["label"], calibrated=(left,top,width,height)==(32,1405,608,33)))
     (folder / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
 
 

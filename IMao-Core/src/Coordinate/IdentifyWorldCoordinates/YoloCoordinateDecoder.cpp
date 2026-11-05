@@ -11,6 +11,8 @@ namespace {
 const std::regex kInteger("[+-]?[0-9]+");
 const std::regex kCoordinatePrefix("([+-]?[0-9]+),([+-]?[0-9]+),");
 const std::regex kNumberOrSign("[+-]?[0-9]+|[+-]");
+constexpr double kUnsignedXMin = 1.5611089586260667, kUnsignedXMax = 1.9318369967347224;
+constexpr double kSignedXMin = 2.239551485178347, kSignedXMax = 2.6686694289991504;
 double V(const Json& o, int i) { return o.at("xyxy").at(i).get<double>(); }
 double Center(const Json& o) { return (V(o,0)+V(o,2))/2; }
 double Score(const Json& o) { return o.at("score").get<double>(); }
@@ -40,26 +42,48 @@ double Median(std::vector<double> x) {
     return n%2 ? x[n/2] : (x[n/2-1]+x[n/2])/2;
 }
 std::vector<Json> Unique(const Json& items) {
-    std::vector<Json> sorted, unique;
-    for (const auto& o:items) if (Score(o)>=.25) sorted.push_back(o);
-    std::stable_sort(sorted.begin(),sorted.end(),[](const auto&a,const auto&b){return Score(a)>Score(b);});
-    for (const auto&o:sorted) {
-        bool duplicate=false;
-        bool strongerLeft=false, strongerRight=false;
-        for (const auto&p:unique) {
-            if (Char(o)!=Char(p))continue;
-            const double overlap=IoU(o,p);
-            if(overlap>.45)duplicate=true;
-            // Repeated digits can produce an extra box straddling two real glyphs.
-            // Require separate, stronger witnesses on both sides before discarding it.
-            if(Digit(o)&&overlap>.25&&Score(p)>2*Score(o)) {
-                if(Center(p)<Center(o))strongerLeft=true;
-                if(Center(p)>Center(o))strongerRight=true;
+    struct Candidate {
+        const Json* box;
+        std::string character;
+        double score, left, right, center;
+        bool digit;
+    };
+    std::vector<Candidate> sorted, kept;
+    sorted.reserve(items.size());
+    for (const auto& box : items) {
+        const double score = Score(box);
+        if (!(score >= .25)) continue;
+        const double left = V(box,0), right = V(box,2);
+        sorted.push_back({&box, Char(box), score, left, right, (left+right)/2, Digit(box)});
+    }
+    std::stable_sort(sorted.begin(),sorted.end(),[](const Candidate& a,const Candidate& b){return a.score>b.score;});
+    for (const auto& glyph : sorted) {
+        bool duplicate = false, strongerLeft = false, strongerRight = false;
+        bool closeDigit = false, coversComma = false;
+        for (const auto& prior : kept) {
+            if (prior.right <= glyph.left || prior.left >= glyph.right) continue;
+            if (glyph.digit && prior.character == "," && prior.score > glyph.score &&
+                prior.center > glyph.left && prior.center < glyph.right) coversComma = true;
+            if (glyph.character != prior.character) continue;
+            const double overlap = IoU(*glyph.box,*prior.box);
+            if (overlap > .45) { duplicate = true; break; }
+            if (!glyph.digit || prior.score <= 2*glyph.score) continue;
+            const double totalWidth = (glyph.right-glyph.left)+(prior.right-prior.left);
+            if (overlap > .15 && std::abs(glyph.center-prior.center) < .35*totalWidth) closeDigit = true;
+            if (overlap > .25) {
+                strongerLeft |= prior.center < glyph.center;
+                strongerRight |= prior.center > glyph.center;
             }
         }
-        if (!duplicate && !(strongerLeft&&strongerRight)) unique.push_back(o);
+        // A weak box straddling two digits, or a digit and its comma, cannot
+        // be counted as another copy of the same digit.
+        if (!duplicate && !(strongerLeft && strongerRight) && !(closeDigit && coversComma))
+            kept.push_back(glyph);
     }
-    std::stable_sort(unique.begin(),unique.end(),[](const auto&a,const auto&b){return Center(a)<Center(b);});
+    std::stable_sort(kept.begin(),kept.end(),[](const Candidate& a,const Candidate& b){return a.center<b.center;});
+    std::vector<Json> unique;
+    unique.reserve(kept.size());
+    for (const auto& glyph : kept) unique.push_back(*glyph.box);
     return unique;
 }
 using Group=std::vector<Json>;
@@ -148,8 +172,8 @@ bool Stroke(const cv::Mat& im,const Json& sign) {
     const double inside=(std::abs(profile[top])+std::abs(profile[bottom]))/2;
     return inside>=1.3*outside&&inside-outside>=1;
 }
-Json Geometry(const Json& raw,const Json& selected) {
-    const auto unique=Unique(raw);std::vector<double> widths;
+Json Geometry(const std::vector<Json>& unique,const Json& selected) {
+    std::vector<double> widths;
     for(const auto&o:unique)if(Digit(o))widths.push_back(V(o,2)-V(o,0));
     if(widths.empty())return nullptr;
     const double width=Median(widths);Json match=nullptr;int count=0;
@@ -168,17 +192,16 @@ Json Geometry(const Json& raw,const Json& selected) {
     return count==1?match:Json(nullptr);
 }
 // Return suspect axes; null means an unexplained layout and therefore abstention.
-Json Audit(const Json& raw,const Json& selected) {
-    if(selected.is_null())return nullptr;
-    const auto f=Geometry(raw,selected);if(f.is_null())return nullptr;
+Json Audit(const Json& f) {
+    if(f.is_null())return nullptr;
     const double width=f["width"];
     if(width<19.53681640625||width>31.200585937499998)return Json::array();
     Json suspects=Json::array();
     for(int axis=0;axis<2;++axis) {
         if(f[axis==0?"xs":"ys"].get<bool>())continue;
         const double value=f[axis==0?"x":"y"];
-        const double ulo=axis==0?1.5611089586260667:1.3089860670310716, uhi=axis==0?1.9318369967347224:1.620053439764766;
-        const double slo=axis==0?2.239551485178347:1.8723558009895704, shi=axis==0?2.6686694289991504:2.2941243508495077;
+        const double ulo=axis==0?kUnsignedXMin:1.3089860670310716, uhi=axis==0?kUnsignedXMax:1.620053439764766;
+        const double slo=axis==0?kSignedXMin:1.8723558009895704, shi=axis==0?kSignedXMax:2.2941243508495077;
         if(value>=ulo&&value<=uhi)continue;
         if(value<slo||value>shi)return nullptr;
         suspects.push_back(axis);
@@ -196,9 +219,56 @@ bool HasDigitAtLeftBoundary(const Json& raw, const Json& contrast) {
     return false;
 }
 
-Json Decode(const Json& detections) {
+bool HasNominalTextSpan(const Json& detections, int contentWidth) {
+    std::vector<Json> boxes;
+    std::vector<double> widths;
+    for (const auto& box : detections) {
+        if (Score(box) < .65) continue;
+        boxes.push_back(box);
+        if (Digit(box)) widths.push_back(V(box,2)-V(box,0));
+    }
+    if (widths.empty()) return false;
+    const double width = Median(widths);
+    std::sort(boxes.begin(),boxes.end(),[](const Json& a,const Json& b){ return Center(a)<Center(b); });
+    std::vector<double> advances;
+    for (size_t i = 1; i < boxes.size(); ++i) {
+        const auto& a = boxes[i-1];
+        const auto& b = boxes[i];
+        if (!Digit(a) || !Digit(b)) continue;
+        const double advance = Center(b)-Center(a);
+        if (advance >= .70*width && advance <= 1.35*width) advances.push_back(advance);
+    }
+    if (advances.size() < 5) return false;
+    // The annotated native crops span 34.67 to 36.20 ordinary digit advances.
+    // A wider ROI can put an unsigned first digit in the usual minus position.
+    const double span = contentWidth / Median(advances);
+    return span >= 34.4 && span <= 36.45;
+}
+
+std::vector<DigitDispute> FindDigitDisputes(const Json& raw, const Json& contrast) {
+    std::vector<DigitDispute> disputes;
+    for (const auto& weaker : raw) {
+        if (!Digit(weaker)) continue;
+        for (const auto& stronger : raw) {
+            if (!Digit(stronger) || Char(stronger)==Char(weaker) || Score(stronger)<=Score(weaker) ||
+                IoU(stronger,weaker)<.5) continue;
+            double same = 0, other = 0;
+            for (const auto& box : contrast) {
+                if (IoU(box,weaker)<.5) continue;
+                if (Char(box)==Char(weaker)) same=std::max(same,Score(box));
+                if (Char(box)==Char(stronger)) other=std::max(other,Score(box));
+            }
+            if (same>0 && other>same)
+                disputes.push_back({Char(weaker),Center(weaker),V(weaker,2)-V(weaker,0),
+                                    std::min(other,Score(stronger))});
+        }
+    }
+    return disputes;
+}
+
+static Json DecodeWithBoxes(const Json& detections, std::vector<Json>& unique) {
     for(const auto&o:detections)if(!Valid(o)||Char(o).size()!=1||std::string("0123456789-,+:").find(Char(o))==std::string::npos)return nullptr;
-    const auto unique=Unique(detections);std::vector<double> widths;
+    unique=Unique(detections);std::vector<double> widths;
     for(const auto&o:unique)if(Digit(o))widths.push_back(V(o,2)-V(o,0));
     if(widths.empty())return nullptr;
     const double width=Median(widths);const auto groups=Groups(unique,width);Json candidates=Json::array();
@@ -237,16 +307,41 @@ Json Decode(const Json& detections) {
     return candidates.size()==1?candidates[0]:Json(nullptr);
 }
 
-Json Select(const Json& raw,const Json& contrast,const cv::Mat& contrastImage,bool calibrated) {
+Json Decode(const Json& detections) {
+    std::vector<Json> boxes;
+    return DecodeWithBoxes(detections, boxes);
+}
+
+bool CanSelectRaw(const Json& detections) {
+    const auto commas = std::count_if(detections.begin(), detections.end(),
+        [](const Json& box){return Char(box)==",";});
+    if (commas < 2) return false;
+    if (!Decode(detections).is_null()) return true;
+    // Resolve can change an invalid raw prefix only by removing a different
+    // overlapping digit with at most half the stronger digit's score.
+    for (const auto& stronger : detections) {
+        if (!Digit(stronger)) continue;
+        for (const auto& weaker : detections)
+            if (Score(stronger)>=2*Score(weaker) && Digit(weaker) && Char(stronger)!=Char(weaker) &&
+                IoU(stronger,weaker)>=.5) return true;
+    }
+    return false;
+}
+
+Json Select(const Json& raw,const Json& contrast,const cv::Mat& contrastImage,bool calibrated,
+            std::optional<SamplingContext> sampling) {
     for(const auto*route:{&raw,&contrast})for(const auto&o:*route)if(!Valid(o))return nullptr;
-    const Json resolved=Resolve(raw,contrast), base=Decode(resolved);
+    const Json resolved=Resolve(raw,contrast);
+    std::vector<Json> unique;
+    const Json base=DecodeWithBoxes(resolved,unique);
     if(base.is_null())return nullptr;
     Json selected = base;
     if(calibrated) {
-        const auto axes=Audit(resolved,selected);if(axes.is_null())return nullptr;
+        const auto f=Geometry(unique,selected);
+        const auto axes=Audit(f);if(axes.is_null())return nullptr;
         if(!axes.empty()) {
             if(contrastImage.size()!=cv::Size(892,48)||contrastImage.type()!=CV_8UC3)return nullptr;
-            const auto f=Geometry(resolved,selected);const double width=f["width"];Json additions=resolved;
+            const double width=f["width"];Json additions=resolved;
             auto expected=selected["xy"];
             for(const auto&axisValue:axes) {
                 const int axis=axisValue.get<int>();if(expected[axis].get<int>()<=0)return nullptr;
@@ -270,12 +365,13 @@ Json Select(const Json& raw,const Json& contrast,const cv::Mat& contrastImage,bo
                 const auto unique=Unique(signs);if(unique.size()!=1)return nullptr;
                 additions.push_back(unique[0]);expected[axis]=-expected[axis].get<int>();
             }
-            selected=Decode(additions);if(selected.is_null()||selected["xy"]!=expected)return nullptr;
-            const auto post=Audit(additions,selected);if(post.is_null()||!post.empty())return nullptr;
+            std::vector<Json> recovered;
+            selected=DecodeWithBoxes(additions,recovered);if(selected.is_null()||selected["xy"]!=expected)return nullptr;
+            const auto post=Audit(Geometry(recovered,selected));if(post.is_null()||!post.empty())return nullptr;
         }
     }
     // Validate every mandatory observed digit on the independent preprocessing route.
-    const auto unique=Unique(resolved);std::vector<double> widths;
+    std::vector<double> widths;
     for(const auto&o:unique)if(Digit(o))widths.push_back(V(o,2)-V(o,0));
     bool any=false;
     const double digitWidth=Median(widths);
@@ -285,6 +381,14 @@ Json Select(const Json& raw,const Json& contrast,const cv::Mat& contrastImage,bo
         // image to its left to distinguish it from a minus cut off by the ROI.
         if(!contrastImage.empty() && Digit(group.front()) && selected["xy"][0]>=0 &&
            V(group.front(),0)-4 < .84*digitWidth)return nullptr;
+        // Uniform resampling preserves the calibrated first-digit offset in
+        // glyph widths once we subtract its horizontal translation. Preserve
+        // the unsigned-X audit even when both views miss the same thin minus.
+        if (sampling && sampling->checkMargin && Digit(group.front()) && selected["xy"][0] >= 0) {
+            const double x = (Center(group.front()) - 4 - sampling->translation) / digitWidth;
+            if (sampling->calibrated && (x < kUnsignedXMin || x > kUnsignedXMax)) return nullptr;
+            if (!sampling->calibrated && x >= kSignedXMin && x <= kSignedXMax) return nullptr;
+        }
         const auto comma=std::find_if(group.begin(),group.end(),[](const Json& o){return Char(o)==",";});
         if(comma!=group.end() && std::next(comma)!=group.end()) {
             const auto& yStart=*std::next(comma);
@@ -295,7 +399,16 @@ Json Select(const Json& raw,const Json& contrast,const cv::Mat& contrastImage,bo
         int commas=0;
         for(const auto&o:group) {
             if(Char(o)==","&&++commas==2)break;
-            if(Digit(o)){any=true;if(!Dominant(o,contrast))return nullptr;}
+            if(Digit(o)){
+                any=true;
+                if(!Dominant(o,contrast))return nullptr;
+                if (sampling && sampling->disputes) {
+                    const double sourceX = 4 + (Center(o)-4-sampling->translation)/sampling->horizontalGain;
+                    for (const auto& dispute : *sampling->disputes)
+                        if (dispute.weakerDigit==Char(o) && Score(o)<dispute.competingScore &&
+                            std::abs(sourceX-dispute.center)<.35*dispute.width) return nullptr;
+                }
+            }
         }
     }
     return any?selected:Json(nullptr);

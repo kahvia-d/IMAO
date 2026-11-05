@@ -1,25 +1,25 @@
-id,video,frame,label,x,y
-0-0,Desktop 2026.10.18 - 14.52.28.01.mp4,286,present,-1206,-6682
-0-1,Desktop 2026.10.18 - 14.52.28.01.mp4,859,present,-1208,-6689
-0-2,Desktop 2026.10.18 - 14.52.28.01.mp4,1432,unknown,,
-0-3,Desktop 2026.10.18 - 14.52.28.01.mp4,2006,present,-1216,-6668
-0-4,Desktop 2026.10.18 - 14.52.28.01.mp4,2579,present,-1211,-6713
-0-5,Desktop 2026.10.18 - 14.52.28.01.mp4,3152,present,-1191,-6748
-1-0,Wuthering Waves 2026.09.08 - 22.44.23.01.mp4,996,absent,,
-1-1,Wuthering Waves 2026.09.08 - 22.44.23.01.mp4,2990,absent,,
-1-2,Wuthering Waves 2026.09.08 - 22.44.23.01.mp4,4983,present,-7953,210
-1-3,Wuthering Waves 2026.09.08 - 22.44.23.01.mp4,6977,absent,,
-1-4,Wuthering Waves 2026.09.08 - 22.44.23.01.mp4,8970,absent,,
-1-5,Wuthering Waves 2026.09.08 - 22.44.23.01.mp4,10964,present,-7953,210
-2-0,Wuthering Waves 2026.09.09 - 19.18.30.02.mp4,27,present,16,912
-2-1,Wuthering Waves 2026.09.09 - 19.18.30.02.mp4,81,present,16,912
-2-2,Wuthering Waves 2026.09.09 - 19.18.30.02.mp4,135,present,16,912
-2-3,Wuthering Waves 2026.09.09 - 19.18.30.02.mp4,189,present,16,912
-2-4,Wuthering Waves 2026.09.09 - 19.18.30.02.mp4,243,present,14,913
-2-5,Wuthering Waves 2026.09.09 - 19.18.30.02.mp4,297,present,11,913
-3-0,Wuthering Waves 2026.10.05 - 16.30.36.08.mp4,16,present,-869,438
-3-1,Wuthering Waves 2026.10.05 - 16.30.36.08.mp4,48,present,-869,438
-3-2,Wuthering Waves 2026.10.05 - 16.30.36.08.mp4,81,present,-869,438
-3-3,Wuthering Waves 2026.10.05 - 16.30.36.08.mp4,113,present,-869,438
-3-4,Wuthering Waves 2026.10.05 - 16.30.36.08.mp4,146,present,-869,438
-3-5,Wuthering Waves 2026.10.05 - 16.30.36.08.mp4,178,present,-869,438
+id,video,frame,label,x,y,decode,nominal_sha256
+0-0,Desktop 2026.10.18 - 14.52.28.01.mp4,286,present,-1206,-6682,seek,e801719ed1e468e09e27916e0aed80afbe652369daf5abc57f3de81aff548cd2
+0-1,Desktop 2026.10.18 - 14.52.28.01.mp4,859,present,-1208,-6689,seek,0e99d1b3fc46dadd0cd1dca396c041a4ea1519a394ddf3937402ef4ffa5b23c0
+0-2,Desktop 2026.10.18 - 14.52.28.01.mp4,1432,unknown,,,seek,0228107632dde3f07e8d17d19e7282fd88a8e7d3e83f4bdcc41c7bf616abf5a8
+0-3,Desktop 2026.10.18 - 14.52.28.01.mp4,2006,present,-1216,-6668,seek,229a02ad525703112257908be783d444b7d2b51256641714e0a0df1efa5d3e33
+0-4,Desktop 2026.10.18 - 14.52.28.01.mp4,2579,present,-1211,-6713,seek,47fdaf31ccf1a846202061bbb97138f1b7c626b682a78321a572406b71baf90d
+0-5,Desktop 2026.10.18 - 14.52.28.01.mp4,3152,present,-1191,-6748,seek,d0076bb5c1034edf04a3891f8e2f47d8a19ba70a337fc6edea33b177a0336275
+1-0,Wuthering Waves 2026.09.08 - 22.44.23.01.mp4,996,absent,,,seek,42857c39f4bb4aacf8abd04b99d9a345ee6ae1db4dc119cac2a0e42ec18e67a3
+1-1,Wuthering Waves 2026.09.08 - 22.44.23.01.mp4,2990,absent,,,seek,101e7c5ce38fb13889a9a0ad24f902ede84b419c5946cb586b283ff5a3f3aea6
+1-2,Wuthering Waves 2026.09.08 - 22.44.23.01.mp4,4983,present,-7953,210,seek,783b40f7ea4e5450f94871ddfe73cff008cbe8674a772adc8f5fd606b8a222ea
+1-3,Wuthering Waves 2026.09.08 - 22.44.23.01.mp4,6977,absent,,,seek,f297879badaa7c0f052507695d155fbf8b5cce0bfb068a6461cd7583ddfc2782
+1-4,Wuthering Waves 2026.09.08 - 22.44.23.01.mp4,8970,absent,,,seek,b769a1072c4288f60a421f8e6398e5a2109d3452cfd80c45348ad24a6c836b46
+1-5,Wuthering Waves 2026.09.08 - 22.44.23.01.mp4,10964,present,-7953,210,seek,1a3463944de7160bdda61e5d49c2fa97699dbd4e787a60f33a6c8b17447c3156
+2-0,Wuthering Waves 2026.09.09 - 19.18.30.02.mp4,27,present,16,912,seek,94f0f3f055f4057ce69cb98cadb69f9f48795525eef47640b194091b9d921070
+2-1,Wuthering Waves 2026.09.09 - 19.18.30.02.mp4,81,present,16,912,seek,605a10e5c2f5a8f75a131bb5a14b2dceb36ed74b168bc63d6ad87faa745c6350
+2-2,Wuthering Waves 2026.09.09 - 19.18.30.02.mp4,135,present,16,912,seek,9f75cecbbe9cdb899f30cf6f54254b2df1a8f3664c7b1cad4723e36aafe9e65a
+2-3,Wuthering Waves 2026.09.09 - 19.18.30.02.mp4,189,present,16,912,seek,7b6f963179503593cad55fa5bda038ed9020b5a7cda427a2ab75506a308ebe0f
+2-4,Wuthering Waves 2026.09.09 - 19.18.30.02.mp4,243,present,14,913,seek,c7841549ebb9c032d72f1714a3e0a8fe9490f073daa064f802e9d973e04e0fa1
+2-5,Wuthering Waves 2026.09.09 - 19.18.30.02.mp4,297,present,11,913,seek,741bff7ae060bb7bc8d50fc4effa4c5a621cf21d3cf30e523d3ce4c653f8c07c
+3-0,Wuthering Waves 2026.10.05 - 16.30.36.08.mp4,16,present,-869,438,seek,b533906ba33eb77d4478fd7a30d28e83fe490ef65e60eabb9005bd1d3ffec32f
+3-1,Wuthering Waves 2026.10.05 - 16.30.36.08.mp4,48,present,-869,438,seek,207accf127beefaef18f4aa25d3ccbe313cd73e4dc5f1927812e72fa4c83c839
+3-2,Wuthering Waves 2026.10.05 - 16.30.36.08.mp4,81,present,-869,438,seek,6c1992c5adc0d89d7588bedca94d8352022e6a67289cca9692ec745dc18b8e0b
+3-3,Wuthering Waves 2026.10.05 - 16.30.36.08.mp4,113,present,-869,438,seek,f1cda6af8132683f528df63bebf712fb50682a091b2d6d49eabcbf33080b8e9f
+3-4,Wuthering Waves 2026.10.05 - 16.30.36.08.mp4,146,present,-869,438,seek,4ca8ca0be1967080bcde378a62e28a8ac3a5c7c5f72dba242e04d161e23e9110
+3-5,Wuthering Waves 2026.10.05 - 16.30.36.08.mp4,178,present,-869,438,seek,05c7846aa7ed18830b949eaaedad97f95482d86d00b1419f6033bcfea9158936

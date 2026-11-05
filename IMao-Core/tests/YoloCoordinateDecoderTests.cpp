@@ -24,6 +24,10 @@ int main() {
     selected=CoordinateYolo::Select(raw,raw,{},false);
     require(!selected.is_null()&&selected["xy"]==Json({-12,345})&&selected["z"].is_null());
     raw=Evidence("12,345");require(CoordinateYolo::Decode(raw).is_null());
+    require(!CoordinateYolo::CanSelectRaw(raw));
+    raw=Evidence("12,345,9");require(CoordinateYolo::CanSelectRaw(raw));
+    alternative=raw[1];alternative["char"]="7";alternative["score"]=.35;raw.push_back(alternative);
+    require(CoordinateYolo::CanSelectRaw(raw));
     // A weak box halfway between two strong repeated digits is not a third digit.
     raw=Evidence("77,345,9");
     auto bridge=raw.front();
@@ -32,6 +36,11 @@ int main() {
     raw.push_back(bridge);
     selected=CoordinateYolo::Select(raw,raw,{},false);
     require(!selected.is_null() && selected["xy"]==Json({77,345}));
+    // A weak copy of the last digit can straddle the stronger comma.
+    raw=Evidence("16,912,53");auto ghost=raw[5];ghost["score"]=.35;
+    ghost["xyxy"]={120,4,141,38};raw.push_back(ghost);
+    selected=CoordinateYolo::Select(raw,raw,{},false);
+    require(!selected.is_null() && selected["xy"]==Json({16,912}));
     raw=Evidence("2147483648,345,9");require(CoordinateYolo::Decode(raw).is_null());
     require(CoordinateYolo::Select(Json::array(),Json::array(),{},false).is_null());
     // If the crop starts at the first digit, a preceding minus could be outside it.
@@ -55,6 +64,24 @@ int main() {
     raw=Evidence("12,345,9");
     for(auto&o:raw){o["xyxy"][0]=o["xyxy"][0].get<int>()+40;o["xyxy"][2]=o["xyxy"][2].get<int>()+46;}
     require(CoordinateYolo::Select(raw,raw,cv::Mat(48,892,CV_8UC3,cv::Scalar::all(0)),true).is_null());
+    require(!CoordinateYolo::Select(raw,raw,clipped,false).is_null());
+    require(CoordinateYolo::Select(raw,raw,clipped,false,CoordinateYolo::SamplingContext{0.,true}).is_null());
+    require(CoordinateYolo::Select(raw,raw,clipped,false,CoordinateYolo::SamplingContext{0.,false}).is_null());
+    for(auto& box:raw) {
+        box["xyxy"][0] = box["xyxy"][0].get<int>()-16;
+        box["xyxy"][2] = box["xyxy"][2].get<int>()-16;
+    }
+    require(!CoordinateYolo::Select(raw,raw,clipped,false,CoordinateYolo::SamplingContext{1.,true}).is_null());
+    raw=Evidence("-12,345,9");raw[5]["score"]=.4;
+    auto ambiguous=raw;
+    alternative=raw[5];alternative["char"]="9";alternative["score"]=.6;
+    ambiguous.push_back(alternative);
+    const auto disputes=CoordinateYolo::FindDigitDisputes(ambiguous,ambiguous);
+    const CoordinateYolo::SamplingContext resampled{0.,false,false,1.,&disputes};
+    require(!CoordinateYolo::Select(raw,raw,{},false).is_null());
+    require(CoordinateYolo::Select(raw,raw,{},false,resampled).is_null());
+    raw[5]["score"]=.9;
+    require(!CoordinateYolo::Select(raw,raw,{},false,resampled).is_null());
     std::cout<<"YOLO decoder tests passed\n";
     } catch(const std::exception& e) {std::cerr<<e.what()<<'\n';return 1;}
 }

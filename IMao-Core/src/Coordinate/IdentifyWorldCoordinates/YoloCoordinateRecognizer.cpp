@@ -231,7 +231,8 @@ CoordinateYolo::RowFit DigitRow(const Json& boxes, double scale) {
 }
 template<class Observe>
 Json SelectViews(const cv::Mat& crop, bool calibrated, const CoordinateYolo::RowFit& fit,
-    const Json& raw, const Json& contrast, const Json& original, Observe observe) {
+    const Json& raw, const Json& contrast, const Json& original,
+    bool nominalSpan, Json* trace, Observe observe) {
     double left = std::numeric_limits<double>::infinity();
     for (const auto& box : raw) {
         if (box.at("score").get<double>() >= .5)
@@ -251,6 +252,8 @@ Json SelectViews(const cv::Mat& crop, bool calibrated, const CoordinateYolo::Row
     if (fit.height <= 0) return nullptr;
 
     const bool clipped = CoordinateYolo::HasDigitAtLeftBoundary(raw, contrast);
+    const auto disputes = CoordinateYolo::FindDigitDisputes(raw, contrast);
+    const double gain = 36./fit.height;
     std::vector<Json> seen;
     if (!original.is_null()) seen.push_back(original);
     const std::array<cv::Point2d,3> phases{{{0,0}, {-1.5,1}, {1.5,-1}}};
@@ -258,7 +261,13 @@ Json SelectViews(const cv::Mat& crop, bool calibrated, const CoordinateYolo::Row
         if (i+1 == phases.size() && seen.empty()) break;
         const auto aligned = CoordinateYolo::RowAlignment::Resample(crop, fit, phases[i]);
         const auto [light, enhanced] = YoloCoordinateRecognizer::Prepare(aligned);
-        const auto candidate = observe(light, enhanced, phases[i]);
+        const auto phase = phases[i];
+        const auto [first,second] = observe(light, enhanced, phase);
+        const CoordinateYolo::SamplingContext sampling{phase.x, calibrated, calibrated || nominalSpan,
+            gain*crop.rows/48., &disputes};
+        const auto candidate = CoordinateYolo::Select(first, second, enhanced, false, sampling);
+        if (trace)
+            trace->push_back({{"phase",{phase.x,phase.y}},{"raw",first},{"contrast",second},{"selected",candidate}});
         if (candidate.is_null() || (clipped && candidate["xy"][0] >= 0)) continue;
         const auto match = std::find_if(seen.begin(), seen.end(), [&](const Json& prior) {
             return prior["xy"] == candidate["xy"];
@@ -283,7 +292,11 @@ Json YoloCoordinateRecognizer::Recognize(const cv::Mat& crop, bool calibrated, J
     ReproCapture::Image("ocr-contrast", contrast, {{"calibrated", calibrated}});
     const auto rawBoxes = Detect(raw);
     const auto contrastBoxes = Detect(contrast);
-    const auto original = CoordinateYolo::Select(rawBoxes, contrastBoxes, contrast, calibrated);
+    const bool nominalSpan = alignment_.Enabled() && !calibrated &&
+        CoordinateYolo::HasNominalTextSpan(rawBoxes, raw.cols-8);
+    const auto origin = nominalSpan
+        ? std::optional<CoordinateYolo::SamplingContext>({0., false}) : std::nullopt;
+    const auto original = CoordinateYolo::Select(rawBoxes, contrastBoxes, contrast, calibrated, origin);
     const bool trace = evidence || ReproCapture::Active();
     Json record;
     Json selected = original;
@@ -297,17 +310,23 @@ Json YoloCoordinateRecognizer::Recognize(const cv::Mat& crop, bool calibrated, J
         const bool agree = (calibrated || !original.is_null()) &&
             std::abs(rawRow.height / crop.rows - .75) <= .04 && enhancedRow.height > 0 &&
             std::abs(rawRow.top-enhancedRow.top) <= 1 && std::abs(rawRow.height-enhancedRow.height) <= 1;
-        const auto fit = alignment_.Fit(crop, !rawBoxes.empty() || !contrastBoxes.empty(), agree ? &rawRow : nullptr);
+        // Contrast enhancement can amplify dark loading-screen noise into a
+        // few isolated digits. A separator or a confident glyph still keeps
+        // the full search available, as does any raw detection.
+        const bool hasEvidence = !rawBoxes.empty() || contrastBoxes.size() >= 5 ||
+            std::any_of(contrastBoxes.begin(), contrastBoxes.end(), [](const Json& box) {
+                return box.at("score").get<double>() >= .85 || box.at("char") == ",";
+            });
+        const auto fit = alignment_.Fit(crop, hasEvidence, agree ? &rawRow : nullptr);
         if (fitMs) *fitMs = std::chrono::duration<double,std::milli>(Clock::now()-fitStart).count();
         Json views = Json::array();
         selected = SelectViews(crop, calibrated, fit, rawBoxes, contrastBoxes, original,
-            [&](const cv::Mat& light, const cv::Mat& enhanced, cv::Point2d phase) {
-                const auto first = Detect(light);
-                const auto second = Detect(enhanced);
-                const auto result = CoordinateYolo::Select(first, second, enhanced, false);
-                if (trace)
-                    views.push_back({{"phase", {phase.x,phase.y}}, {"raw",first}, {"contrast",second}, {"selected",result}});
-                return result;
+            nominalSpan, trace ? &views : nullptr,
+            [&](const cv::Mat& light, const cv::Mat& enhanced, cv::Point2d) {
+                auto boxes = Detect(light);
+                // Diagnostic traces retain both routes even for an impossible prefix.
+                Json confirmed = trace || CoordinateYolo::CanSelectRaw(boxes) ? Detect(enhanced) : Json::array();
+                return std::pair{std::move(boxes),std::move(confirmed)};
             });
         if (trace)
             record["rowAlignment"] = {{"version",1}, {"top",fit.top}, {"height",fit.height},
@@ -331,15 +350,18 @@ Json YoloCoordinateRecognizer::Replay(const cv::Mat& crop, bool calibrated, cons
         alignment.at("confidence").get<double>()};
     const auto& raw = record.at("raw");
     const auto& contrast = record.at("contrast");
-    const auto original = CoordinateYolo::Select(raw, contrast, Prepare(crop).second, calibrated);
+    const auto preparedContrast = Prepare(crop).second;
+    const bool nominalSpan = !calibrated && CoordinateYolo::HasNominalTextSpan(raw, preparedContrast.cols-8);
+    const auto origin = nominalSpan ? std::optional<CoordinateYolo::SamplingContext>({0., false}) : std::nullopt;
+    const auto original = CoordinateYolo::Select(raw, contrast, preparedContrast, calibrated, origin);
     const auto& views = alignment.at("views");
     size_t index = 0;
-    auto result = SelectViews(crop, calibrated, fit, raw, contrast, original,
-        [&](const cv::Mat&, const cv::Mat& enhanced, cv::Point2d phase) {
+    auto result = SelectViews(crop, calibrated, fit, raw, contrast, original, nominalSpan, nullptr,
+        [&](const cv::Mat&, const cv::Mat&, cv::Point2d phase) {
             const auto& view = views.at(index++);
             if (view.at("phase") != Json::array({phase.x,phase.y}))
                 throw std::runtime_error("coordinate replay sampling phase mismatch");
-            return CoordinateYolo::Select(view.at("raw"), view.at("contrast"), enhanced, false);
+            return std::pair{view.at("raw"),view.at("contrast")};
         });
     if (index != views.size()) throw std::runtime_error("unused coordinate replay observations");
     return result;
