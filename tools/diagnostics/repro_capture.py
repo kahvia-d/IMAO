@@ -373,6 +373,12 @@ def inspect_session(session, output, reconstruct=False, model=None):
         crop = stages.get('ocr-crop')
         if crop and crop['recordId'] in images:
             entry['crop'] = str(images[crop['recordId']])
+        if 'rowAlignment' in observations:
+            if 'crop' not in entry:
+                issue('ocr-crop-missing', 'aligned OCR replay requires the original crop', detections, gap=True)
+                continue
+            entry['observations']['rowAlignment'] = observations['rowAlignment']
+            entry['recordedSelected'] = observations['selected']
         replay.append(entry)
         if key[:2] not in published:
             issue('publication-outside-session', 'OCR frame publication unavailable at recording boundary', detections, gap=True)
@@ -392,6 +398,14 @@ def inspect_session(session, output, reconstruct=False, model=None):
             report['modelCheck'] = {'expected': expected, 'actual': actual, 'matches': expected.lower() == actual}
             if expected.lower() != actual:
                 issue('model-mismatch', 'coordinate.onnx differs from the model recorded in this session')
+            if 'modelConfigSha256' in inner or any('rowAlignment' in e['observations'] for e in replay):
+                expected_config = inner.get('modelConfigSha256')
+                if not isinstance(expected_config, str) or len(expected_config) != 64:
+                    raise ValueError('session coordinate model configuration SHA256 is unavailable')
+                actual_config = hashlib.sha256((Path(model) / 'model.json').read_bytes()).hexdigest()
+                report['modelCheck']['configMatches'] = actual_config == expected_config.lower()
+                if not report['modelCheck']['configMatches']:
+                    issue('model-config-mismatch', 'model.json differs from the recorded coordinate configuration')
         except (OSError, ValueError) as exc:
             issue('model-unverifiable', exc)
     else:

@@ -8,6 +8,9 @@
 
 namespace CoordinateYolo {
 namespace {
+const std::regex kInteger("[+-]?[0-9]+");
+const std::regex kCoordinatePrefix("([+-]?[0-9]+),([+-]?[0-9]+),");
+const std::regex kNumberOrSign("[+-]?[0-9]+|[+-]");
 double V(const Json& o, int i) { return o.at("xyxy").at(i).get<double>(); }
 double Center(const Json& o) { return (V(o,0)+V(o,2))/2; }
 double Score(const Json& o) { return o.at("score").get<double>(); }
@@ -20,9 +23,16 @@ bool Valid(const Json& o) {
     return V(o,2)>V(o,0) && V(o,3)>V(o,1);
 }
 double IoU(const Json& a,const Json& b) {
-    const double area=std::max(0.,std::min(V(a,2),V(b,2))-std::max(V(a,0),V(b,0)))*
-        std::max(0.,std::min(V(a,3),V(b,3))-std::max(V(a,1),V(b,1)));
-    const double sum=(V(a,2)-V(a,0))*(V(a,3)-V(a,1))+(V(b,2)-V(b,0))*(V(b,3)-V(b,1))-area;
+    const auto& left = a.at("xyxy");
+    const auto& right = b.at("xyxy");
+    const double ax = left.at(0), ar = left.at(2), bx = right.at(0), br = right.at(2);
+    const double width = std::min(ar, br) - std::max(ax, bx);
+    if (width <= 0) return 0.;
+    const double ay = left.at(1), ab = left.at(3), by = right.at(1), bb = right.at(3);
+    const double height = std::min(ab, bb) - std::max(ay, by);
+    if (height <= 0) return 0.;
+    const double area = width * height;
+    const double sum = (ar-ax)*(ab-ay) + (br-bx)*(bb-by) - area;
     return sum>0 ? area/sum : 0.;
 }
 double Median(std::vector<double> x) {
@@ -35,8 +45,19 @@ std::vector<Json> Unique(const Json& items) {
     std::stable_sort(sorted.begin(),sorted.end(),[](const auto&a,const auto&b){return Score(a)>Score(b);});
     for (const auto&o:sorted) {
         bool duplicate=false;
-        for (const auto&p:unique) if (Char(o)==Char(p)&&IoU(o,p)>.45) duplicate=true;
-        if (!duplicate) unique.push_back(o);
+        bool strongerLeft=false, strongerRight=false;
+        for (const auto&p:unique) {
+            if (Char(o)!=Char(p))continue;
+            const double overlap=IoU(o,p);
+            if(overlap>.45)duplicate=true;
+            // Repeated digits can produce an extra box straddling two real glyphs.
+            // Require separate, stronger witnesses on both sides before discarding it.
+            if(Digit(o)&&overlap>.25&&Score(p)>2*Score(o)) {
+                if(Center(p)<Center(o))strongerLeft=true;
+                if(Center(p)>Center(o))strongerRight=true;
+            }
+        }
+        if (!duplicate && !(strongerLeft&&strongerRight)) unique.push_back(o);
     }
     std::stable_sort(unique.begin(),unique.end(),[](const auto&a,const auto&b){return Center(a)<Center(b);});
     return unique;
@@ -62,7 +83,7 @@ bool Conflicts(const Group& g) {
     return false;
 }
 std::optional<int> Integer(const std::string& s) {
-    if(!std::regex_match(s,std::regex("[+-]?[0-9]+")))return {};
+    if(!std::regex_match(s,kInteger))return {};
     try {const auto v=std::stoll(s);if(v>=INT32_MIN&&v<=INT32_MAX)return static_cast<int>(v);}catch(...){}
     return {};
 }
@@ -166,6 +187,15 @@ Json Audit(const Json& raw,const Json& selected) {
 }
 }
 
+bool HasDigitAtLeftBoundary(const Json& raw, const Json& contrast) {
+    for(const auto& digit:raw) {
+        if(!Digit(digit) || Score(digit)<.5)continue;
+        const double width=V(digit,2)-V(digit,0);
+        if(V(digit,0)-4 < .84*width && Dominant(digit,contrast))return true;
+    }
+    return false;
+}
+
 Json Decode(const Json& detections) {
     for(const auto&o:detections)if(!Valid(o)||Char(o).size()!=1||std::string("0123456789-,+:").find(Char(o))==std::string::npos)return nullptr;
     const auto unique=Unique(detections);std::vector<double> widths;
@@ -180,7 +210,7 @@ Json Decode(const Json& detections) {
         for(size_t i=0;i<end;++i)for(size_t j=0;j<g.size();++j)
             if(i!=j&&Char(g[i])!=Char(g[j])&&IoU(g[i],g[j])>.45)return nullptr;
         std::smatch match;const auto pt=Text(prefix);
-        if(!std::regex_match(pt,match,std::regex("([+-]?[0-9]+),([+-]?[0-9]+),")))continue;
+        if(!std::regex_match(pt,match,kCoordinatePrefix))continue;
         for(size_t c=2;c<commas.size();++c) {
             bool alternative=false;for(const auto&o:suffix)if(Char(o)!=","&&IoU(g[commas[c]],o)>.45)alternative=true;
             if(!alternative)return nullptr;
@@ -188,7 +218,7 @@ Json Decode(const Json& detections) {
         if(!Continuous(prefix,width))return nullptr;
         if(index>0) {
             const auto&p=groups[index-1];double right=0;for(const auto&o:p)right=std::max(right,V(o,2));
-            if(std::regex_match(Text(p),std::regex("[+-]?[0-9]+|[+-]"))&&V(g.front(),0)-right<=2*width)return nullptr;
+            if(std::regex_match(Text(p),kNumberOrSign)&&V(g.front(),0)-right<=2*width)return nullptr;
         }
         const auto x=Integer(match[1]),y=Integer(match[2]);if(!x||!y)continue;
         std::optional<int> z;
@@ -196,7 +226,7 @@ Json Decode(const Json& detections) {
             z=Integer(Text(suffix));
             if(index+1<groups.size()) {
                 const auto&next=groups[index+1];double right=0;for(const auto&o:g)right=std::max(right,V(o,2));
-                if(std::regex_match(Text(next),std::regex("[+-]?[0-9]+"))&&V(next.front(),0)-right<=2*width)z.reset();
+                if(std::regex_match(Text(next),kInteger)&&V(next.front(),0)-right<=2*width)z.reset();
             }
         }
         Json candidate={{"xy",{*x,*y}},{"z",z?Json(*z):Json(nullptr)},{"xyScore",MinScore(prefix)},
@@ -209,8 +239,9 @@ Json Decode(const Json& detections) {
 
 Json Select(const Json& raw,const Json& contrast,const cv::Mat& contrastImage,bool calibrated) {
     for(const auto*route:{&raw,&contrast})for(const auto&o:*route)if(!Valid(o))return nullptr;
-    Json resolved=Resolve(raw,contrast), selected=Decode(resolved);
-    if(selected.is_null())return nullptr;
+    const Json resolved=Resolve(raw,contrast), base=Decode(resolved);
+    if(base.is_null())return nullptr;
+    Json selected = base;
     if(calibrated) {
         const auto axes=Audit(resolved,selected);if(axes.is_null())return nullptr;
         if(!axes.empty()) {
@@ -244,12 +275,23 @@ Json Select(const Json& raw,const Json& contrast,const cv::Mat& contrastImage,bo
         }
     }
     // Validate every mandatory observed digit on the independent preprocessing route.
-    const auto base=Decode(resolved);if(base.is_null())return nullptr;
     const auto unique=Unique(resolved);std::vector<double> widths;
     for(const auto&o:unique)if(Digit(o))widths.push_back(V(o,2)-V(o,0));
     bool any=false;
-    for(const auto&group:Groups(unique,Median(widths))) {
+    const double digitWidth=Median(widths);
+    for(const auto&group:Groups(unique,digitWidth)) {
         if(Text(group)!=base["observedGroupText"].get<std::string>())continue;
+        // Prepare adds four pixels of border. An unsigned X needs enough real
+        // image to its left to distinguish it from a minus cut off by the ROI.
+        if(!contrastImage.empty() && Digit(group.front()) && selected["xy"][0]>=0 &&
+           V(group.front(),0)-4 < .84*digitWidth)return nullptr;
+        const auto comma=std::find_if(group.begin(),group.end(),[](const Json& o){return Char(o)==",";});
+        if(comma!=group.end() && std::next(comma)!=group.end()) {
+            const auto& yStart=*std::next(comma);
+            // In the training font the comma directly touches an unsigned Y.
+            // A sign consumes at least 0.67 digit widths in the source annotations.
+            if(Digit(yStart) && selected["xy"][1]>=0 && V(yStart,0)-V(*comma,2)>.4*digitWidth)return nullptr;
+        }
         int commas=0;
         for(const auto&o:group) {
             if(Char(o)==","&&++commas==2)break;

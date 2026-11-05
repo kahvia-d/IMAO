@@ -113,6 +113,19 @@ class InspectorTests(unittest.TestCase):
         (model / 'coordinate.onnx').write_bytes(b'model')
         self.assertTrue(self.inspect(model=model)['ok'])
 
+    def test_alignment_configuration_hash_checked_independently(self):
+        model = Path(self.tmp.name) / 'models'
+        model.mkdir()
+        (model / 'coordinate.onnx').write_bytes(b'model')
+        metadata_file = self.root / 'metadata.json'
+        metadata = json.loads(metadata_file.read_text(encoding='utf-8'))
+        metadata['metadata']['modelConfigSha256'] = hashlib.sha256(b'original recipe').hexdigest()
+        metadata_file.write_text(json.dumps(metadata), encoding='utf-8')
+        (model / 'model.json').write_bytes(b'other recipe')
+        self.assertIn('model-config-mismatch', {e['code'] for e in self.inspect(model=model)['errors']})
+        (model / 'model.json').write_bytes(b'original recipe')
+        self.assertTrue(self.inspect(model=model)['modelCheck']['configMatches'])
+
     def test_pending_request_reported_at_stop_boundary(self):
         self.records.pop()
         self.save()

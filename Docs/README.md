@@ -1,6 +1,7 @@
 # 文档索引
 
 - [研究成果保留与恢复入口](ResearchArtifactRetention_zh-Hans.md)：最终成果、有效素材与流程留档；清理范围、保留清单及恢复边界。
+- [坐标 YOLO 裁剪鲁棒性](CoordinateYoloCropRobustness_zh-Hans.md)：几何增强权重、原生校正、实机扰动回放与评分边界。
 - [坐标 YOLO 研究续接](CoordinateYoloResume_zh-Hans.md)：当前权重谱系、有效原图/标签、环境与训练、导出、回归入口。
 - [不可探测点位新视频工作流](MarkerDetectabilityWorkflow_zh-Hans.md)：新批次隔离、时间轴与身份审核、名录维护及已完成媒体清理。
 

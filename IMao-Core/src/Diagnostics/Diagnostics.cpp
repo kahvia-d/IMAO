@@ -51,6 +51,8 @@ bool Diagnostics::SetCaptureEnabled(bool enabled) {
     const auto model = ResourceSnapshotContext::BaselineRoot() / "models" / "coordinate-yolo" / "coordinate.onnx";
     try { metadata["modelSha256"] = ModelSha256(model); }
     catch (const std::exception& error) { metadata["modelHashError"] = error.what(); }
+    try { metadata["modelConfigSha256"] = ModelSha256(model.parent_path() / "model.json"); }
+    catch (const std::exception& error) { metadata["modelConfigHashError"] = error.what(); }
     return ReproCapture::Start(StructuredLogger::DiagnosticsDirectory(), metadata);
 }
 void Diagnostics::Record(const std::string& eventName, const std::string& details) {

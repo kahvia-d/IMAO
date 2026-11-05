@@ -1,8 +1,12 @@
 #include "Coordinate/IdentifyWorldCoordinates/YoloCoordinateRecognizer.h"
 #include "Diagnostics/ReproCapture.h"
+#include "Runtime/ReadoutWorkSchedule.h"
 #include <opencv2/imgcodecs.hpp>
+#include <chrono>
 #include <fstream>
 #include <iostream>
+#include <tuple>
+#include <thread>
 #include <Windows.h>
 #include <psapi.h>
 #pragma comment(lib, "psapi.lib")
@@ -59,15 +63,59 @@ int main(int argc,char**argv) {
             sample("model-released");
             return 0;
         }
-        if(argc!=5)throw std::runtime_error("Usage: IMaoCoordinateYolo decode|infer model-directory manifest.json report.json");
+        if(argc!=5)throw std::runtime_error("Usage: IMaoCoordinateYolo decode|infer|recognize|recognize-paced|preprocess model-directory manifest.json report.json");
         std::ifstream file{std::filesystem::path(argv[3])};CoordinateYolo::Json manifest;file>>manifest;
         std::unique_ptr<YoloCoordinateRecognizer> net;
         const bool infer=std::string(argv[1])=="infer";
-        if(infer)net=std::make_unique<YoloCoordinateRecognizer>(std::filesystem::path(argv[2]));
+        const bool paced=std::string(argv[1])=="recognize-paced";
+        const bool recognize=paced || std::string(argv[1])=="recognize";
+        auto nextSubmission=std::chrono::steady_clock::now();
+        if(infer||recognize)net=std::make_unique<YoloCoordinateRecognizer>(std::filesystem::path(argv[2]));
         CoordinateYolo::Json rows=CoordinateYolo::Json::array();int count=0;
         for(const auto&row:manifest) {
-            const auto contrast=cv::imread(row["images"]["contrast"].get<std::string>());
-            if(contrast.empty())throw std::runtime_error("Missing contrast image");
+            if(row.contains("observations") && row.at("observations").contains("rowAlignment") &&
+               (infer || std::string(argv[1])=="decode")) {
+                const auto crop=cv::imread(row.at("crop").get<std::string>(),cv::IMREAD_UNCHANGED);
+                const bool calibrated=row.value("calibrated",false);
+                CoordinateYolo::Json observations=row.at("observations");
+                auto selected = infer ? net->Recognize(crop,calibrated,&observations)
+                                      : YoloCoordinateRecognizer::Replay(crop,calibrated,observations);
+                rows.push_back({{"id",row.at("id")},{"selected",selected},{"detections",observations}});
+                ++count;
+                continue;
+            }
+            if(recognize) {
+                const auto crop=cv::imread(row.at("crop").get<std::string>(),cv::IMREAD_UNCHANGED);
+                if (paced) std::this_thread::sleep_until(nextSubmission);
+                const auto start=std::chrono::steady_clock::now();
+                if (paced) nextSubmission=start+ReadoutWorkSchedule::SubmissionInterval();
+                CoordinateYolo::Json evidence;
+                const bool profile = row.value("profile",false);
+                double fitMs = 0.;
+                const auto result=net->Recognize(crop,row.value("calibrated",false),
+                    profile ? &evidence : nullptr,profile ? &fitMs : nullptr);
+                const auto elapsed=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
+                rows.push_back({{"id",row.at("id")},{"selected",result},{"recognitionMs",elapsed}});
+                if (profile && evidence.contains("rowAlignment")) {
+                    const auto& fit = evidence.at("rowAlignment");
+                    rows.back()["fitMs"] = fitMs;
+                    rows.back()["additionalViews"] = fit.at("views").size();
+                    rows.back()["fitScore"] = fit.at("confidence");
+                }
+                if(++count%250==0)std::cout<<count<<" frames\n"<<std::flush;
+                continue;
+            }
+            cv::Mat raw, contrast;
+            const bool fromCrop = row.contains("crop") && !row.contains("images");
+            std::chrono::steady_clock::time_point started;
+            if (fromCrop) {
+                const auto crop = cv::imread(row.at("crop").get<std::string>(), cv::IMREAD_UNCHANGED);
+                started = std::chrono::steady_clock::now();
+                std::tie(raw, contrast) = YoloCoordinateRecognizer::Prepare(crop);
+            } else {
+                contrast = cv::imread(row.at("images").at("contrast").get<std::string>());
+                if(contrast.empty())throw std::runtime_error("Missing contrast image");
+            }
             if (std::string(argv[1]) == "preprocess") {
                 const auto crop = cv::imread(row["crop"].get<std::string>());
                 const auto expectedRaw = cv::imread(row["images"]["raw"].get<std::string>());
@@ -77,14 +125,17 @@ int main(int argc,char**argv) {
                     throw std::runtime_error("Preprocessing pixel mismatch: " + row["id"].get<std::string>());
                 rows.push_back({{"id",row["id"]},{"samePixels",true}}); ++count; continue;
             }
-            auto observations=row["observations"];
+            CoordinateYolo::Json observations;
+            if(!infer)observations=row.at("observations");
             if(infer) {
-                const auto raw=cv::imread(row["images"]["raw"].get<std::string>());
+                if(!fromCrop)raw=cv::imread(row["images"]["raw"].get<std::string>());
                 if(raw.empty())throw std::runtime_error("Missing raw image");
                 observations={{"raw",net->Detect(raw)},{"contrast",net->Detect(contrast)}};
             }
             const auto selected=CoordinateYolo::Select(observations["raw"],observations["contrast"],contrast,row.value("calibrated",false));
             rows.push_back({{"id",row["id"]},{"selected",selected},{"detections",observations}});
+            if(fromCrop && infer)
+                rows.back()["recognitionMs"]=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
             if(++count%250==0)std::cout<<count<<" frames\n"<<std::flush;
         }
         if(net) std::cout << "Runtime " << net->RuntimeInfo().dump() << std::endl;

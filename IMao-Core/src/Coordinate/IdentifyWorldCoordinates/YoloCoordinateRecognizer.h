@@ -1,5 +1,6 @@
 #pragma once
 #include "YoloCoordinateDecoder.h"
+#include "CoordinateRowAlignment.h"
 #include <filesystem>
 #include <memory>
 
@@ -10,7 +11,9 @@ public:
     YoloCoordinateRecognizer(const YoloCoordinateRecognizer&) = delete;
     YoloCoordinateRecognizer& operator=(const YoloCoordinateRecognizer&) = delete;
     CoordinateYolo::Json Detect(const cv::Mat& normalizedBgr);
-    CoordinateYolo::Json Recognize(const cv::Mat& crop, bool calibrated);
+    CoordinateYolo::Json Recognize(const cv::Mat& crop, bool calibrated,
+        CoordinateYolo::Json* evidence = nullptr, double* fitMs = nullptr);
+    static CoordinateYolo::Json Replay(const cv::Mat& crop, bool calibrated, const CoordinateYolo::Json& record);
     CoordinateYolo::Json RuntimeInfo() const;
     static cv::Rect Region(cv::Size frame);
     static std::pair<cv::Mat,cv::Mat> Prepare(const cv::Mat& crop);
@@ -18,6 +21,7 @@ private:
     struct State;
     std::unique_ptr<State> state_;
     std::filesystem::path directory_;
+    CoordinateYolo::RowAlignment alignment_;
     bool directMl_ = false;
     std::string requested_ = "cpu", fallback_;
     int adapter_ = 0;

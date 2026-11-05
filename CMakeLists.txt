@@ -484,6 +484,7 @@ enable_testing()
 
 add_executable(IMaoOcrDependencyTests
     IMao-Core/tests/OcrDependencyTests.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateRowAlignment.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateRecognizer.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateDecoder.cpp)
 set_target_properties(IMaoOcrDependencyTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
@@ -501,6 +502,7 @@ add_test(NAME IMaoOcrRuntimeStatusTests COMMAND IMaoOcrRuntimeStatusTests)
 add_executable(IMaoCoordinateRuntimeTests
     IMao-Core/tests/CoordinateRuntimeTests.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/IdentifyWorldCoordinates.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateRowAlignment.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateRecognizer.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateDecoder.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp
@@ -659,6 +661,7 @@ add_test(NAME IMaoMultiSceneViewportTests COMMAND IMaoVisualRegression --scene-s
 add_executable(IMaoCoordinateRegression
     IMao-Core/tools/CoordinateRegression/main.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/IdentifyWorldCoordinates.cpp
+    IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateRowAlignment.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateRecognizer.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/YoloCoordinateDecoder.cpp
     IMao-Core/src/Coordinate/IdentifyWorldCoordinates/CoordinateCandidate.cpp
