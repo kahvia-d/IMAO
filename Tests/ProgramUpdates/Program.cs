@@ -11,6 +11,12 @@ using IMao_WinUI.Core.Updates;
 // Shared by the child fixture and the test that reads the launcher log, so the two cannot drift.
 const string stderrMarker = "fixture-child-stderr-tail";
 
+if (args.FirstOrDefault() == "benchmark-verification")
+{
+    await VerificationTests.Benchmark(args[1]);
+    return 0;
+}
+
 if (args.FirstOrDefault() == "worker")
 {
     File.WriteAllText(args[1], Environment.ProcessId.ToString());
@@ -202,6 +208,7 @@ if (args.FirstOrDefault() == "live-program")
     return 0;
 }
 var output = Path.GetFullPath(args[0]); Directory.CreateDirectory(output);
+await VerificationTests.Run(output);
 var passed = new List<string>();
 async Task Test(string name, Func<Task> action) { await action(); passed.Add(name); Console.WriteLine("PASS " + name); }
 void Assert(bool value, string reason = "assertion") { if (!value) throw new Exception(reason); }
@@ -733,11 +740,28 @@ await Test("installed file tampering is detected before activation", async () =>
     await store.RequestRestartAsync();
     Assert((await store.BeginLaunchAsync()).Id == "" && !store.ReadState().Restart, "corrupt pending update must not relaunch fallback repeatedly");
 });
+await Test("cancelled BeginLaunch records timing and never starts a child", async () =>
+{
+    var store = Store();
+    await using var gate = await UpdateStorage.LockAsync(store.Root, default);
+    using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+    bool started = false;
+    try
+    {
+        await new ProgramLauncher(store, path => { started = true; return Child(path); }).RunAsync(cancellation.Token);
+        throw new Exception("Cancelled launch was accepted");
+    }
+    catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+    var timings = await File.ReadAllTextAsync(Path.Combine(store.Root, "launcher.log"));
+    Assert(!started && timings.Contains("phase=begin-launch") && timings.Contains("phase=validation-failed") && timings.Contains("elapsed_ms="));
+});
 await Test("real child process handshake commits only after reporting matching health", async () =>
 {
     var store = Store(); await store.PrepareAsync(envelope, Download);
     await new ProgramLauncher(store, path => Child(path), TimeSpan.FromSeconds(10)).RunAsync();
     Assert(store.ReadState().Current != "" && store.ReadState().Trial is null);
+    var timings = await File.ReadAllTextAsync(Path.Combine(store.Root, "launcher.log"));
+    Assert(timings.Contains("phase=validated") && timings.Contains("phase=child-started") && timings.Contains("phase=healthy") && timings.Contains("elapsed_ms="), "successful launches record phase timings");
 });
 await Test("real candidate process crash restores old program without a retry loop", async () =>
 {
@@ -755,6 +779,7 @@ await Test("a child that dies before the handshake leaves its exit code and stde
     var log = await File.ReadAllTextAsync(Path.Combine(store.Root, "launcher.log"));
     Assert(log.Contains("exit=0x00000011"), "the child's own exit code belongs in the launcher log: " + log);
     Assert(log.Contains(stderrMarker), "the child's stderr tail belongs in the launcher log: " + log);
+    Assert(log.Contains("phase=failed") && log.Contains("elapsed_ms="), "failed launches record elapsed time");
     Assert(launcher.LastFailure.Contains("0x00000011"), "the dialog detail must name the exit code: " + launcher.LastFailure);
 });
 await Test("a child this launcher had to kill is not reported with an exit code", async () =>

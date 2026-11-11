@@ -62,7 +62,19 @@ public sealed class ProgramLauncher
         while (true)
         {
             ct.ThrowIfCancellationRequested();
-            var launch = await store.BeginLaunchAsync(ct);
+            var elapsed = Stopwatch.StartNew();
+            var attempt = Guid.NewGuid().ToString("N");
+            async Task Timing(string phase)
+            {
+                try { await File.AppendAllTextAsync(Path.Combine(store.Root, "launcher.log"), $"{DateTimeOffset.UtcNow:O} attempt={attempt} phase={phase} elapsed_ms={elapsed.ElapsedMilliseconds}\n", CancellationToken.None); }
+                catch (IOException) { } catch (UnauthorizedAccessException) { }
+            }
+            await Timing("begin-launch");
+            (string Id, bool Trial) launch;
+            try { launch = await store.BeginLaunchAsync(ct); }
+            catch { await Timing("validation-failed"); throw; }
+            // BeginLaunch includes signature, complete file verification and recovery/state transitions.
+            await Timing("validated");
             var directory = store.AppDirectory(launch.Id);
             var build = UpdateStorage.Read<BuildInfo>(Path.Combine(directory, "build-info.json"));
             var name = "IMao.ProgramHealth." + Guid.NewGuid().ToString("N");
@@ -83,6 +95,7 @@ public sealed class ProgramLauncher
             try
             {
                 if (!child.Start()) throw new IOException("无法启动程序。");
+                await Timing("child-started");
                 if (start.RedirectStandardError) errorOutput = DrainTailAsync(child.StandardError);
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(healthTimeout);
                 var health = ReadHealthAsync(pipe, child, nonce, build.AppVersion, timeout.Token);
@@ -92,10 +105,12 @@ public sealed class ProgramLauncher
                 if (child.HasExited) throw new IOException("程序在启动确认时退出。");
                 if (launch.Trial) await store.ConfirmHealthyAsync(launch.Id, ct);
                 using (var writer = new StreamWriter(pipe, leaveOpen: true) { AutoFlush = true }) await writer.WriteLineAsync("accepted");
+                await Timing("healthy");
                 await exit;
             }
             catch (Exception error)
             {
+                await Timing("failed");
                 // Read the exit code before killing anything: a child that exited on its own carries the reason
                 // (0xC000027B is a stowed WinRT/XAML exception, 0xC0000135 a missing DLL, 0xE0434352 a managed
                 // exception), while one this launcher has to kill must never be reported as if it had chosen to

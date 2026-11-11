@@ -24,7 +24,9 @@ public partial class App : Application
 {
     private FileStream? programLease;
     private bool closing, closeApproved;
+    private readonly CancellationTokenSource startupCancellation = new();
     public static bool ResourcesInitialized { get; private set; }
+    public static bool RuntimeServicesInitialized { get; private set; }
     // The .NET Generic Host provides dependency injection, configuration, logging, and other services.
     // https://docs.microsoft.com/dotnet/core/extensions/generic-host
     // https://docs.microsoft.com/dotnet/core/extensions/dependency-injection
@@ -151,67 +153,112 @@ public partial class App : Application
 
         base.OnLaunched(args);
 
+        var startupTimer = Stopwatch.StartNew();
+        var preparationView = new StartupPreparationView();
+        MainWindow.Content = preparationView;
+        preparationView.AttachTitleBar(MainWindow);
+        AppTitlebar = preparationView.TitleBar;
+        MainWindow.Closed += (_, _) => startupCancellation.Cancel();
+        MainWindow.AppWindow.Closing += (_, _) =>
+        {
+            // Before resources are published there is nothing to shut down. In particular, do not
+            // resolve CoreHostService just to close: its constructor captures the resource session.
+            if (!RuntimeServicesInitialized) { closing = true; startupCancellation.Cancel(); }
+        };
+        MainWindow.Activate();
+        Trace($"startup-window-activated elapsedMs={startupTimer.ElapsedMilliseconds}");
         try
         {
             if (ProgramLaunchSession.IsManaged) programLease = ProgramLauncher.AcquireChildLease(installRoot);
-            // This runs before the window is interactive, so it is the one place a slow or blocked step
-            // looks like a frozen program. Record how long it takes and what it did, because "the core keeps
-            // loading" is otherwise indistinguishable from a hang.
-            var startupTimer = System.Diagnostics.Stopwatch.StartNew();
-            Trace($"resource-init-start root={installRoot}");
-            var snapshots = GetService<ResourceSnapshotService>();
-            await snapshots.InitializeAsync();
+            var resourceTimer = new Stopwatch();
+            var snapshots = await StartupPreparation.RunAsync(async () =>
+            {
+                await preparationView.WaitForFirstFrameAsync(startupCancellation.Token);
+                Trace($"startup-first-frame elapsedMs={startupTimer.ElapsedMilliseconds}");
+            }, async ct =>
+            {
+                resourceTimer.Start();
+                Trace($"resource-init-start root={installRoot}");
+                var ready = Host.Services.GetRequiredService<ResourceSnapshotService>();
+                await ready.InitializeAsync(ct).ConfigureAwait(false);
+                return ready;
+            }, startupCancellation.Token);
             ResourceSessionPaths.Initialize(snapshots);
             ResourcesInitialized = true;
-            Trace($"resource-init-done elapsedMs={startupTimer.ElapsedMilliseconds} snapshot={snapshots.Current.SnapshotId} "
+            Trace($"resource-init-done elapsedMs={resourceTimer.ElapsedMilliseconds} startupElapsedMs={startupTimer.ElapsedMilliseconds} snapshot={snapshots.Current.SnapshotId} "
                 + $"packages={snapshots.CurrentRuntimeSnapshot.Packages.Count} pending={snapshots.HasPending} notice={snapshots.LastNotice}");
+        }
+        catch (OperationCanceledException) when (startupCancellation.IsCancellationRequested)
+        {
+            Trace("startup-cancelled-before-resources-ready");
+            return;
         }
         catch (Exception error)
         {
             Trace("resource-init-failed " + error);
-            MainWindow.Content = new TextBlock { Text = "地图资源初始化失败：" + error.Message + "\n请重新安装完整程序包后再试。", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(32) };
-            MainWindow.Activate();
+            if (!startupCancellation.IsCancellationRequested) preparationView.ShowFailure(error);
             return;
         }
-        // No notification registration here, on purpose. This program never shows one, Microsoft documents
-        // app notifications as unsupported for elevated processes - this manifest requires admin - and an
-        // unpackaged self-contained app needs the Windows App Runtime Main/Singleton packages for them. On
-        // 2026-10-12 a machine that had never held those packages turned the single registration call into
-        // a stowed exception that killed the process before any window or log could exist, in every
-        // released version. The scaffolding is gone rather than guarded: nothing ever used it.
-        _ = GetService<MarkerGuideCoordinator>();
-        var mapTools = GetService<MapToolsController>();
-        var gamepad = GetService<GamepadInputService>();
-        // 键盘侧的启停快捷键必须在**核心已停止**时也活着，所以它住在外壳里（见该服务注释）。
-        var explorationHotkey = GetService<ExplorationHotkeyService>();
-        MainWindow.Closed += (_, _) => { mapTools.Dispose(); explorationHotkey.Dispose(); gamepad.Dispose(); };
-        MainWindow.AppWindow.Closing += async (_, e) =>
+        try
         {
-            if (closeApproved) return;
-            e.Cancel = true;
-            await CloseCleanlyAsync();
-        };
-        var updates = GetService<UpdateUiController>();
-        if (ProgramLaunchSession.IsManaged)
-        {
-            try
+            // No notification registration here, on purpose. This program never shows one, Microsoft documents
+            // app notifications as unsupported for elevated processes - this manifest requires admin - and an
+            // unpackaged self-contained app needs the Windows App Runtime Main/Singleton packages for them. On
+            // 2026-10-12 a machine that had never held those packages turned the single registration call into
+            // a stowed exception that killed the process before any window or log could exist, in every
+            // released version. The scaffolding is gone rather than guarded: nothing ever used it.
+            _ = GetService<MarkerGuideCoordinator>();
+            var mapTools = GetService<MapToolsController>();
+            var gamepad = GetService<GamepadInputService>();
+            // 键盘侧的启停快捷键必须在**核心已停止**时也活着，所以它住在外壳里（见该服务注释）。
+            var explorationHotkey = GetService<ExplorationHotkeyService>();
+            MainWindow.Closed += (_, _) => { mapTools.Dispose(); explorationHotkey.Dispose(); gamepad.Dispose(); };
+            var updates = GetService<UpdateUiController>();
+            MainWindow.AppWindow.Closing += async (_, e) =>
             {
-                var keys = JsonSerializer.Deserialize<TrustedUpdateKeys>(File.ReadAllBytes(Path.Combine(installRoot, "Assets", "Updates", "trusted-keys.json")), UpdateJson.Options)!;
-                updates.AttachProgramUpdater(new ProgramUpdateStore(installRoot, keys.Keys, ResourceUpdateBootstrap.ReadBuildInfo().AppVersion), () => CloseCleanlyAsync(skipUpdateWait: true));
+                if (closeApproved) return;
+                e.Cancel = true;
+                await CloseCleanlyAsync();
+            };
+            RuntimeServicesInitialized = true;
+            if (ProgramLaunchSession.IsManaged)
+            {
+                try
+                {
+                    var keys = JsonSerializer.Deserialize<TrustedUpdateKeys>(File.ReadAllBytes(Path.Combine(installRoot, "Assets", "Updates", "trusted-keys.json")), UpdateJson.Options)!;
+                    updates.AttachProgramUpdater(new ProgramUpdateStore(installRoot, keys.Keys, ResourceUpdateBootstrap.ReadBuildInfo().AppVersion), () => CloseCleanlyAsync(skipUpdateWait: true));
+                }
+                catch (Exception error) { updates.ShowError(error); }
             }
-            catch (Exception error) { updates.ShowError(error); }
+            await GetService<IActivationService>().ActivateAsync(args, startupCancellation.Token);
+            startupCancellation.Token.ThrowIfCancellationRequested();
+            Trace($"startup-shell-ready elapsedMs={startupTimer.ElapsedMilliseconds}");
+            GetService<CoreHostService>().PropertyChanged += (_, change) =>
+            {
+                if (change.PropertyName == "ResourceActivation") updates.Refresh();
+            };
+            _ = updates.CheckAsync(automatic: true);
+            // Players must not have to run a script: keep the Native Messaging host
+            // registered for the current user on every start (best effort, per-user only).
+            _ = Task.Run(() => { try { KuroBridgeRegistration.EnsureRegistered(); } catch { } });
+            _ = GetService<KuroAutoSyncService>().InitializeAsync();
+            if (ProgramLaunchSession.IsManaged) _ = ConfirmProgramHealthAsync(updates);
         }
-        await App.GetService<IActivationService>().ActivateAsync(args);
-        GetService<CoreHostService>().PropertyChanged += (_, change) =>
+        catch (OperationCanceledException) when (startupCancellation.IsCancellationRequested)
         {
-            if (change.PropertyName == "ResourceActivation") updates.Refresh();
-        };
-        _ = updates.CheckAsync(automatic: true);
-        // Players must not have to run a script: keep the Native Messaging host
-        // registered for the current user on every start (best effort, per-user only).
-        _ = Task.Run(() => { try { KuroBridgeRegistration.EnsureRegistered(); } catch { } });
-        _ = GetService<KuroAutoSyncService>().InitializeAsync();
-        if (ProgramLaunchSession.IsManaged) _ = ConfirmProgramHealthAsync(updates);
+            Trace("startup-shell-cancelled-on-close");
+        }
+        catch (Exception error)
+        {
+            Trace("startup-shell-failed " + error);
+            if (!startupCancellation.IsCancellationRequested)
+            {
+                preparationView.ShowFailure(error);
+                MainWindow.Content = preparationView;
+                preparationView.AttachTitleBar(MainWindow);
+                AppTitlebar = preparationView.TitleBar;
+            }
+        }
     }
 
     private async Task ConfirmProgramHealthAsync(UpdateUiController updates)
@@ -221,18 +268,21 @@ public partial class App : Application
             var snapshots = GetService<ResourceSnapshotService>();
             if (Environment.GetEnvironmentVariable("IMAO_LAUNCH_TRIAL") == "1")
             {
-                using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(4));
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(startupCancellation.Token);
+                timeout.CancelAfter(TimeSpan.FromMinutes(4));
                 var core = GetService<CoreHostService>();
                 await core.EnsureStartedAsync(timeout.Token);
                 while (!core.IsConnected || !core.Status.ResourcesReady || core.Status.CoreState == "faulted" || core.Status.ResourceSnapshotId != snapshots.Current.SnapshotId)
                     await Task.Delay(100, timeout.Token);
                 await snapshots.ReportHealthyAsync(snapshots.Current.SnapshotId, timeout.Token);
             }
-            await ProgramLaunchSession.ReportHealthyAsync(ResourceUpdateBootstrap.ReadBuildInfo().AppVersion, snapshots.Current.SnapshotId);
+            startupCancellation.Token.ThrowIfCancellationRequested();
+            await ProgramLaunchSession.ReportHealthyAsync(ResourceUpdateBootstrap.ReadBuildInfo().AppVersion, snapshots.Current.SnapshotId, startupCancellation.Token);
             updates.Refresh();
         }
         // The last silent path in startup. On the machine this was written for, nothing else had been
         // recorded yet, so a failure here has to survive the process that hit it.
+        catch (OperationCanceledException) when (startupCancellation.IsCancellationRequested) { Trace("program-health-cancelled-on-close"); }
         catch (Exception error) { Trace("program-health-failed " + error); updates.ShowError(error); await CloseCleanlyAsync(); }
     }
 
@@ -240,6 +290,7 @@ public partial class App : Application
     {
         if (closing) return;
         closing = true;
+        startupCancellation.Cancel();
         try
         {
             if (MainWindow.Content is UIElement content) content.IsHitTestVisible = false;

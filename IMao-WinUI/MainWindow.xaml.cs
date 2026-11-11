@@ -36,7 +36,7 @@ public sealed partial class MainWindow : WindowEx
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
         settings.ColorValuesChanged -= Settings_ColorValuesChanged;
-        if (!App.ResourcesInitialized) return;
+        if (!App.RuntimeServicesInitialized) return;
         App.GetService<MarkerGuideCoordinator>().Dispose();
         _ = App.GetService<CoreHostService>().ShutdownAsync();
     }

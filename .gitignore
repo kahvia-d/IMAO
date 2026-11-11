@@ -26,6 +26,8 @@ Tests/ProgramUpdates/obj/
 Tests/ControllerRuntime/obj/
 Tests/ResourceBootstrapRuntime/obj/
 Tests/StartPageRuntime/obj/
+Tests/StartupPreparation/obj/
+Tests/StartupPreparationRuntime/obj/
 tools/ProgramLauncher/obj/
 CMakeFiles/
 1.0.2解压文件/

@@ -21,13 +21,14 @@ public class ActivationService : IActivationService
         _themeSelectorService = themeSelectorService;
     }
 
-    public async Task ActivateAsync(object activationArgs)
+    public async Task ActivateAsync(object activationArgs, CancellationToken cancellationToken = default)
     {
         // Execute tasks before activation.
         await InitializeAsync();
+        cancellationToken.ThrowIfCancellationRequested();
 
         // Set the MainWindow Content.
-        if (App.MainWindow.Content == null)
+        if (App.MainWindow.Content == null || App.MainWindow.Content is StartupPreparationView)
         {
             _shell = App.GetService<ShellPage>();
             App.MainWindow.Content = _shell ?? new Frame();
@@ -35,6 +36,7 @@ public class ActivationService : IActivationService
 
         // Handle activation via ActivationHandlers.
         await HandleActivationAsync(activationArgs);
+        cancellationToken.ThrowIfCancellationRequested();
 
         // Activate the MainWindow.
         App.MainWindow.Activate();

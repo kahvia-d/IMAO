@@ -21,6 +21,8 @@ if (args.FirstOrDefault() == "cloud-preview")
     return;
 }
 
+LaunchEntryTests.Run(Check);
+
 // Backends are reported by CoreHost, never inferred from the launch button.
 Check(new RuntimeConfiguration().ResolveOcrBackend(null) == "cpu", "OCR defaults to CPU");
 Check(new RuntimeConfiguration().ResolveOcrBackend("directml") == "directml", "Unset OCR preference honors test launcher");
