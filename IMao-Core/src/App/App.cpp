@@ -1817,6 +1817,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
             ocrResult.capturedAt >= lastPositionCapturedAt &&
             coordinateHandoff.FreshReadout(ocrResult.frameId, ocrResult.capturedAt, consumedAt)) {
 			ocrRequestInFlight.reset();
+            const bool hadOcrHints = !latestOcrHints.empty();
 			latestOcrHints.clear();
             if (ocrResult.candidates.empty()) { ocrCoordinateGate.Reset(); coordinateHandoff.BreakReadoutStreak(); }
             for (const auto& candidate : ocrResult.candidates) {
@@ -1830,7 +1831,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 						MapCoordinate::IdentifyCoorToImgMapCoord(candidate.Position(), sceneId) });
 				}
 			}
-			++visualHintVersion;
+            if (hadOcrHints || !latestOcrHints.empty()) ++visualHintVersion;
 			Diagnostics::Record("ocr-search-prior", "request=" + std::to_string(ocrResult.requestId) +
 				" candidates=" + std::to_string(ocrResult.candidates.size()) +
 				" mappedHints=" + std::to_string(latestOcrHints.size()) +
@@ -2058,6 +2059,10 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			Diagnostics::Record("visual-localization-stale", "frame=" + std::to_string(result.frameId));
 			return false;
 		}
+        visualRecoveryHints.SetEpoch(coordinateSessionId, coordinateUiGeneration);
+        auto recordRecoveryOutcome = [&](bool rejected, bool supported) {
+            visualRecoveryHints.Complete(result.requestId, result.searchIncomplete, rejected, supported, now);
+        };
 		Diagnostics::Record("visual-localization-result", "quality=" +
 			std::string(GlobalVisualLocalizer::QualityName(result.quality)) +
 			" incomplete=" + std::to_string(result.searchIncomplete) +
@@ -2095,6 +2100,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
         ReproCapture::Record("global-visual-result", {{"inputStage", "global-minimap-input"},
             {"quality", static_cast<int>(result.quality)}, {"candidates", result.candidates.size()}});
 		if (result.candidates.empty() || result.ambiguous || result.quality == VisualLocalizationQuality::Rejected) {
+            recordRecoveryOutcome(true, false);
             observeVisualFailure(CoordinateHandoff::VisualSource::Global, result.frameId, lastVisualRequestCapturedAt);
 			std::string rejectionReason;
 			if (result.searchIncomplete) {
@@ -2117,7 +2123,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 				" coarseCandidates=" + std::to_string(result.coarseCandidateCount) +
 				" mutualMatches=" + std::to_string(result.bestMutualMatchCount) +
 				" scale=" + std::to_string(result.bestObservedScale));
-			if (result.hintVersion != 0 && !latestOcrHints.empty()) {
+			if (result.hintVersion != 0 && result.hintVersion == visualHintVersion && !latestOcrHints.empty()) {
 				latestOcrHints.clear();
 				++visualHintVersion;
 				Diagnostics::Record("ocr-search-prior", "accepted=false action=fallback-global hintVersion=" +
@@ -2163,7 +2169,8 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 				Diagnostics::Record("visual-localization-revalidate", "accepted=false scene=" +
 					std::to_string(globalCandidate.sceneId) + " request=" + std::to_string(result.requestId));
 				observeVisualFailure(CoordinateHandoff::VisualSource::Global, snapshotFrameId, snapshotCapturedAt);
-                globalVisualConfirmation.Reset();
+                recordRecoveryOutcome(true, false);
+            globalVisualConfirmation.Reset();
 				coordinateRecovery.OnRecognitionFailure();
 				RuntimeStatus::SetLocalization("recovering", {}, "小地图候选位置复核失败，正在重试");
 				return false;
@@ -2177,11 +2184,13 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			candidate.inlierRatio, candidate.coveredQuadrants)) {
             observeVisualFailure(CoordinateHandoff::VisualSource::Global, snapshotFrameId,
                 featureRechecked ? snapshotCapturedAt : lastVisualRequestCapturedAt);
-			globalVisualConfirmation.Reset();
+			recordRecoveryOutcome(true, false);
+            globalVisualConfirmation.Reset();
 			Diagnostics::Record("visual-localization-revalidate", "accepted=false reason=weak-reacquisition-geometry");
 			coordinateRecovery.OnRecognitionFailure();
 			return false;
 		}
+        recordRecoveryOutcome(false, true);
 		if (coordinateHandoff.ReadoutActive() || globalVisualConfirmation.Observe(coordinateUiGeneration, snapshotFrameId,
 			{ candidate.sceneId, candidate.mapCenter.x, candidate.mapCenter.y }, now)) {
 			if (coordinateHandoff.ReadoutActive() && !featureRechecked) {
@@ -2279,38 +2288,42 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 		visualRequest.uiGeneration = coordinateUiGeneration;
 		visualRequest.frameId = snapshotFrameId;
 		visualRequest.requestId = nextVisualRequestId++;
-		visualRequest.hintVersion = visualHintVersion;
 		visualRequest.normalizedMinimap = normalizedMinimap;
 		visualRequest.minimapFeatures = minMapFeatureData;
-		// Cold start: no scene and no position yet, so the image matcher would sweep the whole
-		// map - and inside a cave that sweep finds too little to pass geometric verification.
-		// The layered index knows where each cave is and this same frame said which one it is,
-		// so point the search there. It is a scope, not a position: a wrong guess fails and the
-		// existing fallback clears it and sweeps globally, exactly as before.
-		if (latestOcrHints.empty() && playerCurrentSceneId == 0) {
-			const auto scope = LayeredMap::ScopeHint();
-			if (scope.valid) {
-				latestOcrHints.push_back(VisualMapHint{ scope.sceneId, { scope.mapX, scope.mapY } });
-				++visualHintVersion;
-				Diagnostics::Record("layered-floor-scope-used", "scene=" + std::to_string(scope.sceneId) +
-					" floor=" + scope.floorId + " center=" + std::to_string(scope.mapX) + "," +
-					std::to_string(scope.mapY) + " hintVersion=" + std::to_string(visualHintVersion));
-			}
-		}
-		visualRequest.ocrHints = latestOcrHints;
-		visualRequest.requireOcrHint = !latestOcrHints.empty();
+        visualRecoveryHints.SetEpoch(coordinateSessionId, coordinateUiGeneration);
+        const bool preserveGlobal = visualRecoveryHints.PreserveGlobal(now);
+        visualRequest.ocrHints = preserveGlobal ? std::vector<VisualMapHint>{} : latestOcrHints;
+        std::string scopeKey;
+        if (visualRequest.ocrHints.empty() && playerCurrentSceneId == 0 && !preserveGlobal) {
+            const auto scope = LayeredMap::ScopeHint();
+            const auto key = std::to_string(scope.sceneId) + "/" + scope.floorId + "/" +
+                std::to_string(scope.mapX) + "/" + std::to_string(scope.mapY);
+            if (scope.valid && visualRecoveryHints.AllowScope(key, now)) {
+                scopeKey = key;
+                visualRequest.ocrHints.push_back({scope.sceneId, {scope.mapX, scope.mapY}});
+                ++visualHintVersion;
+                Diagnostics::Record("layered-floor-scope-used", "scope=" + key +
+                    " hintVersion=" + std::to_string(visualHintVersion));
+            }
+        }
+        visualRequest.requireOcrHint = !visualRequest.ocrHints.empty();
+        visualRequest.hintVersion = visualRequest.requireOcrHint ? visualHintVersion : 0;
+        const auto submittedVersion = visualRequest.hintVersion;
+        const auto submittedHintCount = visualRequest.ocrHints.size();
+        const auto submittedBounded = visualRequest.requireOcrHint;
 		if (!GlobalVisualLocalizer::Submit(std::move(visualRequest))) return;
+        visualRecoveryHints.Submitted(nextVisualRequestId - 1, scopeKey, submittedBounded);
 		lastVisualSubmitAt = now;
         lastVisualRequestCapturedAt = snapshotCapturedAt;
 		visualRequestInFlight = std::make_pair(coordinateUiGeneration, snapshotFrameId);
 		activeVisualRequestId = nextVisualRequestId - 1;
 
 		Diagnostics::Record("visual-localization-submit", "mode=" +
-			std::string(latestOcrHints.empty() ? "global" : "ocr-bounded") + " frame=" + std::to_string(snapshotFrameId) +
+			std::string(submittedBounded ? "ocr-bounded" : "global") + " frame=" + std::to_string(snapshotFrameId) +
 			" request=" + std::to_string(activeVisualRequestId) +
-			" hintVersion=" + std::to_string(visualHintVersion) +
+			" hintVersion=" + std::to_string(submittedVersion) +
 			" minimapKeypoints=" + std::to_string(minMapFeatureData.imgKeypoints.size()) +
-			" ocrHints=" + std::to_string(latestOcrHints.size()));
+			" ocrHints=" + std::to_string(submittedHintCount));
 	};
 
     // Low-frequency standby is independent of visual search cadence and feature availability.
@@ -2367,7 +2380,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
                     VisualLocalizationRequest request;
                     request.sessionId = coordinateSessionId; request.uiGeneration = coordinateUiGeneration;
                     request.frameId = probe.source.frame; request.requestId = nextVisualRequestId++;
-                    request.hintVersion = visualHintVersion; request.normalizedMinimap = probe.normalized;
+                    request.hintVersion = latestOcrHints.empty() ? 0 : visualHintVersion; request.normalizedMinimap = probe.normalized;
                     request.minimapFeatures = probe.features; request.ocrHints = latestOcrHints;
                     request.requireOcrHint = !latestOcrHints.empty();
                     const auto id = request.requestId;

@@ -54,6 +54,10 @@ struct VisualLocalizationRequest {
     ImageFeatureData minimapFeatures;
     std::vector<VisualMapHint> ocrHints;
     bool requireOcrHint = false;
+    void NormalizeHints() {
+        if (ocrHints.empty()) requireOcrHint = false;
+        if (!requireOcrHint) hintVersion = 0;
+    }
 };
 
 struct VisualLocalizationResult {

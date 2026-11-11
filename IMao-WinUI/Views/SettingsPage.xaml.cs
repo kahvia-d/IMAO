@@ -1519,12 +1519,12 @@ public sealed partial class SettingsPage : Page
             (regionsWithDifferences > 0 ? $"；差异分布在 {regionsWithDifferences} 个区域。" : "；两边完全一致。");
         var footer = new List<string>
         {
-            "待推送＝本地已标记完成、库街区未标记，点“应用同步”会写回库街区（含本次新排队的）。",
+            "待推送＝等待写回库街区的点位状态变更，包括标记完成和取消完成（含本次新排队的）。",
             "待拉取＝库街区已标记完成、本地尚未反映，点“应用同步”会拉进本地。"
         };
         if (comparison.ToCancel > 0)
             footer.Add($"将被取消＝库街区明确取消过、本地还留着的 {comparison.ToCancel} 个点，点“应用同步”会跟着取消。");
-        if (comparison.PendingLocal > 0) footer.Add($"本地有 {comparison.PendingLocal} 个完成标记正在等待上传确认。");
+        if (comparison.PendingLocal > 0) footer.Add($"本地有 {comparison.PendingLocal} 项点位状态变更正在等待上传确认（包括标记完成和取消完成）。");
         if (comparison.Unmapped > 0)
         {
             // Keep the identities on disk so the count can be checked afterwards.

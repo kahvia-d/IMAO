@@ -947,6 +947,9 @@ public:
     }
 
     bool Submit(VisualLocalizationRequest request) {
+        // Unbounded requests have one identity even if a producer advances its
+        // OCR revision without producing a usable search prior.
+        request.NormalizeHints();
         std::scoped_lock lock(mutex_);
         if (!ready_) return false;
         ++epoch_;

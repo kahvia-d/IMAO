@@ -15,6 +15,7 @@
 #include "../Runtime/ReadoutWorkSchedule.h"
 #include "../Runtime/LayeredMapState.h"
 #include "ReadoutVisualWorker.h"
+#include "VisualRecoveryHints.h"
 #include "../Coordinate/IdentifyWorldCoordinates/CoordinateHandoff.h"
 #include "..\Coordinate\IdentifyWorldCoordinates\CoordinateTrust.h"
 #include "..\Coordinate\VisualLocalization\GlobalVisualLocalizer.h"
@@ -302,6 +303,7 @@ private:
 	std::uint64_t nextVisualRequestId = 1;
 	std::uint64_t activeVisualRequestId = 0;
 	std::uint64_t visualHintVersion = 0;
+    VisualRecoveryHints visualRecoveryHints;
 	std::vector<VisualMapHint> latestOcrHints;
 	CoordinateRecoveryController::Clock::time_point lastVisualSubmitAt{};
 	// Confirming the current position from the map's own pixels costs tens of milliseconds,

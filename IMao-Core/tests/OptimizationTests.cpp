@@ -1,6 +1,7 @@
 #include "EncodedCandidateTests.h"
 #include <opencv2/imgcodecs.hpp>
 #include "CoarseSearchCoverageTests.h"
+#include "VisualRecoveryHintsTests.h"
 #include "OverlayVisibilityTests.h"
 #include "GamepadContextTests.h"
 #include "GamepadCursorTargetsTests.h"
@@ -1392,6 +1393,7 @@ int main(int argc, char** argv) {
     TestRecoveryController();
     TestMinimapResumePolicy();
     TestCoarseSearchCoverage(Expect);
+    TestVisualRecoveryHints(Expect);
     TestOverlayVisibility(Expect);
     TestFramePacer(Expect);
     TestOverlayPacing(Expect);
