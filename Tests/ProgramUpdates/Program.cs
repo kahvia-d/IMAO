@@ -1178,6 +1178,14 @@ await Test("a program the installation has run stays launchable after it wrote i
     File.WriteAllText(Path.Combine(store.AppDirectory(launch.Id), "stray.dll"), "not part of any release");
     Assert((await store.BeginLaunchAsync()).Id != launch.Id, "a file no release ships must still end the version");
 });
+await Test("window placement settings are not permitted inside the signed program directory", async () =>
+{
+    var store = Store(); await store.PrepareAsync(envelope, Download);
+    var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);
+    File.WriteAllText(Path.Combine(store.AppDirectory(launch.Id), "main-window-placement.json"), "{}");
+    Assert((await store.BeginLaunchAsync()).Id != launch.Id,
+        "new user settings must stay outside the payload, not expand the runtime artifact exemption");
+});
 await Test("damaged current and predecessor still retain the original bootstrap", async () =>
 {
     var store = Store(); await store.PrepareAsync(envelope, Download); var launch = await store.BeginLaunchAsync(); await store.ConfirmHealthyAsync(launch.Id);

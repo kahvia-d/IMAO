@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows10.0.26100.0</TargetFramework><TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion><SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion><RootNamespace>WindowPlacementRuntime</RootNamespace><Platforms>x64</Platforms><PlatformTarget>x64</PlatformTarget><RuntimeIdentifier>win-x64</RuntimeIdentifier><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><UseWinUI>true</UseWinUI><WindowsPackageType>None</WindowsPackageType><WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained><SelfContained>true</SelfContained><EnableMsixTooling>true</EnableMsixTooling><EnableDefaultPriItems>true</EnableDefaultPriItems><AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath><AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath><OutputPath>../../out/window-placement-runtime/</OutputPath><ApplicationManifest>app.manifest</ApplicationManifest><DefaultLanguage>zh-CN</DefaultLanguage></PropertyGroup>
+<ItemGroup><PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001"/><PackageReference Include="WinUIEx" Version="2.3.2"/><Manifest Include="$(ApplicationManifest)"/></ItemGroup>
+<ItemGroup>
+<Page Include="../../IMao-WinUI/MainWindow.xaml" Link="MainWindow.xaml"/>
+<Compile Include="../../IMao-WinUI/MainWindow.xaml.cs" Link="MainWindow.xaml.cs"/>
+<Compile Include="../../IMao-WinUI/Helpers/MainWindowPlacementStore.cs" Link="MainWindowPlacementStore.cs"/>
+<Compile Include="../../IMao-WinUI/Helpers/StartupLog.cs" Link="StartupLog.cs"/>
+<Compile Include="../../IMao-WinUI.Core/Helpers/AtomicFile.cs" Link="AtomicFile.cs"/>
+<Content Include="../../IMao-WinUI/Assets/WindowIcon.ico" Link="Assets/WindowIcon.ico" CopyToOutputDirectory="PreserveNewest"/>
+</ItemGroup></Project>

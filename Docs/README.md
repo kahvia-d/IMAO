@@ -251,3 +251,4 @@
 
 - [游戏内 UI 自动适配与独立缩放实施计划](superpowers/plans/2026-11-11-overlay-sizing.md)
 - [启动提速实施计划](superpowers/plans/2026-11-11-startup-latency.md)
+- [主窗口位置恢复实施计划](superpowers/plans/2026-11-11-window-placement.md)
