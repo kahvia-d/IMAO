@@ -1,3 +1,4 @@
+#include "../Runtime/OverlayUiScale.h"
 #include <wil/resource.h>
 #include "ImGuiOverWindows.h"
 #include "../App/App.h"
@@ -108,7 +109,10 @@ std::string DescribeRect(const RECT& rect) {
 // minimap alone with the state shown as a ball instead.
 RECT MiniOverlayClientRect(const RECT& gameClient, bool withStatusBar) {
     const auto area = ScreenCoordinate::SpecifyScreenCoordinate(gameClient, hud::kMinimap);
-    const double padding = std::clamp(gameClient.right * 0.025, 30.0, 60.0);
+    const double padding = std::max({std::clamp(gameClient.right * 0.025, 30.0, 60.0),
+        24.0 * OverlayUiScale::Frame(OverlayUiScale::Part::StatusBall),
+        40.0 * OverlayUiScale::Frame(OverlayUiScale::Part::MinimapMarker),
+        40.0 * OverlayUiScale::Frame(OverlayUiScale::Part::Hint)});
     double left = std::min(area.leftPoint.x, area.rightPoint.x) - padding;
     double top = std::min(area.topPoint.y, area.bottomPoint.y) - padding;
     double right = std::max(area.leftPoint.x, area.rightPoint.x) + padding;
@@ -648,6 +652,7 @@ int ImGuiOverWindows::start()
         // two status forms are independent switches, so a small window that could not reach the bar would
         // silently ignore one of them.
         const bool forceFullOverlay = Isolation::Enabled(Isolation::kForceFullOverlay);
+        OverlayUiScale::SetFrame(GetDpiForWindow(h_window), GameRect.right, GameRect.bottom);
         const bool statusBarEnabled = RuntimeStatus::Snapshot().statusBarEnabled;
         bool minimapWindowRequested = false;
         // The same flag picks the window's rectangle and the bar's switch, so a bar the player enabled is
@@ -1081,7 +1086,7 @@ int ImGuiOverWindows::start()
                 // at every resolution and DPI, and the corner it sits in is inside the padding the window
                 // already has.
                 const auto minimap = ScreenCoordinate::SpecifyScreenCoordinate(GameRect, hud::kMinimap);
-                const float ball = std::max(8.0f, static_cast<float>(GameRect.right) * 0.011f / 2.0f);
+                const float ball = 10.56f * OverlayUiScale::Frame(OverlayUiScale::Part::StatusBall);
                 RuntimeStatusBar::DrawCompact(
                     static_cast<float>(std::max(minimap.leftPoint.x, minimap.rightPoint.x)) - ball,
                     static_cast<float>(std::max(minimap.topPoint.y, minimap.bottomPoint.y)) - ball, ball);

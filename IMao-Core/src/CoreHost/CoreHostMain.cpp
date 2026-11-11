@@ -14,6 +14,7 @@
 #include "../Runtime/RoutePlanningService.h"
 #include "../Runtime/FarmMode.h"
 #include "../Runtime/MarkerLayout.h"
+#include "../Runtime/OverlayUiScale.h"
 #include "../Runtime/RuntimeHotkeys.h"
 #include "../Runtime/MarkerGuideProtocol.h"
 #include "../Runtime/GamepadContext.h"
@@ -475,6 +476,16 @@ bool ApplyConfigure(const json& command) {
     const auto guideRange = integer("guideRangePixels", NearbySelection::MinimumRangePixels, NearbySelection::MaximumRangePixels);
     const auto farmRange = integer("farmRangePixels", FarmMode::MinimumRangePixels, FarmMode::MaximumRangePixels);
     const auto markerOverlap = integer("markerMergeOverlapPercent", 1, 100);
+    const auto minimapStatusScale = integer("minimapStatusScalePercent", 50, 200);
+    const auto mapStatusScale = integer("mapStatusScalePercent", 50, 200);
+    const auto toolsScale = integer("toolsScalePercent", 50, 200);
+    const auto guideScale = integer("guideScalePercent", 50, 200);
+    const auto hintScale = integer("hintScalePercent", 50, 200);
+    const auto mapMarkerScale = integer("mapMarkerScalePercent", 50, 200);
+    const auto minimapMarkerScale = integer("minimapMarkerScalePercent", 50, 200);
+    const auto handPaletteScale = integer("handPaletteScalePercent", 50, 200);
+    const auto handNodeScale = integer("handNodeScalePercent", 50, 200);
+    const auto statusBallScale = integer("statusBallScalePercent", 50, 200);
     const auto hotkeys = RuntimeHotkeys::ValidateConfiguration(command);
     if (capture) SetCaptureWay(*capture);
     if (present) SetOverlayPresentMode(*present);
@@ -493,6 +504,16 @@ bool ApplyConfigure(const json& command) {
             guideRange.value_or(NearbySelection::Ranges::Guide()));
     if (farmRange) FarmMode::Range::Apply(*farmRange);
     if (markerOverlap) MarkerLayoutSettings::Apply(*markerOverlap);
+    if (minimapStatusScale) OverlayUiScale::Apply(OverlayUiScale::Part::MinimapStatus, *minimapStatusScale);
+    if (mapStatusScale) OverlayUiScale::Apply(OverlayUiScale::Part::MapStatus, *mapStatusScale);
+    if (toolsScale) OverlayUiScale::Apply(OverlayUiScale::Part::Tools, *toolsScale);
+    if (guideScale) OverlayUiScale::Apply(OverlayUiScale::Part::Guide, *guideScale);
+    if (hintScale) OverlayUiScale::Apply(OverlayUiScale::Part::Hint, *hintScale);
+    if (mapMarkerScale) OverlayUiScale::Apply(OverlayUiScale::Part::MapMarker, *mapMarkerScale);
+    if (minimapMarkerScale) OverlayUiScale::Apply(OverlayUiScale::Part::MinimapMarker, *minimapMarkerScale);
+    if (handPaletteScale) OverlayUiScale::Apply(OverlayUiScale::Part::HandPalette, *handPaletteScale);
+    if (handNodeScale) OverlayUiScale::Apply(OverlayUiScale::Part::HandNode, *handNodeScale);
+    if (statusBallScale) OverlayUiScale::Apply(OverlayUiScale::Part::StatusBall, *statusBallScale);
     RuntimeHotkeys::Apply(hotkeys);
     return true;
 }

@@ -61,6 +61,8 @@ internal sealed class MapToolsWindow : Window
     private bool closed, failedReturn, busy;
     private long animationGeneration;
     private RectInt32 finalBounds;
+    private readonly OverlayScaleHost scaleHost;
+    private double effectiveScale = 1;
     private nint game;
     public string Page { get; private set; } = "home";
     public string CanvasTool { get; private set; } = "pan";
@@ -127,8 +129,9 @@ internal sealed class MapToolsWindow : Window
             { e.Handled = true; if (CanInteract && !TryBackWithinControl()) await command("back"); }
         };
         root.PreviewKeyDown += (_, e) => { if ((int)e.Key is >= 195 and <= 218) e.Handled = true; };
+        scaleHost = new OverlayScaleHost(root, 300, 200);
         Content = new Border { CornerRadius = new CornerRadius(20), BorderThickness = new Thickness(1),
-            BorderBrush = GamepadWindowChrome.Brush("IMaoBorderBrush", 0x304052), Child = root };
+            BorderBrush = GamepadWindowChrome.Brush("IMaoBorderBrush", 0x304052), Child = scaleHost };
         AppWindow.Changed += (_, args) =>
         {
             if (!closed && (args.DidPositionChange || args.DidSizeChange)) GeometryChanged?.Invoke();
@@ -153,7 +156,9 @@ internal sealed class MapToolsWindow : Window
                 FontSize=14,TextWrapping=TextWrapping.Wrap,MaxWidth=440 },
             PrimaryButtonText="重置",CloseButtonText="取消",DefaultButton=ContentDialogButton.Close };
         handFarmDialog=dialog;handFarmChoice=1;
-        try{return await dialog.ShowAsync();}finally{if(ReferenceEquals(handFarmDialog,dialog))handFarmDialog=null;}
+        Grid.SetRowSpan(dialog, 3); root.Children.Add(dialog);
+        try{return await dialog.ShowAsync(ContentDialogPlacement.InPlace);}
+        finally{root.Children.Remove(dialog);if(ReferenceEquals(handFarmDialog,dialog))handFarmDialog=null;}
     }
 
     internal ContentDialog CreateHandFarmDialog() => new()
@@ -176,8 +181,9 @@ internal sealed class MapToolsWindow : Window
     internal async Task<ContentDialogResult> ShowHandFarmDialogAsync()
     {
         var dialog=CreateHandFarmDialog();handFarmDialog=dialog;handFarmChoice=0;
-        try { return await dialog.ShowAsync(); }
-        finally { if(ReferenceEquals(handFarmDialog,dialog))handFarmDialog=null; }
+        Grid.SetRowSpan(dialog, 3); root.Children.Add(dialog);
+        try { return await dialog.ShowAsync(ContentDialogPlacement.InPlace); }
+        finally { root.Children.Remove(dialog); if(ReferenceEquals(handFarmDialog,dialog))handFarmDialog=null; }
     }
 
     internal void HandleHandFarmGamepad(GamepadAction action)
@@ -213,10 +219,7 @@ internal sealed class MapToolsWindow : Window
         game = gameWindow;
         LayoutForGame();
         // Begin at the launcher's anchor. Registration and activation precede expansion.
-        double scale = Math.Max(1, GetDpiForWindow(game) / 96.0);
-        int diameter = (int)Math.Round(56 * scale);
-        ApplyBounds(new(finalBounds.X + (finalBounds.Width - diameter) / 2,
-            finalBounds.Y + finalBounds.Height - diameter, diameter, diameter));
+        ApplyBounds(LauncherBounds());
         ShowWindow(Handle, 4);
     }
 
@@ -660,8 +663,9 @@ internal sealed class MapToolsWindow : Window
         if (game == 0 || !GetClientRect(game, out var rect)) return false;
         var origin = new PointNative();
         if (!ClientToScreen(game, ref origin)) return false;
-        double scale = Math.Max(1, GetDpiForWindow(game) / 96.0);
-        double availableWidth = Math.Max(160, rect.Right / scale - 32);
+        double scale = effectiveScale = OverlayUiScale.Effective(GetDpiForWindow(game), rect.Right, rect.Bottom, core.Configuration.ToolsScalePercent);
+        scaleHost.SetScale(scale);
+        double availableWidth = Math.Max(1, rect.Right / scale - 32);
         double width = Math.Min(Page == "home" ? 600 : 1000, availableWidth);
         double wantedHeight = CanvasTool != "pan" ? 190 : Page switch
         {
@@ -672,15 +676,27 @@ internal sealed class MapToolsWindow : Window
             "routes" => 700,
             _ => 370
         };
-        double height = Math.Min(wantedHeight, Math.Max(180, rect.Bottom / scale - 96));
-        int w = (int)Math.Round(width * scale), h = (int)Math.Round(height * scale);
-        var next = new RectInt32(origin.X + (rect.Right - w) / 2, origin.Y + rect.Bottom - (int)Math.Round(24 * scale) - h, w, h);
+        double height = Math.Min(wantedHeight, Math.Max(1, rect.Bottom / scale - 96));
+        int w = Math.Clamp((int)Math.Round(width * scale), 1, Math.Max(1, rect.Right));
+        int bottomInset = Math.Min((int)Math.Round(24 * scale), Math.Max(0, rect.Bottom / 4));
+        int h = Math.Clamp((int)Math.Round(height * scale), 1, Math.Max(1, rect.Bottom - bottomInset));
+        var next = new RectInt32(origin.X + (rect.Right - w) / 2, origin.Y + rect.Bottom - bottomInset - h, w, h);
         bool changed = !next.Equals(finalBounds);
         finalBounds = next;
         if (!IsAnimating && !closed && changed) ApplyBounds(next);
         return changed;
     }
 
+    private RectInt32 LauncherBounds()
+    {
+        if (!GetClientRect(game, out var viewport)) return finalBounds;
+        var origin = new PointNative();
+        if (!ClientToScreen(game, ref origin)) return finalBounds;
+        double scale = Math.Max(0.001, Math.Min(effectiveScale, Math.Min(viewport.Right / 56.0, viewport.Bottom / 80.0)));
+        int diameter = Math.Max(1, (int)Math.Round(56 * scale));
+        return new RectInt32(origin.X + (viewport.Right - diameter) / 2,
+            origin.Y + viewport.Bottom - (int)Math.Round(24 * scale) - diameter, diameter, diameter);
+    }
     private void ApplyBounds(RectInt32 rect)
     {
         AppWindow.MoveAndResize(rect);
@@ -699,10 +715,8 @@ internal sealed class MapToolsWindow : Window
         IsAnimating = true; bodyHost.IsEnabled = false;
         bool animations = new UISettings().AnimationsEnabled;
         int duration = animations ? expanding ? 180 : 160 : 0;
-        double scale = Math.Max(1, GetDpiForWindow(game) / 96.0);
-        int diameter = (int)Math.Round(56 * scale);
         var large = finalBounds;
-        var small = new RectInt32(large.X + (large.Width - diameter) / 2, large.Y + large.Height - diameter, diameter, diameter);
+        var small = LauncherBounds();
         long start = Environment.TickCount64;
         try
         {

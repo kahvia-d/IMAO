@@ -19,10 +19,19 @@
 #include "Runtime/RuntimeHotkeys.h"
 #include "Runtime/RoutePlanningService.h"
 #include "Runtime/MarkerLayout.h"
+#include "Runtime/OverlayUiScale.h"
+#include "Runtime/MarkerPopoverLayout.h"
+#include "Runtime/OverlayMotion.h"
+#include "ImguiDraw/Routes/DrawFreePointBadge.h"
 #include "ImguiDraw/InteractiveInterface/RuntimeStatusBar.h"
 #include "ImguiDraw/UiFontGlyphs.h"
+#ifdef IMAO_SCALE_FIXTURES
+#include "Runtime/RouteGamepadDisplayLease.h"
+#else
 #include "RouteGamepadTests.h"
+#endif
 
+class GamepadCursorGeometry { public: struct Footprint { Coordinate position; double radius=0,left=0,top=0,right=0,bottom=0; bool cover=false,rectangle=false; std::vector<ItemDatas> members; }; };
 using Json = nlohmann::json;
 static RECT fixtureClient{};
 static UINT fixtureDpi = 96;
@@ -41,6 +50,7 @@ struct DrawItemBase {
         itemsJsonData_MengshuTianluo = Json::array();
 };
 static std::string GetCurrentPath() { return (std::filesystem::current_path() / "x64/Release").string(); }
+struct GameCaptureTarget { static bool Client(HWND, RECT& rect) { rect=fixtureClient; return true; } };
 static RouteGamepadDisplayLease::View fixtureReturnDisplay;
 struct UiBridgeFixture {
     static UiBridgeFixture& Shared() { static UiBridgeFixture value; return value; }
@@ -55,13 +65,43 @@ struct UiBridgeFixture {
 
 namespace {
 HWND game = nullptr;
-std::optional<bool> autoReplanPending;
+std::optional<bool> autoReplanPending, gapFillPending;
 std::string planningNotice, displayedRouteId, displayedRouteTarget;
 RECT hitClientRect{};
 std::vector<MarkerHitRegion> regions;
 bool RouteGamepadFocused() { return fixtureHost; }
 std::string DisplayName(const std::string&) { return "凝素·冰棱"; }
 #include "ToolbarBody.inc"
+void DrawPaletteFixture(const RECT& rect, bool prompt) {
+    RoutePlanningView planning; planning.handDrawnTypeChoosing=prompt;
+    planning.handCategory=FreePointCategory::Daily; planning.handIcon=FreePointIcon::Monster;
+    struct { bool valid=true; } planningBinding;
+    bool handDrawMode=true, handFarmPrompt=prompt, monsterIconsExpanded=false;
+    const auto handFarmPromptGeneration=planning.generation;
+    const double mouseX=-1,mouseY=-1; const POINT origin{};
+    #include "PaletteBody.inc"
+}
+// Icons use fixture discs; panel/list text, layout, clipping and hit regions below
+// are extracted verbatim from the actual production renderer.
+void DrawIcon(const ItemDatas&, ImVec2 center, float radius, bool, bool, std::size_t, bool, bool) {
+    ImGui::GetBackgroundDrawList()->AddCircleFilled(center,radius,IM_COL32(61,153,187,255));
+}
+void DrawPopoverFixture(const RECT& rect) {
+    const float markerScale=OverlayUiScale::Frame(OverlayUiScale::Part::MapMarker);
+    const float radius=OverlayUiScale::MarkerRadius(OverlayUiScale::Part::MapMarker);
+    std::string expanded="fixture",selected,currentFreeKey; bool foundExpanded=true;
+    std::vector<std::string> expandedMembers; std::vector<ItemDatas> mapItems;
+    std::map<std::string,std::size_t> visible; std::map<std::string,ImVec2> displayed;
+    for(int i=0;i<20;++i) { auto key=std::to_string(i); expandedMembers.push_back(key);visible[key]=i;
+        ItemDatas item; item.itemId=key;item.nameId="fixture";item.screenCoordiante={320,180};mapItems.push_back(item); }
+    ImVec2 expandedAnchor(320,180); OverlayScreenTransform motion;
+    RoutePlanningView planning; planning.enabled=true;
+    struct { std::set<std::string> selectedKeys; } planningBinding;
+    struct { std::vector<GamepadCursorGeometry::Footprint> footprints; } cursorGeometry;
+    const auto completed=[](const ItemDatas&){return false;};
+    const double mouseX=-1,mouseY=-1; const POINT origin{};std::size_t listPage=0,expandedPageSize=8;
+    #include "PopoverBody.inc"
+}
 }
 #undef RouteGamepadBridge
 
@@ -136,9 +176,11 @@ static std::set<unsigned> MissingGlyphs(const ToolbarUi& toolbar) {
     return missing;
 }
 int main(int argc,char** argv) {
-    if(argc!=2)return 2;
+    if(argc<2)return 2;
+    const bool scaleFixtures=argc>2 && std::string(argv[2])=="--scale";
     const std::filesystem::path output=argv[1];std::filesystem::create_directories(output);
     ImGui::CreateContext();auto& io=ImGui::GetIO();io.IniFilename=nullptr;
+    ResourceSnapshotContext::Initialize({{"baselineRoot",(std::filesystem::current_path()/"x64/Release/Assets").string()}});
     #include "FontsBody.inc"
     unsigned char* atlas=nullptr;int atlasWidth=0,atlasHeight=0;
     io.Fonts->GetTexDataAsRGBA32(&atlas,&atlasWidth,&atlasHeight);io.Fonts->SetTexID((ImTextureID)1);
@@ -147,8 +189,36 @@ int main(int argc,char** argv) {
     Json report={{"kind","actual-source-offline-render"},{"atlas",{atlasWidth,atlasHeight}},
         {"fontSize",RuntimeStatusBar::UiFont()->FontSize},{"fixtures",Json::array()}};
     static int failures=0;
+    #ifndef IMAO_SCALE_FIXTURES
     TestRouteGamepad([](bool success,const std::string& message) { if(!success){++failures;std::cerr<<message<<std::endl;} });
+    #endif
     report["routeGamepadFailures"]=failures;
+    if(scaleFixtures) {
+        for(const auto dimensions:std::vector<std::pair<int,int>>{{1920,1080},{2560,1440},{3840,2160},{640,360}}) {
+            const bool small=dimensions.first==640;
+            fixtureClient={0,0,dimensions.first,dimensions.second};hitClientRect=fixtureClient;
+            fixtureDpi=(dimensions.first==3840||small)?192:96;
+            OverlayUiScale::SetFrame(fixtureDpi,dimensions.first,dimensions.second);
+            OverlayUiScale::Apply(OverlayUiScale::Part::MapMarker,small?200:100);
+            fixtureStatus.statusBarEnabled=true; fixtureStatus.mapStatusBarEnabled=true;
+            io.DisplaySize={static_cast<float>(dimensions.first),static_cast<float>(dimensions.second)};io.DeltaTime=1.0f/60;
+            ImGui::NewFrame();regions.clear();
+            if(small) DrawPopoverFixture(fixtureClient);
+            else { RuntimeStatusBar::Prepare(reinterpret_cast<HWND>(1),true);RuntimeStatusBar::Draw(nullptr);
+                DrawPaletteFixture(fixtureClient,dimensions.first==2560);
+                DrawFreePointBadge(ImGui::GetForegroundDrawList(),{dimensions.first*.6f,dimensions.second*.7f},"123",true);
+            }
+            bool hitsInside=true;
+            for(const auto& box:regions) hitsInside &= box.left>=0 && box.top>=0 && box.right<=dimensions.first && box.bottom<=dimensions.second;
+            ImGui::Render();Image image(dimensions.first,dimensions.second);Rasterize(image,*ImGui::GetDrawData(),atlas,atlasWidth,atlasHeight);
+            const auto stem="scale-"+std::to_string(dimensions.first)+"x"+std::to_string(dimensions.second);
+            image.SaveBmp(output/(stem+".bmp"));report["fixtures"].push_back({{"image",stem+".png"},{"dpi",fixtureDpi},{"allHitsInside",hitsInside},{"regionCount",regions.size()}});
+            if(!hitsInside||regions.empty()) ++failures;
+        }
+        report["failures"]=failures;std::ofstream(output/"report.json")<<report.dump(2);
+        std::cout<<"scale fixtures=4 failures="<<failures<<std::endl;
+        ImGui::DestroyContext();return failures?1:0;
+    }
     for(const auto dimensions:std::vector<std::pair<int,int>>{{640,360},{800,500},{1280,720},{1920,1080},{2560,1440}})
         for(const UINT dpi:{96u,192u}) for(const bool editing:{false,true}) for(const int returnMode:{0,1,2}) {
             if(returnMode && (dimensions.first!=800 || dpi!=96 || !editing))continue;
@@ -161,15 +231,15 @@ int main(int argc,char** argv) {
             view.start.valid=true;view.start.source="playerSnapshot";view.active=AutoRoute::Plan{};view.active->id="fixture-route";
             ItemDatas item;item.itemId="target";item.nameId="fixture-category";item.layer.stateId=1;
             view.selected={item,item,item};view.active->stops={item,item,item};view.active->skipped.insert("1:skipped");view.preview=view.active;view.hiddenCount=1;
-            ImGui::NewFrame();RuntimeStatusBar::Prepare(reinterpret_cast<HWND>(1));
+            ImGui::NewFrame();RuntimeStatusBar::Prepare(reinterpret_cast<HWND>(1),false);
             const auto toolbar=BuildPlanningToolbar(view,fixtureClient);
             const auto hostPanel=toolbar.layout.panel;
-            fixtureHost=false;RuntimeStatusBar::Prepare(reinterpret_cast<HWND>(1));
+            fixtureHost=false;RuntimeStatusBar::Prepare(reinterpret_cast<HWND>(1),false);
             const auto gamePanel=BuildPlanningToolbar(view,fixtureClient).layout.panel;
-            fixtureStatus.statusBarEnabled=false;RuntimeStatusBar::Prepare(reinterpret_cast<HWND>(1));
+            fixtureStatus.statusBarEnabled=false;RuntimeStatusBar::Prepare(reinterpret_cast<HWND>(1),false);
             const auto noStatusPanel=BuildPlanningToolbar(view,fixtureClient).layout.panel;
             fixtureStatus.statusBarEnabled=showStatus;
-            fixtureHost=true;RuntimeStatusBar::Prepare(reinterpret_cast<HWND>(1));regions.clear();
+            fixtureHost=true;RuntimeStatusBar::Prepare(reinterpret_cast<HWND>(1),false);regions.clear();
             DrawPlanningToolbar(view,toolbar,fixtureClient,{41,73});RuntimeStatusBar::Draw(reinterpret_cast<HWND>(1));
             const auto missing=MissingGlyphs(toolbar);
             Json fixture={{"width",dimensions.first},{"height",dimensions.second},{"dpi",dpi},{"editing",editing},

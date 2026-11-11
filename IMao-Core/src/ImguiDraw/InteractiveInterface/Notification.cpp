@@ -1,3 +1,4 @@
+#include "../../Runtime/OverlayUiScale.h"
 #include "Notification.h"
 #include "../ImGuiOverWindows.h"
 #include "../../Diagnostics/Diagnostics.h"
@@ -30,20 +31,28 @@ void Notification::DrawInfo() {
     if (errors.empty()) return;
 
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    constexpr float kPadding = 16.0f;
+    const float scale = OverlayUiScale::Frame(OverlayUiScale::Part::Hint);
+    const float kPadding = 16.0f * scale;
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8 * scale, 8 * scale));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8 * scale, 4 * scale));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(viewport->WorkSize.x - 2*kPadding, viewport->WorkSize.y - 2*kPadding));
     const ImVec2 position(viewport->WorkPos.x + viewport->WorkSize.x - kPadding,
         viewport->WorkPos.y + viewport->WorkSize.y - kPadding);
     ImGui::SetNextWindowPos(position, ImGuiCond_Always, ImVec2(1.0f, 1.0f));
     bool open = true;
     if (ImGui::Begin("IMao Errors", &open, kWindowFlags)) {
+        ImGui::SetWindowFontScale(scale);
+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + std::max(1.0f, viewport->WorkSize.x - 4*kPadding));
         for (const auto& error : errors) {
             ImGui::TextUnformatted(error.content.c_str());
             ImGui::SameLine();
             ImGui::Text("(%ds)", error.timeDuration);
             ImGui::Separator();
         }
+        ImGui::PopTextWrapPos();
     }
     ImGui::End();
+    ImGui::PopStyleVar(2);
 }
 
 void Notification::AddInfo(NotificationDatas notification) {

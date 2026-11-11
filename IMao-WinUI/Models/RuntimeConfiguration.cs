@@ -67,6 +67,17 @@ public sealed record RuntimeConfiguration
     // cluster is several icons wide, and the mode is meant to mark the whole cluster as the
     // player arrives. Same unit, so the player tunes it the same way.
     public int FarmRangePixels { get; init; } = 30;
+    public int MinimapStatusScalePercent { get; init; } = 100;
+    public int MapStatusScalePercent { get; init; } = 100;
+    public int ToolsScalePercent { get; init; } = 100;
+    public int GuideScalePercent { get; init; } = 100;
+    public int HintScalePercent { get; init; } = 100;
+    public int MapMarkerScalePercent { get; init; } = 100;
+    public int MinimapMarkerScalePercent { get; init; } = 100;
+    public int HandPaletteScalePercent { get; init; } = 100;
+    public int HandNodeScalePercent { get; init; } = 100;
+    public int StatusBallScalePercent { get; init; } = 100;
+
     public int MarkerMergeOverlapPercent { get; init; } = 50;
 
     /// <summary>
@@ -81,6 +92,16 @@ public sealed record RuntimeConfiguration
 
     public void Validate()
     {
+        if (MinimapStatusScalePercent is < 50 or > 200) throw new ArgumentException("MinimapStatus 缩放倍率必须在 50–200% 之间");
+        if (MapStatusScalePercent is < 50 or > 200) throw new ArgumentException("MapStatus 缩放倍率必须在 50–200% 之间");
+        if (ToolsScalePercent is < 50 or > 200) throw new ArgumentException("Tools 缩放倍率必须在 50–200% 之间");
+        if (GuideScalePercent is < 50 or > 200) throw new ArgumentException("Guide 缩放倍率必须在 50–200% 之间");
+        if (HintScalePercent is < 50 or > 200) throw new ArgumentException("Hint 缩放倍率必须在 50–200% 之间");
+        if (MapMarkerScalePercent is < 50 or > 200) throw new ArgumentException("MapMarker 缩放倍率必须在 50–200% 之间");
+        if (MinimapMarkerScalePercent is < 50 or > 200) throw new ArgumentException("MinimapMarker 缩放倍率必须在 50–200% 之间");
+        if (HandPaletteScalePercent is < 50 or > 200) throw new ArgumentException("HandPalette 缩放倍率必须在 50–200% 之间");
+        if (HandNodeScalePercent is < 50 or > 200) throw new ArgumentException("HandNode 缩放倍率必须在 50–200% 之间");
+        if (StatusBallScalePercent is < 50 or > 200) throw new ArgumentException("StatusBall 缩放倍率必须在 50–200% 之间");
         if (MarkerMergeOverlapPercent is < 1 or > 100)
             throw new ArgumentException("图标合并重叠阈值必须在 1–100 之间");
         if (CaptureWay is < 0 or > 1) throw new ArgumentException("截图方式无效");
@@ -118,6 +139,16 @@ public sealed record RuntimeConfiguration
 
     internal Dictionary<string, object?> ToPayload() => new()
     {
+        ["minimapStatusScalePercent"] = MinimapStatusScalePercent,
+        ["mapStatusScalePercent"] = MapStatusScalePercent,
+        ["toolsScalePercent"] = ToolsScalePercent,
+        ["guideScalePercent"] = GuideScalePercent,
+        ["hintScalePercent"] = HintScalePercent,
+        ["mapMarkerScalePercent"] = MapMarkerScalePercent,
+        ["minimapMarkerScalePercent"] = MinimapMarkerScalePercent,
+        ["handPaletteScalePercent"] = HandPaletteScalePercent,
+        ["handNodeScalePercent"] = HandNodeScalePercent,
+        ["statusBallScalePercent"] = StatusBallScalePercent,
         ["captureWay"] = CaptureWay, ["overlayPresentMode"] = OverlayPresentMode,
         ["mapUpdateCycle"] = MapUpdateCycle,
         ["minMapUpdateCycle"] = MinMapUpdateCycle, ["mapEnabled"] = MapEnabled,

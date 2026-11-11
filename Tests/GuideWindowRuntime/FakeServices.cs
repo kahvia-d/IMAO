@@ -66,6 +66,9 @@ public sealed class CoreHostService : INotifyPropertyChanged
         var pending = new DeferredCommand(); queue.Enqueue(pending); return pending;
     }
 
+    public Task<JsonElement> ExecuteConnectedMarkerAsync(string operation, object arguments, CancellationToken cancellationToken = default) =>
+        ExecuteMarkerAsync(operation, arguments, cancellationToken);
+
     public async Task<JsonElement> ExecuteMarkerAsync(string operation, object arguments, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

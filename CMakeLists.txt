@@ -793,3 +793,7 @@ target_include_directories(IMaoGameCaptureTargetTests PRIVATE ${CMAKE_SOURCE_DIR
 target_link_libraries(IMaoGameCaptureTargetTests PRIVATE user32)
 set_target_properties(IMaoGameCaptureTargetTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
 add_test(NAME IMaoGameCaptureTargetTests COMMAND IMaoGameCaptureTargetTests)
+
+add_executable(IMaoOverlayUiScaleTests IMao-Core/tests/OverlayUiScaleTests.cpp)
+target_include_directories(IMaoOverlayUiScaleTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
+add_test(NAME IMaoOverlayUiScaleTests COMMAND IMaoOverlayUiScaleTests)

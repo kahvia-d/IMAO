@@ -248,3 +248,5 @@
 - [107 异步楼层分类与 OCR GPU 设置](OcrAsyncFloorPlan_20261101.md)
 
 - [云鸣潮网页版使用与测试](CloudWuthering_zh-Hans.md)：窗口选择、自动区域及本轮测试要点。
+
+- [游戏内 UI 自动适配与独立缩放实施计划](superpowers/plans/2026-11-11-overlay-sizing.md)

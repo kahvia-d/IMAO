@@ -1,3 +1,4 @@
+using IMao_WinUI.Views.Controls;
 using IMao_WinUI.Models;
 using IMao_WinUI.Services;
 using Microsoft.UI;
@@ -86,6 +87,9 @@ public sealed class MarkerGuideWindow : Window
     private GuideImageWindow? imageWindow;
     private bool imageVisible;
     private RectInt32? lastGameBounds;
+    private readonly OverlayScaleHost scaleHost;
+    private int scalePercent = 100;
+    private uint layoutDpi;
     private readonly TextBlock gamepadHint = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed };
     private readonly ProgressBar gamepadHold = new() { Minimum = 0, Maximum = 1, Height = 5, Visibility = Visibility.Collapsed };
     private bool gamepadMode;
@@ -235,7 +239,8 @@ public sealed class MarkerGuideWindow : Window
         footer.Children.Add(status);
         Grid.SetRow(footer, 2);
         root.Children.Add(footer);
-        Content = root;
+        scaleHost = new OverlayScaleHost(root, 300, 420);
+        Content = scaleHost;
         root.PreviewKeyDown += (_, e) => { if (RootKeyDown((int)e.Key)) e.Handled = true; };
         root.PreviewKeyUp += (_, e) => { if (RootKeyUp((int)e.Key)) e.Handled = true; };
         // 失去前台就不再算作"按住"：玩家已经切到游戏或别的窗口了。
@@ -818,6 +823,16 @@ public sealed class MarkerGuideWindow : Window
         generation == selectionGeneration && selected?.PointId == selection.PointId &&
         selected?.StateId == selection.StateId && selected?.ProfileId == selection.ProfileId;
 
+    internal void UpdateLayout(RectInt32? gameBounds, int percent)
+    {
+        bool changed = !Nullable.Equals(lastGameBounds, gameBounds) || scalePercent != percent ||
+            layoutDpi != GetDpiForWindow(WinRT.Interop.WindowNative.GetWindowHandle(this));
+        lastGameBounds = gameBounds; scalePercent = percent;
+        if (changed && selected is { } selection && IsGuideVisible) PlaceAtGameLeft(selection, gameBounds);
+    }
+
+    internal void SetScalePercent(int percent) => UpdateLayout(lastGameBounds, percent);
+
     private void PlaceAtGameLeft(MarkerSelection selection, RectInt32? gameBounds)
     {
         int x = double.IsFinite(selection.ScreenX) ? (int)Math.Clamp(selection.ScreenX, -100000, 100000) : 0;
@@ -827,7 +842,9 @@ public sealed class MarkerGuideWindow : Window
         var targetArea = gameBounds ?? area;
         // Move to the target monitor before asking Windows for its effective DPI.
         AppWindow.Move(new PointInt32(Math.Max(targetArea.X, area.X), Math.Max(targetArea.Y, area.Y)));
-        double scale = Math.Clamp(GetDpiForWindow(WinRT.Interop.WindowNative.GetWindowHandle(this)) / 96.0, 1, 4);
+        layoutDpi = GetDpiForWindow(WinRT.Interop.WindowNative.GetWindowHandle(this));
+        double scale = OverlayUiScale.Effective(layoutDpi, targetArea.Width, targetArea.Height, scalePercent);
+        scaleHost.SetScale(scale);
         var placement = GuidePlacement.Calculate(targetArea, area, scale);
         AppWindow.MoveAndResize(placement);
     }
@@ -870,4 +887,3 @@ public sealed class MarkerGuideWindow : Window
         refresh.IsEnabled = true;
     }
 }
-

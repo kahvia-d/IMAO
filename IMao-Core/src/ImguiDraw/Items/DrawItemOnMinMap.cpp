@@ -1,3 +1,4 @@
+#include "../../Runtime/OverlayUiScale.h"
 #include "DrawItemOnMinMap.h"
 #include "../../Runtime/LayeredMapState.h"
 #include "../../Runtime/RuntimeHotkeys.h"
@@ -135,7 +136,7 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame
     // The frame records the radius its icons were measured with; a frame that never
     // went through the nearby update (a test fixture) still draws with the same formula.
     const float radius = frame.markerRadius > 0 ? static_cast<float>(frame.markerRadius)
-        : std::max(8.0f, rect.right * 0.012f / 2);
+        : OverlayUiScale::MarkerRadius(OverlayUiScale::Part::MinimapMarker);
     markerRenderStats.candidates += frame.markers.size();
     std::vector<MarkerLayoutPoint> points;
     for (std::size_t index = 0; index < frame.markers.size(); ++index) {
@@ -169,12 +170,13 @@ void DrawItemOnMinMap::DrawItemsOnMinMap(const RECT& rect, const ItemMarkerFrame
     if (route.active && route.profileId == frame.profileId && route.currentTargetIndex >= 0) {
         const int key = RuntimeHotkeys::Snapshot().currentTargetGuideKey;
         const auto label = key > 0 ? RuntimeHotkeys::Label(key) + "  当前目标攻略" : std::string("大地图工具条：当前目标攻略");
-        const auto size = ImGui::CalcTextSize(label.c_str());
+        const float fontSize = 15 * OverlayUiScale::Frame(OverlayUiScale::Part::Hint);
+        const auto size = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0, label.c_str());
         const float x = static_cast<float>(std::clamp(frame.center.x - size.x / 2, 4.0, std::max(4.0, rect.right - size.x - 4.0)));
         const float y = static_cast<float>(std::clamp(frame.center.y + frame.radius + 7, 4.0, std::max(4.0, rect.bottom - size.y - 4.0)));
         auto* draw = ImGui::GetBackgroundDrawList();
         draw->AddRectFilled(ImVec2(x - 4, y - 3), ImVec2(x + size.x + 4, y + size.y + 3), IM_COL32(20, 31, 43, 205), 4);
-        draw->AddText(ImVec2(x, y), IM_COL32(218, 236, 249, 255), label.c_str());
+        draw->AddText(ImGui::GetFont(), fontSize, ImVec2(x, y), IM_COL32(218, 236, 249, 255), label.c_str());
     }
 }
 

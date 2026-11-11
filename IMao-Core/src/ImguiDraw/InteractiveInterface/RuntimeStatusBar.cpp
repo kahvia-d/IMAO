@@ -1,8 +1,10 @@
+#include "../../Runtime/OverlayUiScale.h"
 #include "../../Runtime/GameCaptureTarget.h"
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 #include "RuntimeStatusBar.h"
+#include "../UiTextFont.h"
 #include "../../Runtime/RuntimeStatus.h"
 #include "../../Runtime/RouteGamepadBridge.h"
 #include "../Items/DrawItemBase.h"
@@ -42,7 +44,7 @@ std::string LocalizationText(const std::string& state) {
 }
 }
 
-void RuntimeStatusBar::SetUiFont(ImFont* font) { uiFont = font; }
+void RuntimeStatusBar::SetUiFont(ImFont* font) { uiFont = font; OverlayTextFont::highResolution = font; }
 ImFont* RuntimeStatusBar::UiFont() { return uiFont ? uiFont : ImGui::GetFont(); }
 float RuntimeStatusBar::Scale() { return layout.scale; }
 float RuntimeStatusBar::ToolbarTop() { return layout.visible ? layout.bounds.bottom + 12 * layout.scale : 18 * layout.scale; }
@@ -50,8 +52,9 @@ float RuntimeStatusBar::ToolbarTop() { return layout.visible ? layout.bounds.bot
 void RuntimeStatusBar::Prepare(HWND gameWindow, bool bigMap) {
     layout = {};
     RECT client{}; if (!GameCaptureTarget::Client(gameWindow, client)) return;
-    layout.scale = OverlayPanel::Scale(static_cast<float>(GetDpiForWindow(gameWindow)),
-        static_cast<float>(client.right), static_cast<float>(client.bottom));
+    layout.scale = static_cast<float>(OverlayUiScale::Effective(bigMap ? OverlayUiScale::Part::MapStatus : OverlayUiScale::Part::MinimapStatus, static_cast<float>(GetDpiForWindow(gameWindow)),
+        static_cast<float>(client.right), static_cast<float>(client.bottom)));
+    layout.scale = std::min({layout.scale, client.right / 500.0f, client.bottom / 250.0f});
     const auto status = RuntimeStatus::Snapshot();
     // Only display authorization includes the controller host; writes still require the game.
     layout.available = status.coreState == "running" && DrawItemBase::IsMarkerDisplayContext(gameWindow);

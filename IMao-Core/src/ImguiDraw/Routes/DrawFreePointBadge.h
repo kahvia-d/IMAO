@@ -1,4 +1,7 @@
 #pragma once
+#include "../../Runtime/OverlayUiScale.h"
+#include <cfloat>
+#include "../UiTextFont.h"
 #include "../../Base/imgui_dx11/imgui.h"
 #include "../../Runtime/FreeRoutePoint.h"
 #include <algorithm>
@@ -6,24 +9,26 @@
 #include "../../Runtime/RouteGeometry.h"
 
 inline float FreePointBadgeRadius(const std::string& label,float minimumRadius=0) {
-    const auto size=ImGui::CalcTextSize(label.c_str());
+    const float scale=OverlayUiScale::Frame(OverlayUiScale::Part::HandNode);
+    const auto size=OverlayTextFont::For(label.c_str())->CalcTextSizeA(15*scale,FLT_MAX,0,label.c_str());
     // Saved map points use exactly the standard marker radius for layout and hit testing.
-    return minimumRadius>0?minimumRadius:std::max({10.0f,size.x/2+4,size.y/2+3});
+    return minimumRadius>0?minimumRadius:std::max({10.0f*scale,size.x/2+4*scale,size.y/2+3*scale});
 }
 inline void DrawFreePointBadge(ImDrawList* draw,ImVec2 center,const std::string& label,bool current,
     bool completed=false,bool highlighted=false,float minimumRadius=0) {
-    const auto size=ImGui::CalcTextSize(label.c_str());const auto radius=FreePointBadgeRadius(label,minimumRadius);
+    const float scale=OverlayUiScale::Frame(OverlayUiScale::Part::HandNode);
+    const auto size=OverlayTextFont::For(label.c_str())->CalcTextSizeA(15*scale,FLT_MAX,0,label.c_str());const auto radius=FreePointBadgeRadius(label,minimumRadius);
     // Match the standard marker's 45% completed opacity, including text and focus ring.
     const auto alpha=[&](int value){return completed?static_cast<int>(value*0.45f):value;};
     draw->AddCircleFilled(center,radius,current?IM_COL32(233,165,57,alpha(255)):IM_COL32(31,114,151,alpha(245)));
-    if(current||highlighted)draw->AddCircle(center,radius+2,IM_COL32(110,250,190,alpha(255)),0,1.5f);
+    if(current||highlighted)draw->AddCircle(center,radius+2*scale,IM_COL32(110,250,190,alpha(255)),0,1.5f*scale);
     const float textScale=std::min({1.0f,(radius*2-6)/std::max(1.0f,size.x),(radius*2-6)/std::max(1.0f,size.y)});
-    draw->AddText(ImGui::GetFont(),ImGui::GetFontSize()*textScale,
+    draw->AddText(OverlayTextFont::For(label.c_str()),15*scale*textScale,
         ImVec2(center.x-size.x*textScale/2,center.y-size.y*textScale/2),IM_COL32(255,255,255,alpha(255)),label.c_str());
 }
 
 inline void DrawFreePointBadgeClipped(ImDrawList* draw,ImVec2 position,const std::string& label,bool current,Coordinate center,double radius) {
-    const double badge=FreePointBadgeRadius(label)+(current?4.0:1.0);
+    const double badge=FreePointBadgeRadius(label)+(current?4.0:1.0)*OverlayUiScale::Frame(OverlayUiScale::Part::HandNode);
     const double distance=std::hypot(position.x-center.x,position.y-center.y);
     if(distance-badge>=radius)return;
     if(distance+badge<=radius){DrawFreePointBadge(draw,position,label,current);return;}

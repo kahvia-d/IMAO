@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'out/overlay-ui-native')
+param([string]$OutputDirectory = 'out/overlay-ui-native', [switch]$ScaleFixtures)
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $outputPath = [IO.Path]::GetFullPath((Join-Path $repo $OutputDirectory))
@@ -20,6 +20,8 @@ function Export-ExactBody([string]$RelativePath, [string]$Start, [string]$End, [
 Export-ExactBody 'IMao-Core/src/ImguiDraw/Items/DrawMarkerInteraction.cpp' 'void AddRegion(' 'void DrawGesturePreview(' 'ToolbarBody.inc'
 Export-ExactBody 'IMao-Core/src/ImguiDraw/InteractiveInterface/RuntimeStatusBar.cpp' 'namespace {' '' 'StatusBody.inc'
 Export-ExactBody 'IMao-Core/src/ImguiDraw/ImGuiOverWindows.cpp' '    std::string FontsPath =' '    //IM_ASSERT(font != nullptr);' 'FontsBody.inc'
+Export-ExactBody 'IMao-Core/src/ImguiDraw/Items/DrawMarkerInteraction.cpp' '    if(!planning.handDrawnTypeChoosing||' '    // While a route is being drawn by hand' 'PaletteBody.inc'
+Export-ExactBody 'IMao-Core/src/ImguiDraw/Items/DrawMarkerInteraction.cpp' '    if (!expanded.empty() && foundExpanded)' '    if (planningBinding.valid)' 'PopoverBody.inc'
 $layoutPath = Join-Path $repo 'IMao-Core/src/Runtime/OverlayPanelLayout.h'
 $manifest += [ordered]@{source='IMao-Core/src/Runtime/OverlayPanelLayout.h';sourceSha256=(Get-FileHash -LiteralPath $layoutPath -Algorithm SHA256).Hash}
 $glyphPath = Join-Path $repo 'IMao-Core/src/ImguiDraw/UiFontGlyphs.h'
@@ -28,7 +30,8 @@ $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $outpu
 $sources = @('IMao-Core/tests/OverlayUiRenderHarness.cpp','IMao-Core/src/Base/imgui_dx11/imgui.cpp','IMao-Core/src/Base/imgui_dx11/imgui_draw.cpp','IMao-Core/src/Base/imgui_dx11/imgui_tables.cpp','IMao-Core/src/Base/imgui_dx11/imgui_widgets.cpp')
 $quotedSources = ($sources | ForEach-Object { '"' + $_ + '"' }) -join ' '
 $buildLog = Join-Path $outputPath 'build.log'
-$command = 'call "C:\VSBuildTools-Current\VC\Auxiliary\Build\vcvars64.bat" >nul && cl /nologo /std:c++20 /EHsc /O2 /MT /utf-8 /DUNICODE /D_UNICODE /DIMGUI_DISABLE_OBSOLETE_FUNCTIONS /I "IMao-Core/src" /I "IMao-Core/packages/nlohmann" /I "' + $outputPath + '" ' + $quotedSources + ' /Fo"' + $outputPath + '\\" /Fe"' + (Join-Path $outputPath 'OverlayUiRenderHarness.exe') + '" > "' + $buildLog + '" 2>&1'
+$command = 'call "C:\VSBuildTools-Current\VC\Auxiliary\Build\vcvars64.bat" >nul && cl /nologo /std:c++20 /EHsc /O2 /MT /utf-8 /DUNICODE /D_UNICODE /DIMGUI_DISABLE_OBSOLETE_FUNCTIONS /I "IMao-Core/src" /I "third_party/src/opencv-4.11.0/modules/core/include" /I "third_party/build/opencv-4.11.0" /I "IMao-Core/packages/nlohmann" /I "' + $outputPath + '" ' + $quotedSources + ' /Fo"' + $outputPath + '\\" /Fe"' + (Join-Path $outputPath 'OverlayUiRenderHarness.exe') + '" > "' + $buildLog + '" 2>&1'
+if ($ScaleFixtures) { $command = $command.Replace('cl /nologo', 'cl /nologo /DIMAO_SCALE_FIXTURES') }
 $start = [Diagnostics.ProcessStartInfo]::new()
 $start.FileName = Join-Path $env:SystemRoot 'System32/cmd.exe'
 $start.Arguments = '/d /c ' + $command
@@ -38,7 +41,7 @@ $start.EnvironmentVariables['PATH'] = [Environment]::GetEnvironmentVariable('Pat
 $process = [Diagnostics.Process]::Start($start);$process.WaitForExit()
 if ($process.ExitCode -ne 0) { Get-Content -LiteralPath $buildLog -Tail 40; throw "UI harness compilation failed: $($process.ExitCode)" }
 Push-Location $repo
-try { & (Join-Path $outputPath 'OverlayUiRenderHarness.exe') $outputPath; $result = $LASTEXITCODE } finally { Pop-Location }
+try { if ($ScaleFixtures) { & (Join-Path $outputPath 'OverlayUiRenderHarness.exe') $outputPath --scale } else { & (Join-Path $outputPath 'OverlayUiRenderHarness.exe') $outputPath }; $result = $LASTEXITCODE } finally { Pop-Location }
 Add-Type -AssemblyName System.Drawing
 foreach ($bitmapPath in [IO.Directory]::EnumerateFiles($outputPath, '*.bmp')) {
     $bitmap = [Drawing.Bitmap]::new($bitmapPath)

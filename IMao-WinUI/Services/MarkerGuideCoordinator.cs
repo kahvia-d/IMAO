@@ -103,6 +103,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
     private CancellationTokenSource? returnRequest;
     private bool returnInFlight;
     private long returnVersion;
+    private readonly DispatcherTimer guideLayoutTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
+    private bool refreshingGuideLayout, guideLayoutFailed;
     public bool IsGamepadReturnPending => returnWindow is not null;
 
     public MarkerGuideCoordinator(CoreHostService core, MarkerDetailService details)
@@ -111,6 +113,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
         this.details = details;
         core.MarkerEvent += OnMarkerEvent;
         core.PropertyChanged += OnCorePropertyChanged;
+        guideLayoutTimer.Tick += RefreshGuideLayout;
+        guideLayoutTimer.Start();
     }
 
     public bool IsGamepadSessionOpen => !disposed && gamepadSessionOpen && !gamepadOpening;
@@ -852,6 +856,33 @@ public sealed class MarkerGuideCoordinator : IDisposable
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool IsWindow(IntPtr window);
 
+    private async void RefreshGuideLayout(object? sender, object args)
+    {
+        if (disposed || refreshingGuideLayout || !core.IsConnected || guide is not { IsGuideVisible: true } current) return;
+        refreshingGuideLayout = true;
+        long version = session.Generation;
+        try
+        {
+            var bounds = await core.ExecuteConnectedMarkerAsync("markerGetGameWindowBounds", new { }, connectionRequests.Token);
+            if (disposed || !ReferenceEquals(guide, current) || !session.IsCurrent(version) || !current.IsGuideVisible) return;
+            if (!bounds.TryGetProperty("available", out var available) || available.ValueKind != JsonValueKind.True)
+                throw new InvalidOperationException("游戏窗口边界暂不可用");
+            var area = bounds.TryGetProperty("gameViewport", out var viewport) ? viewport : bounds;
+            int left = Integer(area, "left"), top = Integer(area, "top");
+            long width = (long)Integer(area, "right") - left, height = (long)Integer(area, "bottom") - top;
+            if (width is <= 0 or > 100000 || height is <= 0 or > 100000)
+                throw new InvalidOperationException("游戏窗口边界无效");
+            current.UpdateLayout(new RectInt32(left, top, (int)width, (int)height), core.Configuration.GuideScalePercent);
+            guideLayoutFailed = false;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception error)
+        {
+            if (!guideLayoutFailed) core.ReportGamepadDiagnostic("guide-layout-failed", error.Message);
+            guideLayoutFailed = true;
+        }
+        finally { refreshingGuideLayout = false; }
+    }
     private void OnCorePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (disposed) return;
@@ -860,6 +891,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             var configuration = core.Configuration;
             guide?.SetPagingHotkeys(configuration.GuidePreviousImageKey, configuration.GuideNextImageKey);
             guide?.SetSkipHotkey(configuration.GuideSkipKey);
+            guide?.SetScalePercent(configuration.GuideScalePercent);
             return;
         }
         // The route may have advanced, paused or stopped since the guide opened, so the skip
@@ -1359,6 +1391,7 @@ public sealed class MarkerGuideCoordinator : IDisposable
             }
             var configuration = core.Configuration;
             current.SetPagingHotkeys(configuration.GuidePreviousImageKey, configuration.GuideNextImageKey);
+            current.SetScalePercent(configuration.GuideScalePercent);
             await RegisterWindowAsync(current, selection, generation);
             if (!session.IsCurrent(generation) || disposed) return false;
             // Registration is another IPC await. A synchronized completion may update A
@@ -2103,6 +2136,8 @@ public sealed class MarkerGuideCoordinator : IDisposable
     {
         SuspendGamepad("应用已关闭");
         disposed = true;
+        guideLayoutTimer.Stop();
+        guideLayoutTimer.Tick -= RefreshGuideLayout;
         CancelOpeningRequest();
         session.Close();
         selectionGeneration++;
@@ -2113,4 +2148,3 @@ public sealed class MarkerGuideCoordinator : IDisposable
         chooser?.Close(); guide?.Close();
     }
 }
-

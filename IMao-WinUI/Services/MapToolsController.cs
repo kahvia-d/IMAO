@@ -130,6 +130,7 @@ public sealed class MapToolsController : IMapToolsController, IDisposable
         if (window is null) return;
         if (e.PropertyName == nameof(CoreHostService.Configuration))
         {
+            window.LayoutForGame();
             window.RenderRoute(core.RoutePlanning);
             window.RenderRoutes(core.RoutePlanning, RouteFilterActive, FilteredRouteName, FilteredKindCount);
         }

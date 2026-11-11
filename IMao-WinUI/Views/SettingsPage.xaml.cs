@@ -1,4 +1,4 @@
-﻿using IMao_WinUI.Contracts.Services;
+using IMao_WinUI.Contracts.Services;
 using IMao_WinUI.Helpers;
 using IMao_WinUI.Models;
 using IMao_WinUI.Services;
@@ -806,6 +806,7 @@ public sealed partial class SettingsPage : Page
 
     private void RestoreRuntime()
     {
+        RestoreOverlayScales();
         restoringRuntime = true;
         OcrGpuAcceleration.IsOn = coreHost.DesiredOcrBackend == "directml";
         OcrBackendState.Text = coreHost.Status.OcrBackend?.DisplayText ?? "OCR：等待核心报告实际后端";

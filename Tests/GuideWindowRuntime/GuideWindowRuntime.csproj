@@ -27,6 +27,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
+    <Compile Include="../../IMao-WinUI/Views/Controls/OverlayScaleHost.cs" Link="Production/OverlayScaleHost.cs" />
+    <Compile Include="../../IMao-WinUI/Models/OverlayUiScale.cs" Link="Production/OverlayUiScale.cs" />
     <Manifest Include="$(ApplicationManifest)" />
     <Page Include="../../IMao-WinUI/Styles/IMaoTheme.xaml" Link="Styles/IMaoTheme.xaml" />
     <Compile Include="../../IMao-WinUI/Views/MarkerGuideWindow.cs" Link="Production/MarkerGuideWindow.cs" />

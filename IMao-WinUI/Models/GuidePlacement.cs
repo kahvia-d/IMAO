@@ -15,7 +15,7 @@ internal static class GuidePlacement
     // All rectangles are physical screen pixels. Scale only the desired size and inset.
     internal static RectInt32 Calculate(RectInt32 gameBounds, RectInt32 workArea, double scale)
     {
-        scale = double.IsFinite(scale) ? Math.Clamp(scale, 1, 4) : 1;
+        scale = double.IsFinite(scale) ? Math.Clamp(scale, 0.5, 8) : 1;
         int left = Math.Max(gameBounds.X, workArea.X);
         int top = Math.Max(gameBounds.Y, workArea.Y);
         int right = Math.Min(gameBounds.X + gameBounds.Width, workArea.X + workArea.Width);

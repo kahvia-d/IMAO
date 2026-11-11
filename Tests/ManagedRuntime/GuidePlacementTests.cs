@@ -12,6 +12,10 @@ internal static class GuidePlacementTests
     {
         var work = new RectInt32(0, 0, 1920, 1080);
         var game = new RectInt32(0, 0, 1920, 1080);
+        var halfGuide = GuidePlacement.Calculate(game, work, 0.5);
+        check(halfGuide.Width == 220, "guide placement preserves the requested 50 percent scale");
+        var largeGuide = GuidePlacement.Calculate(new RectInt32(0, 0, 7680, 4320), new RectInt32(0, 0, 7680, 4320), 8);
+        check(largeGuide.Width == 3520, "guide placement preserves automatic scale times 200 percent");
         const int chromeWidth = 32, chromeHeight = 132;
         int expectedHeight = (int)Math.Round(1080 * GuidePlacement.PictureHeightFraction);
         int imageHeight = expectedHeight - chromeHeight;

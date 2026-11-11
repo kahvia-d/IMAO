@@ -89,6 +89,8 @@ string root = Path.Combine(Path.GetTempPath(), "imao-managed-test-" + Guid.NewGu
 Directory.CreateDirectory(root);
 try
 {
+    await OverlayUiScaleTests.RunAsync(root, Check);
+    if (args.Contains("--overlay-scale")) return;
     RegionalProgressTests.Run(root, Check);
     if (args.Contains("--regional-progress")) return;
     MapFilterCatalogTests.Run(root, Check);

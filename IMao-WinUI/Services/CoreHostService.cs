@@ -323,7 +323,17 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         int? completionRangePixels = null, int? guideRangePixels = null, int? farmRangePixels = null,
         int? markerMergeOverlapPercent = null, string? gamepadDeviceId = null,
         GamepadButtonLayout? gamepadButtonLayout = null,
-        bool? gapFillModeEnabled = null, bool? expectedGapFillModeEnabled = null)
+        bool? gapFillModeEnabled = null, bool? expectedGapFillModeEnabled = null,
+        int? minimapStatusScalePercent = null,
+        int? mapStatusScalePercent = null,
+        int? toolsScalePercent = null,
+        int? guideScalePercent = null,
+        int? hintScalePercent = null,
+        int? mapMarkerScalePercent = null,
+        int? minimapMarkerScalePercent = null,
+        int? handPaletteScalePercent = null,
+        int? handNodeScalePercent = null,
+        int? statusBallScalePercent = null)
     {
         await lifecycleLock.WaitAsync(cancellationToken);
         try
@@ -345,6 +355,16 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
             {
                 next = configuration.Update(old => old with
                 {
+                    MinimapStatusScalePercent = minimapStatusScalePercent ?? old.MinimapStatusScalePercent,
+                    MapStatusScalePercent = mapStatusScalePercent ?? old.MapStatusScalePercent,
+                    ToolsScalePercent = toolsScalePercent ?? old.ToolsScalePercent,
+                    GuideScalePercent = guideScalePercent ?? old.GuideScalePercent,
+                    HintScalePercent = hintScalePercent ?? old.HintScalePercent,
+                    MapMarkerScalePercent = mapMarkerScalePercent ?? old.MapMarkerScalePercent,
+                    MinimapMarkerScalePercent = minimapMarkerScalePercent ?? old.MinimapMarkerScalePercent,
+                    HandPaletteScalePercent = handPaletteScalePercent ?? old.HandPaletteScalePercent,
+                    HandNodeScalePercent = handNodeScalePercent ?? old.HandNodeScalePercent,
+                    StatusBallScalePercent = statusBallScalePercent ?? old.StatusBallScalePercent,
                     CaptureWay = captureWay ?? old.CaptureWay,
                     OverlayPresentMode = overlayPresentMode ?? old.OverlayPresentMode,
                     MapUpdateCycle = mapUpdateCycle ?? old.MapUpdateCycle,

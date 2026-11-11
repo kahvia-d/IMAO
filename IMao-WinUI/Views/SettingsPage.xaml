@@ -275,6 +275,128 @@
                     </Border>
                 </Grid>
             </ContentControl>
+            <Grid ColumnSpacing="16">
+                <Grid.Resources>
+                    <SolidColorBrush x:Key="SliderThumbBackground" Color="#E5C17B" />
+                    <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#F2D494" />
+                    <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#C8A25A" />
+                    <SolidColorBrush x:Key="SliderTrackValueFill" Color="#E5C17B" />
+                    <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="#F2D494" />
+                    <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="#C8A25A" />
+                </Grid.Resources>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource IMaoCardStyle}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="窗口与提示大小" Style="{StaticResource IMaoSectionTitleStyle}" />
+                        <Border Style="{StaticResource IMaoSettingRowStyle}">
+                            <StackPanel Spacing="4">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="小地图状态条" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="MinimapStatusScaleLabel" Grid.Column="1" Text="100% · 自动适配" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                                <Slider x:Name="MinimapStatusScaleSlider" Tag="MinimapStatus" AutomationProperties.Name="小地图状态条大小" Minimum="50" Maximum="200" StepFrequency="1" Value="100" ValueChanged="OverlayScale_ValueChanged" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource IMaoSettingRowStyle}">
+                            <StackPanel Spacing="4">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="大地图状态条" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="MapStatusScaleLabel" Grid.Column="1" Text="100% · 自动适配" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                                <Slider x:Name="MapStatusScaleSlider" Tag="MapStatus" AutomationProperties.Name="大地图状态条大小" Minimum="50" Maximum="200" StepFrequency="1" Value="100" ValueChanged="OverlayScale_ValueChanged" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource IMaoSettingRowStyle}">
+                            <StackPanel Spacing="4">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="工具栏入口与窗口" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="ToolsScaleLabel" Grid.Column="1" Text="100% · 自动适配" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                                <Slider x:Name="ToolsScaleSlider" Tag="Tools" AutomationProperties.Name="工具栏入口与窗口大小" Minimum="50" Maximum="200" StepFrequency="1" Value="100" ValueChanged="OverlayScale_ValueChanged" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource IMaoSettingRowStyle}">
+                            <StackPanel Spacing="4">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="攻略窗口" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="GuideScaleLabel" Grid.Column="1" Text="100% · 自动适配" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                                <Slider x:Name="GuideScaleSlider" Tag="Guide" AutomationProperties.Name="攻略窗口大小" Minimum="50" Maximum="200" StepFrequency="1" Value="100" ValueChanged="OverlayScale_ValueChanged" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource IMaoSettingRowStyle}">
+                            <StackPanel Spacing="4">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="操作与错误提示" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="HintScaleLabel" Grid.Column="1" Text="100% · 自动适配" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                                <Slider x:Name="HintScaleSlider" Tag="Hint" AutomationProperties.Name="操作与错误提示大小" Minimum="50" Maximum="200" StepFrequency="1" Value="100" ValueChanged="OverlayScale_ValueChanged" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource IMaoCardStyle}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="地图标记与手绘大小" Style="{StaticResource IMaoSectionTitleStyle}" />
+                        <Border Style="{StaticResource IMaoSettingRowStyle}">
+                            <StackPanel Spacing="4">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="大地图标记" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="MapMarkerScaleLabel" Grid.Column="1" Text="100% · 自动适配" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                                <Slider x:Name="MapMarkerScaleSlider" Tag="MapMarker" AutomationProperties.Name="大地图标记大小" Minimum="50" Maximum="200" StepFrequency="1" Value="100" ValueChanged="OverlayScale_ValueChanged" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource IMaoSettingRowStyle}">
+                            <StackPanel Spacing="4">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="小地图标记" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="MinimapMarkerScaleLabel" Grid.Column="1" Text="100% · 自动适配" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                                <Slider x:Name="MinimapMarkerScaleSlider" Tag="MinimapMarker" AutomationProperties.Name="小地图标记大小" Minimum="50" Maximum="200" StepFrequency="1" Value="100" ValueChanged="OverlayScale_ValueChanged" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource IMaoSettingRowStyle}">
+                            <StackPanel Spacing="4">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="手绘选项栏" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="HandPaletteScaleLabel" Grid.Column="1" Text="100% · 自动适配" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                                <Slider x:Name="HandPaletteScaleSlider" Tag="HandPalette" AutomationProperties.Name="手绘选项栏大小" Minimum="50" Maximum="200" StepFrequency="1" Value="100" ValueChanged="OverlayScale_ValueChanged" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource IMaoSettingRowStyle}">
+                            <StackPanel Spacing="4">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="手绘节点编号" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="HandNodeScaleLabel" Grid.Column="1" Text="100% · 自动适配" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                                <Slider x:Name="HandNodeScaleSlider" Tag="HandNode" AutomationProperties.Name="手绘节点编号大小" Minimum="50" Maximum="200" StepFrequency="1" Value="100" ValueChanged="OverlayScale_ValueChanged" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource IMaoSettingRowStyle}">
+                            <StackPanel Spacing="4">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="小地图状态球" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="StatusBallScaleLabel" Grid.Column="1" Text="100% · 自动适配" Foreground="{StaticResource IMaoSecondaryTextBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                                <Slider x:Name="StatusBallScaleSlider" Tag="StatusBall" AutomationProperties.Name="小地图状态球大小" Minimum="50" Maximum="200" StepFrequency="1" Value="100" ValueChanged="OverlayScale_ValueChanged" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
+            <InfoBar x:Name="OverlayScaleMessage" IsOpen="False" IsClosable="True" />
             <InfoBar x:Name="RuntimeMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
         </StackPanel>
 

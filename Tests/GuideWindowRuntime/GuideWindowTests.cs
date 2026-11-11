@@ -23,9 +23,28 @@ internal static class GuideWindowTests
     };
     private static readonly MarkerSelection B = A with { PointId = "1409980210964680704" };
 
+    internal static async Task OverlayScaleAsync(Action<string> log)
+    {
+        await CaseAsync("scaled guide retains a finite wrapping viewport", async f =>
+        {
+            await f.Coordinator.ShowAsync(A);
+            await UntilAsync(() => Visible(f), "scaled guide opens");
+            var window = f.Window!;
+            window.SetScalePercent(200);
+            var root = Read<Grid>(window, "root")!;
+            var description = Read<TextBlock>(window, "description")!;
+            description.Text = string.Join(" ", Enumerable.Repeat("A long guide sentence that must wrap inside the visible viewport.", 30));
+            await UntilAsync(() => double.IsFinite(root.Width) && double.IsFinite(root.Height) &&
+                root.ActualWidth > 0 && description.ActualHeight > 50, "scaled guide measures finite content and wraps long text");
+            Check(description.ActualWidth <= root.Width && root.Width >= 300 && root.Height >= 420,
+                "guide content stays finite with a scrollable minimum on constrained windows");
+        }, log);
+    }
+
     public static async Task RunAsync(Action<string> log)
     {
         PlacementTests(log);
+        await OverlayScaleAsync(log);
         foreach (var point in new[] { A, A with { NameId = "", PointId = "free:1", StopKind = "free", RouteId = "test-route", LocalName = "自由点 · 第 1 个点" } })
             await CaseAsync("completed map point uses the same controller undo action: " + point.StopKind, async f =>
             {

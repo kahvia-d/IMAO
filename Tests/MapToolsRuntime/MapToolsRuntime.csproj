@@ -13,6 +13,7 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
     <PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.250402" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.1.0" />
+    <Compile Include="../../IMao-WinUI/Views/Controls/OverlayScaleHost.cs" Link="Production/OverlayScaleHost.cs" />
     <Manifest Include="$(ApplicationManifest)" />
     <Page Include="../../IMao-WinUI/Styles/IMaoTheme.xaml" Link="Styles/IMaoTheme.xaml" />
     <Page Include="../../IMao-WinUI/Views/Controls/FilterControl.xaml" Link="Views/Controls/FilterControl.xaml" />

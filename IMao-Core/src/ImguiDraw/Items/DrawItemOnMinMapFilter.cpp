@@ -1,3 +1,4 @@
+#include "../../Runtime/OverlayUiScale.h"
 #include "../../Runtime/GameCaptureTarget.h"
 #include "DrawItemOnMinMap.h"
 #include "../../Diagnostics/Diagnostics.h"
@@ -52,7 +53,7 @@ void DrawItemOnMinMap::UpdatePlayerNearItemsData(RECT &w_Rect, Coordinate & play
     std::scoped_lock lock(markerMutex);
     minMapFilterRevision = DrawItemBase::MarkerFilterRevision();
     minMapClipRadius = minMapRadius;
-    minMapMarkerRadius = std::max(8.0, w_Rect.right * 0.012 / 2);
+    minMapMarkerRadius = OverlayUiScale::MarkerRadius(OverlayUiScale::Part::MinimapMarker);
     minMapCenterPoint = ScreenCoordinate::MinMapCircleCenterScreenCoordinate(w_Rect);
     const bool sceneDataKnown = GetBasicDataBySenceId(SceneId);
     if(sceneDataKnown) {
@@ -143,6 +144,7 @@ vector<ItemDatas> DrawItemOnMinMap::GetAndFilterItemsData(const RECT& rect, cons
 
 ItemMarkerFrame DrawItemOnMinMap::Snapshot() {
     std::scoped_lock lock(markerMutex);
+    minMapMarkerRadius = OverlayUiScale::MarkerRadius(OverlayUiScale::Part::MinimapMarker);
     const auto profile = DrawItemBase::MarkerProfile();
     if (profile != minMapMarkerProfile)
         return {senceName, {}, minMapCenterPoint, minMapClipRadius, minMapMarkerRadius, profile, minMapFilterRevision};

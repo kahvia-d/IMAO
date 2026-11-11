@@ -1,3 +1,5 @@
+#include "../../Runtime/OverlayUiScale.h"
+#include "../../Runtime/MarkerPopoverLayout.h"
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -39,6 +41,13 @@
 #include <utility>
 
 namespace {
+ImVec2 ScaledSize(OverlayUiScale::Part part, const char* text) {
+    return OverlayTextFont::For(text)->CalcTextSizeA(15*OverlayUiScale::Frame(part),FLT_MAX,0,text);
+}
+void ScaledText(ImDrawList* draw, OverlayUiScale::Part part, ImVec2 position, ImU32 color, const char* text) {
+    draw->AddText(OverlayTextFont::For(text),15*OverlayUiScale::Frame(part),position,color,text);
+}
+
 using Clock = std::chrono::steady_clock;
 HWND game = nullptr;
 HHOOK mouseHook = nullptr;
@@ -100,6 +109,7 @@ std::string displayedRouteId, displayedRouteTarget;
 Clock::time_point hoverAt{};
 std::vector<std::string> expandedMembers;
 std::size_t listPage = 0;
+std::size_t expandedPageSize = 8;
 
 // This binding is the pose actually drawn, not the latest localization result.
 // A gesture retains its own copy until mouse-up and never changes completion.
@@ -783,7 +793,7 @@ struct ToolbarUi {
 // 只改了这里，于是按钮在实机上根本看不见。）
 ToolbarUi BuildPlanningToolbar(const RoutePlanningView& view, const RECT& rect) {
     ToolbarUi ui;
-    const float scale = RuntimeStatusBar::Scale();
+    const float scale = OverlayUiScale::Frame(OverlayUiScale::Part::Tools);
     const auto add = [&](std::string label, std::string key, bool active = false, bool enabled = true, int group = 0) {
         ui.buttons.push_back({std::move(label), std::move(key), active, enabled, group});
     };
@@ -969,11 +979,11 @@ void DrawGesturePreview(const RECT& rect) {
         draw->AddCircle(ImVec2(static_cast<float>(point.x), static_cast<float>(point.y)), 15, IM_COL32(103, 255, 193, 255), 0, 2);
     }
     const auto label = "将新增 " + std::to_string(added) + " 个";
-    const auto size = ImGui::CalcTextSize(label.c_str());
+    const auto size = ScaledSize(OverlayUiScale::Part::Hint, label.c_str());
     const ImVec2 position(static_cast<float>(std::clamp(gesture.current.x + 16, 6.0, std::max(6.0, rect.right - size.x - 16.0))),
         static_cast<float>(std::clamp(gesture.current.y + 16, 6.0, std::max(6.0, rect.bottom - size.y - 8.0))));
     draw->AddRectFilled(ImVec2(position.x - 5, position.y - 3), ImVec2(position.x + size.x + 5, position.y + size.y + 3), IM_COL32(19, 35, 34, 240), 4);
-    draw->AddText(position, IM_COL32_WHITE, label.c_str());
+    ScaledText(draw, OverlayUiScale::Part::Hint, position, IM_COL32_WHITE, label.c_str());
 }
 
 void FinishToolsCanvas(std::uint64_t session, const std::string& message) {
@@ -1114,7 +1124,7 @@ void ProcessRouteGamepad(const RECT& rect, POINT origin, bool suppressFrameInput
             const auto update = routeGamepadControls.Update(sample.buttons, sample.leftX, sample.leftY, sample.otherInput, false, false, now);
             if (update.exit) { CancelRouteGamepad("已取消打开攻略"); return; }
         }
-        ImGui::GetForegroundDrawList()->AddText(ImVec2(20, static_cast<float>(rect.bottom - 34)),
+        ScaledText(ImGui::GetForegroundDrawList(), OverlayUiScale::Part::Hint, ImVec2(20, static_cast<float>(rect.bottom - 34*OverlayUiScale::Frame(OverlayUiScale::Part::Hint))),
             IM_COL32(255, 230, 155, 255), "正在打开当前目标攻略 · B 取消并退出");
         return;
     }
@@ -1247,8 +1257,8 @@ void ProcessRouteGamepad(const RECT& rect, POINT origin, bool suppressFrameInput
     const char* hint = routeGamepadCursorMode ? (planningBinding.tool == "point" ?
         "左摇杆移动光标 · A 切换点位 · B 返回工具栏" : "左摇杆移动光标 · 按住 A 圈选，松开提交 · B 退出") :
         "左摇杆 / 方向键选择 · A 确认 · B 退出";
-    draw->AddText(RuntimeStatusBar::UiFont(), 18 * RuntimeStatusBar::Scale(),
-        ImVec2(20, static_cast<float>(rect.bottom - 34 * RuntimeStatusBar::Scale())), IM_COL32(150, 239, 248, 255), hint);
+    draw->AddText(RuntimeStatusBar::UiFont(), 18 * OverlayUiScale::Frame(OverlayUiScale::Part::Hint),
+        ImVec2(20, static_cast<float>(rect.bottom - 34 * OverlayUiScale::Frame(OverlayUiScale::Part::Hint))), IM_COL32(150, 239, 248, 255), hint);
 }
 }
 
@@ -1427,7 +1437,7 @@ void DrawMarkerInteraction::DrawMapToolsLauncher(const RECT& rect, HWND gameWind
     if (state.registered) return; // The WinUI window is the only expanded UI.
     const auto current = GamepadContextSnapshot::Shared().Read(profile);
     if (!current.running || !current.observable || !current.bigMap || !DrawItemBase::IsMarkerGameFocused(gameWindow)) return;
-    const double scale = std::max(1.0, GetDpiForWindow(gameWindow) / 96.0);
+    const double scale = std::min({OverlayUiScale::Effective(OverlayUiScale::Part::Tools, GetDpiForWindow(gameWindow), rect.right, rect.bottom), rect.right/56.0, rect.bottom/80.0});
     const double radius = 28 * scale, x = rect.right / 2.0, y = rect.bottom - (24 + 28) * scale;
     if (x < radius || y < radius) return;
     POINT origin{}; if (!GameCaptureTarget::Origin(gameWindow, origin)) return;
@@ -1498,10 +1508,11 @@ void DrawMarkerInteraction::DrawIcon(const ItemDatas& item, ImVec2 position, flo
     }
     if (count > 1) {
         const auto label = std::to_string(count);
-        const auto size = ImGui::CalcTextSize(label.c_str());
+        const float fontSize = std::max(7.5f, radius * 1.15f);
+        const auto size = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0, label.c_str());
         const ImVec2 badge(position.x + radius * 0.72f, position.y - radius * 0.65f);
         draw->AddCircleFilled(badge, std::max(9.0f, size.x * 0.55f + 3), IM_COL32(33, 55, 78, 255));
-        draw->AddText(ImVec2(badge.x - size.x / 2, badge.y - size.y / 2), IM_COL32_WHITE, label.c_str());
+        draw->AddText(ImGui::GetFont(), fontSize, ImVec2(badge.x - size.x / 2, badge.y - size.y / 2), IM_COL32_WHITE, label.c_str());
     }
     // A collectible that lives in a layered map ("分层地图") carries a floor id. The official
     // map marks those with a small stacked-layers glyph so the layer is visible before you
@@ -1576,7 +1587,8 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     if(gapFillPending && (*gapFillPending==GapFillFilter::Enabled() || Clock::now()-gapFillRequestedAt>std::chrono::seconds(3))) {
         planningNotice=*gapFillPending==GapFillFilter::Enabled()?"查漏补缺设置已更新":"查漏补缺设置未生效，请重试";gapFillPending.reset();
     }
-    const float radius = std::max(9.0f, rect.right * 0.0135f / 2);
+    const float markerScale = OverlayUiScale::Frame(OverlayUiScale::Part::MapMarker);
+    const float radius = OverlayUiScale::MarkerRadius(OverlayUiScale::Part::MapMarker);
     POINT origin{}; if (!GameCaptureTarget::Origin(gameWindow, origin)) return;
     POINT cursor{}; GetCursorPos(&cursor);
     const double mouseX = cursor.x - origin.x, mouseY = cursor.y - origin.y;
@@ -1780,11 +1792,11 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         cursorGeometry.footprints.push_back(std::move(groupFootprint));
         if ((planning.enabled || drafting) && selectedCount > 0) {
             const auto label = group.members.size() > 1 ? std::to_string(selectedCount) + "/" + std::to_string(group.members.size()) : std::string("已选");
-            const auto size = ImGui::CalcTextSize(label.c_str());
+            const auto size = ScaledSize(OverlayUiScale::Part::Hint, label.c_str());
             auto* draw = ImGui::GetBackgroundDrawList();
             draw->AddRectFilled(ImVec2(anchor.x - size.x / 2 - 3, anchor.y + radius + 1),
                 ImVec2(anchor.x + size.x / 2 + 3, anchor.y + radius + size.y + 4), IM_COL32(20, 80, 59, 235), 3);
-            draw->AddText(ImVec2(anchor.x - size.x / 2, anchor.y + radius + 2), IM_COL32(169, 255, 217, 255), label.c_str());
+            ScaledText(draw, OverlayUiScale::Part::Hint, ImVec2(anchor.x - size.x / 2, anchor.y + radius + 2), IM_COL32(169, 255, 217, 255), label.c_str());
         }
         AddRegion(anchor.x, anchor.y, radius + 3, radius + 3, origin, key);
         displayed[group.anchor.key] = anchor;
@@ -1825,23 +1837,28 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     }
     if (!expanded.empty() && foundExpanded) {
         auto* draw = ImGui::GetBackgroundDrawList();
-        const bool list = expandedMembers.size() > 8;
-        const std::size_t perPage = 8;
-        const std::size_t begin = list ? listPage * perPage : 0;
-        const std::size_t end = std::min(expandedMembers.size(), begin + perPage);
         const float orbit = std::max(radius * 3.5f, static_cast<float>(expandedMembers.size()) * (radius + 4) / 3.14159265f);
+        const bool list = expandedMembers.size() > 8 || 2*(orbit+radius+40*markerScale) > std::min(rect.right,rect.bottom);
+        const auto popover = MarkerPopover::Measure(static_cast<float>(rect.right),static_cast<float>(rect.bottom),markerScale,radius,expandedMembers.size(),planning.enabled);
+        const float uiScale = list ? popover.scale : markerScale;
+        const float row = popover.row, panelWidth = popover.width;
+        const std::size_t perPage = popover.perPage;
+        expandedPageSize = perPage;
+        listPage = std::min(listPage,(expandedMembers.size()-1)/perPage);
+        const std::size_t begin = list ? listPage * perPage : 0;
+        const std::size_t end = list ? std::min(expandedMembers.size(), begin + perPage) : expandedMembers.size();
         const ImVec2 orbitCenter(std::clamp(expandedAnchor.x, orbit + radius + 4, std::max(orbit + radius + 4, rect.right - orbit - radius - 4)),
             std::clamp(expandedAnchor.y, orbit + radius + 4, std::max(orbit + radius + 4, rect.bottom - orbit - radius - 4)));
-        const float left = std::clamp(expandedAnchor.x + radius + 12, 8.0f, std::max(8.0f, rect.right - 250.0f));
-        const float top = std::clamp(expandedAnchor.y - 24, 8.0f, std::max(8.0f, rect.bottom - 340.0f));
+        const float left = std::clamp(expandedAnchor.x + radius + 12, 8.0f, std::max(8.0f, rect.right - panelWidth - 8));
+        const float top = std::clamp(expandedAnchor.y - 24, 8.0f, std::max(8.0f, rect.bottom - popover.height - 8));
         if (list) {
-            const float height = static_cast<float>(end - begin) * 35 + 42 + (planning.enabled ? 34.0f : 0.0f);
+            const float height = static_cast<float>(end - begin) * row + 66*uiScale + (planning.enabled ? 34.0f*uiScale : 0.0f);
             GamepadCursorGeometry::Footprint cover;
             cover.cover = cover.rectangle = true;
-            cover.left=left; cover.top=top; cover.right=left+240; cover.bottom=top+height;
+            cover.left=left; cover.top=top; cover.right=left+panelWidth; cover.bottom=top+height;
             cursorGeometry.footprints.push_back(std::move(cover));
-            draw->AddRectFilled(ImVec2(left, top), ImVec2(left + 240, top + height), IM_COL32(25, 31, 42, 245), 8);
-            AddRegion(left + 120, top + height / 2, 120, height / 2, origin, "panel");
+            draw->AddRectFilled(ImVec2(left, top), ImVec2(left + panelWidth, top + height), IM_COL32(25, 31, 42, 245), 8);
+            AddRegion(left + panelWidth/2, top + height / 2, panelWidth/2, height / 2, origin, "panel");
         }
         for (std::size_t index = begin; index < end; ++index) {
             const auto& id = expandedMembers[index];
@@ -1850,54 +1867,58 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             const auto& item = mapItems[found->second];
             const auto truePosition = AutoRoute::IsFreeStop(item)?item.screenCoordiante:motion.Apply(item.screenCoordiante);
             const float angle = -1.5707963f + static_cast<float>(index) * 6.2831853f / static_cast<float>(expandedMembers.size());
-            ImVec2 position = list ? ImVec2(left + radius + 8, top + 20 + static_cast<float>(index - begin) * 35) :
+            ImVec2 position = list ? ImVec2(left + radius + 8, top + row/2 + static_cast<float>(index - begin) * row) :
                 ImVec2(orbitCenter.x + std::cos(angle) * orbit, orbitCenter.y + std::sin(angle) * orbit);
             draw->AddLine(ImVec2(static_cast<float>(truePosition.x), static_cast<float>(truePosition.y)), position, IM_COL32(173, 192, 214, 160), 1);
-            const bool memberHover = list ? mouseX >= left && mouseX <= left + 240 && std::abs(mouseY - position.y) <= 16 :
+            const bool memberHover = list ? mouseX >= left && mouseX <= left + panelWidth && std::abs(mouseY - position.y) <= row/2 :
                 std::hypot(mouseX - position.x, mouseY - position.y) <= radius + 3;
             DrawIcon(item, position, radius, memberHover || (planning.enabled ? planningBinding.selectedKeys.contains(id) : selected == id),
                 completed(item),1,true,AutoRoute::Key(item)==currentFreeKey);
             GamepadCursorGeometry::Footprint memberFootprint;
             memberFootprint.position={position.x,position.y}; memberFootprint.radius=radius;
-            memberFootprint.rectangle=list; memberFootprint.left=left+3; memberFootprint.right=left+237;
-            memberFootprint.top=position.y-16; memberFootprint.bottom=position.y+16;
+            memberFootprint.rectangle=list; memberFootprint.left=left+3; memberFootprint.right=left+panelWidth-3*uiScale;
+            memberFootprint.top=position.y-row/2; memberFootprint.bottom=position.y+row/2;
             memberFootprint.members.push_back(item);
             cursorGeometry.footprints.push_back(std::move(memberFootprint));
             displayed[id] = position;
             if (list) {
                 const std::string label = DisplayName(item.nameId) + (item.layer.level.empty() ? "" : "  [" + item.layer.level + "]");
-                draw->PushClipRect(ImVec2(left + radius * 2 + 16, position.y - 16), ImVec2(left + 235, position.y + 16), true);
-                draw->AddText(ImVec2(position.x + radius + 8, position.y - 7), IM_COL32_WHITE, label.c_str());
+                draw->PushClipRect(ImVec2(left + radius * 2 + 16, position.y - row/2), ImVec2(left + panelWidth-5*uiScale, position.y + row/2), true);
+                draw->AddText(OverlayTextFont::For(label.c_str()),15*uiScale, ImVec2(position.x + radius + 8, position.y - 7*uiScale), IM_COL32_WHITE, label.c_str());
                 draw->PopClipRect();
-                AddRegion(left + 120, position.y, 117, 16, origin, "p:" + id);
+                AddRegion(left + panelWidth/2, position.y, panelWidth/2-3*uiScale, row/2, origin, "p:" + id);
             } else {
                 AddRegion(position.x, position.y, radius + 3, radius + 3, origin, "p:" + id);
                 const auto label = std::to_string(index + 1) + (item.layer.level.empty() ? "" : " · " + item.layer.level);
-                const auto textSize = ImGui::CalcTextSize(label.c_str());
+                const auto textSize = OverlayTextFont::For(label.c_str())->CalcTextSizeA(15*uiScale,FLT_MAX,0, label.c_str());
                 const ImVec2 textPosition(position.x - textSize.x / 2, position.y + radius + 2);
                 draw->AddRectFilled(ImVec2(textPosition.x - 2, textPosition.y - 1),
                     ImVec2(textPosition.x + textSize.x + 2, textPosition.y + textSize.y + 1), IM_COL32(25, 31, 42, 210), 2);
-                draw->AddText(textPosition, IM_COL32_WHITE, label.c_str());
+                draw->AddText(RuntimeStatusBar::UiFont(),15*uiScale, textPosition, IM_COL32_WHITE, label.c_str());
             }
         }
         if (list) {
-            const float y = top + static_cast<float>(end - begin) * 35 + 20;
-            const std::string caption = "<  " + std::to_string(listPage + 1) + " / " + std::to_string((expandedMembers.size() + 7) / 8) + "  >";
-            draw->AddText(ImVec2(left + 80, y - 7), IM_COL32_WHITE, caption.c_str());
-            AddRegion(left + 65, y, 40, 15, origin, "page:previous");
-            AddRegion(left + 175, y, 40, 15, origin, "page:next");
+            const float y = top + static_cast<float>(end - begin) * row + 44*uiScale;
+            const std::string caption = "<  " + std::to_string(listPage + 1) + " / " + std::to_string((expandedMembers.size() + perPage-1) / perPage) + "  >";
+            draw->AddText(RuntimeStatusBar::UiFont(),15*uiScale, ImVec2(left + panelWidth/2 - 40*uiScale, y - 7*uiScale), IM_COL32_WHITE, caption.c_str());
+            AddRegion(left + panelWidth*.27f, y, panelWidth*.2f, 15*uiScale, origin, "page:previous");
+            AddRegion(left + panelWidth*.73f, y, panelWidth*.2f, 15*uiScale, origin, "page:next");
         }
         if (planning.enabled) {
-            const float y = list ? top + static_cast<float>(end - begin) * 35 + 58 : std::min(static_cast<float>(rect.bottom) - 26, orbitCenter.y + orbit + radius + 26);
-            const float x = list ? left + 120 : orbitCenter.x;
+            const float y = list ? top + static_cast<float>(end - begin) * row + 82*uiScale : std::min(static_cast<float>(rect.bottom) - 26, orbitCenter.y + orbit + radius + 26);
+            const float x = list ? left + panelWidth/2 : orbitCenter.x;
             const auto label = "加入全部 " + std::to_string(expandedMembers.size()) + " 个";
-            const auto size = ImGui::CalcTextSize(label.c_str());
-            draw->AddRectFilled(ImVec2(x - size.x / 2 - 12, y - 13), ImVec2(x + size.x / 2 + 12, y + 13), IM_COL32(26, 99, 77, 250), 5);
-            draw->AddText(ImVec2(x - size.x / 2, y - size.y / 2), IM_COL32_WHITE, label.c_str());
-            AddRegion(x, y, size.x / 2 + 12, 13, origin, "route:addGroup");
+            const auto size = OverlayTextFont::For(label.c_str())->CalcTextSizeA(15*uiScale,FLT_MAX,0, label.c_str());
+            draw->AddRectFilled(ImVec2(x - size.x / 2 - 12*uiScale, y - 13*uiScale), ImVec2(x + size.x / 2 + 12*uiScale, y + 13*uiScale), IM_COL32(26, 99, 77, 250), 5);
+            draw->AddText(RuntimeStatusBar::UiFont(),15*uiScale, ImVec2(x - size.x / 2, y - size.y / 2), IM_COL32_WHITE, label.c_str());
+            AddRegion(x, y, size.x / 2 + 12*uiScale, 13*uiScale, origin, "route:addGroup");
         }
-        draw->AddText(ImVec2(expandedAnchor.x + radius + 5, expandedAnchor.y - radius - 16), IM_COL32_WHITE,
-            planning.enabled ? "Esc 收起 · 点击成员切换选中" : "Esc 收起 · 左键攻略 · 右键完成");
+        const char* help = planning.enabled ? "Esc 收起 · 点击成员切换选中" : "Esc 收起 · 左键攻略 · 右键完成";
+        const float helpWidth = RuntimeStatusBar::UiFont()->CalcTextSizeA(15*uiScale,FLT_MAX,0,help).x;
+        const float helpSize = list ? 15*uiScale*std::min(1.0f,(panelWidth-16)/std::max(1.0f,helpWidth)) : 15*uiScale;
+        const ImVec2 helpPosition = list ? ImVec2(left+8,top+static_cast<float>(end-begin)*row+3*uiScale) :
+            ImVec2(std::clamp(expandedAnchor.x + radius + 5,4.0f,std::max(4.0f,rect.right-helpWidth-4)),std::max(4.0f,expandedAnchor.y-radius-16));
+        draw->AddText(RuntimeStatusBar::UiFont(),helpSize,helpPosition,IM_COL32_WHITE,help);
     }
     if (planningBinding.valid) {
         const bool previewing = !drafting && planning.enabled && planning.preview.has_value();
@@ -1910,10 +1931,10 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             if (position.x >= 0 && position.y >= 0 && position.x <= rect.right && position.y <= rect.bottom) {
                 auto* draw = ImGui::GetBackgroundDrawList();
                 const ImVec2 center(static_cast<float>(position.x), static_cast<float>(position.y));
-                draw->AddCircleFilled(center, 12, IM_COL32(19, 92, 78, 250));
-                draw->AddCircle(center, 14, IM_COL32(110, 250, 190, 255), 0, 2);
-                const auto text = ImGui::CalcTextSize("起");
-                draw->AddText(ImVec2(center.x - text.x / 2, center.y - text.y / 2), IM_COL32_WHITE, "起");
+                draw->AddCircleFilled(center, 12*OverlayUiScale::Frame(OverlayUiScale::Part::HandNode), IM_COL32(19, 92, 78, 250));
+                draw->AddCircle(center, 14*OverlayUiScale::Frame(OverlayUiScale::Part::HandNode), IM_COL32(110, 250, 190, 255), 0, 2);
+                const auto text = ScaledSize(OverlayUiScale::Part::HandNode, "起");
+                ScaledText(draw, OverlayUiScale::Part::HandNode, ImVec2(center.x - text.x / 2, center.y - text.y / 2), IM_COL32_WHITE, "起");
             }
         }
         // The far end of the path. On a planned route the last stop is reached and disappears, so
@@ -1924,10 +1945,10 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             if (position.x >= 0 && position.y >= 0 && position.x <= rect.right && position.y <= rect.bottom) {
                 auto* draw = ImGui::GetBackgroundDrawList();
                 const ImVec2 center(static_cast<float>(position.x), static_cast<float>(position.y));
-                draw->AddCircleFilled(center, 12, IM_COL32(120, 62, 22, 250));
-                draw->AddCircle(center, 14, IM_COL32(255, 193, 73, 255), 0, 2);
-                const auto text = ImGui::CalcTextSize("终");
-                draw->AddText(ImVec2(center.x - text.x / 2, center.y - text.y / 2), IM_COL32_WHITE, "终");
+                draw->AddCircleFilled(center, 12*OverlayUiScale::Frame(OverlayUiScale::Part::HandNode), IM_COL32(120, 62, 22, 250));
+                draw->AddCircle(center, 14*OverlayUiScale::Frame(OverlayUiScale::Part::HandNode), IM_COL32(255, 193, 73, 255), 0, 2);
+                const auto text = ScaledSize(OverlayUiScale::Part::HandNode, "终");
+                ScaledText(draw, OverlayUiScale::Part::HandNode, ImVec2(center.x - text.x / 2, center.y - text.y / 2), IM_COL32_WHITE, "终");
             }
         }
         if (!drafting && plan && plan->sceneId == sceneId && scene) {
@@ -1945,7 +1966,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
                 // laying one unreadable number over another.
                 if (offset) continue;
                 const auto label = AutoRoute::IsFreeStop(stop)?AutoRoute::FreePointLabel(stop.freeIcon,static_cast<int>(index+1)):std::to_string(index + 1);
-                const auto size = ImGui::CalcTextSize(label.c_str());
+                const auto size = ScaledSize(OverlayUiScale::Part::HandNode, label.c_str());
                 // A stop with an icon has the badge beside it. A free point has no icon at all, so
                 // its number is the marker: the circle sits on the point rather than beside it.
                 const bool freeStop = AutoRoute::IsFreeStop(stop) || (drafting && stop.nameId.empty());
@@ -1976,13 +1997,14 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             if(position.x<0||position.y<0||position.x>rect.right||position.y>rect.bottom||planningPanel.Contains(position.x,position.y))continue;
             // Co-located editor nodes get distinct, visible badges rather than unreachable IDs.
             const auto bucket=std::to_string(static_cast<int>(position.x/12))+":"+std::to_string(static_cast<int>(position.y/12));
-            const int offset=colocated[bucket]++;position.x+=offset*(2*radius+6);
+            const int offset=colocated[bucket]++;position.x+=offset*(2*FreePointBadgeRadius("999")+6);
             const auto found=std::find(order.begin(),order.end(),node.id);const int number=found==order.end()?0:static_cast<int>(found-order.begin()+1);
             const auto label=AutoRoute::IsFreeStop(node.point)&&node.point.freeIcon!=FreePointIcon::Number?AutoRoute::FreePointLabel(node.point.freeIcon,number):number?std::to_string(number):std::string("·");
             const bool free=AutoRoute::IsFreeStop(node.point);
             const double x=free?position.x:position.x+radius+12;
             DrawFreePointBadge(draw,{static_cast<float>(x),static_cast<float>(position.y)},label,false);
-            AddRegion(x,position.y,radius+3,radius+3,origin,"route:hand:node:"+node.id);
+            const float badgeRadius=FreePointBadgeRadius(label);
+            AddRegion(x,position.y,badgeRadius+3,badgeRadius+3,origin,"route:hand:node:"+node.id);
             if(!free)AddRegion(position.x,position.y,radius+3,radius+3,origin,"route:hand:node:"+node.id);
         }
         if(handMouse.active&&!handMouse.cancelled&&!handMouse.fromNode.empty()&&handMouse.pointer.Moved())
@@ -1992,17 +2014,18 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
     if(!planning.handDrawnTypeChoosing||planning.generation!=handFarmPromptGeneration)handFarmPrompt=false;
     if(planningBinding.valid && (planning.handDrawnTypeChoosing || handDrawMode)) {
         auto* draw=ImGui::GetForegroundDrawList();
-        const float scale=std::clamp(static_cast<float>(rect.bottom)/1080.0f,0.75f,1.5f);
+        const float scale=std::min({OverlayUiScale::Frame(OverlayUiScale::Part::HandPalette), rect.right/220.0f, rect.bottom/300.0f});
         const float r=18*scale,gap=8*scale,x=24*scale+r;
         const float top=std::clamp(static_cast<float>(rect.bottom)*0.4f,50*scale,std::max(50*scale,static_cast<float>(rect.bottom)-210*scale));
         const auto circle=[&](float px,float py,const std::string& label,const std::string& key,bool active){
             draw->AddCircleFilled({px,py},r,active?IM_COL32(233,165,57,255):IM_COL32(25,44,58,245));
             draw->AddCircle({px,py},r,IM_COL32(102,201,222,255),0,active?2.5f:1.0f);
-            const auto size=ImGui::CalcTextSize(label.c_str());
-            draw->AddText({px-size.x/2,py-size.y/2},IM_COL32_WHITE,label.c_str());
+            const auto size=RuntimeStatusBar::UiFont()->CalcTextSizeA(15*scale,FLT_MAX,0, label.c_str());
+            draw->AddText(RuntimeStatusBar::UiFont(),15*scale, {px-size.x/2,py-size.y/2},IM_COL32_WHITE,label.c_str());
             AddRegion(px,py,r,r,origin,key);
         };
         if(planning.handDrawnTypeChoosing&&handFarmPrompt) {
+            const float scale=std::min({OverlayUiScale::Frame(OverlayUiScale::Part::HandPalette), rect.right/720.0f, rect.bottom/300.0f});
             // This modal uses the same published hit regions as the type chooser; no
             // game click underneath it may accidentally select or create a point.
             const float width=std::min(680*scale,static_cast<float>(rect.right)-40*scale);
@@ -2011,8 +2034,8 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             draw->AddRectFilled({0,0},{static_cast<float>(rect.right),static_cast<float>(rect.bottom)},IM_COL32(0,0,0,120));
             draw->AddRectFilled({left,top},{left+width,top+height},IM_COL32(25,44,58,255),10*scale);
             draw->AddRect({left,top},{left+width,top+height},IM_COL32(102,201,222,255),10*scale);
-            draw->AddText({left+20*scale,top+22*scale},IM_COL32_WHITE,"为此路线开启刷怪采集模式？");
-            draw->AddText(ImGui::GetFont(),ImGui::GetFontSize()*0.85f,{left+20*scale,top+65*scale},IM_COL32(190,207,218,255),
+            draw->AddText(RuntimeStatusBar::UiFont(),15*scale, {left+20*scale,top+22*scale},IM_COL32_WHITE,"为此路线开启刷怪采集模式？");
+            draw->AddText(RuntimeStatusBar::UiFont(),15*scale*0.85f,{left+20*scale,top+65*scale},IM_COL32(190,207,218,255),
                 "导航时，接近当前目标并停留片刻会自动标记完成，然后指引下一个目标；无需逐个手动标记。此模式不会代替游戏内的战斗或拾取操作。",nullptr,width-40*scale);
             const char* labels[]={"开启并绘制","不开启并绘制","取消"};
             const char* keys[]={"route:hand:farm:on","route:hand:farm:off","route:hand:farm:cancel"};
@@ -2020,16 +2043,16 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
             for(int i=0;i<3;++i) {
                 const float x=left+20*scale+i*(buttonWidth+10*scale),h=38*scale;
                 draw->AddRectFilled({x,buttonTop},{x+buttonWidth,buttonTop+h},i==0?IM_COL32(38,111,127,255):IM_COL32(44,61,75,255),5*scale);
-                const auto text=ImGui::CalcTextSize(labels[i]);
-                draw->AddText({x+(buttonWidth-text.x)/2,buttonTop+(h-text.y)/2},IM_COL32_WHITE,labels[i]);
+                const auto text=RuntimeStatusBar::UiFont()->CalcTextSizeA(15*scale,FLT_MAX,0, labels[i]);
+                draw->AddText(RuntimeStatusBar::UiFont(),15*scale, {x+(buttonWidth-text.x)/2,buttonTop+(h-text.y)/2},IM_COL32_WHITE,labels[i]);
                 AddRegion(x+buttonWidth/2,buttonTop+h/2,buttonWidth/2,h/2,origin,keys[i]);
             }
         } else if(planning.handDrawnTypeChoosing) {
             for(int i=0;i<2;++i) {
                 const auto label=i==0?"收集物路线":"非收集物路线";
-                const float y=top+i*(2*r+gap),width=std::max(150.0f*scale,ImGui::CalcTextSize(label).x+20);
+                const float y=top+i*(2*r+gap),width=std::max(150.0f*scale,RuntimeStatusBar::UiFont()->CalcTextSizeA(15*scale,FLT_MAX,0, label).x+20*scale);
                 draw->AddRectFilled({x-r,y-r},{x-r+width,y+r},IM_COL32(25,44,58,245),4);
-                draw->AddText({x-r+10,y-ImGui::CalcTextSize(label).y/2},IM_COL32_WHITE,label);
+                draw->AddText(RuntimeStatusBar::UiFont(),15*scale, {x-r+10*scale,y-RuntimeStatusBar::UiFont()->CalcTextSizeA(15*scale,FLT_MAX,0, label).y/2},IM_COL32_WHITE,label);
                 AddRegion(x-r+width/2,y,width/2,r,origin,i==0?"route:hand:type:collectible":"route:hand:type:daily");
             }
         } else {
@@ -2073,11 +2096,11 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         const auto key = RuntimeHotkeys::Label(RuntimeHotkeys::Snapshot().manualRouteKey);
         const auto editNode=HandNodeAtHit(Hit(mouseX+origin.x,mouseY+origin.y),planning);
         const auto label = !editNode.empty()?std::string("按住拖拽修改连接 · 双击 Backspace 移除点位") : incompatible ? std::string("该点位与路线类型不匹配，无法连接") : onPoint ? "点击加入这个点位，再拖拽连接（或按 " + key + "）" : "点击记下这里 · " + std::string(AutoRoute::CategoryLabel(planning.handCategory)) + " · " + (planning.handIcon==FreePointIcon::Number?std::string("数"):AutoRoute::FreePointLabel(planning.handIcon,0)) + "（或按 " + key + "）";
-        const auto size = ImGui::CalcTextSize(label.c_str());
+        const auto size = ScaledSize(OverlayUiScale::Part::Hint, label.c_str());
         const ImVec2 text(mouseX - size.x / 2, mouseY + radius + 10);
         draw->AddRectFilled(ImVec2(text.x - 4, text.y - 2), ImVec2(text.x + size.x + 4, text.y + size.y + 2),
             IM_COL32(25, 31, 42, 225), 3);
-        draw->AddText(text, IM_COL32_WHITE, label.c_str());
+        ScaledText(draw, OverlayUiScale::Part::Hint, text, IM_COL32_WHITE, label.c_str());
     }
     GamepadCursorGeometry::Shared().Publish(std::move(cursorGeometry));
     mapInteractive = DrawItemBase::IsMarkerGameFocused(gameWindow) || ToolsFocused();
@@ -2195,7 +2218,7 @@ void DrawMarkerInteraction::DrawMap(const RECT& rect, HWND gameWindow, const Ite
         } else if (click.target.starts_with("g:")) {
             if (groupMembers.contains(click.target)) { expanded = click.target; expandedMembers = groupMembers[expanded]; listPage = 0; }
         } else if (click.target == "page:next") {
-            if ((listPage + 1) * 8 < expandedMembers.size()) ++listPage;
+            if ((listPage + 1) * expandedPageSize < expandedMembers.size()) ++listPage;
         } else if (click.target == "page:previous") { if (listPage) --listPage; }
         else if (click.target.starts_with("p:")) {
             const auto id = click.target.substr(2);

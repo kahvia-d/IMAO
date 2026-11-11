@@ -46,7 +46,8 @@ public partial class App : Application
         int exitCode = 1;
         try
         {
-            if (readerProbe) await GamepadReaderProbe.RunAsync(originalForeground, message => log.WriteLine(message));
+            if (Environment.GetCommandLineArgs().Contains("--test-overlay-scale")) await GuideWindowTests.OverlayScaleAsync(message => log.WriteLine(message));
+            else if (readerProbe) await GamepadReaderProbe.RunAsync(originalForeground, message => log.WriteLine(message));
             else if (serviceTest) await GamepadWindowTests.RunServiceAsync(message => log.WriteLine(message));
             else if (crossProcessTest) await GamepadCrossProcessTests.RunAsync(message => log.WriteLine(message));
             else if (visibilityTest) await AssistantVisibilityTests.RunAsync(message => log.WriteLine(message));
