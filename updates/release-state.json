@@ -13,7 +13,10 @@
     "previousStableSha256": "6d7bdb37807cb8778475a16a54f1a5117426eb5e29953d178ce79a6c97a5d387",
     "artifactDigest": "b26f9306da4569472c03b876d55048cacee125dc98e381f2bd680d73c8eae4ef",
     "status": "awaiting-signature",
-    "id": "9c2ab46691bf4a9f83e2dc91d82425f1"
+    "id": "9c2ab46691bf4a9f83e2dc91d82425f1",
+    "requestId": "07dc8db04cbd8bf39821cd81679fb4951197c292574fe7848ff3ec302e4e2d88",
+    "requestArtifactId": 13836723523,
+    "requestArtifactDigest": "47dd54a9a09171bb24367768e0f6e7a97b4ddb8aa640aaabf9ab1c5cf35c0077"
   },
   "completed": [
     {
