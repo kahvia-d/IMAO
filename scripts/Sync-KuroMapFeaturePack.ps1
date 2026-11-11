@@ -47,7 +47,7 @@ param(
     # surface appearance and every floor's layered appearance. Stacking the floors into a
     # single image instead measured 5 near-anchor matches against a real minimap where the
     # per-floor files scored 21, so they must stay separate; see
-    # Docs/LayeredMapFeaturePackPlan.md section 0.
+    # Docs/architecture/LayeredMapFeaturePackPlan.md section 0.
     [string]$LayeredCompositeDir = '',
     # Generation recorded in the manifest. With -TileArchive it defaults to the archive
     # directory name; without it, the value is compared against the live upstream value

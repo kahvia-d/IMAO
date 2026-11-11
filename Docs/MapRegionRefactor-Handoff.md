@@ -1,15 +1,14 @@
 # 地图资源分区域重构 · 交接说明
 
-这份文档写给**接手这项工作的人或 AI 会话**。目标不是复述历史，而是让你在
-**不重新踩一遍坑**的前提下继续往下做。
+本文保留早期地图分区域重构的阶段交接与证据。2026-11-12 核对：区域包、按需下载和共享词表已经历后续实施，旧分支、HEAD 和阶段编号不是当前工作区要求。当前入口见[区域按需说明](architecture/MapRegionOnDemandHandoff.md)、[瓦片特征包](guides/KuroTileFeaturePacks.md)与[程序/资源更新](ResourceUpdates.md)。下文历史命令执行前应核对其阶段与输入，不可按旧快照恢复当前资源。
 
 如果你是一个新会话，请先执行下面的"自证状态"，不要只信本文的描述——本文也可能有记错的地方。
 
 ```powershell
 cd C:\Dcode\WWMAP-TOOLS
-git log --oneline -6          # 期望 HEAD = 222ace2
-git rev-parse --abbrev-ref HEAD   # 期望 refactor/map-regions
-git status --porcelain=v1     # 期望无输出
+git log --oneline -6          # 查看当前提交，不要求回到早期交接 HEAD
+git rev-parse --abbrev-ref HEAD   # 查看当前分支
+git status --porcelain=v1     # 检查已有工作，勿为复现旧状态丢弃改动
 ```
 
 ---

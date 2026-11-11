@@ -1,8 +1,8 @@
 # Builds "layered view" tiles for a region by compositing each layered-map overlay onto
 # the surface tile it sits on, ONE IMAGE PER FLOOR.
 #
-# Evidence for the model (Docs/LayeredMapFeatureMeasurement_20260922.md sections 7-8,
-# Docs/LayeredMapFeaturePackPlan.md section 0):
+# Evidence for the model (Docs/research/LayeredMapFeatureMeasurement_20260922.md sections 7-8,
+# Docs/architecture/LayeredMapFeaturePackPlan.md section 0):
 #   * upstream layered tiles are RGBA overlays (93.7-100% fully transparent);
 #   * the in-game layered view is the surface tile dimmed to 0.197x with the current
 #     layer on top, and the corner minimap draws the current layer over the surface;

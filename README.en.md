@@ -53,39 +53,36 @@ IMAO itself is permanently free, with no paid edition, membership tier or featur
 | Item | Requirement |
 | :--- | :--- |
 | OS | Windows 10 1809 (17763) or newer, **x64 only** |
-| Game display | Any client aspect ratio (16:9 / 16:10 / 21:9); coordinate OCR is placed by the game's own HUD scale instead of a resolution list |
+| Game display | Adapts to client size and HUD scale, including common 16:9 / 16:10 / 21:9 layouts; extreme scaling, blurred readouts and cloud-stream compression can affect recognition |
 | Runtime | **No .NET installation needed** (the launcher is self-contained); the VC++ runtime ships with the package |
-| Disk | About **1.5 GB** after extracting the full package (all map regions included) |
+| Disk | The full package includes regional resources; size varies by release. Leave extra space for staging and rollback versions |
 
-> Updates are small: **Settings → Check for updates** downloads only the shards that differ from your
-> build — roughly 1.6 MB for a marker-data-only update, about 30 MB for a regular program update.
-> You never re-download the whole package.
+> Program updates support incremental shards. Download size depends on the changes, selected source and local file state.
+> The new version takes effect after you fully exit and reopen IMAO.
 
 ## Highlights
 
-- **Real-time position sync.** Minimap feature matching is the primary source, backed by OCR of the
-  in-game coordinate readout and big-map viewport solving. When tracking briefly drops, markers keep
-  moving along the extrapolated path (about 7 units of error after one second).
+- **Real-time position sync.** Combines minimap visual matching, a custom-trained YOLO coordinate recognizer and big-map viewport solving. Accepted positions can be retained during brief gaps; motion extrapolation has been removed, and scene or display-context changes require reconfirmation.
 - **Interactive big map and minimap navigation.** The overlay is drawn straight onto the game window:
   marker icons, count badges, overlap expansion, completed-marker display and **marker filtering** —
   the main window and the in-game tool palette share one filter state.
 - **Automatic route planning.** Nearest-neighbour plus 2-opt local search, up to **500 targets per route**;
   measured P95 around **13.7 ms** at the 500-target scale. Preview, save, load, and **re-plan the
   remaining route live** while you walk.
+- **Hand-drawn routes and collections.** Draw and edit route nodes, organize collections, import/export route bundles, reorder routes and rotate between them automatically.
+- **Missing-marker filter.** Filter by the curated list of confirmed undetectable markers; markers outside that list remain unknown rather than being classified as detectable.
 - **One-key nearby collection.** Triggered within 15 minimap pixels by default (adjustable 5–120).
   A candidate list only appears when marker icons actually overlap; you can work through it
   continuously or collect a whole group at once.
 - **Guide popup.** Marker details, illustrated guides, paging and zooming, with a separate always-on-top
   window for full-size images. Guides are cached online and **reading public guides requires no login**.
-- **Automatic layered-map detection.** Inside caves and underground structures only your current floor's
-  markers are shown; other floors appear dimmed with an up/down badge and surface markers hide
-  themselves, then come back the moment you step out. Covers **57 layered maps / 90 floors**.
+- **Automatic layered-map detection.** Markers follow detected floor membership with up/down indicators. Enclosed floors can hide surface markers; open floors keep them visible. The current layered-map manifest covers **63 maps / 98 floors**.
 - **Per-region downloads.** Every region is a separate feature pack. Disable it, or delete the local copy
   to free disk space and download it again later. Offline import
   (`resources-<version>-offline.zip`) is supported too.
 - **Xbox / PlayStation gamepad support.** Open the tool palette, the marker assistant, complete nearby markers,
   collect a whole group and zoom guide images — all without touching the keyboard.
-- **KuroBBS progress sync.** With the [companion browser extension](https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg),
+- **KuroBBS progress sync.** With the [Chrome Web Store](https://chromewebstore.google.com/detail/imao-%E5%BA%93%E8%A1%97%E5%8C%BA%E8%BF%9B%E5%BA%A6%E5%90%8C%E6%AD%A5/elhbnijeefmmmempajadehknbckaopge) / [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg) extension,
   local records and your own KuroBBS account sync both ways: the initial merge takes the union, while later syncs also reflect user cancellations.
 - **A signed update chain.** Manifests are ECDSA P-256 signed, every package is SHA-256 verified and
   executables are rejected inside map packages. Updates only touch the program and map data —
@@ -93,7 +90,7 @@ IMAO itself is permanently free, with no paid edition, membership tier or featur
 - **A choice of download source.** Settings → "Download source" offers **GitHub** (free, but often unreachable
   from mainland China) or
   [MirrorChyan](https://mirrorchyan.com/zh/projects?rid=IMAO&source=imao_app_settings) (an optional third-party high-speed download and update service
-  requiring a MirrorChyan CDK, with no additional feature unlocks). The choice decides **both the update check and the download**.
+  requiring a MirrorChyan CDK, with no additional feature unlocks). The choice determines **program version checks and program downloads**; regional resources continue to use the signed manifest.
 
 <!-- markdownlint-disable -->
 
@@ -134,12 +131,17 @@ IMAO itself is permanently free, with no paid edition, membership tier or featur
 2. Launch Wuthering Waves (any client aspect ratio: 16:9, 16:10 or 21:9), and make sure the
    **coordinate readout in the lower-left corner is clearly visible** — it is one of the tool's
    positioning sources.
-3. Click **Start exploring** and wait for the status message in the lower-right corner to disappear;
-   that means positioning succeeded.
+3. Click **Start exploring** and check the status message to see whether positioning is ready.
 4. **On a cold start, open the in-game big map once** so the tool can determine which region you are in.
    Until then the status bar says "open the big map once to determine your region". After that, region
    detection is automatic wherever you go.
 5. Open Settings to enable minimap/big-map markers and the status bar, or download the regions you want.
+
+### Cloud gaming and interface scaling
+
+For the browser version of cloud Wuthering Waves, use the home page’s game-window picker to select Chrome or Edge. The game area is detected automatically; select it again after restarting IMAO. See the [cloud-gaming guide](Docs/guides/CloudWuthering_zh-Hans.md) for usage and validation limits.
+
+In-game text, tool windows, guides and map markers support independent scaling; 100% uses automatic adaptation.
 
 ### Default hotkeys
 
@@ -150,7 +152,7 @@ immediately.
 | :--- | :--- |
 | <kbd>Z</kbd> | Complete the nearby marker (a candidate list appears first if icons overlap) |
 | <kbd>F8</kbd> | Open / close the guide for the current target |
-| <kbd>Q</kbd> | Record the two endpoints of a hand-drawn route on the big map |
+| <kbd>Q</kbd> | Add a route node in big-map hand-drawing mode |
 | <kbd>PageUp</kbd> / <kbd>PageDown</kbd> | Previous / next guide image |
 | <kbd>F9</kbd> | Start / stop exploring (same as the button on the home page) |
 | <kbd>Shift</kbd> + left-drag | Temporary rectangle selection while picking route targets |
@@ -207,18 +209,20 @@ IMAO does not modify or fabricate public KuroBBS maps, markers or other shared c
 sync only takes place after you actively sign in to and connect your own KuroBBS account, using your own
 login session to synchronise only your own marker completion status.
 
-**Edge Add-ons (recommended): [IMao KuroBBS Progress Sync](https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg)**
+Install from the store for your browser:
 
-On Chrome, load the same code by hand with the [manual install guide](Docs/KuroMapSyncInstall.md) —
-`manifest.json` pins the release public key, so the unpacked build gets exactly the same extension id
-as the store build (`ohmikf…`) and the desktop credentials and sync profiles carry over unchanged.
+- **[Chrome Web Store](https://chromewebstore.google.com/detail/imao-%E5%BA%93%E8%A1%97%E5%8C%BA%E8%BF%9B%E5%BA%A6%E5%90%8C%E6%AD%A5/elhbnijeefmmmempajadehknbckaopge)**
+- **[Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/ohmikfaeobbffhlhoocklplniobcfdbg)**
+
+Neither store version needs developer mode. Chrome and Edge use different extension IDs, and the current desktop bridge supports both.
+For an older installation, update IMAO and run "Register/repair browser bridge" again. See the [installation guide](Docs/KuroMapSyncInstall.md) for unpacked installs and troubleshooting.
 
 Once installed:
 
 1. In the tool, open **Settings → KuroBBS marker progress sync** and click "Register/repair browser bridge".
 2. Open and sign in to the KuroBBS map, click the extension icon, then "Connect desktop app".
-3. Back in the tool, "Preview sync" to see the difference, then "Apply sync". With automatic sync on,
-   local completion or cancellation changes are pushed immediately and everything is reconciled every 10 minutes.
+3. Bind the intended local record book to the KuroBBS account ID shown by the extension in Settings.
+4. Preview the differences, then apply sync. Automatic sync attempts to push local completion or cancellation changes promptly and checks every 10 minutes, with backoff after failures.
 
 Credentials travel only over the browser's official Native Messaging channel to the local program, which
 stores them encrypted with **DPAPI** under the current Windows user. The extension **does not read
@@ -238,7 +242,7 @@ in-game minimap reference check (2.7 px); original map imagery is not committed.
 Its four-point calibration was fitted from four in-game captures on 2026-09-30 (0.53 px
 maximum error). It has passed local in-game trial approval and supports filters, marker labels and
 visual localisation; the full four-check verification and baseline regression are still ongoing.
-See [the calibration samples guide](Docs/KuroSceneCalibrationSamples.md).
+See [the calibration samples guide](Docs/guides/KuroSceneCalibrationSamples.md).
 
 | Country | Regions |
 | :--- | :--- |
@@ -263,19 +267,15 @@ localisation features; those original PNGs are not distributed with the program.
 - **Why open the big map once on a cold start?**
   A region's identity can only be established by visual matching or by the first big-map solve; the
   in-game coordinate readout alone cannot decide which region you are in. It is a one-time step.
-- **Why do markers disappear when tracking is lost?**
-  When positioning data is unavailable, ambiguous or insufficient, the last trusted position is kept for
-  up to 3 seconds while markers move along the extrapolated path. After 2 seconds without a new result
-  markers stop being drawn, so they never sit in place and flicker.
+- **What happens during a positioning gap?**
+  Position extrapolation and the old blanket two-second display timeout have been removed. Accepted positions may remain visible during brief gaps; scene changes, stopping exploration or changes in display context require reconfirmation. A retained marker is not a new position observation.
 - **Some places cannot be located from the minimap.**
   Dark, fine-contour art styles, large water surfaces and sparse reefs (parts of Chengxiao Mountain and
   Tethys, for example) have too few features and matching is conservatively rejected there.
-  **Opening the big map once solves it** — the in-game big map matches the imagery used to build localisation features, so it
-  localises very reliably.
+  Try opening the big map to help recovery; results still depend on image quality, map features and the available regional resources.
 - **Does the game have to be 16:9?**
   No. The game scales its HUD by `min(width/1600, height/900)` and anchors each widget to the screen
-  edge it hugs; the tool now places every crop by the same rule, so 2560×1600, 3840×2160 and 21:9
-  clients all work and coordinate OCR is no longer limited to three 16:9 tiers.
+  edge it hugs. IMAO adapts to common aspect ratios instead of limiting OCR to three 16:9 sizes; extreme scaling or unclear text can still cause rejection.
   (Before 2026-09-26 a client that was not 1600×900 / 1920×1080 / 2560×1440 refused coordinate
   recognition, and on 16:10 the minimap crop sat too low while the task-icon box missed by 36px.)
 - **What if two floors look almost identical?**
@@ -324,8 +324,8 @@ moment it tries to download it errors out. This is a defect in the program, not 
 
 To build it yourself or contribute:
 
-- [Reproducible build (Windows x64)](Docs/Build_zh-Hans.md)
-- [Compile with CMake](Docs/Compile_en.md) / [CMake 编译说明](Docs/Compile_zh-Hans.md)
+- [Reproducible build (Windows x64)](Docs/guides/Build_zh-Hans.md)
+- [Historical upstream CMake guide](Docs/archive/Compile_en.md) / [上游历史 CMake 说明](Docs/archive/Compile_zh-Hans.md)
 - [Documentation index](Docs/README.md) (build, updates, map data, UI, audit records)
 - Layout: `IMao-Core/` (C++ native core: visual localisation, resource loading, IPC),
   `IMao-WinUI/` + `IMao-WinUI.Core/` (WinUI 3 shell: UI, updates, settings),
@@ -340,7 +340,8 @@ This project continues the work of
 ### Open-source libraries
 
 - Image recognition: [OpenCV](https://github.com/opencv/opencv) (with opencv_contrib, using SURF)
-- Text recognition: [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) / [Paddle Inference](https://www.paddlepaddle.org.cn/inference/master/guides/install/download_lib.html)
+- Coordinate recognition: [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) with a specialized model trained on project captures / [ONNX Runtime](https://github.com/microsoft/onnxruntime)
+- Historical OCR and compatibility tools: [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) / [Paddle Inference](https://github.com/PaddlePaddle/Paddle)
 - Window capture: [Win32CaptureSample](https://github.com/robmikh/Win32CaptureSample)
 - Overlay UI: [ImGui](https://github.com/ocornut/imgui)
 - C++ JSON: [nlohmann/json](https://github.com/nlohmann/json)

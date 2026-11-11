@@ -5,7 +5,7 @@
 # ---------------
 # New-LayeredTileComposite builds each floor's reference image as `surface x k` with that floor's
 # RGBA overlay composited on top, because that is what the game itself draws (see
-# Docs/LayeredMapFeatureMeasurement_20260922.md sections 7-8). The overlay is 93.7-100% transparent,
+# Docs/research/LayeredMapFeatureMeasurement_20260922.md sections 7-8). The overlay is 93.7-100% transparent,
 # so most of what the feature builder then extracts is the SURFACE map's own art at a lower
 # brightness - measured at 71% of 寒雾深坑's 1381 descriptors, and 59.9% of all 275k across the 90
 # floors of the game.
@@ -14,7 +14,7 @@
 # cave) and fatal for identity: the base plate is the SAME picture for every floor sharing a tile, and
 # for a floor that owns its tile outright it is the surface the player may be standing on. On
 # 2026-09-26 a frame captured on the surface at 虎口山脉 voted 寒雾深坑 10-17 against 3-7 on that base
-# plate and the tool hid every surface marker. See Docs/LayeredMapFalsePositive_Hukou_20260926.md.
+# plate and the tool hid every surface marker. See Docs/research/LayeredMapFalsePositive_Hukou_20260926.md.
 #
 # The grid this file produces travels in floor-index.json next to the floor's tile list, one bit per
 # descriptor of the floor's own .imf, so the runtime can ask "of these matches, how many hit art this

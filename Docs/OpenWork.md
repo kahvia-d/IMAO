@@ -6,50 +6,57 @@
 > 维护方式：做完一条就在该条上写明完成日期与验证方式，**不要删条目**（删了就不知道它曾经存在）；
 > 新发现的未完成项加到对应分组。优先级沿用来源文档里的标注。
 >
-> 最后整理：2026-09-20（分片增量发布之后）。
+> 初次汇总：2026-09-20；后续事项按条目中的日期续写。2026-11-12 整理导航与状态口径，未把历史待办自动判为已完成。
+>
+> 本页混合历史问题、已完成记录与待验收事项。每条以其最近一次带日期的记录为准；旧条目的“当前”“未实现”等描述需要结合对应提交与现有实现核对，不能直接作为新一轮修改需求。当前入口见[文档索引](README.md)。
 
 ## 1. 覆盖层与游戏帧率（最需要收尾的一块）
 
-现象与成因**已查明但没有修**：玩家在 release 上感到的 120 → 99 fps 来自两件结构性的事——
-一个**整屏置顶分层窗口长期在场**，把游戏从 Independent Flip 压回 DWM 合成；以及 **WGC 的整屏
-GPU→CPU 回读**以游戏呈现节奏持续运行且不节流。出处：`GameFrameCostAnalysis_20260918.md` §5。
+2026-09-18 的历史基线曾记录 120 → 99 fps，并归因于整屏覆盖层合成和未节流的 WGC 回读。
+**2026-11-12 对照现有实现复核：这些问题已有多项修复，不能再统称“没有修”。** 下表区分代码已落地与仍需实测的收益；历史基线出处为 [`GameFrameCostAnalysis_20260918.md`](GameFrameCostAnalysis_20260918.md) §5。
 
 ⚠️ 这块的结论**反复过**：DirectComposition 的两次"成立"测量**当晚即撤回**（§18），`2026.9.18.1`
 那次发布也因此撤回。之后任何 DComp 结论都必须重新测量，不能引用旧结论。
 
 | # | 优先级 | 未完成项 | 出处 | 下一步动作 |
 |---|---|---|---|---|
-| 1.1 | 高 | 覆盖层交换链是 `DXGI_SWAP_EFFECT_DISCARD`（blt 模型）+ `LWA_COLORKEY`；只画一小块的探针用 `FLIP_SEQUENTIAL` + DComp 只要 **1.8 fps**，真实覆盖层却要 **13–16 fps** | §16.2 / §16.3 | **一行配置改动**，先验证这条——目前最有价值的待验证项 |
-| 1.2 | 高 | WGC 没有 `MinUpdateInterval`，整屏读回不节流 | §6.1 | 加 `MinUpdateInterval`（`ApiInformation` 运行时探测，旧系统回退），从源头砍流量 |
-| 1.3 | 中 | 覆盖层窗口整屏大小，合成面积大；"无内容时隐藏窗口"没有真正生效 | §6.2 | 只覆盖真正要绘制的区域（注意：未必能恢复 Independent Flip） |
-| 1.4 | 中 | 状态条每帧文本都在变，内容哈希几乎不命中 | §6.3 | 把每秒都变的文本排除出哈希，或让状态条降频更新 |
-| 1.5 | 中 | 每帧一次 14.7 MB 的 `cv::Mat` 分配 + memcpy | §6.4 | 消费侧直接读 staging 映射视图，或复用缓冲，合并拷贝链 |
-| 1.6 | 高（工作量最大） | 未用 DirectComposition 取代 `WS_EX_LAYERED` + `LWA_COLORKEY`——唯一有机会让游戏恢复 Independent Flip 的路 | §6.5 | 结构性改造；先按 §7 用 PresentMon 做「关/开/关」三段对比建立基线 |
+| 1.1 | 高 | **2026-11-12 核对：默认已是 DComp + `FLIP_SEQUENTIAL`**；`ImGuiOverWindows.h` 的 `PresentMode=1` 为默认，`.cpp` 保留 DISCARD/colorkey 回退 | §16.2 / §16.3 | 不再作为“一行改动”待办；不同机器的收益、兼容回退仍须同场景测量，不引用已撤回的旧测量 |
+| 1.2 | 高 | **已实施**：`bed9524` 加运行时属性探测与约 33.333ms `MinUpdateInterval`；`b146fb4` 将探索 ROI 回读设为普通路径。当前 `SimpleCapture.cpp` 仍保留全帧回退 | §6.1 | 持续核对旧系统回退与 ROI/全帧切换；不能再按“全程整屏且不节流”描述当前版本 |
+| 1.3 | 中 | **已实施小尺寸/并集窗口及空闲隐藏**：`ImGuiOverWindows.cpp` 按内容调整窗口并记录 `visible=0 reason=idle`；9月21日实机记录见小地图渲染计划 §29 | §6.2 | 大地图及状态栏并集仍可能扩大面积；继续测量，不据此断言恢复 Independent Flip |
+| 1.4 | 中 | 9月18日基线：状态条动态文本导致内容哈希很少命中；当前仍有内容哈希与诊断hold-present路径，**本次未取得新版命中率测量** | §6.3 | 先重测状态条单独显示/关闭的哈希命中率与帧率，再决定降频或调整哈希，不能把旧比率当当前实测 |
+| 1.5 | 中 | **已实施缓冲复用与锁外拷贝**：`8cf7a73`、`390ce02`；当前 `SimpleCapture.cpp` 复用 scratch/latest，消费者 `copyTo` 仍存在，ROI另有紧凑 staging | §6.4 | “每帧重新分配”已过期；剩余拷贝成本需按 ROI/全帧分别量化，尚非零拷贝 |
+| 1.6 | 高 | **DComp已落地，但仍保留 `WS_EX_LAYERED` 以保证输入穿透**；旧“取代 layered”的目标不能作为当前实现描述 | §6.5 | Independent Flip 恢复仍须 PresentMon 关/开/关实验；不能把 DComp 已接入等同于该性能目标已达成 |
 
 ## 2. 识别与资源
 
-出处：`ProjectAudit_20260907.md` 的未完成表。
+出处：[`ProjectAudit_20260907.md`](research/ProjectAudit_20260907.md) 的未完成表。
 
 | # | 优先级 | 未完成项 | 下一步动作 |
 |---|---|---|---|
-| 2.1 | 高 | 928 个归档点位有 `floorId`，但运行时 `ItemDatas` 不保留楼层身份，定位/筛选没有完整楼层模型 | 把 state/country/floor/level 与坐标空间作为统一身份；用同一平面位置的不同楼层独立样本验证不串层 |
-| 2.2 | 高 | 三个新区共 970 个点位，但 `scene-validation.json` 全部关闭，缺独立校准与可用特征包 | 收集校准锚点 → 构建并核验各场景特征包 → 实测后开放（不能只因 JSON 齐全就开启） |
-| 2.3 | 高 | 旧 OCR 清单缺 61/61 张图，旧视觉清单缺 111/113 张图 | 可共享回归图归档到 `Tests`，补外部真值、反例与各场景覆盖 |
-| 2.4 | 高 | 回放用例主要来自同一区域（大地图 8 用例含同图变体，不是 8 个独立场景） | 增加不同国家/场景、连续移动、传送、遮挡、缩放、开关地图、失焦与重新捕获的实机录像 |
-| 2.5 | 高 | 全局定位 P95 **256.38 ms**、失败搜索可达 **5–7 s**、大地图首帧约 **4 s** | 分离可取消的快速候选搜索与分批后台恢复；复用已加载索引与区域结果；给首次定位/连续追踪/错误输入分别设延迟门槛（不放松几何要求） |
+| 2.1 | 高 | **2026-11-12 核对：楼层身份已进入运行时**。`DrawItemBase.cpp` 加载/导出 `layer.stateId/countryId/floorId/level`，楼层过滤与异步分类已存在（`4b144db`）；原“ItemDatas 不保留”已过期 | 继续按同平面不同楼层独立样本验收；字段存在不代表所有地区标定和实机不串层均已结案 |
+| 2.2 | 高 | **2026-11-12 核对：不再全部关闭**。`Assets/KuroMap/scene-validation.json` 的 LowerVault、Darkplain、TimeRiftRuins、MengshuTianluo 均 `approved=true`，范围为 `local-capture-trial`；`27a8cc6` 为梦书天罗开放提交 | 仍按清单的验证范围保留四项完整核验及113样本回归缺口；局部实机试用许可不等于完整独立场景验收 |
+| 2.3 | 高 | 9月7日审计所列旧OCR/视觉清单分别缺61/61、111/113图；后续YOLO与诊断采集已有独立样本，**不等于旧清单全部补齐或全场景真值齐备** | 保留旧清单补图/标签核验；将新模型评测与旧清单完整性分别验收，不沿用旧缺图数概括当前全部回归能力 |
+| 2.4 | 高 | 旧8用例大地图回放含同图变体，不是8个独立场景；后续采集与回归增加不能自动证明跨国家/场景覆盖完整 | 增加不同国家/场景、连续移动、传送、遮挡、缩放、开关地图、失焦与重新捕获的实机录像 |
+| 2.5 | 高 | **已实施分组协作预算、取消检查、查询特征复用和恢复进度保留**；见 `PerformanceMemoryPlan_20261020.md`，最新 `cb265b5` 保留未完成区域遍历进度。256.38ms/5–7s/4s是旧基线 | 按当前版本重测首帧/连续/失败延迟；组间约2秒软预算不能抢占单次OpenCV调用，不能据代码关闭性能验收 |
 | 2.6 | 中高 | 点位/特征/标定/索引分散存放；同步 `-Apply` 验证后仍逐文件覆盖 | 按资源版本建立完整候选目录，全部文件与变换验证通过后统一切换，失败能回滚 |
-| 2.7 | 高 | even 已确认 2026.10.14.102 解决大地图闪烁。2026-10-19 小地图也已接入批量完成状态读取和账号绑定，并补齐过滤耗时 / 渲染拒绝分类诊断；真实生产过滤的旧读法性能回归先红后绿。**2026-10-19 已随 `2026.10.19.1` 正式发布**（用户决定不等 even 反馈先发） | 实机验收仍待 even 反馈与新日志，继续区分定位 / 过期 / 画面附着。见 [`MinimapMarkerFlickerFix_20261019_even.md`](MinimapMarkerFlickerFix_20261019_even.md)；前置排查见 [`MinimapMarkerFlicker_20261018_even.md`](MinimapMarkerFlicker_20261018_even.md) |
-| 2.8 | 高 | 自训 YOLO 坐标识别已随 `2026.10.19.1` 进入玩家版（`Assets/models/coordinate-yolo` 取代原 PaddleOCR 兜底），但接管延迟、恢复交回、连续移动读数误差与推理帧时间成本尚未实机测量；离线评测的零已知错误门槛未通过（用户已知情并要求随版发布） | 用实机日志核对首次失配到接管、两路切换与移动读数误差；必要时回退模型目录并记录原因。见 [`CoordinateYoloIntegration_20261016_zh-Hans.md`](CoordinateYoloIntegration_20261016_zh-Hans.md)、[`CoordinateIndependentEvaluation_20261016_zh-Hans.md`](CoordinateIndependentEvaluation_20261016_zh-Hans.md) |
-| 2.9 | 高 | 2026-10-24 原4K玩家实测确认客户端裁剪修正解决其坐标识别问题，但新的短时诊断采集中断，终态清单和原因尚待取得；本机此前也出现过队列超限，不能据此断言该玩家同因 | 获取该次`completion.json`和同日日志，区分主动停止、队列/磁盘预算、写入失败或宿主退出；对实际4K采集节奏与模式切换做吞吐回归。见 [`DiagnosticReproCapture_20261023.md`](DiagnosticReproCapture_20261023.md)、[`ClientCaptureCropFix_20261024.md`](ClientCaptureCropFix_20261024.md) |
+| 2.7 | 高 | even 已确认 2026.10.14.102 解决大地图闪烁。2026-10-19 小地图也已接入批量完成状态读取和账号绑定，并补齐过滤耗时 / 渲染拒绝分类诊断；真实生产过滤的旧读法性能回归先红后绿。**2026-10-19 已随 `2026.10.19.1` 正式发布**（用户决定不等 even 反馈先发） | 实机验收仍待 even 反馈与新日志，继续区分定位 / 过期 / 画面附着。见 [`MinimapMarkerFlickerFix_20261019_even.md`](research/MinimapMarkerFlickerFix_20261019_even.md)；前置排查见 [`MinimapMarkerFlicker_20261018_even.md`](research/MinimapMarkerFlicker_20261018_even.md) |
+| 2.8 | 高 | YOLO已进入玩家版；后续 `a096381` 保持显示状态、`7d5fe8c` 删除外推并统一投影、`bbab795` 增加消费延迟诊断、`4b144db` 异步楼层分类/GPU设置均已实施。11月11日 `3c5d8fd`/`8ba9eb0` 又改进缩放与符号证据，随 `2026.11.11.1` 发布 | 仍需当前版两路切换、连续移动误差、旧电脑延迟和GPU回退实测；旧离线零错误未通过记录保留，不自动视为最新模型评测结论。见对应11月计划和坐标评估报告 |
+| 2.9 | 高 | 10月24日该玩家采集中断原因仍未取得直接证据；**10月31日 `626798a` 已修复本机确认的独立问题**：共享编码预算与复用压缩worker，详见 [`ReproCaptureReliabilityPlan_20261031.md`](plans/ReproCaptureReliabilityPlan_20261031.md) | 仍需该玩家终态清单与同日日志；代码修复不证明与其同因，也不承诺4K持续吞吐，按计划保留真实采集验收 |
+
+### 近期已实施、尚有验收边界（2026-11-12 对照提交复核）
+
+- 内存：`4af5fbf` 已提交并随 `2026.10.22.1` 发布紧凑编码/索引、描述子映射、直方图释放、Paddle延迟加载等。最后记录的活动峰仍约910MiB，**全应用600MiB目标未达**；详见 [`RuntimeMemoryPlan_20261020.md`](plans/RuntimeMemoryPlan_20261020.md)。
+- 11月11日缩放、启动准备和主窗口位置保存分别为 `576714b`、`25e1af4`、`bd05c20`，随 `2026.11.11.2` 发布；不再列为待实现。缩放仍缺真实4K游戏会话验收；启动提速的首屏数字不含旧根启动器校验，新入口需完整安装覆盖。
+- OCR显示/外推/异步楼层及差量包的历史交付已完成，105–107不应作为当前推荐安装版本；旧电脑延迟与新旧机器连续移动验收仍开放。
 
 ## 3. 工程健壮性
 
-出处：`ProjectAudit_20260907.md` 的未完成表。
+出处：[`ProjectAudit_20260907.md`](research/ProjectAudit_20260907.md) 的未完成表。
 
 | # | 优先级 | 未完成项 | 下一步动作 |
 |---|---|---|---|
 | 3.1 | 中高 | `App` 仍有多个工作线程共享状态；本轮只修了容器与视口读口，**未完成全类并发所有权证明** | 把一帧截图、帧号、UI 状态、视口与玩家定位发布为**不可变帧结果**，UI 与快捷键只消费快照 |
-| 3.2 | 中 | 首页初始配置仍会设置默认开关/刷新间隔，功能页控件创建也可能发初始化事件 | 唯一配置状态放服务并用于界面回填；导航/重启不得覆盖用户选择 |
+| 3.2 | 中 | **2026-11-12 核对：旧首页默认值描述已过期**。现 `StartPage` 从 `CoreHostService` 读取状态，`SettingsPage` 通过 `RestoreRuntime` 回填配置，`FunctionPage` 已是路线管理页 | 继续按导航/重启/快速调节验收保存不丢失；本次静态核对不能关闭所有配置事件顺序的实机风险 |
 | 3.3 | 中 | 仍有历史坐标原点、比例和屏幕布局常量，无法从当前测试推出所有比例都正确 | 用明确坐标类型与场景标定替代重复换算；分辨率、DPI、UI 缩放与窗口比例分别验收 |
 | 3.4 | 中 | 原生 `PrintWindow` 仍是同步系统调用；游戏挂起可能拖住停止 | 测试游戏挂起/退出/最小化与设备丢失；引入可取消的捕获边界与统一故障状态 |
 | 3.5 | 中 | 多开程序仍可同时写同一账户文件；当前原子写不是跨进程合并协议 | 单实例约束，或按账户建立跨进程锁与事务存储 |
@@ -80,7 +87,7 @@ ImGui 字体/`imgui.ini` 等窄接口仍会失败或替换成 `?`；超过 `MAX_
 | 4.2 | 待决策 | `runtime` 片是否拆成 `runtime-dotnet` / `runtime-native`（换 .NET/Paddle 时要下 142 MB） | 等下一次 .NET 或 Paddle 升级前定 |
 | 4.3 | 待决策 | **跨渠道引用**：内容与某资源包完全一致的分片，能否直接沿用那个资源包的 URL | 纯发布侧改动；上传带宽吃紧时优先做 |
 | 4.4 | 待决策 | 分片级断点续传（现在单片失败整次重试、从零） | 2026-09-21 实测：472 MB 离线包上传时 TLS 握手超时，重跑发布脚本按**已上传资产的名字与摘要**跳过、只补缺的那几个，所以资产级续传已经有了，缺的是单个大文件内部的字节级续传。看用户实际失败率再定 |
-| 4.6 | 新发现 | 安装根目录与快捷方式的图标**不会**随更新变化（更新器按设计不碰原始副本，见 `ProgramUpdates.md`） | 要么接受，要么给启动器做"下次启动替换自己"的自更新（改的是救援路径，需单独设计与测试） |
+| 4.6 | 新发现 | 安装根目录与快捷方式的图标**不会**随更新变化（更新器按设计不碰原始副本，见 [`ProgramUpdates.md`](ProgramUpdates.md)） | 要么接受，要么给启动器做"下次启动替换自己"的自更新（改的是救援路径，需单独设计与测试） |
 | 4.7 | 小 | `IMao-WinUI/Package.appxmanifest` 引用了 5 个不存在的 PNG（`StoreLogo.png`、`Square150x150Logo.png` 等） | 只在打 MSIX 包时会踩；补资源或清理清单 |
 
 已了结：4.1（**构建不可复现**）——**2026-10-07 已修**。native 编译/链接加 `/d1trimfile:<仓库根>`，用
@@ -125,7 +132,7 @@ reparse point，更新系统有意使用它；不要收紧成链接计数**—�
 ⚠️ **实机节省量还没实测**——套件只能证明链接确实建立、链接数为 2、共享的树仍能通过启动校验；
 逐字节重复量（本机 1,914 MB）是在改动前的三棵树上用只读脚本量出来的，下一次真实更新后才能对账。
 ⚠️ 跨卷回退没有自动化用例（套件只有 C: 一个卷），回退是一条 `if`，由上面那条契约用例与"源被损坏"
-用例共同覆盖。一次性迁移**决定不做**，理由见 [`ProgramUpdateDiskReuse_20261010.md`](ProgramUpdateDiskReuse_20261010.md) §6.4。
+用例共同覆盖。一次性迁移**决定不做**，理由见 [`ProgramUpdateDiskReuse_20261010.md`](research/ProgramUpdateDiskReuse_20261010.md) §6.4。
 
 已了结：4.10（**启动器与桥接没有做路径归一化**）——**2026-10-10 已修**。原先判断"4.1 可能未覆盖这两个产物"是对的，
 而且原因很具体：4.1 的 `-p:ContinuousIntegrationBuild=true` 只传给了 WinUI 的发布（`Build-ReleaseCandidate.ps1:120`），
@@ -154,7 +161,7 @@ reparse point，更新系统有意使用它；不要收紧成链接计数**—�
 三条新用例：被中断留下的暂存目录在下次启动被清掉；被别的进程占住时不阻断启动且留到下次；
 `staging` 是联接时**不穿透删除**它指向的内容（junction 无需提权即可造）。
 把清扫调用去掉做对照，正好是第一条变红。资源更新套件当时 **117 项通过**（4.12 又加两条后为 119 项），
-`ResourceUpdates.md` 的对应说明已改写。
+[`ResourceUpdates.md`](ResourceUpdates.md) 的对应说明已改写。
 ⚠️ 存量残留要等**下一次启动**才被收走（本机那份 69.6 MB 目前还在）。
 
 已了结：4.12（**资源描述文件缓存无限累积**）——**2026-10-10 已修**。先量清了两个目录，因为它们的结论相反：
@@ -169,7 +176,7 @@ reparse point，更新系统有意使用它；不要收紧成链接计数**—�
 `v2/` 是子目录，`EnumerateFiles` 本来就不递归。尽力而为，被占用的留到下次。
 两条新用例：无人引用的被清、被引用的与 `v2/` 一定留下（最老一批必删、最新一批必留，中间一段**刻意不断言**——
 它取决于本次启动自己写了几个）；被别的进程占住时不阻断启动。资源更新套件 **119 项通过**。
-`ResourceUpdates.md` 里那句玩家承诺**没有被削弱**——它说的是 `v2/` 与 `packages/<包 ID>` 保留已安装资源，
+[`ResourceUpdates.md`](ResourceUpdates.md) 里那句玩家承诺**没有被削弱**——它说的是 `v2/` 与 `packages/<包 ID>` 保留已安装资源，
 本次清的只是可按内容重建的缓存，文档已把这个区别写明。
 
 已了结：4.13（**两个 65 MB 产物的版本戳**）——**2026-10-10 已做**。事实：`IMao-Launcher.exe` 与
@@ -187,7 +194,7 @@ reparse point，更新系统有意使用它；不要收紧成链接计数**—�
 **没动更新子系统源码的发版，这两个产物每版落盘从约 190 MB 降到约 0**——这正是我原先以为靠"修好可复现性"就能拿到、
 后来发现拿不到的那部分。
 ⚠️ 代价要说清：两个二进制不再自带源码出处（`build-info.json` 与 `launcher-build-info.json` 仍带）；
-启动器 PE 版本从此是"启动器版本"而非"程序版本"，看文件属性时别误读。`ProgramUpdates.md` 已同步。
+启动器 PE 版本从此是"启动器版本"而非"程序版本"，看文件属性时别误读。[`ProgramUpdates.md`](ProgramUpdates.md) 已同步。
 ⚠️ **收益的边界（2026-10-10 云端预演后更正）**：上面那句原来写成"每版落盘降到约 60 MB"、并且
 "逐版相同成立"，**都不准确**。启动器是按源码 glob 编译 `IMao-WinUI.Core/Updates/*.cs`（见
 `ProgramLauncher.csproj`），桥接引用 Core——**所以只要更新子系统的源码变了，这两个产物必然变字节**，
@@ -200,7 +207,7 @@ reparse point，更新系统有意使用它；不要收紧成链接计数**—�
 
 即**收益从"再下一版"开始显现**，而大多数发版不动 `Updates/*.cs`，所以稳态下这两个 65 MB 基本不再重复。
 剩下的每版 churn 是 `IMao-WinUI.dll`（自带程序版本戳，约 1.5 MB）加上真正改动过的文件。
-（`ProgramUpdateDiskReuse_20261010.md` §5.4 把「自有产物 190 MB/版」当作稳态模型参数，那份按
+（[`ProgramUpdateDiskReuse_20261010.md`](research/ProgramUpdateDiskReuse_20261010.md) §5.4 把「自有产物 190 MB/版」当作稳态模型参数，那份按
 `Docs/README.md` 的约定是**不再追改**的当天记录——以本条为准。）
 ⚠️ 次要边界：实测同一份源码在**不同输出布局**下构建出的桥接仍差 173 字节（MVID / PDB GUID / Roslyn
 确定性哈希 / 嵌套 PE 时间戳）——**不是版本泄漏，是构建布局参与了编译**（同一布局下换 `IMaoVersion`
@@ -225,29 +232,27 @@ package contents.`），`Program update checks: 58 passed.` 与 `Resource update
 | # | 位置 | 内容 | 建议 |
 |---|---|---|---|
 | 5.1 | `IMao-WinUI/AppNotificationActivationHandler.cs`、`Services/AppNotificationService.cs`、`Contracts/Services/IAppNotificationService.cs`（**三个文件均已删除**） | WinUI 模板遗留的"处理通知激活"占位（命中会弹 TODO 对话框） | ✅ **已完成（`1517c5c`）**：2026-10-12 一位玩家**所有版本都打不开**——`App` 构造函数里那行未加保护的 `AppNotificationManager.Default` 在他那台没有 Windows App Runtime Main/Singleton 包的机器上抛 `E_ACCESSDENIED`，变成 stowed exception（`0xC000027B`）在能写任何日志之前杀死进程。整条脚手架已删除，`App.xaml.cs` 留了注释说明为什么**不**注册通知（见 MEMORY K74） |
-| 5.2 | `IMao-WinUI/ShellPage.xaml.cs:16,36` | 模板文案：导航标题/图标、标题栏图标 | 标题栏图标运行时已由 `MainWindow.xaml.cs:23` 正确设置；清掉过期注释即可 |
+| 5.2 | `IMao-WinUI/Views/ShellPage.xaml.cs` | **2026-11-12 已核对：旧路径已迁移，当前文件无 TODO 占位注释**；11月UI重构已替代旧模板导航 | 关闭原“清理模板注释”待办；此结论仅限该占位，不是全UI验收 |
 
 ## 6. 环境与流程（提示，不是必须做）
 
-- 生产私钥唯一副本曾只存在于 Codex 包的 `LocalCache` 里；**2026-09-20 已复制回文档主位置**
-  `%LOCALAPPDATA%\WWMAP-TOOLS-Publisher\release-signing-key.json`（两份 SHA-256 一致、DPAPI 当前
-  用户可解封、与 `Assets/Updates/trusted-keys.json` 匹配）。原始那份仍在，可视为备份。
+- 凭据仅在本机保管；不在文档、记忆、日志或对话记录其值与存放位置。2026-11-12 清理此处历史存放细节。
 - 发布后本地 `main` 会落后远端（脚本用 GitHub API 直接写远端 `main`）：先 `git fetch origin`，再
   `git merge --ff-only origin/main` 追平。**不要用 `git fetch origin main:main`**——`main` 已检出时 Git
   直接拒绝（`refusing to fetch into branch ... checked out at ...`），2026-09-21 踩过一次。
 
 ## 7. 检测器迁移（2026-10-08 的 SURF → SIFT 决策）
 
-出处：[`DetectorMigrationDecision_20261008.md`](DetectorMigrationDecision_20261008.md)（当天记录，按
+出处：[`DetectorMigrationDecision_20261008.md`](research/DetectorMigrationDecision_20261008.md)（当天记录，按
 `Docs/README.md` 的约定不再追改）。该文第五节把 `fabricatorium`（隐海试验场）的 **4/12** 记为「明确的异常，
 未解释」，并在第七节把它列为**不迁移 SIFT 的理由之一**（原话：「在解释它之前不该迁移」）。
 **2026-10-10 查清：那条理由不成立**，而且原文对它的三处描述都是错的。
 
 | # | 事项 | 现状 | 备注 |
 |---|---|---|---|
-| 7.1 | 词汇表去重（14 份相同拷贝改为共享一份，省 26 MB） | 未做 | 与检测器无关，风险最低、收益最大 |
+| 7.1 | 词汇表去重（14份相同拷贝改为共享一份，省26MiB） | **已实施：`134aff1`、`69388d2`（2026-10-08）** | `RuntimeFeatureRepository.cpp` 加载共享词表；方案见 [`VisualIndexVocabularySharing.md`](plans/VisualIndexVocabularySharing.md)。原“未做”漏记了已合入的实现 |
 | 7.2 | 查清 fabricatorium 为什么一半查询零匹配 | **已了结 2026-10-10** | 见下 |
-| 7.3 | histogram 压缩（17.56 MB 稀疏 TF-IDF 换窄类型，省 5–9 MB） | 未做 | 要重新验证检索排序不变 |
+| 7.3 | histogram压缩（旧建议：17.56MB改窄类型） | **未实施该磁盘格式方案；运行期收益已由释放副本实现**（`4af5fbf`） | 当前 `ReleaseBuildOnlyIndexData()` 释放构建用histogram，查询走posting；不要重复把这17.56MB当常驻待节省。磁盘压缩若继续做，仍需排序一致性验证 |
 | 7.4 | 公平的 SURF↔SIFT 对照 | **覆盖面对照已完成**；定位精度对照仍缺 | Python wheels 没有 SURF，要 C++ 侧探针 |
 | 7.5 | 换检测器 | 未做，**理由从三条减到两条** | 「收益 2.4x 不是 8x」与「缺公平对照」仍然成立 |
 
@@ -507,7 +512,7 @@ ui 单独                     60.58 MB   （文档说 30 MB）
 ⚠️ **这个 SHA 的预演对正式构建的有效期：** 任何新提交都会移动 `build-info.json` 里的 `sourceCommit`
 与 `sourceTreeSha256`，因而改变 `ui` 分片——**哪怕只改 `Docs/`**。`Docs/` 本身不进发行包
 （`Test-Path out\map-test\Docs` = False），但 `New-ProgramReleasePackage.ps1:98-99` 会把
-`Docs/ResourceUpdates.md` 与 `Docs/ProgramUpdates.md` 复制进包当 `README-Updates.md` / `ProgramUpdates.md`；
+`Docs/ResourceUpdates.md` 与 `Docs/ProgramUpdates.md` 复制进包当 `README-Updates.md` / [`ProgramUpdates.md`](ProgramUpdates.md)；
 `OpenWork.md` 不在被复制的名单里，所以改它不动任何发行字节——**但提交本身会**。
 **正式发版必须在发版的那个 SHA 上重新预演。**
 

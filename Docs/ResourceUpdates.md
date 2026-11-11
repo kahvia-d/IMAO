@@ -16,7 +16,7 @@
 - 基础资源继续随程序提供。一个 `map-data` 包完整包含八个现有场景的点位、分类、图标、校准、场景准入和本地攻略数据；`tile` 和 `candidate` 分别按地区打包。五份原先嵌入 DLL 的点位在构建时复制到输出的 `Assets/KuroMap/runtime`，只统一既有两个分类 ID 别名，不改变点位 ID、坐标或状态 ID。
 - 构建生成 `Assets/Updates/bundled-snapshot.json`，启用 `map-data`、`kuro-tile-packs.json` 中注册的每个瓦片包，以及 `candidate-packs.json` 中注册的候选包。一个包只有在 `referenceVerification.passed` 为真时才会进入快照；目录存在本身不足以启用它。`requiresGameValidation` 为真的场景还必须在 `Assets/KuroMap/scene-validation.json` 中获得批准：客户端始终传 `--resource-snapshot`，因此 `RuntimeFeatureRepository` 会因任何一个已注册包未获批准而中止整个资源加载，表现为“启动核心失败”。打包还需通过 CoreHost 资源预检。
 - 内置包的版本必须与线上清单使用同一内容身份：某包内容与上一份 `updates/stable.json` 中同 ID 的包逐文件一致时沿用清单里的版本，内容有变化时才使用本程序版本（暂存入口默认读取仓库的 `updates/stable.json`，可用 `-PreviousCatalog` 覆盖）。版本一致时客户端会把随程序内置的资源识别为已安装，不重复下载；不一致会让客户端认为这些包缺失并重新下载整套资源。客户端同时要求发布内容全部内置时才不提示资源更新。
-- 客户端读取签名清单时按顺序尝试多个来源：先是 `https://raw.githubusercontent.com/kahvia-d/IMAO/main/updates/stable.json`，然后是 `https://gitee.com/tan-xuedong/imao-updates/raw/main/stable.json`。只在国内无代理时不可达的那一跳上换源；**只有"够不到"（连接失败、超时、拒绝服务）才换下一个来源**，而重定向到不受信任主机、响应过大、验签失败一律就地失败，不会静默改用镜像——那是指纹/篡改信号，镜像只负责可达性。每一份来源都必须通过同一个固定公钥验签，所以镜像不引入任何新的信任。最后一个来源的失败原样抛出，只配置一个来源时行为与从前完全一致。程序版本、清单序号、资源快照版本和各包版本分别处理。单独发布资源时保留上一清单的程序信息。**（2026-10-02 起：这一段描述的是「下载源管理」选 GitHub 时的行为；选 Mirror酱 时"有没有新版程序"由 Mirror酱 的 API 回答，清单仍然要读，但只用于逐文件校验与地图资源，详见 [MirrorChyanIntegration.md](MirrorChyanIntegration.md) §12。）**
+- 客户端读取签名清单时按顺序尝试多个来源：先是 `https://raw.githubusercontent.com/kahvia-d/IMAO/main/updates/stable.json`，然后是 `https://gitee.com/tan-xuedong/imao-updates/raw/main/stable.json`。只在国内无代理时不可达的那一跳上换源；**只有"够不到"（连接失败、超时、拒绝服务）才换下一个来源**，而重定向到不受信任主机、响应过大、验签失败一律就地失败，不会静默改用镜像——那是指纹/篡改信号，镜像只负责可达性。每一份来源都必须通过同一个固定公钥验签，所以镜像不引入任何新的信任。最后一个来源的失败原样抛出，只配置一个来源时行为与从前完全一致。程序版本、清单序号、资源快照版本和各包版本分别处理。单独发布资源时保留上一清单的程序信息。**（2026-10-02 起：这一段描述的是「下载源管理」选 GitHub 时的行为；选 Mirror酱 时"有没有新版程序"由 Mirror酱 的 API 回答，清单仍然要读，但只用于逐文件校验与地图资源，详见 [MirrorChyanIntegration.md](architecture/MirrorChyanIntegration.md) §12。）**
 - **地址校验以签名为准，不写仓库名**（`UpdateSignature.ValidateUrl` / `UpdatePublisher.RequireGithub`）：只要求 `https`、默认端口、无 userinfo、主机属于 `github.com` 与 GitHub 的签名附件主机，且 GitHub 路径落在 `/releases/` 内。**载荷的可信度完全来自固定 P-256 公钥对清单的签名，以及清单内记录的每个文件 SHA-256**；URL 规则只是传输卫生，**不是安全边界**。因此**不要**再把 `owner/repo` 写回这条规则。
 
   > ⚠️ **2026-09-24 的真实故障（务必记住）**：仓库改名 `kahvia-d/WWMAP-TOOLS` → `kahvia-d/IMAO` 之后，旧客户端**无法再更新任何东西**。
@@ -36,58 +36,15 @@
 - 客户端按发布密钥分别记录该渠道已验证过的最高清单序号与内容哈希，本地测试密钥或预览渠道不会污染正式渠道。只有清单所属程序版本早于当前运行版本时（即回放旧清单的场景）序号下降才会被拒绝；同一程序线内的序号下降或同序号不同内容会在记录中重新同步，并在界面与更新日志里说明。旧版客户端写入的单一全局序号由下一次检查时首个验证通过的渠道继承，不会被丢弃。确实需要重建记录时，可在设置中使用“修复更新状态”，该操作仍会用内置公钥验证当前线上清单。
 - 私钥保存在仓库外，以 Windows 当前用户 DPAPI 加密；客户端只携带 `Assets/Updates/trusted-keys.json`。清单使用 P-256/SHA-256、P1363 签名，封装字段为 `keyId`、Base64 `payload`、Base64 `signature`。私钥换机须先规划密钥迁移与客户端公钥升级；不要删除旧密钥后重新初始化同名密钥。
 
-## 维护者首次配置
+## 维护者本地环境与签名边界
 
-在仓库根目录使用 PowerShell 7。本仓库提供的本地 SDK 路径是示例；其他维护机器可将 `$dotnet` 指向自己的 .NET 8 SDK。
+任何 build / test / publish 前先执行 `. ./scripts/Enter-DevEnvironment.ps1`，使用它提供的便携 SDK 与仓库 NuGet 缓存。生产签名材料只在受保护的本机配置中读取，不能写入文档、日志、提交或 CI。
 
-```powershell
-$dotnet = Join-Path (Get-Location) 'tools/dotnet-sdk-8.0.424/dotnet.exe'
-$env:DOTNET_CLI_HOME = Join-Path (Get-Location) 'third_party/dotnet-cli-home'
-$env:NUGET_PACKAGES = Join-Path (Get-Location) 'third_party/nuget-packages'
-& $dotnet build tools/UpdatePublisher/UpdatePublisher.csproj -c Release
-$publisher = 'tools/UpdatePublisher/Release/net8.0/UpdatePublisher.dll'
-$privateKey = Join-Path $env:LOCALAPPDATA 'WWMAP-TOOLS-Publisher/release-signing-key.json'
-```
-
-**私钥路径有陷阱，别照抄上一行就去用。** `init-key` 生成在哪个目录，取决于当时是谁在跑：普通桌面 shell 里 `%LOCALAPPDATA%` 就是 `C:\Users\<你>\AppData\Local`；而在 MSIX/AppContainer 封装的打包环境里，写这个路径会被重定向到容器的私有位置：
-
-```text
-C:\Users\<你>\AppData\Local\Packages\<包名>\LocalCache\Local\WWMAP-TOOLS-Publisher\release-signing-key.json
-```
-
-两个位置同名不同地，`Test-Path` 在错误的那一边只会说"没有"，看起来像密钥不存在。**先确认密钥到底在哪一边**，再把该路径传给 `prepare`：
-
-```powershell
-# 两个候选都查一遍，用存在的那个
-$candidates = @(
-  (Join-Path $env:LOCALAPPDATA 'WWMAP-TOOLS-Publisher/release-signing-key.json'),
-  (Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Packages') -Recurse -Depth 6 `
-     -Filter 'release-signing-key.json' -ErrorAction SilentlyContinue).FullName
-)
-$privateKey = $candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
-if (-not $privateKey) { throw '找不到发布私钥；先在生成它的那个环境里定位，不要重新 init-key。' }
-$privateKey
-```
-
-深度必须够：重定向路径在 `Packages` 以下有 5 层，`-Depth 4` 会**静默什么都找不到**（`-ErrorAction SilentlyContinue` 把无结果也吞了），于是又变成"看起来没有密钥"。若这个脚本报了找不到，先用 `Get-ChildItem -Recurse -Filter 'release-signing-key.json'` 不带深度限制手工确认一次。
-
-如果确实一个都搜不到，**不要重新生成**——见下面关于 DPAPI 的说明；改为在生成密钥的那个 Windows 账户下执行发布。
-
-再另外：`init-key` 只在从未建立过发布身份时运行。密钥已存在时**不要重跑**，任何已有的私钥都要先确认位置再使用。
-
-仅在从未建立过发布身份时运行以下命令。目标文件存在会拒绝覆盖。生产私钥不能位于仓库内；测试密钥使用不同 ID、输出目录并显式传入 `--test true`，正式验包和发布拒绝测试密钥。
-
-```powershell
-& $dotnet $publisher init-key --repo (Get-Location).Path `
-  --private-key $privateKey --public-key Assets/Updates/trusted-keys.json `
-  --key-id wwmap-production-2026
-```
-
-公钥需要随首次客户端一同交付并提交源码。切勿提交私钥，亦不要把开发者的 `%LOCALAPPDATA%` 或 `%APPDATA%` 目录复制进发行包。
+已有发布身份不得因当前进程找不到本机配置而重新生成。Windows 打包应用的目录重定向、执行账户不同及 DPAPI 用户绑定都可能导致访问失败；应在原配置账户中诊断并显式报错，不扫描和输出敏感位置。首次身份建立与密钥轮换需单独审核；日常发布使用 [CloudRelease.md](CloudRelease.md) 的小请求双签名助手。
 
 ## 构建、验包与离线包
 
-正式候选使用 `scripts/Build-ReleaseCandidate.ps1`，要求当前工作区干净且 `SourceCommit` 等于当前 HEAD。脚本读取已经验证的 VS 2022 原生配置，在新的 CMake 目录中重新编译 CoreHost 和原生测试，重建 WinUI 后生成自包含发布，并输出独立程序 ZIP。每个阶段检查源码未变化；原生构建收据记录提交、版本与实际 CoreHost SHA-256，正式打包必须核对收据，不能拿旧 EXE 搭配新清单。
+本地独立候选验收可使用 `scripts/Build-ReleaseCandidate.ps1`（生产构建入口是 Cloud release build），要求当前工作区干净且 `SourceCommit` 等于当前 HEAD。脚本读取已经验证的 VS 2022 原生配置，在新的 CMake 目录中重新编译 CoreHost 和原生测试，重建 WinUI 后生成自包含发布，并输出独立程序 ZIP。每个阶段检查源码未变化；原生构建收据记录提交、版本与实际 CoreHost SHA-256，正式打包必须核对收据，不能拿旧 EXE 搭配新清单。
 
 ```powershell
 & scripts/Build-ReleaseCandidate.ps1 -OutputRoot out/release-candidate-2026.9.9.4 `
@@ -126,7 +83,7 @@ $appRoot = 'out/release-2026.9.9.4/IMao-v2026.9.9.4-windows-x64'
 
 `--notes-file` 的内容是**面向玩家的更新公告**，同时进入两处：签名清单的 `app.notes`（客户端更新提示直接显示）与发行页正文。所以按公告写——第三人称陈述程序行为，不要出现"你/您"，也不要写只有开发者才看得懂的内部细节或本次会话的测试过程。两处的可修改性不同：发行页正文随时可用 `gh release edit v<版本> --notes-file <文件>` 改写，而 `app.notes` 一旦签名就不能原地替换——已发布发行页上的同名附件字节不同会被发布脚本拒绝——只能等下一版覆盖，除非另起一个更高的 `--sequence`。
 
-程序发布默认仍用整包 ZIP。改为分片发布时把 `--program-zip` 换成 `--program-shards true`：`prepare` 直接从 `--app-root` 读出权威文件清单并按 `ShardMap` 的路径规则切分，签名清单里的整包字段指向一个小的分片描述符，客户端只下载变化的片。
+当前云发布使用分片，另附完整安装 ZIP。兼容本地 `prepare` 支持整包输入；本地改为分片验包时把 `--program-zip` 换成 `--program-shards true`：`prepare` 直接从 `--app-root` 读出权威文件清单并按 `ShardMap` 的路径规则切分，签名清单里的整包字段指向一个小的分片描述符，客户端只下载变化的片。
 
 ```powershell
 & $dotnet $publisher prepare --app-root $appRoot `
@@ -157,108 +114,30 @@ $appRoot = 'out/release-2026.9.9.4/IMao-v2026.9.9.4-windows-x64'
 & $dotnet $publisher shard-map --app-root $appRoot --report out/program-shards.json
 ```
 
-分片边界、决策与实施阶段见 [ProgramShardIncrementalPlan.md](ProgramShardIncrementalPlan.md)。
+分片边界、决策与实施阶段见 [ProgramShardIncrementalPlan.md](architecture/ProgramShardIncrementalPlan.md)。
 
 新资源必须先同步到构建输入，再重新生成暂存资源快照。`prepare` 读取指定 `app-root`，不会联网抓取上游地图，也不会推断或自动开放新地图。离线包包括目标基础资源对应快照所需的全部可更新包；其他基础资源客户端需要与其程序兼容的离线包。
 
-## 正式发布
+## 正式发布与恢复
 
-准备输出本身不会发布。检查完整构建、更新事务测试、资源预检和地图回放报告后，再执行下面的独立发布入口。首次或程序更新时增加 `-ProgramZip`；仅资源发布省略它。GitHub CLI 必须以有本仓库写权限的维护者身份登录。
+唯一生产入口是 [CloudRelease.md](CloudRelease.md)：抬版本与公告 → 提交并 push → dispatch `publish=true confirm_version=<版本>` → 构建与临时密钥预演 → production 审批后预留 sequence → 本机 `Complete-CiRelease.ps1` 双签名 → 再审批发布。上文 `prepare` 仅用于兼容与本地验包，不能代替已登记请求、原始响应及冻结产物授权。
 
-**发布前先确认自己在哪个分支。** 候选包、公告文件和 `prepare` 的输入都按路径读取；如果在这中间有别的会话或自动任务 `checkout` 了其它分支，路径会找不到，`prepare` 会失败（此时尚未产生任何签名产物，重新切回并重跑即可，不用清理）。动手前跑一次：
+`scripts/Publish-ResourceUpdate.ps1` 默认 `Publish=false`；正式执行必须显式授权版本及事务。`release-state.json` 记录最高已分配序号和活动事务；已分配序号永不复用。公开验证通过后，`stable.json`、`channel-state.json` 和完成事务在同一个 Git commit 中推进。中断应恢复原事务、原签名与原附件，不因为 stable 尚未推进就重新签名或分配新序号。只有尚未开始发布的等待签名事务可以显式放弃。
 
-```powershell
-git branch --show-current     # 必须是你要发布的那个分支
-git log --oneline -1          # 必须与 -SourceCommit 一致
-```
+上传前仍检查同版本包内容身份、基础资源兼容、逐片长度/哈希及描述符绑定。已发布同名附件不同字节会拒绝覆盖；不能给 immutable Release 补写缺少附件。`-ProgramZip` 对应整包程序清单，与分片互斥；分片的完整安装 ZIP 使用 `-ManualInstallZip`，除同名 `.report.json` 外还必须在双签名批准的附件清单中，缺省时仅自动选取其中唯一获准安装包。
 
-```powershell
-& scripts/Publish-ResourceUpdate.ps1 -PreparedRoot out/maps-2026.9.9.1 `
-  -NotesFile out/program-release-notes.md `
-  -ProgramZip out/release-2026.9.9.1/IMao-v2026.9.9.1-windows-x64.zip
-```
+公开网络检查失败不会推进 stable；排查后重跑失败发布 Job，复用相同事务和字节。网络/代理诊断不得以重复下载大包代替已存在证据：先用本地重组产物及报告对账远端 digest，任何超过约 100 MB 的下载先征求用户同意。
 
-脚本固定使用 `kahvia-d/IMAO`（仓库改名前的 slug 为 `kahvia-d/WWMAP-TOOLS`）：校验本地签名与文件 → 检查稳定清单序号 → 创建或复用草稿 → 上传缺少附件 → 下载核对草稿字节 → 发布 → 无认证公开下载核对 → 最后通过 GitHub 文件 API 更新 `updates/stable.json`，并回读核对。更新稳定清单使用旧文件 SHA，遇到并发发布会失败，重新读取并重新准备后再发布。相同名称的远端附件内容不同会拒绝覆盖；已发布版本缺附件也会拒绝补写。
+### 分片迁移历史与现行验收
 
-已发布的序号由 `updates/channel-state.json` 持久化。脚本在创建草稿之前核对它，并在推进稳定清单**之前**写入新序号，因此已发布的序号永不重用：即使 `updates/stable.json` 被回退或历史被重写，客户端已经记录过的高序号也不会重新可用（客户端只记得自己验证过的最高序号，重编号会让所有旧客户端拒绝更新）。稳定清单推进失败时该序号已被占用，需用更高的 `--sequence` 重新准备发布，而不是重试同一个序号。
+`2026.9.20.1`（sequence 16）曾用整包把认识分片的客户端送到既有安装；`2026.9.20.2`（sequence 17）是首个分片版。这个过渡已完成，不是当前还要重做的步骤。当前流水线固定产出分片和完整安装 ZIP，首次安装使用完整 ZIP，后续程序更新仅下载需要的分片。旧方案中的“可选不传完整安装包”不代表当前生产工作流。
 
-"无认证公开下载核对"这一步用 .NET `HttpClient` 拉取附件并比对哈希，它只按环境变量与系统代理设置走代理，不跟随只在网络层生效的透明代理：系统代理关闭、而本机代理只做透明转发时，这一步会直连 GitHub 并被远端重置（`An error occurred while sending the request`，内层是 `远程主机强迫关闭了一个现有的连接`）。此时发行版与附件其实已经上传并公开，只是稳定清单没有推进；让 .NET 也走代理后重跑同一准备目录即可，不需要重新签名：
+分片绑定可通过 `scripts/Test-ProgramShardReleaseAssets.ps1 -OutputRoot <新的证据目录> -RealPreparedRoot <准备目录>` 本地预览，不联网、不发布。离线集合包只在资源集合变化或显式请求时生成；它服务资源导入，不是程序分片的替代物。
 
-```powershell
-$env:HTTPS_PROXY = 'http://127.0.0.1:7890'; $env:HTTP_PROXY = $env:HTTPS_PROXY
-```
-
-创建草稿之前，还会比较已验证的线上稳定清单与候选清单：共同包 ID 与版本的归档哈希、大小、类型、完整文件清单必须一致；已有基础资源版本的条目不得丢失，程序版本不得倒退。忘记 `--previous` 时不能绕过这些检查。可执行 `scripts/Test-ResourceCatalogTransition.ps1 -OutputRoot out/catalog-transition-test-new-run` 运行本地清单迁移回归。
-
-分片程序发布同样在创建草稿前完成本地绑定：`scripts/ResourceUpdateAssets.ps1` 逐个核对签名清单里每个分片与描述符的本地长度和 SHA-256，只上传指向本次 tag 的归档；未变分片保留它已发布的旧 URL，并和"只带过去程序"的资源-only 发布一起进入公开可达性检查。`-ProgramZip` 与分片发布互斥。可执行 `scripts/Test-ProgramShardReleaseAssets.ps1 -OutputRoot out/program-shard-assets-new-run` 运行本地绑定回归；带上 `-RealPreparedRoot <准备目录>` 可以在上传前预览真实归档的上传清单（它会读取该目录的 `update.json` 与 `release-report.json`，只做本地校验，不联网）。
-
-### 过渡版与分片版的发布差异
-
-首个带分片能力的客户端必须先到达用户手里：线上 `2026.9.19.2` 是在分片实现之前构建的，它不认识 `Shards`。所以**过渡版仍按整包发布**（清单里没有 `Shards`），所有客户端会自动升级到"认识分片的客户端"；**再下一个版本**才用分片。两条路线都必须在发行页保留一份完整 zip，因为分片时代的新用户首次安装只能靠它。
-
-发布前逐项确认（本机现状写在这里，动手前重跑一遍）：
-
-```powershell
-git branch --show-current                 # 必须是发布分支
-git status --short                        # 必须为空：候选构建要求干净工作区
-git log --oneline -1                      # 与 -SourceCommit 一致
-(Get-Content Version.props -Raw) -match '<IMaoVersion>([^<]+)</IMaoVersion>' | Out-Null; $Matches[1]   # 新版本号
-$privateKey = Join-Path $env:LOCALAPPDATA 'WWMAP-TOOLS-Publisher/release-signing-key.json'
-Test-Path -LiteralPath $privateKey        # 必须是 True；找到的是 DPAPI 加密的生产私钥
-```
-
-`$privateKey` 失效时按上文「找不到发布私钥」一节搜索（重定向路径在 `Packages` 下 5 层），**不要重新 `init-key`**。本机实测位置与验证方式记录在 [MapRegionOnDemandHandoff.md](MapRegionOnDemandHandoff.md) 的「私钥位置」一节：主位置的那份与 `Assets/Updates/trusted-keys.json` 里的 `wwmap-production-2026` 逐字节匹配，DPAPI 当前用户可解封。
-
-**过渡版（首个带分片能力的版本，推荐路线）**——`prepare` 用整包输入：
-
-```powershell
-$appRoot = 'out/release-<版本>/IMao-v<版本>-windows-x64'
-& $dotnet $publisher prepare --app-root $appRoot `
-  --private-key $privateKey --public-key Assets/Updates/trusted-keys.json `
-  --output out/maps-<版本> --sequence 16 --resource-version <版本> `
-  --tag v<版本> --program-release true --program-zip "$appRoot.zip" `
-  --previous updates/stable.json --core-host "$appRoot/IMao-CoreHost.exe"
-& $dotnet $publisher verify --input out/maps-<版本> --public-key Assets/Updates/trusted-keys.json
-& scripts/Publish-ResourceUpdate.ps1 -PreparedRoot out/maps-<版本> -NotesFile out/program-release-notes.md `
-  -ProgramZip "$appRoot.zip"
-```
-
-**分片版（过渡版之后的常规发布）**——`prepare` 用分片输入，发布时另外附一份完整 zip 供新用户首次安装：
-
-```powershell
-& $dotnet $publisher prepare --app-root $appRoot `
-  --private-key $privateKey --public-key Assets/Updates/trusted-keys.json `
-  --output out/maps-<版本> --sequence <上一个+1> --resource-version <版本> `
-  --tag v<版本> --program-release true --program-shards true `
-  --previous updates/stable.json --core-host "$appRoot/IMao-CoreHost.exe"
-& $dotnet $publisher shard-map --app-root $appRoot --report out/maps-<版本>/shard-map.json
-& $dotnet $publisher verify --input out/maps-<版本> --public-key Assets/Updates/trusted-keys.json
-# 上传前预览：每个分片与描述符都按签名清单核对本地字节，并列出真正要上传的归档
-& scripts/Test-ProgramShardReleaseAssets.ps1 -OutputRoot (Join-Path 'out' ('shard-preview-' + [guid]::NewGuid().ToString('N'))) `
-  -RealPreparedRoot out/maps-<版本>
-& scripts/Publish-ResourceUpdate.ps1 -PreparedRoot out/maps-<版本> -NotesFile out/program-release-notes.md `
-  -ManualInstallZip "$appRoot.zip"
-```
-
-`-ProgramZip` 与分片发布互斥；分片发布时给了 `-ProgramZip` 会直接拒绝。`-ManualInstallZip` 不写进签名清单（清单里是分片与描述符），它与本次发布的绑定靠同名 `.report.json`（`passed`、`sourceDirty=false`、`sourceCommit`、`version`、大小与 SHA-256 全部核对）。没有 `-ManualInstallZip` 时脚本会提示"本次没有任何可供全新安装的归档"。那份 zip 不必每个版本都重传：任何一份认识分片的完整 zip 都能自动增量升级到最新。
-
-离线集合包按同一原则处理：`release-report.json` 的 `offline` 为 `null` 时（本次没有任何新资源包）发布脚本不上传它，只会打印"resource set unchanged"，并把上一次发布的离线包作为当前完整的离线交付物继续使用；确实需要一份新的就用 `prepare --with-offline true` 重新准备。
-
-发布后：
-
-```powershell
-git pull                                  # 取回脚本刚推进的 updates/stable.json 与 channel-state.json
-(Get-Content updates/stable.json -Raw | ConvertFrom-Json).payload   # 看一眼新序号
-```
-
-再让客户端实测一次并记录字节数：过渡版应看到普通整包升级；分片版应只在 `ui`(+ 本次改动片) 上花流量（§4 的实测表：最常见 ≈30 MB，改点位/攻略 ≈1.6 MB）。释放大体积证据用 `scripts/Compact-ReleaseArtifacts.ps1`。
-
-如果附件上传或公开下载失败，稳定清单保持原值。排查网络后可对同一准备目录重试，不需要重新签名或替换已有资源。日志和验证输出留在准备目录，不记录私钥或认证令牌。清单推进之后客户端下次检查才会看见更新；已有运行实例仍固定使用当前快照。发布完成后可运行 `scripts/Compact-ReleaseArtifacts.ps1` 归档这些证据并释放候选与准备目录里可重建的大体积产物（`-WhatIf` 先预览，`-RetainFull N` 保留最近 N 个目录完整；归档会逐文件校验哈希并写入 `archive-manifest.json`，`scripts/Test-CompactReleaseArtifacts.ps1` 覆盖归档、保留与越界拒绝）。发布字节本身仍可从对应 GitHub 发行重新下载，并与归档的 `release-report.json` 哈希对账。
-
-编译、自检、签名验包、离线导入与回归报告证明更新系统和已有资源可用，不能替代新地区的实际游戏定位验证。任何新区准入仍需既有校准、资源与实机证据。
+历史增量实测及体积见 [ProgramShardIncrementalPlan.md](architecture/ProgramShardIncrementalPlan.md)，不能把 2026-09 的 MB 数当当前下载预算。编译、自检、签名验包、离线导入与回归报告不代替 WinUI 管理员启动、设置页更新/回退、玩家记录保留及实际游戏定位验收。归档大产物前用 `Compact-ReleaseArtifacts.ps1 -WhatIf` 预览，并保留摘要、报告与必要恢复字节。
 
 ## 本地预览版迁移与快照兼容
 
 从 `2026.9.9.3` 开始，已安装的外部快照使用 `formatVersion=2`，记录签名清单的 `minAppVersion` / `maxAppVersion`。每次启动及回退均重新核对程序版本；WinUI 与 CoreHost 都执行此限制。内置快照仍为 v1。旧预览版 `.1` / `.2` 会拒绝 v2；新程序对缺少程序版本约束的旧外部 v1 快照整体恢复内置资源，可重新导入签名离线包，不删除历史目录或个人记录。
 
-首次正式候选预留清单序号 3，高于本地验收包使用过的序号 1 / 2。发布前仍需读取实际线上稳定清单和 `updates/channel-state.json`，序号必须高于两者的最大值，不能覆盖同序号的不同内容，也不能重用已发布的序号。相关修复和候选发行说明见 [Release-2026.9.9.3.md](Release-2026.9.9.3.md)。
+历史上首次正式候选预留清单序号 3，高于本地验收包使用过的序号 1 / 2。发布前仍需读取实际线上稳定清单和 `updates/channel-state.json`，序号必须高于两者的最大值，不能覆盖同序号的不同内容，也不能重用已发布的序号。相关修复和候选发行说明见 [Release-2026.9.9.3.md](releases/Release-2026.9.9.3.md)。

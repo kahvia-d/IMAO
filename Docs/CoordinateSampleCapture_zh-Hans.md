@@ -70,11 +70,12 @@ Windows HWND 捕获入口要求 Windows 10 1903 或更高，见
 
 ## 检查与回放
 
-采集结束后，先检查会话。这里才需要原工作区已有的 Python 环境：
+采集结束后，先检查会话。检查器需要能导入 `cv2`、`numpy` 的 Python，不依赖旧 Paddle 环境。2026-11-01 清理后不再默认使用 `out/coord-ocr-compare/.venv`；下面优先复用保留的 YOLO 环境（跨机时需重新指定已有环境）：
 
 ```powershell
 . (Join-Path $dataRoot 'scripts\Enter-DevEnvironment.ps1')
-$python = "$dataRoot\out\coord-ocr-compare\.venv\Scripts\python.exe"
+$python = "$dataRoot\out\coordinate-yolo-selftrain-20261015\.gpu-venv\Scripts\python.exe"
+if (-not (Test-Path -LiteralPath $python)) { throw "请指定已有且能导入 cv2、numpy 的 Python；不要默认恢复旧实验环境。" }
 & $python tools\coordinate-ocr\sessions.py <会话目录> --output <新的检查目录>
 ```
 
@@ -100,7 +101,7 @@ OCR 回放会重新核对配对文件，但传给两种 OCR 的输入仍只有�
 }
 ```
 
-完整回放命令与口径见 [`CoordinateOfflineEvaluation_zh-Hans.md`](CoordinateOfflineEvaluation_zh-Hans.md)。
+历史 PP-OCR / 第三方 YOLO 对照命令见 [`CoordinateOfflineEvaluation_zh-Hans.md`](CoordinateOfflineEvaluation_zh-Hans.md)，需要另外具备其旧模型和依赖；当前自训 YOLO 的恢复与回放见[YOLO 续接](guides/CoordinateYoloResume_zh-Hans.md)。采集、配对文件校验与模型回放是不同步骤，采集成功不表示任何模型已通过验收。
 新会话应该先作为独立验收素材；在选择模型或参数后才考虑把其他会话用于训练。
 
 ## 验证与限制

@@ -7,7 +7,7 @@
 # any floor hid every marker that carries no floor of its own - which is correct inside a cave and
 # wrong in 星炬学院, an above-ground building whose 广场区 IS the surface: a player reported that
 # 终声残卷 never showed there while he was in the academy. See
-# Docs/ZscjLayerAttribute_20260927.md for the evidence, and Docs/LayeredMapOpenness_20260927.md for
+# Docs/research/ZscjLayerAttribute_20260927.md for the evidence, and Docs/architecture/LayeredMapOpenness_20260927.md for
 # the rule the two kinds now follow.
 #
 #   开放分层地图 (open):   本身不封闭、没有限定的出入口、地表本身也算一层。星炬学院是今天全游戏唯一一个。

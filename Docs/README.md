@@ -1,254 +1,267 @@
-# 文档索引
+# IMao 文档索引
 
-- [研究成果保留与恢复入口](ResearchArtifactRetention_zh-Hans.md)：最终成果、有效素材与流程留档；清理范围、保留清单及恢复边界。
-- [坐标 YOLO 裁剪鲁棒性](CoordinateYoloCropRobustness_zh-Hans.md)：几何增强权重、原生校正、实机扰动回放与评分边界。
-- [坐标 YOLO 研究续接](CoordinateYoloResume_zh-Hans.md)：当前权重谱系、有效原图/标签、环境与训练、导出、回归入口。
-- [不可探测点位新视频工作流](MarkerDetectabilityWorkflow_zh-Hans.md)：新批次隔离、时间轴与身份审核、名录维护及已完成媒体清理。
+按用途查找文档；目录分类不表示方案已完成或实机验收通过。旧名 WWMAP-TOOLS 与 IMao/IMAO 指同一项目。
 
-- [云鸣潮捕获验证记录](CloudWutheringCaptureValidation_20261103.md)：独立 WGC 采样工具、自绘窗口验证及用户手动采样步骤。
+## 常用入口
 
-- [云鸣潮网页版适配实现计划](CloudWutheringAdaptationPlan_20261103.md)：最新 main 基线、捕获目标与视口设计、浏览器有效性门禁、实现记录、自动游戏区域与验收范围。
-
-- [WGC 客户端裁剪修正](ClientCaptureCropFix_20261024.md)：真实窗口起点、局部回读同步、回归与测试树交付。
-
-- [短时完整诊断复现采集](DiagnosticReproCapture_20261023.md)：采集设计、关联格式、实现计划与测试树实测。
-
-这个目录按"**现行指南 / 现行方案 / 历史记录**"三类组织。新文档请沿用这里的命名约定,并在本索引里登记一行。
-
-| 命名 | 含义 |
+| 要做什么 | 入口 |
 |---|---|
-| `<主题>_<YYYYMMDD>.md` | 当天的实现或排查记录(证据、决策、复现步骤),写完就不再更新 |
-| `Release-<版本>.md` | 某次发行的说明 |
-| `<主题>_zh-Hans.md` / `_en.md` | 面向使用者或维护者的参考文档,随代码更新 |
-| `*Handoff*.md` / `*Plan*.md` | 阶段性方案与交接说明,完成后转为历史记录 |
+| 构建与开发 | [可复现构建](guides/Build_zh-Hans.md) |
+| 使用云鸣潮 | [窗口选择与手动验收](guides/CloudWuthering_zh-Hans.md) |
+| 库街区进度同步 | [Chrome / Edge 安装说明](KuroMapSyncInstall.md) · [隐私说明](KuroMapSyncPrivacy.md) |
+| 发布与更新 | [云端构建、本地签名](CloudRelease.md) · [程序更新](ProgramUpdates.md) · [资源更新](ResourceUpdates.md) |
+| 继续坐标研究 | [YOLO 续接](guides/CoordinateYoloResume_zh-Hans.md) · [成果保留](guides/ResearchArtifactRetention_zh-Hans.md) |
+| 查漏补缺名录 | [维护指南](guides/MarkerDetectabilityMaintenance.md) · [新视频流程](guides/MarkerDetectabilityWorkflow_zh-Hans.md) |
+| 未完成事项 | [OpenWork](OpenWork.md)（按条目日期及验证记录核对） |
+| 新增或维护文档 | [文档维护规则](guides/DocumentationMaintenance.md) |
 
-> **不要移动这几个文件**:`ProgramUpdates.md`、`ResourceUpdates.md`、`ReleaseAssets_v1.0.2.md`、
-> `ReleaseAssets_v1.0.2.sha256`、`GameFrameCostAnalysis_20260918.md`、`GameFrameDropAnalysis_20260917.md`、
-> `MapRegionRefactor-Handoff.md`——脚本按精确路径引用它们(`New-ProgramReleasePackage.ps1` 会把前四个打进发行包,
-> `Measure-WorkIsolation.ps1` / `OverlayTrace.Common.ps1` / `New-NoBaselineMapTestTree.ps1` 在注释里指向后三个)。
+## 当前状态来源
 
-其他相关位置:仓库根的 `MEMORY.md`(跨对话长期记忆,**不进 git**)；`out/evidence/`(发布产物的小证据归档,
-由 `scripts/Compact-ReleaseArtifacts.ps1` 生成,含 `archive-manifest.json`)；`updates/stable.json`(线上签名清单)。
+版本以 [Version.props](../Version.props) 为准；发布事务见 [release-state.json](../updates/release-state.json)，签名清单见 [stable.json](../updates/stable.json)。2026-11-12 整理时源码版本为 **2026.11.11.2**。
 
-## 待办与未完成
+[CloudReleaseNotes.md](CloudReleaseNotes.md) 是当前发布正文；`releases/` 和 `archive/` 中的 Release 文件是历史留档，并非完整版本列表，不能用最后一篇文档推断当前版本。
 
-最新发行说明：[`Release-2026.10.6.1.md`](Release-2026.10.6.1.md)（手绘路线编辑、路线排序与自动轮换）。
+## 分类目录
 
-| 文档 | 内容 |
+下面逐项登记全部文档。`research/` 保存当时的实验与故障证据；`plans/` 同时包含待办和实施记录；`archive/` 保存既有归档及明确退役资料。日期较早不等于结论失效。
+
+## 固定路径文档
+
+| 文档 | 内容 / 阅读提示 |
 |---|---|
-| [`OpenWork.md`](OpenWork.md) | 跨领域未完成项汇总（帧率、识别与资源、工程健壮性、更新系统、代码 TODO），带优先级与出处；每周或每次发布前过一遍 |
+| [CloudRelease.md](CloudRelease.md) | 云端构建、本地签名发布 |
+| [CloudReleaseNotes.md](CloudReleaseNotes.md) | 发布正文；禁止添加内部维护备注 |
+| [CoordinateOfflineEvaluation_zh-Hans.md](CoordinateOfflineEvaluation_zh-Hans.md) | 坐标 OCR 独立离线评测（2026-10历史对照，非当前YOLO入口） |
+| [CoordinateSampleCapture_zh-Hans.md](CoordinateSampleCapture_zh-Hans.md) | 坐标识别素材采集 |
+| [GameFrameCostAnalysis_20260918.md](GameFrameCostAnalysis_20260918.md) | 工具对游戏帧率的影响：玩家现场现象与成因分析 |
+| [GameFrameDropAnalysis_20260917.md](GameFrameDropAnalysis_20260917.md) | 2026-09-17 游戏掉帧：工具侧开销分析与改动 |
+| [KuroMapSyncInstall.md](KuroMapSyncInstall.md) | 库街区进度同步扩展：安装说明 |
+| [KuroMapSyncPrivacy.md](KuroMapSyncPrivacy.md) | IMao 库街区进度同步扩展 · 隐私说明 |
+| [MapRegionRefactor-Handoff.md](MapRegionRefactor-Handoff.md) | 地图资源分区域重构 · 交接说明 |
+| [OpenWork.md](OpenWork.md) | 历史问题、后续修复与待验收项，按条目日期阅读 |
+| [ProgramUpdates.md](ProgramUpdates.md) | 程序自更新 |
+| [ReleaseAssets_v1.0.2.md](ReleaseAssets_v1.0.2.md) | v1.0.2 发行资源归档 |
+| [ReleaseAssets_v1.0.2.sha256](ReleaseAssets_v1.0.2.sha256) | 发行资源 SHA-256 清单 |
+| [ResourceUpdates.md](ResourceUpdates.md) | 程序与地图资源更新 |
 
-## 构建与编译
+## 使用与维护指南
 
-| 文档 | 内容 |
+| 文档 | 内容 / 阅读提示 |
 |---|---|
-| [`Build_zh-Hans.md`](Build_zh-Hans.md) | 可复现构建（Windows x64） |
-| [`Compile_zh-Hans.md`](Compile_zh-Hans.md) | 编译项目 CMake编译 |
-| [`Compile_en.md`](Compile_en.md) | Compile the Project with CMake |
+| [Build_zh-Hans.md](guides/Build_zh-Hans.md) | 可复现构建（Windows x64） |
+| [CloudWuthering_zh-Hans.md](guides/CloudWuthering_zh-Hans.md) | 云鸣潮网页版使用与测试 |
+| [CoordinateYoloResume_zh-Hans.md](guides/CoordinateYoloResume_zh-Hans.md) | 坐标 YOLO 研究续接与清理保留清单 |
+| [DocumentationMaintenance.md](guides/DocumentationMaintenance.md) | 文档维护与状态口径 |
+| [KuroMapDataSource.md](guides/KuroMapDataSource.md) | 库街区地图数据同步 |
+| [KuroMapSyncStoreListing.md](guides/KuroMapSyncStoreListing.md) | Chrome / Edge 商店入口、桥接身份与 Edge 历史上架材料 |
+| [KuroSceneCalibrationSamples.md](guides/KuroSceneCalibrationSamples.md) | 新地区四点校准样本 |
+| [KuroTileFeaturePacks.md](guides/KuroTileFeaturePacks.md) | 库街区瓦片特征包 |
+| [MarkerDetectabilityMaintenance.md](guides/MarkerDetectabilityMaintenance.md) | 查漏补缺模式与名录维护 |
+| [MarkerDetectabilityWorkflow_zh-Hans.md](guides/MarkerDetectabilityWorkflow_zh-Hans.md) | 不可探测点位视频研究：新增视频与完成后清理 |
+| [ResearchArtifactRetention_zh-Hans.md](guides/ResearchArtifactRetention_zh-Hans.md) | 研究成果保留与恢复入口 |
+| [RouteGuideFallbackAndSkip_zh-Hans.md](guides/RouteGuideFallbackAndSkip_zh-Hans.md) | 路线攻略回退与攻略内长按跳过（实施与验收记录） |
+| [DocumentationPathMap.md](guides/DocumentationPathMap.md) | 156 篇文档的旧路径到新入口对照，供历史注释和配方追溯 |
 
-## 程序与资源更新（现行）
+## 设计与运行规则
 
-| 文档 | 内容 |
+| 文档 | 内容 / 阅读提示 |
 |---|---|
-| [`ProgramUpdates.md`](ProgramUpdates.md) | 程序自更新 |
-| [`ResourceUpdates.md`](ResourceUpdates.md) | 程序与地图资源更新 |
-| [`ResourceUpdateValidation.md`](ResourceUpdateValidation.md) | 资源更新系统验证记录（2026-09-09） |
-| [`ProgramShardIncrementalPlan.md`](ProgramShardIncrementalPlan.md) | 程序本体分片增量更新方案（已评审） |
-| [`ProgramUpdateDiskReuse_20261010.md`](ProgramUpdateDiskReuse_20261010.md) | **磁盘增量：把"复用"从复制改成硬链接**（方案已定，未实施）——三份完整快照的成因、程序 425 MB 冻结层 + 190 MB/版自有产物的实测拆分、被否决的原地替换与 git 两条路、新装玩家稳态约 1.45 GB |
-| [`MapRegionOnDemandHandoff.md`](MapRegionOnDemandHandoff.md) | 区域按需下载 / 删除 · 设计说明（续篇） |
-| [`MapRegionRefactor-Handoff.md`](MapRegionRefactor-Handoff.md) | 地图资源分区域重构 · 交接说明 |
+| [LayeredMapFeaturePackPlan.md](architecture/LayeredMapFeaturePackPlan.md) | 分层地图特征包落地方案（草案，2026-09-22） |
+| [LayeredMapOpenness_20260927.md](architecture/LayeredMapOpenness_20260927.md) | 开放分层地图 / 封闭分层地图（设计决定，2026-09-27） |
+| [MapRegionOnDemandHandoff.md](architecture/MapRegionOnDemandHandoff.md) | 区域按需下载 / 删除 · 设计说明（续篇） |
+| [MirrorChyanIntegration.md](architecture/MirrorChyanIntegration.md) | Mirror酱现行接入与历史方案 |
+| [ProgramShardIncrementalPlan.md](architecture/ProgramShardIncrementalPlan.md) | 程序本体分片增量更新方案（已评审） |
+| [VisualLocalization_zh-Hans.md](architecture/VisualLocalization_zh-Hans.md) | 小地图视觉定位 |
 
-## 地图数据、定位与校准
+## 计划与交接
 
-| 文档 | 内容 |
+| 文档 | 内容 / 阅读提示 |
 |---|---|
-| [`KuroMapDataSource.md`](KuroMapDataSource.md) | 库街区地图数据同步 |
-| [`MarkerDetectabilitySpike_20261029.md`](MarkerDetectabilitySpike_20261029.md) | 不可探测点位半自动小样本：黑海岸视频三目标、地图配准与库街区攻略图文核验 |
-| [`KuroSceneCalibrationSamples.md`](KuroSceneCalibrationSamples.md) | 新地区四点校准样本 |
-| [`KuroTileFeaturePacks.md`](KuroTileFeaturePacks.md) | 库街区瓦片特征包 |
-| [`VisualLocalization_zh-Hans.md`](VisualLocalization_zh-Hans.md) | 小地图视觉定位 |
-| [`CoordinateOfflineEvaluation_zh-Hans.md`](CoordinateOfflineEvaluation_zh-Hans.md) | 坐标 OCR 独立离线评测：共同像素输入、无标签先验、单条输出与候选召回、PP-OCR / 单字符 YOLO 对照 |
-| [`CoordinateSampleCapture_zh-Hans.md`](CoordinateSampleCapture_zh-Hans.md) | 独立坐标素材采集：原始像素带、前台游戏限定、暂停/结束、预算、会话校验与离线回放 |
-| [`CoordinateCaptureStudy_20261014_zh-Hans.md`](CoordinateCaptureStudy_20261014_zh-Hans.md) | 首轮实机双图核验：OCR 取景对照、小地图误差、近似 XY 候选及大地图/负号反例 |
-| [`PerformanceOptimizationPlan_zh-Hans.md`](PerformanceOptimizationPlan_zh-Hans.md) | 启动加载与坐标识别优化实施计划 |
-| [`MapRecognitionAudit_20260906.md`](MapRecognitionAudit_20260906.md) | 2026-09-06 地图识别根因审计 |
-| [`MinimapRetrievalAudit_20260907.md`](MinimapRetrievalAudit_20260907.md) | 小地图跨区域定位排查（2026-09-07 晚间） |
-| [`MinimapRecoveryFix_20260907.md`](MinimapRecoveryFix_20260907.md) | 小地图跨区域恢复修复（2026-09-07） |
-| [`SparseMinimapFusion_20260909.md`](SparseMinimapFusion_20260909.md) | 稀疏小地图与辅助定位整合（2026-09-09） |
-| [`TethysCalibration_20260909.md`](TethysCalibration_20260909.md) | 泰缇斯四点校准与资源隔离 |
-| [`RoyMaps_20260909.md`](RoyMaps_20260909.md) | 罗伊冰原地图补充 |
-| [`CandidatePackRedundancy.md`](CandidatePackRedundancy.md) | 候选包是否已被梦州区域包取代 · 实测 |
-| [`DreamzhouCandidateFeaturePack.md`](DreamzhouCandidateFeaturePack.md) | Dreamzhou curated-location candidates（已退役） |
-| [`ResourcePackagePickerFix-20260909.md`](ResourcePackagePickerFix-20260909.md) | 离线导入入口修复记录（2026-09-09） |
-| [`LayeredMapFeaturePackPlan.md`](LayeredMapFeaturePackPlan.md) | 分层地图特征包落地方案（现行）：分层归属、共用地表、上下方向、开放/封闭分类 |
-| [`LayeredMapOpenness_20260927.md`](LayeredMapOpenness_20260927.md) | **开放/封闭/混合三种分层地图的定义与运行时规则**（用户 2026-09-27 拍板） |
-| [`ZscjLayerAttribute_20260927.md`](ZscjLayerAttribute_20260927.md) | 终声残卷在星炬学院不显示的核实（数据缺层级 + 隐藏机制） |
-| [`LayeredMapFeatureMeasurement_20260922.md`](LayeredMapFeatureMeasurement_20260922.md) | 分层瓦片的实机测量（合成模型：地表底片 × 0.20 + 当前层） |
-| [`LayeredFloorIndexFrame_20260926.md`](LayeredFloorIndexFrame_20260926.md) | 隐海试验场分层索引建错坐标系的根因与重建 |
-| [`LayeredMapFalsePositive_Hukou_20260926.md`](LayeredMapFalsePositive_Hukou_20260926.md) | 虎口山脉"地表帧被当成层内"的根因与判定修正 |
-| [`LayeredFloorRetention_20261001.md`](LayeredFloorRetention_20261001.md) | 天槎空间站"走出洞穴后层不解除"：`盲望之塌` 是地表而非楼层，保留判据从足迹改为影像（同前一条的另一半） |
-| [`VisualIndexRebuildRegression_20261008.md`](VisualIndexRebuildRegression_20261008.md) | 视觉索引重建后小地图识别质量崩塌的 A/B 证据与回退（根因未证实） |
-| [`DetectorMigrationDecision_20261008.md`](DetectorMigrationDecision_20261008.md) | **换检测器（SURF → SIFT）决策实验**：逐瓦片协议下的体积/质量实测、被推翻的三个数字、索引 section 拆解与优先级建议 |
-| [`VisualIndexVocabularySharing.md`](VisualIndexVocabularySharing.md) | **视觉索引词汇表去重方案**：14 份重复的 2 MB 词汇表降到一份（28 MB→2 MB），重打包而非重建，格式迁移风险与验证 |
-| [`RouteLibraryAndHandDrawn_20260928.md`](RouteLibraryAndHandDrawn_20260928.md) | **路线列表、手绘路线重做、旧手绘数据导入、按路线筛选（借出/归还）**：规格 + 实施记录 + 五轮实机反馈的真因 |
-| [`HandRouteEditing_20261005.md`](HandRouteEditing_20261005.md) | 手绘路线编辑、合集排序、自动轮换及图标合并阈值的实现与回归记录 |
-| [`RouteCollectionsAndTransfer_20261001.md`](RouteCollectionsAndTransfer_20261001.md) | **路线合集 + 路线包导入导出**：方案（现行，未实施）——合集落盘、9 个新命令、路线包格式、两步导入、界面分工、8 个实施阶段 |
-| [`NativeRoutePlanningMap_20260928.md`](NativeRoutePlanningMap_20260928.md) | 原生路线规划逐行证据地图（命令协议、落盘 schema、命中与筛选机制） |
+| [2026-10-14-english-coordinate-model.md](plans/2026-10-14-english-coordinate-model.md) | English coordinate model offline evaluation |
+| [2026-11-11-overlay-sizing.md](plans/2026-11-11-overlay-sizing.md) | 游戏内独立缩放 Implementation Plan |
+| [2026-11-11-startup-latency.md](plans/2026-11-11-startup-latency.md) | 启动提速 Implementation Plan |
+| [2026-11-11-window-placement.md](plans/2026-11-11-window-placement.md) | 主窗口位置恢复 Implementation Plan |
+| [2026-11-12-docs-organization.md](plans/2026-11-12-docs-organization.md) | Docs 分类整理实施记录 |
+| [AutoRoutePlanningTests_20260908.md](plans/AutoRoutePlanningTests_20260908.md) | 自动路线规划测试命令 |
+| [CloudWutheringAdaptationPlan_20261103.md](plans/CloudWutheringAdaptationPlan_20261103.md) | 云鸣潮网页版适配实现计划与实现记录 |
+| [CoordinateHandoffStability_20261016_zh-Hans.md](plans/CoordinateHandoffStability_20261016_zh-Hans.md) | 实机交接稳定与绘制配准恢复 |
+| [KuroPsMaptest-Handoff.md](plans/KuroPsMaptest-Handoff.md) | 库街区点位与 PS 手柄测试交付 |
+| [MinimapMarkerRenderPerfPlan_zh-Hans.md](plans/MinimapMarkerRenderPerfPlan_zh-Hans.md) | IMAO 小地图标记渲染掉帧优化任务书 |
+| [MiniMapOverlayDesign_zh-Hans.md](plans/MiniMapOverlayDesign_zh-Hans.md) | 小地图局部覆盖层（Mini Overlay）正式设计 |
+| [NativeRoutePlanningMap_20260928.md](plans/NativeRoutePlanningMap_20260928.md) | Native (C++) Route-Planning Core — Evidence Map |
+| [NoExtrapolationPlan_20261101.md](plans/NoExtrapolationPlan_20261101.md) | 105 删除位置外推与统一标记投影计划 |
+| [OcrAsyncFloorPlan_20261101.md](plans/OcrAsyncFloorPlan_20261101.md) | 107：异步楼层分类与 OCR GPU 设置实施计划 |
+| [OcrDelayPlan_20261101.md](plans/OcrDelayPlan_20261101.md) | 106 OCR 结果消费延迟诊断计划 |
+| [OldPcLocalizationPlan_20261031.md](plans/OldPcLocalizationPlan_20261031.md) | 旧电脑定位与录制隔离测试计划 |
+| [PerformanceMemoryPlan_20261020.md](plans/PerformanceMemoryPlan_20261020.md) | 地图特征内存与全局搜索分段计划 |
+| [PerformanceOptimizationPlan_zh-Hans.md](plans/PerformanceOptimizationPlan_zh-Hans.md) | 启动加载与坐标识别优化实施计划 |
+| [PixelAnchorHandoffRecovery_20261018_zh-Hans.md](plans/PixelAnchorHandoffRecovery_20261018_zh-Hans.md) | 实测像素锚点恢复与独立来源健康 |
+| [ReproCaptureReliabilityPlan_20261031.md](plans/ReproCaptureReliabilityPlan_20261031.md) | 短时完整采集可靠性修改计划 |
+| [RouteCollectionsAndTransfer_20261001.md](plans/RouteCollectionsAndTransfer_20261001.md) | 方案与实施记录；偏差、测试及遗留见 §11 |
+| [RuntimeMemoryPlan_20261020.md](plans/RuntimeMemoryPlan_20261020.md) | Runtime Memory Implementation Plan |
+| [StatefulDisplayPlan_20261101.md](plans/StatefulDisplayPlan_20261101.md) | 104 状态式显示与位置保持 |
+| [VisibilityAndDeltaPlan_20261031.md](plans/VisibilityAndDeltaPlan_20261031.md) | 显示许可与差量测试包实施计划 |
+| [VisualIndexVocabularySharing.md](plans/VisualIndexVocabularySharing.md) | 视觉索引词汇表共享：方案与迁移风险 |
 
-## 界面、手柄与覆盖层
+## 研究与故障记录
 
-| 文档 | 内容 |
+| 文档 | 内容 / 阅读提示 |
 |---|---|
-| [`MapTools_20260908.md`](MapTools_20260908.md) | 地图工具台与附近点位操作 |
-| [`OverlayFocusStateFix_20261004.md`](OverlayFocusStateFix_20261004.md) | 切屏保留手绘与规划状态：临时暂停、确认关闭、回归与 map-test 交付 |
-| [`OverlayDragRecovery_20261004.md`](OverlayDragRecovery_20261004.md) | 拖动地图时任务图标误命中导致草稿取消：玩家日志、证据优先级修正与复测 |
-| [`RouteUiTrimAudit_20261001.md`](RouteUiTrimAudit_20261001.md) | **路线功能界面精简**：三个面（桌面页/游戏内工具窗/死掉的 ImGui 工具栏）的边界审计 + 两轮精简的实施记录 |
-| [`AutoRoutePlanningTests_20260908.md`](AutoRoutePlanningTests_20260908.md) | 自动路线规划测试命令 |
-| [`RouteUsability_20260908.md`](RouteUsability_20260908.md) | 路线退出、删除与快捷键指南 |
-| [`MarkerGuideLayout_20260908.md`](MarkerGuideLayout_20260908.md) | 攻略白边、默认位置与图片翻页 |
-| [`MarkerGuideWindow_20260908.md`](MarkerGuideWindow_20260908.md) | 攻略浮窗开关与完成交互 |
-| [`GamepadCursor_20260908.md`](GamepadCursor_20260908.md) | 大地图手柄光标点位修复 |
-| [`ImageAnchoredOverlay_20260908.md`](ImageAnchoredOverlay_20260908.md) | 地形图像跟随与小地图浮动修复（2026-09-08） |
-| [`OverlayContinuityFix_20260908.md`](OverlayContinuityFix_20260908.md) | 小地图闪烁与大地图快拖错位（2026-09-08） |
-| [`MapMarkerFlicker_20260928.md`](MapMarkerFlicker_20260928.md) | 玩家反馈「标记一闪一闪」的日志分析与修复（2026-09-28） |
-| [`MapMarkerFlicker_20260928_evening_playerlog.md`](MapMarkerFlicker_20260928_evening_playerlog.md) | 同一症状的第二轮排查：下午/傍晚新旧版对照，焦点门是大地图标记的另一条来源（2026-09-28） |
-| [`MapMarkerFlicker_20261013_even.md`](MapMarkerFlicker_20261013_even.md) | even 的大世界 / 下层金库对照：源帧年龄、附着绘制差异与新增诊断（2026-10-13） |
-| [`MapMarkerFlicker_20261014_even_diagnostic.md`](MapMarkerFlicker_20261014_even_diagnostic.md) | even 新诊断日志确认：大世界点位过滤耗时高，标记源帧过期导致撤绘（2026-10-14） |
-| [`MinimapMarkerFlicker_20261018_even.md`](MinimapMarkerFlicker_20261018_even.md) | even 确认大地图已修复；小地图仍使用逐类别完成状态读取，记录同类瓶颈、撤绘入口与诊断缺口（2026-10-18） |
-| [`MinimapMarkerFlickerFix_20261019_even.md`](MinimapMarkerFlickerFix_20261019_even.md) | 小地图接入批量完成状态读取，保留原筛选规则并补齐生产耗时与渲染拒绝诊断；本地回归和测试包说明（2026-10-19） |
-| [`MapMarkerFlickerAudit_20261031.md`](MapMarkerFlickerAudit_20261031.md) | 10.30 版本大小地图闪烁复查：发布前完成查询热点、筛选与撤绘路径、性能对照及测试缺口 |
-| [`ReproCaptureReliabilityPlan_20261031.md`](ReproCaptureReliabilityPlan_20261031.md) | 短时完整采集吞吐、队列预算、状态提示及旧电脑测试包计划 |
+| [CandidatePackRedundancy.md](research/CandidatePackRedundancy.md) | 候选包是否已被梦州区域包取代 · 实测 |
+| [ClientCaptureCropFix_20261024.md](research/ClientCaptureCropFix_20261024.md) | WGC 客户端裁剪修正（2026-10-24） |
+| [CloudWutheringCaptureValidation_20261103.md](research/CloudWutheringCaptureValidation_20261103.md) | 云鸣潮捕获验证记录（2026-11-03） |
+| [CoordinateAnnotationExpansion_20261015_zh-Hans.md](research/CoordinateAnnotationExpansion_20261015_zh-Hans.md) | 已有坐标截图的视觉标注扩充 |
+| [CoordinateCaptureStudy_20261014_zh-Hans.md](research/CoordinateCaptureStudy_20261014_zh-Hans.md) | 同帧坐标与小地图采集：第一轮实机核验 |
+| [CoordinateCoverageFinetune_20261015_zh-Hans.md](research/CoordinateCoverageFinetune_20261015_zh-Hans.md) | 草地、雪地覆盖与正 X 回放微调对照（2026-10-15） |
+| [CoordinateExpandedEvaluation_20261015_zh-Hans.md](research/CoordinateExpandedEvaluation_20261015_zh-Hans.md) | 扩展标注集重评分与坐标训练裁片 |
+| [CoordinateFinetune_20261015_zh-Hans.md](research/CoordinateFinetune_20261015_zh-Hans.md) | 坐标 OCR 首轮离线微调（2026-10-15） |
+| [CoordinateFlightEffectRetrain_20261016_zh-Hans.md](research/CoordinateFlightEffectRetrain_20261016_zh-Hans.md) | 飞行特效素材补训与留出回放 |
+| [CoordinateImageGap_20261015_zh-Hans.md](research/CoordinateImageGap_20261015_zh-Hans.md) | 坐标／日期图像分区对照 |
+| [CoordinateIndependentEvaluation_20261016_zh-Hans.md](research/CoordinateIndependentEvaluation_20261016_zh-Hans.md) | 新会话素材整理与冻结模型独立评测 |
+| [CoordinateInputAlignment_20261015_zh-Hans.md](research/CoordinateInputAlignment_20261015_zh-Hans.md) | 坐标 OCR 实际输入、导出与日期边界诊断 |
+| [CoordinateLineExperiment_20261015_zh-Hans.md](research/CoordinateLineExperiment_20261015_zh-Hans.md) | 坐标文字行、等比缩放与日期边界：离线实验 |
+| [CoordinateOwnYoloExpansion_20261015_zh-Hans.md](research/CoordinateOwnYoloExpansion_20261015_zh-Hans.md) | IMao 自训字符检测：扩充不同坐标与背景 |
+| [CoordinateOwnYoloPilot_20261015_zh-Hans.md](research/CoordinateOwnYoloPilot_20261015_zh-Hans.md) | IMao 自训字符检测：首轮拟合与 ONNX 链路 |
+| [CoordinateOwnYoloXY_20261015_zh-Hans.md](research/CoordinateOwnYoloXY_20261015_zh-Hans.md) | IMao 自训 YOLO：XY 必需，Z 可选 |
+| [CoordinatePairedFinetune_20261015_zh-Hans.md](research/CoordinatePairedFinetune_20261015_zh-Hans.md) | 静止草地配对补充训练与上下文对照（2026-10-15） |
+| [CoordinateRegressionRecovery_20261016_zh-Hans.md](research/CoordinateRegressionRecovery_20261016_zh-Hans.md) | 飞行补训后的退步恢复与单张推理核验 |
+| [CoordinateSignLayout_20261015_zh-Hans.md](research/CoordinateSignLayout_20261015_zh-Hans.md) | IMao 坐标符号：固定 X 起点与 Y 相对间距校验 |
+| [CoordinateSignRecovery_20261016_zh-Hans.md](research/CoordinateSignRecovery_20261016_zh-Hans.md) | 自训坐标模型：图像确认补负号与训练补充 |
+| [CoordinateStationaryGrass_20261015_zh-Hans.md](research/CoordinateStationaryGrass_20261015_zh-Hans.md) | 静止位置的清晰／草叶遮挡成组素材（2026-10-15） |
+| [CoordinateTargetedRetrain_20261016_zh-Hans.md](research/CoordinateTargetedRetrain_20261016_zh-Hans.md) | 浅色数字与五位数坐标的针对性补训 |
+| [CoordinateYoloCropRobustness_zh-Hans.md](research/CoordinateYoloCropRobustness_zh-Hans.md) | 坐标 YOLO 裁剪鲁棒性 |
+| [CoordinateYoloIntegration_20261016_zh-Hans.md](research/CoordinateYoloIntegration_20261016_zh-Hans.md) | 自训 YOLO 与图像定位交接初版 |
+| [CpuMemoryInvestigation_20261020.md](research/CpuMemoryInvestigation_20261020.md) | 游戏内定位与大地图匹配 CPU / 内存占用分析 |
+| [DetectorMigrationDecision_20261008.md](research/DetectorMigrationDecision_20261008.md) | 换检测器（SURF → SIFT）：决策实验与结论（2026-10-08） |
+| [DiagnosticReproCapture_20261023.md](research/DiagnosticReproCapture_20261023.md) | 短时完整诊断复现采集 |
+| [FarmMode_20260927.md](research/FarmMode_20260927.md) | 刷怪采集模式（自动标记与每日重置）设计 |
+| [FeatureSizeComparison-20261002.md](research/FeatureSizeComparison-20261002.md) | Feature size and detector comparison (2026-10-02) |
+| [GamepadCursor_20260908.md](research/GamepadCursor_20260908.md) | 大地图手柄光标点位修复 |
+| [HandDrawnFreePoints_20261004.md](research/HandDrawnFreePoints_20261004.md) | 手绘自由点：本地进度、类型和地图显示 |
+| [HandRouteEditing_20261005.md](research/HandRouteEditing_20261005.md) | 手绘路线编辑实施记录 |
+| [ImageAnchoredOverlay_20260908.md](research/ImageAnchoredOverlay_20260908.md) | 地形图像跟随与小地图浮动修复（2026-09-08） |
+| [KuroPointChanges_20261006.md](research/KuroPointChanges_20261006.md) | maptest 点位变化清单（2026-10-06） |
+| [KuroSyncCredentialNaming_20260927.md](research/KuroSyncCredentialNaming_20260927.md) | 缺陷分析：已连接库街区，仍提示「此同步档案尚未连接库街区」 |
+| [LayeredFloorIndexFrame_20260926.md](research/LayeredFloorIndexFrame_20260926.md) | 隐海试验场的分层地图识别不出来的根因：分层楼层索引的坐标系建错了 |
+| [LayeredFloorRetention_20261001.md](research/LayeredFloorRetention_20261001.md) | 分层楼层该解除时不解除：地表就在洞穴正上方（2026-10-01，roysurface 天槎空间站） |
+| [LayeredMapFalsePositive_Hukou_20260926.md](research/LayeredMapFalsePositive_Hukou_20260926.md) | 虎口山脉标记消失：分层地图误判复盘（2026-09-26） |
+| [LayeredMapFeatureMeasurement_20260922.md](research/LayeredMapFeatureMeasurement_20260922.md) | 分层地图瓦片特征密度实测（2026-09-22） |
+| [LegacyDataRecovery_20260927.md](research/LegacyDataRecovery_20260927.md) | 旧版本地数据修复（帮助页） |
+| [LocalAccounts_20260926.md](research/LocalAccounts_20260926.md) | 本地多账本与库街区账号绑定（设计草案） |
+| [MapMarkerFlicker_20260928.md](research/MapMarkerFlicker_20260928.md) | 大地图/小地图标记"一闪一闪"（玩家日志分析，2026-09-28） |
+| [MapMarkerFlicker_20260928_evening_playerlog.md](research/MapMarkerFlicker_20260928_evening_playerlog.md) | 大地图标记闪烁：玩家 2026-09-28 傍晚实测的日志分析 |
+| [MapMarkerFlicker_20261013_even.md](research/MapMarkerFlicker_20261013_even.md) | even 的大地图标记闪烁：大世界 / 下层金库对照（2026-10-13） |
+| [MapMarkerFlicker_20261014_even_diagnostic.md](research/MapMarkerFlicker_20261014_even_diagnostic.md) | even 诊断包新日志：点位过滤阻塞与源帧过期（2026-10-14） |
+| [MapMarkerFlickerAudit_20261031.md](research/MapMarkerFlickerAudit_20261031.md) | 大小地图闪烁复查（2026-10-31） |
+| [MapRecognitionAudit_20260906.md](research/MapRecognitionAudit_20260906.md) | 2026-09-06 地图识别根因审计 |
+| [MapTools_20260908.md](research/MapTools_20260908.md) | 地图工具台与附近点位操作 |
+| [MarkerDetectabilityCollection_20261029.md](research/MarkerDetectabilityCollection_20261029.md) | 探测仪遗漏点位：合集离线整理（2026-10-29） |
+| [MarkerDetectabilitySpike_20261029.md](research/MarkerDetectabilitySpike_20261029.md) | 黑海岸不可探测点位小样本核验 |
+| [MarkerDetectabilityV2_20261029.md](research/MarkerDetectabilityV2_20261029.md) | 可探测性补充 v2：视频时间轴优先 |
+| [MarkerGuideLayout_20260908.md](research/MarkerGuideLayout_20260908.md) | 攻略白边、默认位置与图片翻页 |
+| [MarkerGuideWindow_20260908.md](research/MarkerGuideWindow_20260908.md) | 攻略浮窗开关与完成交互 |
+| [MengshuTianluo_20260930.md](research/MengshuTianluo_20260930.md) | 梦枢天罗接入（2026-09-30，分支 `feature/mengshutianluo`） |
+| [MinimapMarkerFlicker_20261018_even.md](research/MinimapMarkerFlicker_20261018_even.md) | even 小地图闪烁：同类读取瓶颈仍在（2026-10-18） |
+| [MinimapMarkerFlickerFix_20261019_even.md](research/MinimapMarkerFlickerFix_20261019_even.md) | even 小地图标记批量读取修复（2026-10-19） |
+| [MinimapReadoutProjection_20261018_zh-Hans.md](research/MinimapReadoutProjection_20261018_zh-Hans.md) | 固定朝向小地图的读数投影 |
+| [MinimapReadoutPublication_20261018_zh-Hans.md](research/MinimapReadoutPublication_20261018_zh-Hans.md) | OCR绘制快照发布与SURF搜索状态分离 |
+| [MinimapRecoveryFix_20260907.md](research/MinimapRecoveryFix_20260907.md) | 小地图跨区域恢复修复（2026-09-07） |
+| [MinimapRetrievalAudit_20260907.md](research/MinimapRetrievalAudit_20260907.md) | 小地图跨区域定位排查（2026-09-07 晚间） |
+| [OcrSignWitness_20260930.md](research/OcrSignWitness_20260930.md) | 坐标读数丢负号：为什么位移预算拦不住，以及现在由谁作证 |
+| [OverlayContinuityFix_20260908.md](research/OverlayContinuityFix_20260908.md) | 小地图闪烁与大地图快拖错位（2026-09-08） |
+| [OverlayDragRecovery_20261004.md](research/OverlayDragRecovery_20261004.md) | 拖动大地图误关闭手绘草稿（2026-10-04） |
+| [OverlayFocusStateFix_20261004.md](research/OverlayFocusStateFix_20261004.md) | IMAO 切屏状态保留修复（2026-10-04） |
+| [PlayerCursorStutter_20261020.md](research/PlayerCursorStutter_20261020.md) | 玩家大地图标记出现后鼠标卡顿：日志分析 |
+| [ProgramUpdateDiskReuse_20261010.md](research/ProgramUpdateDiskReuse_20261010.md) | 硬链接等已实施；一次性迁移未实施，实际节省量仍按原文待验收 |
+| [ProjectAudit_20260907.md](research/ProjectAudit_20260907.md) | 全项目审计与基础修复（2026-09-07） |
+| [ReadoutContinuity_20261018_zh-Hans.md](research/ReadoutContinuity_20261018_zh-Hans.md) | 读数短暂断读恢复、接管节奏与提前发布 |
+| [ReadoutDirectTest_20261018_zh-Hans.md](research/ReadoutDirectTest_20261018_zh-Hans.md) | OCR显示完全关闭预测与平滑的对照（2026-10-18） |
+| [ReadoutJitterFix_20261018_zh-Hans.md](research/ReadoutJitterFix_20261018_zh-Hans.md) | OCR显示读数交接回跳修复（2026-10-18） |
+| [ReadoutMotion_20261018_zh-Hans.md](research/ReadoutMotion_20261018_zh-Hans.md) | OCR接管调度、显示运动与完整缺口诊断 |
+| [ReadoutScheduling_20261018_zh-Hans.md](research/ReadoutScheduling_20261018_zh-Hans.md) | OCR 接管调度稳定性（2026-10-18） |
+| [Refactor_20260907.md](research/Refactor_20260907.md) | 核心重构记录（2026-09-07） |
+| [ResourcePackagePickerFix-20260909.md](research/ResourcePackagePickerFix-20260909.md) | 离线导入入口修复记录（2026-09-09） |
+| [ResourceUpdateValidation.md](research/ResourceUpdateValidation.md) | 资源更新系统验证记录（2026-09-09） |
+| [RouteLibraryAndHandDrawn_20260928.md](research/RouteLibraryAndHandDrawn_20260928.md) | 路线库（保存/加载/切换/筛选）与手绘路线重做 —— 实施计划 |
+| [RouteUiTrimAudit_20261001.md](research/RouteUiTrimAudit_20261001.md) | 路线功能界面精简 · 审阅（哪些只能在游戏内用、哪些放 UI 上没有意义） |
+| [RouteUsability_20260908.md](research/RouteUsability_20260908.md) | 路线退出、删除与快捷键指南 |
+| [RoyMaps_20260909.md](research/RoyMaps_20260909.md) | 罗伊冰原地图补充 |
+| [SparseMinimapFusion_20260909.md](research/SparseMinimapFusion_20260909.md) | 稀疏小地图与辅助定位整合（2026-09-09） |
+| [TestResourceStateIncident_20261020.md](research/TestResourceStateIncident_20261020.md) | 测试树切换地区导致玩家版地区列表缩减 |
+| [TethysCalibration_20260909.md](research/TethysCalibration_20260909.md) | 泰缇斯四点校准与资源隔离 |
+| [ViewportColdStartRanking_20261008.md](research/ViewportColdStartRanking_20261008.md) | 大地图冷启动：先用视觉索引排序，再决定搜什么 |
+| [VisualIndexRebuildRegression_20261008.md](research/VisualIndexRebuildRegression_20261008.md) | 视觉索引重建：为什么重建后反而变差（2026-10-08） |
+| [ZscjLayerAttribute_20260927.md](research/ZscjLayerAttribute_20260927.md) | 终声残卷在星炬学院不显示：核实报告（2026-09-27，分支 `investigate/zscj-layer-attribute`） |
+| [DocumentationContentAudit_20261112.md](research/DocumentationContentAudit_20261112.md) | 正文时效复核：35份文档的修订证据与保留验收边界 |
 
-## 库街区进度同步扩展
+## 发行说明
 
-| 文档 | 内容 |
+| 文档 | 内容 / 阅读提示 |
 |---|---|
-| [`KuroMapSyncInstall.md`](KuroMapSyncInstall.md) | 库街区进度同步扩展：商店版（Edge，已上架）与手动安装（Chrome） |
-| [`KuroMapSyncPrivacy.md`](KuroMapSyncPrivacy.md) | IMao 库街区进度同步扩展 · 隐私说明 |
-| [`KuroMapSyncStoreListing.md`](KuroMapSyncStoreListing.md) | Edge 插件上架材料与上架后留存（Partner Center 填报用） |
+| [Release-2026.10.1.1.md](releases/Release-2026.10.1.1.md) | 2026.10.1.1 |
+| [Release-2026.10.1.2.md](releases/Release-2026.10.1.2.md) | 2026.10.1.2 |
+| [Release-2026.10.2.1.md](releases/Release-2026.10.2.1.md) | 2026.10.2.1 |
+| [Release-2026.10.2.2.md](releases/Release-2026.10.2.2.md) | 2026.10.2.2 |
+| [Release-2026.10.3.1.md](releases/Release-2026.10.3.1.md) | 2026.10.3.1 |
+| [Release-2026.10.4.1.md](releases/Release-2026.10.4.1.md) | 2026.10.4.1 |
+| [Release-2026.10.4.2.md](releases/Release-2026.10.4.2.md) | 2026.10.4.2 |
+| [Release-2026.10.6.1.md](releases/Release-2026.10.6.1.md) | 2026.10.6.1 |
+| [Release-2026.9.18.1.md](releases/Release-2026.9.18.1.md) | 2026.9.18.1 |
+| [Release-2026.9.19.1.md](releases/Release-2026.9.19.1.md) | 2026.9.19.1 |
+| [Release-2026.9.19.2.md](releases/Release-2026.9.19.2.md) | 2026.9.19.2 |
+| [Release-2026.9.21.1.md](releases/Release-2026.9.21.1.md) | 2026.9.21.1 |
+| [Release-2026.9.22.1.md](releases/Release-2026.9.22.1.md) | 2026.9.22.1 |
+| [Release-2026.9.23.1.md](releases/Release-2026.9.23.1.md) | 2026.9.23.1 |
+| [Release-2026.9.25.1.md](releases/Release-2026.9.25.1.md) | 2026.9.25.1 |
+| [Release-2026.9.25.2.md](releases/Release-2026.9.25.2.md) | 2026.9.25.2 |
+| [Release-2026.9.26.1.md](releases/Release-2026.9.26.1.md) | 2026.9.26.1 |
+| [Release-2026.9.26.2.md](releases/Release-2026.9.26.2.md) | 2026.9.26.2 |
+| [Release-2026.9.26.3.md](releases/Release-2026.9.26.3.md) | 2026.9.26.3 |
+| [Release-2026.9.27.1.md](releases/Release-2026.9.27.1.md) | 2026.9.27.1 |
+| [Release-2026.9.27.2.md](releases/Release-2026.9.27.2.md) | 2026.9.27.2 |
+| [Release-2026.9.28.1.md](releases/Release-2026.9.28.1.md) | 2026.9.28.1 |
+| [Release-2026.9.28.2.md](releases/Release-2026.9.28.2.md) | 2026.9.28.2 |
+| [Release-2026.9.28.3.md](releases/Release-2026.9.28.3.md) | 2026.9.28.3 |
+| [Release-2026.9.28.4.md](releases/Release-2026.9.28.4.md) | 2026.9.28.4 |
+| [Release-2026.9.30.1.md](releases/Release-2026.9.30.1.md) | 2026.9.30.1 |
+| [Release-2026.9.9.3.md](releases/Release-2026.9.9.3.md) | WWMAP-TOOLS 2026.9.9.3 发行候选 |
 
-## 审计、性能与重构
+## 历史归档
 
-| 文档 | 内容 |
+| 文档 | 内容 / 阅读提示 |
 |---|---|
-| [`CpuMemoryInvestigation_20261020.md`](CpuMemoryInvestigation_20261020.md) | 游戏内定位与大地图匹配 CPU / 内存分析：main 资源核算、缓存峰值与取消边界、OCR / 视觉恢复并行及实机对照方案 |
-| [`PerformanceMemoryPlan_20261020.md`](PerformanceMemoryPlan_20261020.md) | 既有编码按需展开、候选复用和全局搜索协作预算的实现与验证计划 |
-| [`PlayerCursorStutter_20261020.md`](PlayerCursorStutter_20261020.md) | 玩家日志确认大地图附着时覆盖层构建变慢与输入服务间隔增长，排查鼠标钩子共线程及逐标记完成状态查询 |
-| [`TestResourceStateIncident_20261020.md`](TestResourceStateIncident_20261020.md) | 测试版切换地区串扰玩家版的状态恢复、资源更新隔离、包身份修复与零下载验收 |
-| [`ProjectAudit_20260907.md`](ProjectAudit_20260907.md) | 全项目审计与基础修复（2026-09-07） |
-| [`Refactor_20260907.md`](Refactor_20260907.md) | 核心重构记录（2026-09-07） |
-| [`GameFrameCostAnalysis_20260918.md`](GameFrameCostAnalysis_20260918.md) | 工具对游戏帧率的影响：玩家现场现象与成因分析 |
-| [`GameFrameDropAnalysis_20260917.md`](GameFrameDropAnalysis_20260917.md) | 2026-09-17 游戏掉帧：工具侧开销分析与改动 |
-| [`MinimapMarkerRenderPerfPlan_zh-Hans.md`](MinimapMarkerRenderPerfPlan_zh-Hans.md) | 小地图标记渲染掉帧优化 · 任务书与进度台账（现行） |
-| [`MiniMapOverlayDesign_zh-Hans.md`](MiniMapOverlayDesign_zh-Hans.md) | 小地图局部覆盖层 · 正式设计（待评审） |
+| [AutomaticRoutePlanning_20260908.md](archive/AutomaticRoutePlanning_20260908.md) | 自动路径规划首版 |
+| [AutoReplanCore_20260908.md](archive/AutoReplanCore_20260908.md) | 实时路线重排核心 |
+| [Compile_en.md](archive/Compile_en.md) | 上游历史构建说明；当前入口见 Build_zh-Hans.md |
+| [Compile_zh-Hans.md](archive/Compile_zh-Hans.md) | 上游历史构建说明；当前入口见 Build_zh-Hans.md |
+| [DreamzhouCandidateFeaturePack.md](archive/DreamzhouCandidateFeaturePack.md) | Dreamzhou curated-location candidates（已退役） |
+| [F8NearbyGuide_20260909.md](archive/F8NearbyGuide_20260909.md) | F8 无活动路线时打开附近攻略 |
+| [GamepadAdaptationDesign_20260908.md](archive/GamepadAdaptationDesign_20260908.md) | 标准 Xbox 手柄适配设计 |
+| [GamepadEntryDiagnosis_20260908.md](archive/GamepadEntryDiagnosis_20260908.md) | LB 入口无响应排查（2026-09-08） |
+| [GamepadMapRecognition_20260908.md](archive/GamepadMapRecognition_20260908.md) | 手柄大地图识别问题分析 |
+| [GamepadReturnRefusal_20260908.md](archive/GamepadReturnRefusal_20260908.md) | LB → B 返回游戏失败修复 |
+| [IndependentMaps_20260909.md](archive/IndependentMaps_20260909.md) | 非 World 地图接入 |
+| [KuroProgressSyncPlan_20260916.md](archive/KuroProgressSyncPlan_20260916.md) | 库街区浏览器扩展与点位进度同步计划 |
+| [MapOverlayAndFilterFix_20260907.md](archive/MapOverlayAndFilterFix_20260907.md) | 地图标记退出、过滤器及诊断布局修复 |
+| [MarkerFeatures_20260908.md](archive/MarkerFeatures_20260908.md) | 重叠点位、攻略与本地完成记录 |
+| [NavigationRefresh_20260908.md](archive/NavigationRefresh_20260908.md) | IMao 手柄、实时路线与界面更新 |
+| [OverlayCaptureNeverPublishes_20260918.md](archive/OverlayCaptureNeverPublishes_20260918.md) | 2026-09-18 覆盖层一直停在「等待定位」：BitBlt 回退一帧都发布不出去 |
+| [OverlayInputLatencyFix_20260917.md](archive/OverlayInputLatencyFix_20260917.md) | 2026-09-17 覆盖层输入延迟修复 |
+| [OverlayMotionOptimization_20260907.md](archive/OverlayMotionOptimization_20260907.md) | 地图标记运动流畅度优化（2026-09-07） |
+| [Release-2026.9.17.1.md](archive/Release-2026.9.17.1.md) | 2026.9.17.1 库街区点位进度同步 |
+| [Release-2026.9.17.2.md](archive/Release-2026.9.17.2.md) | 2026.9.17.2 库街区点位进度同步 |
+| [Release-2026.9.17.3.md](archive/Release-2026.9.17.3.md) | 2026.9.17.3 库街区点位进度同步 |
+| [Release-2026.9.17.4.md](archive/Release-2026.9.17.4.md) | 2026.9.17.4 修复无法更新的问题 |
+| [Release-2026.9.17.5.md](archive/Release-2026.9.17.5.md) | 2026.9.17.5 |
+| [Release-2026.9.17.6.md](archive/Release-2026.9.17.6.md) | 2026.9.17.6 |
+| [Release-2026.9.18.2.md](archive/Release-2026.9.18.2.md) | 2026.9.18.2 |
+| [Release-2026.9.9.5.md](archive/Release-2026.9.9.5.md) | 2026.9.9.5 攻略快捷键修复 |
+| [Release-2026.9.9.6.md](archive/Release-2026.9.9.6.md) | 2026.9.9.6 完整工作区更新 |
+| [Release-KuroMapSync-0.1.1.md](archive/Release-KuroMapSync-0.1.1.md) | IMao 库街区同步扩展 0.1.1（手动安装版） |
+| [ResourceSelectionRegression_20260909.md](archive/ResourceSelectionRegression_20260909.md) | F8 更新后地图定位失效：实际资源选择回归 |
+| [SparseMapViewport_20260909.md](archive/SparseMapViewport_20260909.md) | 中央海面导致的大地图定位失败 |
+| [TethysVideoReview_20260909.md](archive/TethysVideoReview_20260909.md) | Tethys 视频检查 |
 
-## 发行说明与发行资源
+## 配套资料
 
-| 文档 | 内容 |
-|---|---|
-| [`Release-2026.9.9.3.md`](Release-2026.9.9.3.md) | WWMAP-TOOLS 2026.9.9.3 发行候选 |
-| [`Release-2026.9.18.1.md`](Release-2026.9.18.1.md) | 2026.9.18.1 |
-| [`Release-2026.9.19.1.md`](Release-2026.9.19.1.md) | 2026.9.19.1 |
-| [`Release-2026.9.19.2.md`](Release-2026.9.19.2.md) | 2026.9.19.2 |
-| [`Release-2026.9.22.1.md`](Release-2026.9.22.1.md) | 2026.9.22.1 |
-| [`Release-2026.9.23.1.md`](Release-2026.9.23.1.md) | 2026.9.23.1 |
-| [`Release-2026.9.28.2.md`](Release-2026.9.28.2.md) | 2026.9.28.2（程序分片增量更新，修标记闪烁） |
-| [`Release-2026.10.2.1.md`](Release-2026.10.2.1.md) | 2026.10.2.1（地区重新启用修复、内存优化、梦枢天罗点位、默认筛选） |
-| [`Release-2026.10.2.2.md`](Release-2026.10.2.2.md) | 2026.10.2.2（更新尝试记录、改用分片发布） |
-| [`Release-2026.10.4.2.md`](Release-2026.10.4.2.md) | 2026.10.4.2（手绘自由点、小地图标记与本地进度） |
-| [`Release-2026.10.6.1.md`](Release-2026.10.6.1.md) | 2026.10.6.1（手绘路线编辑、路线排序与自动轮换） |
-| [`HandDrawnFreePoints_20261004.md`](HandDrawnFreePoints_20261004.md) | 自由点实现、交互一致性和删除清理验证记录 |
-| [`ReleaseAssets_v1.0.2.md`](ReleaseAssets_v1.0.2.md) | v1.0.2 发行资源归档 |
-| [`ReleaseAssets_v1.0.2.sha256`](ReleaseAssets_v1.0.2.sha256) | — |
-| [`FeatureSizeComparison_20261002.md`](FeatureSizeComparison_20261002.md) | 特征与索引的体积对照：v1 与量化后 v2、各检测器参数下的关键点数。2026-10-10 从 `test/feature-algo-budget-compare` 打捞进来，配套脚本见 [`tools/feature-probe/`](../tools/feature-probe/README.md) |
-
-## 历史记录（`archive/`）
-
-按日期的一次性实现/排查记录与早期的发行说明，保留备查，不再更新。
-
-| 文档 | 内容 |
-|---|---|
-| [`AutomaticRoutePlanning_20260908.md`](archive/AutomaticRoutePlanning_20260908.md) | 自动路径规划首版 |
-| [`AutoReplanCore_20260908.md`](archive/AutoReplanCore_20260908.md) | 实时路线重排核心 |
-| [`F8NearbyGuide_20260909.md`](archive/F8NearbyGuide_20260909.md) | F8 无活动路线时打开附近攻略 |
-| [`GamepadAdaptationDesign_20260908.md`](archive/GamepadAdaptationDesign_20260908.md) | 标准 Xbox 手柄适配设计 |
-| [`GamepadEntryDiagnosis_20260908.md`](archive/GamepadEntryDiagnosis_20260908.md) | LB 入口无响应排查（2026-09-08） |
-| [`GamepadMapRecognition_20260908.md`](archive/GamepadMapRecognition_20260908.md) | 手柄大地图识别问题分析 |
-| [`GamepadReturnRefusal_20260908.md`](archive/GamepadReturnRefusal_20260908.md) | LB → B 返回游戏失败修复 |
-| [`IndependentMaps_20260909.md`](archive/IndependentMaps_20260909.md) | 非 World 地图接入 |
-| [`KuroProgressSyncPlan_20260916.md`](archive/KuroProgressSyncPlan_20260916.md) | 库街区浏览器扩展与点位进度同步计划 |
-| [`MapOverlayAndFilterFix_20260907.md`](archive/MapOverlayAndFilterFix_20260907.md) | 地图标记退出、过滤器及诊断布局修复 |
-| [`MarkerFeatures_20260908.md`](archive/MarkerFeatures_20260908.md) | 重叠点位、攻略与本地完成记录 |
-| [`NavigationRefresh_20260908.md`](archive/NavigationRefresh_20260908.md) | IMao 手柄、实时路线与界面更新 |
-| [`OverlayCaptureNeverPublishes_20260918.md`](archive/OverlayCaptureNeverPublishes_20260918.md) | 2026-09-18 覆盖层一直停在「等待定位」：BitBlt 回退一帧都发布不出去 |
-| [`OverlayInputLatencyFix_20260917.md`](archive/OverlayInputLatencyFix_20260917.md) | 2026-09-17 覆盖层输入延迟修复 |
-| [`OverlayMotionOptimization_20260907.md`](archive/OverlayMotionOptimization_20260907.md) | 地图标记运动流畅度优化（2026-09-07） |
-| [`Release-2026.9.17.1.md`](archive/Release-2026.9.17.1.md) | 2026.9.17.1 库街区点位进度同步 |
-| [`Release-2026.9.17.2.md`](archive/Release-2026.9.17.2.md) | 2026.9.17.2 库街区点位进度同步 |
-| [`Release-2026.9.17.3.md`](archive/Release-2026.9.17.3.md) | 2026.9.17.3 库街区点位进度同步 |
-| [`Release-2026.9.17.4.md`](archive/Release-2026.9.17.4.md) | 2026.9.17.4 修复无法更新的问题 |
-| [`Release-2026.9.17.5.md`](archive/Release-2026.9.17.5.md) | 2026.9.17.5 |
-| [`Release-2026.9.17.6.md`](archive/Release-2026.9.17.6.md) | 2026.9.17.6 |
-| [`Release-2026.9.18.2.md`](archive/Release-2026.9.18.2.md) | 2026.9.18.2 |
-| [`Release-2026.9.9.5.md`](archive/Release-2026.9.9.5.md) | 2026.9.9.5 攻略快捷键修复 |
-| [`Release-2026.9.9.6.md`](archive/Release-2026.9.9.6.md) | 2026.9.9.6 完整工作区更新 |
-| [`Release-KuroMapSync-0.1.1.md`](archive/Release-KuroMapSync-0.1.1.md) | IMao 库街区同步扩展 0.1.1（手动安装版） |
-| [`ResourceSelectionRegression_20260909.md`](archive/ResourceSelectionRegression_20260909.md) | F8 更新后地图定位失效：实际资源选择回归 |
-| [`SparseMapViewport_20260909.md`](archive/SparseMapViewport_20260909.md) | 中央海面导致的大地图定位失败 |
-| [`TethysVideoReview_20260909.md`](archive/TethysVideoReview_20260909.md) | Tethys 视频检查 |
-| [`2026-10-14-english-coordinate-model.md`](superpowers/plans/2026-10-14-english-coordinate-model.md) | 英文坐标模型独立离线评测计划 |
-| [`CoordinateLineExperiment_20261015_zh-Hans.md`](CoordinateLineExperiment_20261015_zh-Hans.md) | 坐标行、等比缩放与日期边界离线实验及失败间隔法 |
-| [`CoordinateAnnotationExpansion_20261015_zh-Hans.md`](CoordinateAnnotationExpansion_20261015_zh-Hans.md) | 已有 1160 帧的助手视觉标注扩充、逐帧复核来源与待定清单 |
-| [`CoordinateExpandedEvaluation_20261015_zh-Hans.md`](CoordinateExpandedEvaluation_20261015_zh-Hans.md) | 扩展坐标集全量重评分、负号与 Z 错误分析、1011 张训练裁片准备 |
-| [`CoordinateFinetune_20261015_zh-Hans.md`](CoordinateFinetune_20261015_zh-Hans.md) | 五组 GPU 微调、冻结 BN 对照、数字模型兼容导出与原生 CPU 回放 |
-| [`CoordinateCoverageFinetune_20261015_zh-Hans.md`](CoordinateCoverageFinetune_20261015_zh-Hans.md) | 草地雪地分组覆盖、六张历史正 X 回放、两组补训及未解决难例 |
-| [`CoordinateStationaryGrass_20261015_zh-Hans.md`](CoordinateStationaryGrass_20261015_zh-Hans.md) | 三组同位置草地清晰／遮挡配对、39 帧小地图支持及整组划分约束 |
-| [`CoordinatePairedFinetune_20261015_zh-Hans.md`](CoordinatePairedFinetune_20261015_zh-Hans.md) | 三组配对补充／上下文训练失败对照、整组留出与训练推理差距 |
-| [`CoordinateInputAlignment_20261015_zh-Hans.md`](CoordinateInputAlignment_20261015_zh-Hans.md) | 原生真实张量与 checkpoint 对齐、padding 对照及坐标／日期边界分解 |
-| [`CoordinateImageGap_20261015_zh-Hans.md`](CoordinateImageGap_20261015_zh-Hans.md) | 无标签图像空隙裁切、末位截断反例及整图／裁片 XYZ 支持对照 |
-| [`CoordinateOwnYoloPilot_20261015_zh-Hans.md`](CoordinateOwnYoloPilot_20261015_zh-Hans.md) | 官方通用初始化、自有字符框与自训 YOLO 原型、拟合局限及 ONNX CPU 链路 |
-| [`CoordinateOwnYoloExpansion_20261015_zh-Hans.md`](CoordinateOwnYoloExpansion_20261015_zh-Hans.md) | 自训 YOLO 扩充草地雪地与不同坐标，固定开发回放、错误分析及 ONNX 一致性 |
-| [`CoordinateOwnYoloXY_20261015_zh-Hans.md`](CoordinateOwnYoloXY_20261015_zh-Hans.md) | XY 必需、Z 可选，日期冲突隔离、自训 YOLO 同框对照及 XY 口径比较 |
-| [`CoordinateSignLayout_20261015_zh-Hans.md`](CoordinateSignLayout_20261015_zh-Hans.md) | X 固定起点与 Y 相对间距的漏符号校验、正数检查及删框对照 |
-| [`CoordinateSignRecovery_20261016_zh-Hans.md`](CoordinateSignRecovery_20261016_zh-Hans.md) | 图像确认后补负号、24 张训练来源补充、开发回归及新会话验收冻结 |
-| [`CoordinateIndependentEvaluation_20261016_zh-Hans.md`](CoordinateIndependentEvaluation_20261016_zh-Hans.md) | 新会话 1162 组素材整理、冻结双模型全量回放、错误审计与验收未通过结论 |
-| [`CoordinateTargetedRetrain_20261016_zh-Hans.md`](CoordinateTargetedRetrain_20261016_zh-Hans.md) | 浅色数字与五位数补训、旧数据对照、蓝色耀光续训反例及 CPU ONNX 核验 |
-| [`CoordinateFlightEffectRetrain_20261016_zh-Hans.md`](CoordinateFlightEffectRetrain_20261016_zh-Hans.md) | 飞行特效 435 组素材、25 来源补训与留出回放、旧样本退步及批量／单张边界诊断 |
-| [`CoordinateRegressionRecovery_20261016_zh-Hans.md`](CoordinateRegressionRecovery_20261016_zh-Hans.md) | 字符优势互证与自有旧权重后备、严格基线退步恢复、单张 CPU/GPU 一致性与额外开销 |
-| [`CoordinateYoloIntegration_20261016_zh-Hans.md`](CoordinateYoloIntegration_20261016_zh-Hans.md) | 自训 YOLO 原生接入、SURF/OCR 待命与交接初版、构建和回放验收 |
-| [`CoordinateHandoffStability_20261016_zh-Hans.md`](CoordinateHandoffStability_20261016_zh-Hans.md) | 实机来源切回稳定期、严格像素配准恢复与失败诊断 |
-| [`PixelAnchorHandoffRecovery_20261018_zh-Hans.md`](PixelAnchorHandoffRecovery_20261018_zh-Hans.md) | 最近实测截图恢复、局部/全局来源健康分离、时序保护与掉绘时长诊断 |
-| [`MinimapReadoutProjection_20261018_zh-Hans.md`](MinimapReadoutProjection_20261018_zh-Hans.md) | 固定朝向小地图的可信读数投影、原始读数时效、统一标记/路线中心与像素路径隔离 |
-| [`MinimapReadoutPublication_20261018_zh-Hans.md`](MinimapReadoutPublication_20261018_zh-Hans.md) | OCR绘制快照发布脱离SURF恢复状态、旧锚点替代保护与完整发布决策回归 |
-| [`ReadoutContinuity_20261018_zh-Hans.md`](ReadoutContinuity_20261018_zh-Hans.md) | 已提交历史位置校验断读恢复、接管150ms请求与视觉恢复前提前发布布局 |
-
-| [`ReadoutMotion_20261018_zh-Hans.md`](ReadoutMotion_20261018_zh-Hans.md) | OCR优先消费与100ms接管调度、绘制线程受限运动及完整显示资格缺口诊断 |
-
-| [`ReadoutJitterFix_20261018_zh-Hans.md`](ReadoutJitterFix_20261018_zh-Hans.md) | 新OCR读数交接连续性、短窗估速与量化/延迟/停止/反向回归 |
-
-| [`ReadoutDirectTest_20261018_zh-Hans.md`](ReadoutDirectTest_20261018_zh-Hans.md) | 完全关闭OCR显示预测和平滑的实机对照、零补偿及有效期回归 |
-
-- [OCR 接管调度稳定性（2026-10-18）](ReadoutScheduling_20261018_zh-Hans.md)
-
-- [运行时内存归因与匹配副本优化计划](RuntimeMemoryPlan_20261020.md)
-
-- [探测仪遗漏点位：合集离线整理（2026-10-29）](MarkerDetectabilityCollection_20261029.md)
-
-- [可探测性补充 v2：视频时间轴优先（2026-10-29）](MarkerDetectabilityV2_20261029.md)
-
-- [查漏补缺模式与名录维护](MarkerDetectabilityMaintenance.md)：正例名录、生成校验、资源分发和运行规则。
-
-- [旧电脑定位与录制隔离测试计划](OldPcLocalizationPlan_20261031.md)
-
-- [显示许可与差量测试包实施计划](VisibilityAndDeltaPlan_20261031.md)
-- [104 状态式显示与位置保持](StatefulDisplayPlan_20261101.md)
-- [105 删除外推与统一标记投影计划](NoExtrapolationPlan_20261101.md)
-- [106 OCR结果消费延迟诊断计划](OcrDelayPlan_20261101.md)
-
-- [107 异步楼层分类与 OCR GPU 设置](OcrAsyncFloorPlan_20261101.md)
-
-- [云鸣潮网页版使用与测试](CloudWuthering_zh-Hans.md)：窗口选择、自动区域及本轮测试要点。
-
-- [游戏内 UI 自动适配与独立缩放实施计划](superpowers/plans/2026-11-11-overlay-sizing.md)
-- [启动提速实施计划](superpowers/plans/2026-11-11-startup-latency.md)
-- [主窗口位置恢复实施计划](superpowers/plans/2026-11-11-window-placement.md)
+图片保留于 `images/`。本机长期记忆为根目录 `MEMORY.md`（不进 Git）；小型发布证据在 `out/evidence/`。固定路径与迁移维护规则见[文档维护](guides/DocumentationMaintenance.md)。

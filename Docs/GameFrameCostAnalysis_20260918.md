@@ -932,7 +932,7 @@ composition 比分层窗口**更低**，与第 18 节相反。
    schema 升到 **4**，把 2026.9.18.1 迁移过去的配置**迁回来**（`RuntimeConfigurationStore.Migrate`）。
 2. **`画面捕获方式` 默认保持 WGC**（`CaptureWay = 1`），与 schema 2 的迁移一致，本次不动。
 3. **删掉所有"composition 帧率更高"的说法**：设置页选项文字与说明、第 18/19/20 节、
-   `Docs/Release-2026.9.18.1.md`、以及 GitHub 上 v2026.9.18.1 的发布说明。
+   `Docs/releases/Release-2026.9.18.1.md`、以及 GitHub 上 v2026.9.18.1 的发布说明。
    DirectComposition 保留为**可选**项，但不再作为推荐。
 4. **修掉下拉框反向**：`ComboBox_PresentMethod` 改为 `分层窗口` 在前。
 

@@ -151,7 +151,7 @@ if (Test-Path -LiteralPath $layeredIndexPath) {
     # runtime reads an absent field as enclosed, which is exactly what used to hide 星炬学院's
     # collectibles - so a shipped index must state it, and a rebuilt one that dropped it is a failure
     # here rather than a player report. A value this checker does not know is refused for the same
-    # reason. See Docs/LayeredMapOpenness_20260927.md.
+    # reason. See Docs/architecture/LayeredMapOpenness_20260927.md.
     . (Join-Path $PSScriptRoot 'LayeredSurfaceAccess.ps1')
     foreach ($floor in @($layeredIndex.floors)) {
         $access = if ($null -ne $floor.PSObject.Properties['surfaceAccess']) { [string]$floor.surfaceAccess } else { '' }

@@ -1,6 +1,6 @@
 # IMao coordinate YOLO candidate
 
-This model fine-tunes the project's own flight detector on its labeled game crops with varied geometry. A fixed blend of the fine-tuned and flight parameters is exported as one ONNX. The source checkpoint, ablations, evaluation results and known limitations are documented in the [crop robustness study](../../../Docs/CoordinateYoloCropRobustness_zh-Hans.md).
+This model fine-tunes the project's own flight detector on its labeled game crops with varied geometry. A fixed blend of the fine-tuned and flight parameters is exported as one ONNX. The source checkpoint, ablations, evaluation results and known limitations are documented in the [crop robustness study](../../../Docs/research/CoordinateYoloCropRobustness_zh-Hans.md).
 
 ONNX Runtime loads the same detector on CPU and on the optional DirectML backend. `model.json` freezes the artifact digests, class ordering, input dimensions and detection thresholds. The DLL was reused from the existing local ONNX Runtime 1.31.0 distribution, with its original license and third-party notices included beside it. The C API23 headers are vendored separately under `IMao-Core/packages/onnxruntime` from [Microsoft's v1.23.2 sources](https://github.com/microsoft/onnxruntime/tree/v1.23.2/include/onnxruntime/core/session), with their MIT license.
 

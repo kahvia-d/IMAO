@@ -13,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 # of them or to a deliberate "no", and the flat point-id set the C++ builds can stand in for a
 # per-point category.
 #
-# See Docs/FarmMode_20260927.md sections 2.1, 4 and 8.
+# See Docs/research/FarmMode_20260927.md sections 2.1, 4 and 8.
 
 $taskRepo = Split-Path -Parent $PSScriptRoot
 $taskMapRoot = if ($MapDataRoot) { $MapDataRoot } else { Join-Path $taskRepo 'Assets\KuroMap' }

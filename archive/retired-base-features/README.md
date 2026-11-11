@@ -1,7 +1,7 @@
 # 退役的基础地图特征库（v1.0.2）
 
 这里放的是**不再随程序发布**的基础地图特征库，2026-09-20 从
-`Assets/FeaturesDatas/` 归档出来，理由与验证见 `Docs/MapRegionOnDemandHandoff.md`
+`Assets/FeaturesDatas/` 归档出来，理由与验证见 `Docs/architecture/MapRegionOnDemandHandoff.md`
 （§五 第六层）。
 
 | 文件 | 大小 | 原路径 |

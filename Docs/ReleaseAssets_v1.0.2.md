@@ -56,7 +56,7 @@ Get-Content Docs/ReleaseAssets_v1.0.2.sha256 | ForEach-Object {
 - `mklml.dll`、`mkldnn.dll`、`libiomp5md.dll`、`common.dll`
 - `IMao-Core.dll`、`IMao-WinUI.exe` 及 WinUI/.NET 发布文件
 
-构建仍应按 `Docs/Compile_zh-Hans.md` 准备 OpenCV（含 SURF）和 Paddle C++ 推理
+构建仍应按 `Docs/archive/Compile_zh-Hans.md` 准备 OpenCV（含 SURF）和 Paddle C++ 推理
 库。若需要复现发行包，先从这些构建依赖生成原生 DLL，再将根目录 `Assets/` 放到
 最终可执行文件同级目录。
 

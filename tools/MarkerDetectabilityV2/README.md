@@ -1,12 +1,12 @@
 # 视频时间轴优先的可探测性补充 v2
 
-> 2026-11-01 归档说明：用户已要求保留最终成果和可复用流程，清理完成批次的视频、音轨、审阅截图及生成 HTML。本文后续的审核页链接、媒体缓存存在性和“零缺失”检查均为历史记录，不代表清理后状态。小型结构化记录、原始转写与共用模型/运行环境保留。新增视频入口见 `Docs/MarkerDetectabilityWorkflow_zh-Hans.md`；保留与清理清单见 `Docs/ResearchArtifactRetention_zh-Hans.md`。
+> 2026-11-01 归档说明：用户已要求保留最终成果和可复用流程，清理完成批次的视频、音轨、审阅截图及生成 HTML。本文后续的审核页链接、媒体缓存存在性和“零缺失”检查均为历史记录，不代表清理后状态。小型结构化记录、原始转写与共用模型/运行环境保留。新增视频入口见 `Docs/guides/MarkerDetectabilityWorkflow_zh-Hans.md`；保留与清理清单见 `Docs/guides/ResearchArtifactRetention_zh-Hans.md`。
 
 ## 当前交付状态（2026-10-30）
 
 最终结果为 12 个视频、26 个分 P、345 个事件、378 个去重不可探测点位，待审 0 项（352 个单项确认、26 个集合成员）。最终用户确认记录与 `results/summary.json` 为本轮离线成果；下方各阶段数量及“未接入运行时”描述均为历史记录。
 
-运行时已通过独立维护名录 `tools/MarkerDetectability/catalog.json` 收录这 378 个身份，后续增删以维护名录为准，不自动从历史审核结果覆盖。生成与维护流程见 `Docs/MarkerDetectabilityMaintenance.md`。结构化研究记录及可复用模型/环境保留在 ignored 的 `out/` 中，已完成批次媒体按页首归档说明清理。
+运行时已通过独立维护名录 `tools/MarkerDetectability/catalog.json` 收录这 378 个身份，后续增删以维护名录为准，不自动从历史审核结果覆盖。生成与维护流程见 `Docs/guides/MarkerDetectabilityMaintenance.md`。结构化研究记录及可复用模型/环境保留在 ignored 的 `out/` 中，已完成批次媒体按页首归档说明清理。
 
 ## 连续路线补查结果（2026-10-29，当前）
 

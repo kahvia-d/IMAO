@@ -6,7 +6,7 @@
 ## 为什么在这里
 
 这些脚本原本只存在于本机的 `measurements/accuracy-check/`，而那个目录在 `.gitignore` 里——
-于是 [`DetectorMigrationDecision_20261008.md`](../../Docs/DetectorMigrationDecision_20261008.md)
+于是 [`DetectorMigrationDecision_20261008.md`](../../Docs/research/DetectorMigrationDecision_20261008.md)
 引用的脚本在版本库里根本不存在。2026-10-10 把**产出证据的那一版**搬到这里，让结论可复核。
 
 搬过来的是当时的版本，不是最初的版本：`imao_vs_sift.py` 在 10-08 到 10-10 之间从 428 行长到 648 行，

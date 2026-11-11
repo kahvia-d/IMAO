@@ -1,6 +1,6 @@
 # 非 World 地图接入
 
-**最新进展：**四点截图已用于校准，旧库重复特征已按配准证据隔离，Tethys 包通过参考验证并加入运行时清单。下文保留初步实施记录；最终结果与限制见 [TethysCalibration_20260909.md](../TethysCalibration_20260909.md)。
+**最新进展：**四点截图已用于校准，旧库重复特征已按配准证据隔离，Tethys 包通过参考验证并加入运行时清单。下文保留初步实施记录；最终结果与限制见 [TethysCalibration_20260909.md](../research/TethysCalibration_20260909.md)。
 
 本轮补齐按场景隔离的大地图搜索、小地图局部跟踪和补充包恢复。定位结果直接携带场景 ID，不再用中心坐标落在哪块瓦片中推断场景。基础索引的历史分区标签统一按 World 解释，独立地图即使内部坐标重叠也不会合并特征。大地图同一尺度上有多个场景通过几何验证时拒绝发布结果。
 
@@ -39,7 +39,7 @@ $pack = 'Assets\FeaturesDatas\KuroTilePacks\Tethys'
 ## 实机接入剩余步骤
 
 1. 在 Tethys 中选取分散位置，使用 `.\scripts\Start-KuroCaptureAssistant.ps1 -Scene Tethys -Sample 01` 采集。Ctrl+Alt+F9 保存正常画面，Ctrl+Alt+F10 保存人物未移动时的大地图；Ctrl+Alt+F11 记录移动录像。采集不会控制游戏。
-2. 按 `KuroSceneCalibrationSamples.md` 的格式填写四点样本，使用 `Set-KuroSceneCalibration.ps1 -Scene Tethys -SamplesPath <样本路径> -Check` 检查变换；应用校准后保持既有瓦片特征坐标系不变；重新验证参考图，不能把游戏校准反向套入瓦片生成。
+2. 按 [`KuroSceneCalibrationSamples.md`](../guides/KuroSceneCalibrationSamples.md) 的格式填写四点样本，使用 `Set-KuroSceneCalibration.ps1 -Scene Tethys -SamplesPath <样本路径> -Check` 检查变换；应用校准后保持既有瓦片特征坐标系不变；重新验证参考图，不能把游戏校准反向套入瓦片生成。
 3. 使用真实游戏坐标和参考截图重新执行同步脚本，传入 `-ReferencePath <截图>`、`-ReferenceFullSnapshot`，移除 `-SkipReferenceVerification`。参考误差必须通过原有 8 像素检查，再制作二进制与索引。
 4. 将已验证包加入 `kuro-tile-packs.json`，通过现有资源暂存流程生成包含它的 bundled snapshot。开发版缺省扫描仅加载 World，独立地图必须通过显式资源描述加载。
 5. 验证小地图连续移动、打开地图后的标记位置，以及与 World 来回切换。LowerVault、Darkplain、TimeRiftRuins 还需原有 `Approve-KuroSceneRelease.ps1` 的完整开放证据。

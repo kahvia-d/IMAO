@@ -217,7 +217,7 @@ pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply
 新地图的 frame 在原点上没有校准、在归档里也没有记录，所以前两步与上面不同：
 
 ```powershell
-# 1. 同步上游点位（新 state 先按 supported=$false 归档，见 Docs/KuroMapDataSource.md）
+# 1. 同步上游点位（新 state 先按 supported=$false 归档，见 Docs/guides/KuroMapDataSource.md）
 pwsh -File scripts\Sync-KuroMapData.ps1 -Check
 pwsh -File scripts\Sync-KuroMapData.ps1 -Apply
 
@@ -238,7 +238,7 @@ pwsh -File scripts\Test-MapRegionRegistry.ps1
 pwsh -File scripts\Invoke-MapRegionRebuild.ps1 -Apply -RegionId <id> `
     -TileArchive map-regions\tiles\13CCF182D6AF491CA1AC2A02754E5345
 
-# 6. 采四组截图做四点校准（见 Docs/KuroSceneCalibrationSamples.md）
+# 6. 采四组截图做四点校准（见 Docs/guides/KuroSceneCalibrationSamples.md）
 pwsh -File scripts\Set-KuroSceneCalibration.ps1 -Scene <Scene> -SamplesPath map-regions\samples\<id>.json -Check
 pwsh -File scripts\Set-KuroSceneCalibration.ps1 -Scene <Scene> -SamplesPath map-regions\samples\<id>.json -Apply
 
