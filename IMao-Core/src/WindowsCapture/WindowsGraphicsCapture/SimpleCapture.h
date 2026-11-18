@@ -12,6 +12,7 @@
 #include <array>
 #include <nlohmann/json.hpp>
 #include "CaptureCallbackGate.h"
+#include "WgcFrameDelivery.h"
 class SimpleCapture
 {
 public:
@@ -77,12 +78,13 @@ public:
 
     bool GetLatestFrame_Mat(cv::Mat& outputFrame, std::uint64_t* frameSequence = nullptr,
         std::chrono::steady_clock::time_point* capturedAt = nullptr,
-        nlohmann::json* readbackInfo = nullptr) {
+        nlohmann::json* readbackInfo = nullptr, WgcFrameDelivery* delivery = nullptr) {
         std::lock_guard<std::mutex> lock(m_frameMutex);
         if (m_latestFrame.empty()) {
             return false;
         }
-        m_latestFrame.copyTo(outputFrame);
+        if (delivery) outputFrame = delivery->Read(m_latestFrame, m_frameSequence);
+        else m_latestFrame.copyTo(outputFrame);
         if (frameSequence != nullptr) *frameSequence = m_frameSequence;
         if (capturedAt != nullptr) *capturedAt = m_frameCapturedAt;
         if (readbackInfo != nullptr) *readbackInfo = m_latestReadbackInfo;

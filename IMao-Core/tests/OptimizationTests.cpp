@@ -1,4 +1,5 @@
 #include "EncodedCandidateTests.h"
+#include "WgcFrameDeliveryTests.h"
 #include <opencv2/imgcodecs.hpp>
 #include "CoarseSearchCoverageTests.h"
 #include "VisualRecoveryHintsTests.h"
@@ -1397,6 +1398,7 @@ int main(int argc, char** argv) {
     TestOverlayVisibility(Expect);
     TestFramePacer(Expect);
     TestOverlayPacing(Expect);
+    TestWgcFrameDelivery(Expect);
     TestGamepadContext(Expect);
     TestGamepadCursorTargets(Expect);
     TestGamepadWorldActions(Expect);

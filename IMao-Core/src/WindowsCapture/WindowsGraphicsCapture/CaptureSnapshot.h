@@ -45,8 +45,8 @@ public:
 
     bool GetLatestFrame(Mat& output, std::uint64_t* frameSequence = nullptr,
         std::chrono::steady_clock::time_point* capturedAt = nullptr,
-        nlohmann::json* readbackInfo = nullptr) {
-        return m_capture != nullptr && m_capture->GetLatestFrame_Mat(output, frameSequence, capturedAt, readbackInfo);
+        nlohmann::json* readbackInfo = nullptr, WgcFrameDelivery* delivery = nullptr) {
+        return m_capture != nullptr && m_capture->GetLatestFrame_Mat(output, frameSequence, capturedAt, readbackInfo, delivery);
     }
 
     CaptureSnapshot(HWND hwnd) {

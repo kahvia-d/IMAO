@@ -217,6 +217,7 @@ void App::Thread_Capture() {
         // takes frames that arrived after the one it starts on. A backend that reports no sequence
         // (the BitBlt fallback) is numbered here instead - see OverlayPacing::CaptureFrameSource.
         OverlayPacing::CaptureFrameSource frameSource;
+        WgcFrameDelivery delivery;
         auto reportAt = std::chrono::steady_clock::now();
         // The window capture runs synchronously against the game, so its cost lands in the game's own
         // frame time. Report the per-call average and worst case next to the achieved rate.
@@ -238,12 +239,14 @@ void App::Thread_Capture() {
             }
             const auto revision=GameCaptureTarget::Revision();
             if (revision!=surfaceRevision) {
+                delivery.DiscardPixels();
                 coordinateSuspendRequested=true;mapViewportResetRequested=true;
                 overlayFrames.Publish({});overlayVisibility.Publish({});capturedFrames.Publish({});
                 surfaceRevision=revision;
             }
             RECT captureRect{};
             if (!GameCaptureTarget::Client(hwnd, captureRect)) {
+                delivery.DiscardPixels();
                 capturedFrames.Publish({});overlayVisibility.Publish({});
                 coordinateSuspendRequested=true;mapViewportResetRequested=true;
                 if (GameCaptureTarget::Read() && IsWindow(hwnd)) {
@@ -260,7 +263,7 @@ void App::Thread_Capture() {
                 // Diagnostic isolation: with capture switched off the loop still runs and still paces
                 // itself, but never asks the game for pixels.
                 if (!Isolation::Enabled(Isolation::kCapture))
-                    GetMatSnapshot(false, image, &sequence, &captureRect, &capturedAt).get();
+                    GetMatSnapshot(false, image, &sequence, &captureRect, &capturedAt, &delivery).get();
             } catch (const std::exception& error) {
                 Diagnostics::Record("capture-frame-error", error.what());
             }
@@ -272,6 +275,7 @@ void App::Thread_Capture() {
             // backend's read. Never publish pixels with incompatible geometry.
             if (image.empty() || image.cols != captureRect.right || image.rows != captureRect.bottom || geometryRevision!=GameCaptureTarget::Revision())
             {
+                delivery.DiscardPixels();
                 ++emptyCaptures;
                 capturedFrames.Publish({});
             }
@@ -337,10 +341,13 @@ void App::Thread_Capture() {
                     " captureSlow=" + std::to_string(slowCaptures) +
                     " captureEmpty=" + std::to_string(emptyCaptures) +
                     " captureUnpublished=" + std::to_string(unpublishedCaptures) +
+                    " wgcCopiesAvoided=" + std::to_string(delivery.copiesAvoided) +
+                    " wgcBytesAvoided=" + std::to_string(delivery.bytesAvoided) +
                     " capturePeriodMs=" + std::to_string(capturePeriod.count() / 1000.0));
                 published = 0; reportAt = now;
                 captureTotalMs = 0; captureMaxMs = 0; captureAttempts = 0; slowCaptures = 0;
                 emptyCaptures = 0; unpublishedCaptures = 0;
+                delivery.copiesAvoided = delivery.bytesAvoided = 0;
             }
             pacer.WaitUntil(start + capturePeriod);
         }
@@ -746,7 +753,7 @@ winrt::IAsyncAction App::Start() {
 }
 
 winrt::IAsyncAction App::GetMatSnapshot(bool isTaketAsync, Mat& result, uint64_t* frameSequence,
-    const RECT* requestedRect, std::chrono::steady_clock::time_point* capturedAt) {
+    const RECT* requestedRect, std::chrono::steady_clock::time_point* capturedAt, WgcFrameDelivery* delivery) {
 	FrameStorage::Scope allocationOrigin(FrameStorage::Origin::CaptureDelivery);
 	const auto waitStart = std::chrono::steady_clock::now();
     const RECT captureRect = requestedRect ? *requestedRect : rect;
@@ -769,7 +776,7 @@ winrt::IAsyncAction App::GetMatSnapshot(bool isTaketAsync, Mat& result, uint64_t
 		auto* readbackOutput = &readbackInfo;
 		const bool captured = isTaketAsync
 			? graphicsCapture->WaitForFirstFrame(temp, std::chrono::milliseconds(1500), sequenceOutput, readbackOutput)
-			: graphicsCapture->GetLatestFrame(temp, sequenceOutput, capturedAt, readbackOutput);
+			: graphicsCapture->GetLatestFrame(temp, sequenceOutput, capturedAt, readbackOutput, delivery);
 		if (!captured || temp.empty()) {
 			result.release();
 			if (isTaketAsync) {

@@ -449,7 +449,8 @@ private:
 
 private:
 	winrt::IAsyncAction GetMatSnapshot(bool isTaketAsync, cv::Mat& result, uint64_t* frameSequence = nullptr,
-        const RECT* captureRect = nullptr, std::chrono::steady_clock::time_point* capturedAt = nullptr);
+        const RECT* captureRect = nullptr, std::chrono::steady_clock::time_point* capturedAt = nullptr,
+        WgcFrameDelivery* delivery = nullptr);
     void Thread_Capture();
     void PublishOverlayFrame(const CapturedFrame& captured, const MapViewportPrediction& viewport);
 	// True while the big map has a recently confirmed absolute fix behind it. See
