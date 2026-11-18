@@ -132,6 +132,7 @@
 | [CoordinateYoloCropRobustness_zh-Hans.md](research/CoordinateYoloCropRobustness_zh-Hans.md) | 坐标 YOLO 裁剪鲁棒性 |
 | [CoordinateYoloIntegration_20261016_zh-Hans.md](research/CoordinateYoloIntegration_20261016_zh-Hans.md) | 自训 YOLO 与图像定位交接初版 |
 | [CpuMemoryInvestigation_20261020.md](research/CpuMemoryInvestigation_20261020.md) | 游戏内定位与大地图匹配 CPU / 内存占用分析 |
+| [RuntimePerformance_20261118.md](research/RuntimePerformance_20261118.md) | 探索采集、定位延迟与游戏帧时间的优化优先级，含当前主线离线对照 |
 | [DetectorMigrationDecision_20261008.md](research/DetectorMigrationDecision_20261008.md) | 换检测器（SURF → SIFT）：决策实验与结论（2026-10-08） |
 | [DiagnosticReproCapture_20261023.md](research/DiagnosticReproCapture_20261023.md) | 短时完整诊断复现采集 |
 | [FarmMode_20260927.md](research/FarmMode_20260927.md) | 刷怪采集模式（自动标记与每日重置）设计 |
