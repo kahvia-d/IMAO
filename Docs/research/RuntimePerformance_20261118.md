@@ -80,6 +80,27 @@
 
 本机原始文件在 `out/memory-activity-20261119/`，包含测试用快照、回放清单、逐阶段账本、各样例结果，以及字体探针源码与两份输出。游戏样本取自 `out/oldpc-logs6-107/events-20261101.jsonl`。本次未调整安装或地区选择。
 
+### 11 月 19 日实现后的对照
+
+覆盖层的两种字号现在共用内容相同的字体源。生产代码的 DX11 字体回归测得上传后仍占用 38,501,928 字节，对照为 58,206,280 字节，节省 18.79 MiB。中文渲染与图集哈希和对照一致，设备重建三次与退出清理通过。
+
+楼层加载器完成校验后，运行时释放只在校验与抽样时用到的关键点坐标，把每个地区的完整识别数据与全图搜索用的样本按原始精度写入只读临时文件。匹配时由 Windows 调入所读的页，映射随索引的最后一个读者释放。暂存失败时保留该区可用的内存数据并记录原因。已读页面的驻留时间由 Windows 管理。全图搜索仍覆盖全部已启用地区，同场景的多个地区仍一起参加楼层判断。[运行时安装](../../IMao-Core/src/Runtime/LayeredMapState.cpp) · [地区楼层存储](../../IMao-Core/src/Feature/FloorDescriptorStorage.cpp)
+
+使用同一 Release 回放器和 14 地区快照，按旧、新、新、旧启动四个独立进程。每次先做一次未知地区楼层搜索，再做两次 World 场景判断，然后回放同样的小地图和八个大地图样例。下表为识别回放进程实际占用的物理内存（工作集），单位 MiB。字体在独立进程计量。
+
+| 时点 | 旧 | 新 |
+|---|---:|---:|
+| 全部地图和楼层就绪 | 144.9–145.6 | 73.2–73.3 |
+| 两次 World 楼层判断后 | 166.2–169.4 | 137.6–138.3 |
+| 大地图各样例返回时 | 250.9–287.3 | 221.3–257.4 |
+| 进程累计峰值，包含资源加载 | 531.6–532.7 | 460.6–461.0 |
+
+大地图按相同样例对齐、每种实现各取两次平均，工作集节省的中位数为 31.0 MiB。新实现使用 22 个临时映射，逻辑大小共 60.0 MiB，四轮退出时活跃映射数均为零。代价主要在首次读取，楼层准备从 293–294 ms 增至 560–587 ms，首次全地区楼层搜索从 14–15 ms 增至 28–30 ms。第二次 World 判断为旧版 51–57 ms、新版 50–53 ms。此处使用同一张截图，时间仅代表本机这组回放。
+
+四轮大地图均为 8/8，坐标、匹配数和接受结果一致。独立跨区小地图清单为 11/12，与修改前逐例一致。首张图在第一页找到候选，未满足继续翻页的已有断言。楼层存储测试另覆盖完整与抽样投票、归属掩码、旧版浮点资源、映射失败回退。以上测量不含游戏采集、OCR、WinUI 或覆盖层，整机游戏时的内存与掉帧仍待实测。
+
+四份账本及逐例结果位于 `out/memory-activity-20261119/production-vote-*`。在同目录 `full-map-input.json` 的基础上增加 `"memoryFloorScenes": [0,1,1]`，使用 `"memoryHeapFloorControl": true` 复现旧存储，设为 `false` 复现产品默认存储。[回放器](../../IMao-Core/tools/VisualRegression/main.cpp)
+
 ### 11 月 18 日的线程与识别回放
 
 在仓库根目录先执行 `. .\scripts\Enter-DevEnvironment.ps1`，以现有 CMake 配置构建 Release 目标 `IMaoVisualRegression`。运行 `x64\Release\IMaoVisualRegression.exe <仓库根> <清单路径> <报告路径>`。大地图清单是 `Tests/VisualLocalization/20260906-viewport.json`，小地图是 `Tests/VisualLocalization/20260907-cross-area.json`。本机原始报告在 `out/perf-study-20261118/`。表中数据见 `peer-summary.json` 和四份 `peer-*.log`，诊断入口与计量代码见 `thread-probe.cpp`、`run-peer.py`。重跑线程对照时将该目录下的 `ThreadProbe.exe` 临时复制到原回放器旁并命名为 `IMaoPerfStudyProbe20261118.exe`，再从仓库根运行 `run-peer.py`。采集重复计数来自 `out/oldpc-logs6-107/events-20261101.jsonl` 中各次 `capture-cadence` 的 `captureUnpublished` 之和。

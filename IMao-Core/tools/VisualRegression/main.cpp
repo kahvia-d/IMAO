@@ -1135,8 +1135,14 @@ int MeasureMemoryLedger(const std::filesystem::path& root, const std::filesystem
             ResourceSnapshotContext::Path(manifest.at("resourceSnapshot").get<std::string>()), snapshot, error))
             throw std::runtime_error("Invalid ledger resource snapshot: " + error);
         ResourceSnapshotContext::Initialize(std::move(snapshot));
-        LayeredMap::Install(ResourceSnapshotContext::BaselineRoot() / "FeaturesDatas");
-        ledger->Record("floors-ready");
+        const auto floorStart = std::chrono::steady_clock::now();
+        LayeredMap::Install(ResourceSnapshotContext::BaselineRoot() / "FeaturesDatas",
+            manifest.value("memoryHeapFloorControl", false) ? LayeredMap::DescriptorStorage::HeapControl :
+            LayeredMap::DescriptorStorage::FileBacked);
+        const auto floorStorage = MappedDescriptorStorage::Read();
+        ledger->Record("floors-ready", {{"mappedBytes", floorStorage.bytes}, {"mappings", floorStorage.mappings},
+            {"mappingFailures", floorStorage.failures}, {"loadMs", std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - floorStart).count()}});
         if (manifest.value("memoryDisableDescriptorMapping", false)) SetEnvironmentVariableW(L"IMAO_DESCRIPTOR_MAPPING", L"0");
         if (manifest.value("memoryDisableRuntimeIndexPacking", false)) SetEnvironmentVariableW(L"IMAO_RUNTIME_INDEX_COMPACT", L"0");
         RuntimeFeatureRepository::Instance().BeginPreload(ResourceSnapshotContext::BaselineRoot());
@@ -1184,6 +1190,24 @@ int MeasureMemoryLedger(const std::filesystem::path& root, const std::filesystem
             {
                 const auto image = cv::imread((root / manifest.at("memoryMinimap").get<std::string>()).string());
                 if (image.empty()) throw std::runtime_error("Ledger minimap image missing");
+                if (manifest.contains("memoryFloorScenes")) {
+                    cv::Mat normalized;
+                    ImageFeatureData features;
+                    if (!GlobalVisualLocalizer::PrepareMinimap(image, normalized, features))
+                        throw std::runtime_error("No minimap features for floor replay");
+                    for (const int scene : manifest.at("memoryFloorScenes").get<std::vector<int>>()) {
+                        // Respect the synchronous classifier's idle cadence between votes.
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+                        const auto begin = std::chrono::steady_clock::now();
+                        LayeredMap::ObserveMinimap(features, scene, 0, 0);
+                        const auto elapsed = std::chrono::steady_clock::now() - begin;
+                        const auto floor = LayeredMap::Read();
+                        const auto scope = LayeredMap::ScopeHint();
+                        ledger->Record("floor-vote", {{"scene", scene}, {"floor", floor.floorId},
+                            {"active", floor.active}, {"scopeValid", scope.valid}, {"scopeFloor", scope.floorId},
+                            {"durationMs", std::chrono::duration<double, std::milli>(elapsed).count()}});
+                    }
+                }
                 for (int iteration = 1; iteration <= 3; ++iteration) {
                     cv::Mat normalized; ImageFeatureData features;
                     if (!GlobalVisualLocalizer::PrepareMinimap(image, normalized, features))

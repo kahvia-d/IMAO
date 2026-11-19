@@ -5,6 +5,7 @@
 #include <thread>
 
 #include "../Diagnostics/Diagnostics.h"
+#include "../Feature/FloorDescriptorStorage.h"
 #include "../Runtime/ResourceSnapshotContext.h"
 
 #include <nlohmann/json.hpp>
@@ -192,7 +193,7 @@ std::string VoteSummary(const std::vector<LayeredFloors::FloorVote>& votes,
 
 } // namespace
 
-void Install(const std::filesystem::path& featureDataRoot) {
+void Install(const std::filesystem::path& featureDataRoot, DescriptorStorage storage) {
     std::vector<Entry> loaded;
     const auto packsRoot = featureDataRoot / "KuroTilePacks";
     std::error_code error;
@@ -241,7 +242,6 @@ void Install(const std::filesystem::path& featureDataRoot) {
             sceneId = 0;
             kuroStateId = 0;
         }
-        std::vector<LayeredFloors::FloorEntry> floors;
         LayeredFloors::Index index;
         std::string loadError;
         if (!LayeredFloors::Load(packRoot, index, loadError, kFloorDescriptorCap, true)) {
@@ -250,12 +250,22 @@ void Install(const std::filesystem::path& featureDataRoot) {
             continue;
         }
         const auto region = packRoot.filename().string();
+        const bool useFileStorage = storage == DescriptorStorage::FileBacked;
+        const bool mapped = useFileStorage && LayeredFloors::MapRegionDescriptors(index, loadError);
         for (auto& floor : index.floors) {
+            // The loader uses keypoints to validate the rows and align the masks.
+            // Runtime floor votes only read descriptors and the two own-art masks.
+            if (useFileStorage) {
+                std::vector<cv::KeyPoint>().swap(floor.features.imgKeypoints);
+                std::vector<cv::KeyPoint>().swap(floor.sampleFeatures.imgKeypoints);
+            }
             loaded.push_back(Entry{sceneId, kuroStateId, region, std::move(floor), index.transform});
         }
         Diagnostics::Record("layered-floor-index", "region=" + region + " scene=" + std::to_string(sceneId) +
             " kuroState=" + std::to_string(kuroStateId) + " floors=" + std::to_string(index.floors.size()) +
-            " descriptorCap=" + std::to_string(kFloorDescriptorCap));
+            " descriptorCap=" + std::to_string(kFloorDescriptorCap) +
+            (mapped ? " storage=mapped" : " storage=heap") +
+            (loadError.empty() ? "" : " mappingError=" + loadError));
     }
 
     std::lock_guard lock(stateMutex);

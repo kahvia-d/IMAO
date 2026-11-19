@@ -94,7 +94,9 @@ struct Scope {
 
 /// Loads every <featureDataRoot>/KuroTilePacks/<region>/layered-floors index. A pack
 /// without one is normal - most regions have no layered maps - and is simply skipped.
-void Install(const std::filesystem::path& featureDataRoot);
+enum class DescriptorStorage { FileBacked, HeapControl };
+void Install(const std::filesystem::path& featureDataRoot,
+    DescriptorStorage storage = DescriptorStorage::FileBacked);
 
 /// Classifies one minimap capture and debounces the answer into the state.
 ///

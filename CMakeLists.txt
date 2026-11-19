@@ -478,7 +478,7 @@ target_include_directories(IMaoOptimizationTests PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/src
     ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann)
 target_compile_definitions(IMaoOptimizationTests PRIVATE IMAO_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-target_link_libraries(IMaoOptimizationTests PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib user32.lib)
+target_link_libraries(IMaoOptimizationTests PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib user32.lib psapi.lib)
 
 enable_testing()
 
@@ -624,7 +624,6 @@ add_executable(IMaoVisualRegression
     IMao-Core/src/Coordinate/VisualLocalization/DenseMapConfirmer.cpp
     IMao-Core/src/Feature/Match/StreamingSurf.cpp
     IMao-Core/src/Feature/RuntimeFeatureRepository.cpp
-    IMao-Core/src/Feature/Match/MappedDescriptorStorage.cpp
     IMao-Core/src/Runtime/ResourceSnapshotContext.cpp
     IMao-Core/src/Runtime/RuntimeStatus.cpp
     IMao-Core/src/App/MapViewportLocalizer.cpp
@@ -765,6 +764,11 @@ set_target_properties(IMaoRuntimeIndexStorageTests PROPERTIES RUNTIME_OUTPUT_DIR
 add_test(NAME IMaoRuntimeIndexStorageTests COMMAND IMaoRuntimeIndexStorageTests)
 
 # These tools compile production diagnostics/recognition sources directly.
+foreach(_floor_target IN ITEMS IMaoOptimizationTests IMaoLayeredMapTests IMaoVisualRegression)
+    target_sources(${_floor_target} PRIVATE IMao-Core/src/Feature/FloorDescriptorStorage.cpp
+        IMao-Core/src/Feature/Match/MappedDescriptorStorage.cpp)
+endforeach()
+
 foreach(_repro_target IN ITEMS IMaoOptimizationTests IMaoOcrDependencyTests
     IMaoCoordinateRuntimeTests IMaoLayeredMapTests IMaoVisualRegression IMaoCoordinateRegression)
     target_sources(${_repro_target} PRIVATE IMao-Core/src/Diagnostics/ReproCapture.cpp)

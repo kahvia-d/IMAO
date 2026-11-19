@@ -4,6 +4,8 @@
 #include "Feature/Match/FeatureRowCache.h"
 #include "Feature/Match/SceneMapFeatures.h"
 #include "Feature/LayeredFloorIndex.h"
+#include "Feature/FloorDescriptorStorage.h"
+#include "Feature/Match/MappedDescriptorStorage.h"
 #include <filesystem>
 #include <fstream>
 #include "Feature/Match/AppendFeatureBatch.h"
@@ -92,12 +94,39 @@ void TestDescriptorStorage(Check check) {
             "packed floor Load retains full evidence and exactly aligned float samples");
         for (size_t i = 0; i < b.sampleOwnArt.size(); ++i)
             check(b.sampleOwnArt[i] == b.ownArt[i * 3], "mixed own-art mask uses the same sampling stride");
+        const auto original = b.features.imgDescriptors;
+        check(!LayeredFloors::MapRegionDescriptors(packedIndex, error, root / "absent") &&
+            !error.empty() && b.features.imgDescriptors.data == original.data,
+            "mapping failure reports an error and keeps the validated floor usable");
+        check(LayeredFloors::MapRegionDescriptors(packedIndex, error, root) &&
+            MappedDescriptorStorage::IsMapped(b.features.imgDescriptors) &&
+            MappedDescriptorStorage::IsMapped(b.sampleFeatures.imgDescriptors) &&
+            cv::norm(b.features.imgDescriptors, original, cv::NORM_INF) == 0 &&
+            cv::norm(b.sampleFeatures.imgDescriptors, a.sampleFeatures.imgDescriptors, cv::NORM_INF) == 0,
+            "full and sampled floor descriptors are file-backed and byte exact");
         for (bool samples : {false, true}) {
             const auto av = LayeredFloors::Classify(baseline, plainIndex.floors, 10, 2, .75f, .6f, samples);
             const auto bv = LayeredFloors::Classify(baseline, packedIndex.floors, 10, 2, .75f, .6f, samples);
             check(av.identified == bv.identified && av.winnerMatches == bv.winnerMatches &&
                 av.ownDominant == bv.ownDominant, "loaded full/sample own-art votes agree with legacy float storage");
         }
+    }
+    {
+        LayeredFloors::Index region;
+        region.floors.resize(2);
+        for (int i = 0; i < 2; ++i) {
+            auto& floor = region.floors[i];
+            floor.features.imgDescriptors = cv::Mat(7 + i, 128, CV_32F, cv::Scalar(3 + i));
+            floor.sampleFeatures = floor.features;
+        }
+        check(LayeredFloors::MapRegionDescriptors(region, error, root), "uncapped legacy float floors map");
+        const auto& first = region.floors.front().features.imgDescriptors;
+        const auto& second = region.floors.back().features.imgDescriptors;
+        check(first.u == second.u && first.data != second.data && first.rows == 7 && second.rows == 8 &&
+            first.at<float>(6, 127) == 3 && second.at<float>(7, 127) == 4 &&
+            region.floors[0].sampleFeatures.imgDescriptors.data == first.data &&
+            region.floors[1].sampleFeatures.imgDescriptors.data == second.data,
+            "adjacent floors share one mapping and uncapped samples reuse the corresponding rows");
     }
     // Two v2 packs may have different ranges. The boundary must decode using
     // the source pack's scale, including after a legacy float pack is appended.
@@ -130,6 +159,7 @@ void TestDescriptorStorage(Check check) {
     check(!LoadStoredDescriptors<FeatureBinaryCodec>(root / "v2.imf", stored, error) &&
         stored.imgDescriptors.empty() && stored.descriptorEncoding.empty() && !error.empty(),
         "encoded storage still rejects corruption and clears partial output");
+    packedIndex.floors.clear();
     std::filesystem::remove_all(root);
 }
 
