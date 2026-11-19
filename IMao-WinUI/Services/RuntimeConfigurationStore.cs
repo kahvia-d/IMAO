@@ -108,6 +108,11 @@ internal sealed class RuntimeConfigurationStore
         {
             migrated = migrated with { GuideSkipKey = 0 };
         }
+        // The original OCR switch predates the two experimental map switches.
+        if (migrated.GpuAcceleration is null &&
+            (migrated.OcrGpuAcceleration.HasValue || migrated.MinimapGpuAcceleration.HasValue || migrated.ViewportGpuAcceleration.HasValue))
+            migrated = migrated with { GpuAcceleration = migrated.OcrGpuAcceleration ??
+                (migrated.MinimapGpuAcceleration == true || migrated.ViewportGpuAcceleration == true) };
         return migrated;
     }
 

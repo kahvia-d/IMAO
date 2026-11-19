@@ -538,11 +538,15 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
                 const auto& mask = command.at("mask");
                 if (!mask.is_number_integer() || mask < 0 || mask > 3)
                     throw std::invalid_argument("地图 GPU 开关值无效");
+                if (command.contains("ocr")) {
+                    if (!command.at("ocr").is_boolean()) throw std::invalid_argument("OCR GPU 开关值无效");
+                    MapGpuSettings::ocrOverride.store(command.at("ocr").get<bool>() ? 1 : 0);
+                }
                 MapGpuSettings::Mask().store(mask.get<int>());
             }
             const auto status = RuntimeStatus::Snapshot();
             SendAck(events, command, true, "", {
-                {"mask", MapGpuSettings::Mask().load()}, {"pid", GetCurrentProcessId()},
+                {"mask", MapGpuSettings::Mask().load()}, {"ocrOverride", MapGpuSettings::ocrOverride.load()}, {"pid", GetCurrentProcessId()},
                 {"coreState", status.coreState}, {"gameFocused", status.gameFocused},
                 {"localization", status.localization}, {"minimapBatches", MapGpuSettings::minimapBatches.load()},
                 {"minimapGpuBatches", MapGpuSettings::minimapGpuBatches.load()},

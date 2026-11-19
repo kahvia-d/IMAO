@@ -44,24 +44,6 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public (bool Minimap, bool Viewport) DesiredMapGpuSettings => Configuration.ResolveMapGpuSettings(
         Environment.GetEnvironmentVariable(MinimapGpuVariable), Environment.GetEnvironmentVariable(ViewportGpuVariable));
 
-    public bool SaveOcrGpuAcceleration(bool enabled) =>
-        SaveGpuPreference(old => old with { OcrGpuAcceleration = enabled });
-
-    private bool SaveGpuPreference(Func<RuntimeConfiguration, RuntimeConfiguration> update)
-    {
-        try
-        {
-            configuration.Update(update);
-            OnUi(() => OnPropertyChanged(nameof(Configuration)));
-            return true;
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
-        {
-            ReportUserError("无法保存 GPU 加速设置：" + error.Message);
-            return false;
-        }
-    }
-
     public CoreHostService() : this(AppContext.BaseDirectory,
         new RuntimeConfigurationStore(Path.Combine(UserDataPaths.Root, "runtime-preferences.json")), new LocalItemFilter(),
         new LocalAccountCatalog(Path.Combine(UserDataPaths.SavedPoints, "accounts.json"),

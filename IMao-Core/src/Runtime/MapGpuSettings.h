@@ -18,6 +18,8 @@ inline std::atomic<int>& Mask() {
 }
 inline bool MinimapEnabled() { return (Mask().load() & 1) != 0; }
 inline bool ViewportEnabled() { return (Mask().load() & 2) != 0; }
+// Map-only observation trials leave the coordinate recognizer on its player-selected backend.
+inline std::atomic<int> ocrOverride{-1};
 
 // Eligible work and actual dispatches are separate: a quiet minute with the switch
 // on, or a driver fallback, must not count as GPU-assisted recognition.

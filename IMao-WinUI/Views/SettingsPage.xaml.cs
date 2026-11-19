@@ -809,11 +809,7 @@ public sealed partial class SettingsPage : Page
     {
         RestoreOverlayScales();
         restoringRuntime = true;
-        OcrGpuAcceleration.IsOn = coreHost.DesiredOcrBackend == "directml";
-        var mapGpu = coreHost.EffectiveMapGpuSettings;
-        MinimapGpuAcceleration.IsOn = mapGpu.Minimap;
-        ViewportGpuAcceleration.IsOn = mapGpu.Viewport;
-        OcrBackendState.Text = coreHost.Status.OcrBackend?.DisplayText ?? "OCR：等待核心报告实际后端";
+        GpuAcceleration.IsOn = coreHost.DesiredOcrBackend == "directml";
         var value = coreHost.Configuration;
         ComboBox_CaptureMethod.SelectedIndex = value.CaptureWay;
         ComboBox_CaptureMethod.IsEnabled = !coreHost.Status.IsRunning;
@@ -836,44 +832,19 @@ public sealed partial class SettingsPage : Page
         MarkerMergeOverlapPercent.Value = value.MarkerMergeOverlapPercent;
         restoringRuntime = false;
     }
-    private void OcrGpuAcceleration_Toggled(object sender, RoutedEventArgs e)
+    private async void GpuAcceleration_Toggled(object sender, RoutedEventArgs e)
     {
         if (restoringRuntime || !IsLoaded) return;
-        ShowGpuSaveResult(coreHost.SaveOcrGpuAcceleration(OcrGpuAcceleration.IsOn));
-    }
-
-    private async void MinimapGpuAcceleration_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (restoringRuntime || !IsLoaded) return;
-        await ApplyMapGpuAsync(MinimapGpuAcceleration.IsOn, null);
-    }
-
-    private async void ViewportGpuAcceleration_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (restoringRuntime || !IsLoaded) return;
-        await ApplyMapGpuAsync(null, ViewportGpuAcceleration.IsOn);
-    }
-
-    private async Task ApplyMapGpuAsync(bool? minimap, bool? viewport)
-    {
-        MinimapGpuAcceleration.IsEnabled = ViewportGpuAcceleration.IsEnabled = false;
+        GpuAcceleration.IsEnabled = false;
         try
         {
-            bool saved = await coreHost.SaveMapGpuAsync(minimap, viewport);
-            GpuPerformanceMessage.Severity = saved ? InfoBarSeverity.Informational : InfoBarSeverity.Error;
-            GpuPerformanceMessage.Message = saved ? "已应用，下次地图匹配使用新设置。" : coreHost.LastFault;
-            GpuPerformanceMessage.IsOpen = true;
+            bool saved = await coreHost.SaveGpuAccelerationAsync(GpuAcceleration.IsOn);
+            GpuPerformanceMessage.Severity = InfoBarSeverity.Error;
+            GpuPerformanceMessage.Message = saved ? string.Empty : coreHost.LastFault;
+            GpuPerformanceMessage.IsOpen = !saved;
             RestoreRuntime();
         }
-        finally { MinimapGpuAcceleration.IsEnabled = ViewportGpuAcceleration.IsEnabled = true; }
-    }
-
-    private void ShowGpuSaveResult(bool saved)
-    {
-        GpuPerformanceMessage.Severity = saved ? InfoBarSeverity.Informational : InfoBarSeverity.Error;
-        GpuPerformanceMessage.Message = saved ? "已保存。从托盘退出 IMao，再打开即可生效。" : coreHost.LastFault;
-        GpuPerformanceMessage.IsOpen = true;
-        RestoreRuntime();
+        finally { GpuAcceleration.IsEnabled = true; }
     }
 
     private async Task SaveRuntimeAsync(Func<Task<bool>> update)

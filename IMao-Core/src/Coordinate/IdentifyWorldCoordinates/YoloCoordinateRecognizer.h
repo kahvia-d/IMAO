@@ -3,10 +3,12 @@
 #include "CoordinateRowAlignment.h"
 #include <filesystem>
 #include <memory>
+#include <optional>
 
 class YoloCoordinateRecognizer {
 public:
-    explicit YoloCoordinateRecognizer(const std::filesystem::path& directory);
+    explicit YoloCoordinateRecognizer(const std::filesystem::path& directory, std::optional<bool> gpu = std::nullopt);
+    void SetGpuAcceleration(bool enabled);
     ~YoloCoordinateRecognizer();
     YoloCoordinateRecognizer(const YoloCoordinateRecognizer&) = delete;
     YoloCoordinateRecognizer& operator=(const YoloCoordinateRecognizer&) = delete;

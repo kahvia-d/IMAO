@@ -3,13 +3,14 @@ namespace IMao_WinUI.Models;
 public sealed record RuntimeConfiguration
 {
     // Null preserves the existing CPU/GPU test launcher until the player makes a choice.
+    public bool? GpuAcceleration { get; init; }
     public bool? OcrGpuAcceleration { get; init; }
     public bool? MinimapGpuAcceleration { get; init; }
     public bool? ViewportGpuAcceleration { get; init; }
     public (bool Minimap, bool Viewport) ResolveMapGpuSettings(string? launchMinimap, string? launchViewport) =>
-        (MinimapGpuAcceleration ?? (launchMinimap == "1"), ViewportGpuAcceleration ?? (launchViewport == "1"));
+        (GpuAcceleration ?? MinimapGpuAcceleration ?? (launchMinimap == "1"), GpuAcceleration ?? ViewportGpuAcceleration ?? (launchViewport == "1"));
     public string ResolveOcrBackend(string? launchBackend) =>
-        (OcrGpuAcceleration ?? string.Equals(launchBackend, "directml", StringComparison.OrdinalIgnoreCase))
+        (GpuAcceleration ?? OcrGpuAcceleration ?? string.Equals(launchBackend, "directml", StringComparison.OrdinalIgnoreCase))
             ? "directml" : "cpu";
     // Bumped when a stored default changes meaning, or when a new setting is introduced whose default a
     // stored file could not have chosen. Version 2 promoted the capture method; version 3 promoted the

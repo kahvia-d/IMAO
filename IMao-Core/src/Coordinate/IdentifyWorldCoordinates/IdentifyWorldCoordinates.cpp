@@ -5,6 +5,7 @@
 #include "../../Runtime/ThreadPriority.h"
 #include "../../Runtime/RuntimeStatus.h"
 #include "../../Runtime/OcrBackendOperation.h"
+#include "../../Runtime/MapGpuSettings.h"
 #include "CoordinateReadoutRoi.h"
 #include "../../Runtime/ReadoutWorkSchedule.h"
 #include "YoloCoordinateRecognizer.h"
@@ -187,7 +188,11 @@ public:
                 {"capturedSteadyMs", std::chrono::duration_cast<std::chrono::milliseconds>(request.capturedAt.time_since_epoch()).count()}});
             std::scoped_lock inferenceLock(inferenceMutex_);
             const auto selected = RunOcrInferenceReporting(
-                [&] { return yolo_->Recognize(cropped ? request.snapshot : request.snapshot(region), calibrated); },
+                [&] {
+                    const int gpu = MapGpuSettings::ocrOverride.load();
+                    if (gpu >= 0) yolo_->SetGpuAcceleration(gpu != 0);
+                    return yolo_->Recognize(cropped ? request.snapshot : request.snapshot(region), calibrated);
+                },
                 [&] { return ReadOcrBackend(*yolo_); });
             result.inferenceMilliseconds = MillisecondsSince(started);
             if (!selected.is_null()) {

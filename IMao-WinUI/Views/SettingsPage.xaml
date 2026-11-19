@@ -259,36 +259,11 @@
                             </Border>
 
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
-                                <StackPanel Spacing="6">
-                                    <Grid ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2" VerticalAlignment="Center">
-                                            <TextBlock Text="GPU 加速（OCR 坐标识别）" FontSize="13.5" FontWeight="SemiBold" />
-                                            <TextBlock Text="使用 DirectML 分担 CPU 负担，重启软件后生效" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                        </StackPanel>
-                                        <ToggleSwitch x:Name="OcrGpuAcceleration" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="OcrGpuAcceleration_Toggled" />
-                                    </Grid>
-                                    <TextBlock x:Name="OcrBackendState" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="小地图 GPU 加速" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="跨区域后重新找位置时，由显卡分担识别。切换后从下一次匹配生效。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                                    </StackPanel>
-                                    <ToggleSwitch x:Name="MinimapGpuAcceleration" Grid.Column="1" AutomationProperties.Name="小地图 GPU 加速" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="MinimapGpuAcceleration_Toggled" />
-                                </Grid>
-                            </Border>
-                            <Border Style="{StaticResource IMaoSettingRowStyle}">
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="大地图 GPU 加速" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="打开或拖动大地图，需要全图搜索时，由显卡分担识别。切换后从下一次匹配生效。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                                    </StackPanel>
-                                    <ToggleSwitch x:Name="ViewportGpuAcceleration" Grid.Column="1" AutomationProperties.Name="大地图 GPU 加速" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="ViewportGpuAcceleration_Toggled" />
+                                    <TextBlock Text="GPU 加速" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <ToggleSwitch x:Name="GpuAcceleration" Grid.Column="1" AutomationProperties.Name="GPU 加速"
+                                                  Style="{StaticResource IMaoCompactToggleStyle}" Toggled="GpuAcceleration_Toggled" />
                                 </Grid>
                             </Border>
                             <InfoBar x:Name="GpuPerformanceMessage" IsOpen="False" IsClosable="True" />

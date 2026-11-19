@@ -55,6 +55,21 @@ if (args.FirstOrDefault() == "map-gpu-live")
         return reply.RootElement.GetProperty("mask").GetInt32();
     }
     Check(await OneObservation('2') == 2 && await OneObservation('?') == 1, "Observer disconnect restores player settings in the same core");
+    foreach (bool enabled in new[] { true, false })
+    {
+        Check(await core.SaveGpuAccelerationAsync(enabled), "Unified GPU setting saved");
+        var state = await core.ObserveMapGpuAsync('?');
+        Check(state.GetProperty("pid").GetInt32() == pid && state.GetProperty("mask").GetInt32() == (enabled ? 3 : 0) &&
+            state.GetProperty("ocrOverride").GetInt32() == (enabled ? 1 : 0), "One switch updates all three paths in the same core");
+        var reloaded = new RuntimeConfigurationStore(Path.Combine(scratch, "preferences.json")).Read();
+        Check(reloaded.GpuAcceleration == enabled && reloaded.ResolveMapGpuSettings(null, null) == (enabled, enabled) &&
+            reloaded.ResolveOcrBackend(null) == (enabled ? "directml" : "cpu"), "Unified GPU choice survives restart");
+    }
+    var legacyPath = Path.Combine(scratch, "legacy-gpu.json");
+    File.WriteAllText(legacyPath, """{"OcrGpuAcceleration":false,"MinimapGpuAcceleration":true}""");
+    Check(new RuntimeConfigurationStore(legacyPath).Read().GpuAcceleration == false, "A mixed legacy configuration retains the OCR choice");
+    File.WriteAllText(legacyPath, """{"MinimapGpuAcceleration":false,"ViewportGpuAcceleration":true}""");
+    Check(new RuntimeConfigurationStore(legacyPath).Read().GpuAcceleration == true, "Map-only legacy configuration retains an enabled option");
     return;
 }
 

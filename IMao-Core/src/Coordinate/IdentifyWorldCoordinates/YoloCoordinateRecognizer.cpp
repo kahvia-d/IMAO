@@ -47,13 +47,14 @@ struct YoloCoordinateRecognizer::State {
     }
 };
 YoloCoordinateRecognizer::~YoloCoordinateRecognizer()=default;
-YoloCoordinateRecognizer::YoloCoordinateRecognizer(const std::filesystem::path& directory):directory_(directory),alignment_(directory) {
+YoloCoordinateRecognizer::YoloCoordinateRecognizer(const std::filesystem::path& directory, std::optional<bool> gpu):directory_(directory),alignment_(directory) {
     wchar_t mode[32]{};
-    const auto length=GetEnvironmentVariableW(L"IMAO_OCR_BACKEND",mode,32);
-    if(length==0 || (length<32 && _wcsicmp(mode,L"cpu")==0)) { Initialize(false); return; }
+    const auto length = gpu.has_value() ? 0UL : GetEnvironmentVariableW(L"IMAO_OCR_BACKEND",mode,32);
+    const bool cpu = gpu.has_value() ? !*gpu : length == 0 || (length < 32 && _wcsicmp(mode, L"cpu") == 0);
+    if (cpu) { Initialize(false); return; }
     requested_="directml";
     try {
-        if(length>=32 || _wcsicmp(mode,L"directml")!=0) throw std::runtime_error("unrecognized OCR backend");
+        if(!gpu.has_value() && (length>=32 || _wcsicmp(mode,L"directml")!=0)) throw std::runtime_error("unrecognized OCR backend");
         wchar_t adapter[32]{};
         const auto size=GetEnvironmentVariableW(L"IMAO_OCR_ADAPTER",adapter,32);
         if(size) {
@@ -68,6 +69,16 @@ YoloCoordinateRecognizer::YoloCoordinateRecognizer(const std::filesystem::path& 
     } catch(const std::exception& e) {
         fallback_=e.what(); Initialize(false);
     }
+}
+void YoloCoordinateRecognizer::SetGpuAcceleration(bool enabled) {
+    if ((requested_ == "directml") == enabled) return;
+    // Build the replacement first, so initialization failure leaves the previous session usable.
+    YoloCoordinateRecognizer next(directory_, enabled);
+    state_.swap(next.state_);
+    directMl_ = next.directMl_;
+    requested_.swap(next.requested_);
+    fallback_.swap(next.fallback_);
+    adapter_ = next.adapter_;
 }
 Json YoloCoordinateRecognizer::RuntimeInfo() const {
     return {{"backend",directMl_?"directml":"cpu"},{"requested",requested_},

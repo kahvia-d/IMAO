@@ -25,35 +25,48 @@ public sealed partial class CoreHostService
         return (minimap ? 1 : 0) | (viewport ? 2 : 0);
     }
 
-    public async Task<bool> SaveMapGpuAsync(bool? minimap, bool? viewport)
+    public Task<bool> SaveGpuAccelerationAsync(bool enabled) => SaveGpuSettingsAsync(enabled, enabled, enabled);
+
+    internal Task<bool> SaveMapGpuAsync(bool? minimap, bool? viewport) => SaveGpuSettingsAsync(minimap, viewport, null);
+
+    private async Task<bool> SaveGpuSettingsAsync(bool? minimap, bool? viewport, bool? unified)
     {
         await lifecycleLock.WaitAsync();
         try
         {
-            var session = await EnsureStartedLockedAsync(default) ?? throw new IOException("核心尚未连接");
+            var session = active;
             var old = EffectiveMapGpuSettings;
+            bool oldOcr = DesiredOcrBackend == "directml";
             // During an experiment, save only the switch the player touched. Release the override
             // so the other switch resumes its own durable preference.
             var desired = DesiredMapGpuSettings;
             var mask = ((minimap ?? desired.Minimap) ? 1 : 0) | ((viewport ?? desired.Viewport) ? 2 : 0);
-            await SendDataCommandLockedAsync(session, "mapGpu", new { mask }, default);
+            async Task ApplyAsync(int mapMask, bool ocr)
+            {
+                if (session is null || !session.Pipe.IsConnected) return;
+                object args = unified.HasValue ? new { mask = mapMask, ocr } : new { mask = mapMask };
+                await SendDataCommandLockedAsync(session, "mapGpu", args, default);
+            }
+            await ApplyAsync(mask, unified ?? oldOcr);
             try
             {
                 configuration.Update(value => value with {
-                    MinimapGpuAcceleration = minimap ?? value.MinimapGpuAcceleration,
-                    ViewportGpuAcceleration = viewport ?? value.ViewportGpuAcceleration
+                    GpuAcceleration = unified,
+                    OcrGpuAcceleration = unified.HasValue ? null : oldOcr,
+                    MinimapGpuAcceleration = unified.HasValue ? null : minimap ?? desired.Minimap,
+                    ViewportGpuAcceleration = unified.HasValue ? null : viewport ?? desired.Viewport
                 });
             }
             catch
             {
-                await SendDataCommandLockedAsync(session, "mapGpu", new { mask = (old.Minimap ? 1 : 0) | (old.Viewport ? 2 : 0) }, default);
+                await ApplyAsync((old.Minimap ? 1 : 0) | (old.Viewport ? 2 : 0), oldOcr);
                 throw;
             }
             trialMapGpuMask = -1;
             OnUi(() => OnPropertyChanged(nameof(Configuration)));
             return true;
         }
-        catch (Exception e) { ReportUserError("地图 GPU 设置未能应用：" + e.Message); return false; }
+        catch (Exception e) { ReportUserError("GPU 加速设置未能应用：" + e.Message); return false; }
         finally { lifecycleLock.Release(); }
     }
 
