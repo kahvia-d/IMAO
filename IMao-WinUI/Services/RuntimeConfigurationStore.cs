@@ -23,9 +23,15 @@ internal sealed class RuntimeConfigurationStore
             try
             {
                 var text = File.ReadAllText(path);
-                var value = JsonSerializer.Deserialize<RuntimeConfiguration>(text)
+                using var document = JsonDocument.Parse(text);
+                var root = document.RootElement;
+                var value = root.Deserialize<RuntimeConfiguration>()
                     ?? throw new JsonException("配置必须是有效对象");
-                value = Migrate(value, StoredSchemaVersion(text));
+                // The experimental combined switch also controlled coordinate OCR.
+                if (value.OcrGpuAcceleration is null && root.TryGetProperty("GpuAcceleration", out var combined) &&
+                    combined.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                    value = value with { OcrGpuAcceleration = combined.GetBoolean() };
+                value = Migrate(value, StoredSchemaVersion(root));
                 value.Validate();
                 // The file loaded: whatever a migration wanted to say about it is settled, so do not
                 // leave a note behind for a file that turned out to be fine.
@@ -108,22 +114,15 @@ internal sealed class RuntimeConfigurationStore
         {
             migrated = migrated with { GuideSkipKey = 0 };
         }
-        // The original OCR switch predates the two experimental map switches.
-        if (migrated.GpuAcceleration is null &&
-            (migrated.OcrGpuAcceleration.HasValue || migrated.MinimapGpuAcceleration.HasValue || migrated.ViewportGpuAcceleration.HasValue))
-            migrated = migrated with { GpuAcceleration = migrated.OcrGpuAcceleration ??
-                (migrated.MinimapGpuAcceleration == true || migrated.ViewportGpuAcceleration == true) };
         return migrated;
     }
 
     // The stored field is the only witness for the schema: a deserialized object cannot distinguish a
     // missing property from the default its initializer supplies. A file with no version at all is
     // treated as the oldest schema, which is what it is.
-    private static int StoredSchemaVersion(string text)
+    private static int StoredSchemaVersion(JsonElement root)
     {
-        using var document = JsonDocument.Parse(text);
-        if (document.RootElement.ValueKind != JsonValueKind.Object) return 0;
-        return document.RootElement.TryGetProperty(nameof(RuntimeConfiguration.ConfigVersion), out var version) &&
+        return root.TryGetProperty(nameof(RuntimeConfiguration.ConfigVersion), out var version) &&
             version.TryGetInt32(out var value) ? value : 0;
     }
 }

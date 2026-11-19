@@ -18,16 +18,6 @@ int main(int argc,char** argv) {
             throw std::runtime_error("Unavailable GPU must fall back to CPU with a reason");
         fallback.Detect(cv::Mat(48,892,CV_8UC3,cv::Scalar::all(0)));
         if(fallback.RuntimeInfo()["backend"]!="cpu") throw std::runtime_error("Fallback must remain CPU");
-        fallback.SetGpuAcceleration(false);
-        if (fallback.RuntimeInfo()["requested"] != "cpu" || fallback.RuntimeInfo()["fallback"] != "")
-            throw std::runtime_error("Switching off must reset DirectML fallback status");
-        SetEnvironmentVariableW(L"IMAO_OCR_ADAPTER", nullptr);
-        fallback.SetGpuAcceleration(true);
-        if (fallback.RuntimeInfo()["requested"] != "directml") throw std::runtime_error("Live GPU request lost");
-        fallback.Detect(cv::Mat(48,892,CV_8UC3,cv::Scalar::all(0)));
-        std::cout << "Live GPU backend: " << fallback.RuntimeInfo().dump() << '\n';
-        fallback.SetGpuAcceleration(false);
-        if (fallback.RuntimeInfo()["backend"] != "cpu") throw std::runtime_error("Live CPU switch failed");
         std::cout << "PASS CPU and unavailable GPU fallback: " << fallback.RuntimeInfo().dump() << '\n';
     } catch(const std::exception& e) {std::cerr<<e.what()<<'\n';return 1;}
 }

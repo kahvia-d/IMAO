@@ -3,9 +3,9 @@
 #include "ExactDescriptorMatcher.h"
 inline void MatchDescriptorsExactly(const ImageFeatureData& map, const cv::Mat& query,
     std::vector<std::vector<cv::DMatch>>& forward, std::vector<std::vector<cv::DMatch>>& reverse,
-    const std::function<bool()>& interrupted = {}, const DescriptorDistanceKernel& kernel = {}) {
+    const std::function<bool()>& interrupted = {}) {
     if (map.imgDescriptors.type() == CV_32FC1 || map.imgDescriptors.empty()) {
-        MatchDescriptorsExactly(map.imgDescriptors, query, forward, reverse, interrupted, kernel);
+        MatchDescriptorsExactly(map.imgDescriptors, query, forward, reverse, interrupted);
         return;
     }
     // SURF descriptors have 128 columns: at most 4096 decoded rows (2 MiB),
@@ -18,5 +18,5 @@ inline void MatchDescriptorsExactly(const ImageFeatureData& map, const cv::Mat& 
             map.CopyDescriptorRowTo(row, decoded.ptr<float>(row - begin));
         }
         return decoded.rowRange(0, end - begin);
-    }, forward, reverse, interrupted, kernel);
+    }, forward, reverse, interrupted);
 }

@@ -481,16 +481,6 @@ __declspec(noinline) int ReplayViewports(const std::filesystem::path& root, cons
         MapViewportLocalizationRequest request;
         request.requestId = ++requestId;
         request.mapCrop = ImageProcessing::CropToMapCenterArea(image, rect);
-        if (sample.contains("localPrior")) {
-            const auto& hint = sample.at("localPrior");
-            WorldSearchPrior prior;
-            prior.valid = true;
-            prior.sceneId = hint.at("sceneId").get<int>();
-            prior.centerMapCoordinate = {hint.at("mapX").get<double>(), hint.at("mapY").get<double>()};
-            prior.radius = hint.at("radius").get<double>();
-            request.prior = prior;
-            request.scope = MapViewportSearchScope::Local512;
-        }
         MapViewportLocalizer::Submit(std::move(request));
         MapViewportLocalizationResult result;
         bool received = false;
@@ -532,8 +522,6 @@ __declspec(noinline) int ReplayViewports(const std::filesystem::path& root, cons
             {"retrievalRunnerUpScore", result.retrievalRunnerUpScore},
             {"retrievalTileCount", result.retrievalTileCount},
             {"retrievalMilliseconds", result.retrievalMilliseconds},
-            {"gpuSurfOctaves", result.gpuSurfOctaves},
-            {"scope", MapViewportLocalizer::ScopeName(result.scope)},
             {"candidateNearestM", result.candidateNearestM}, {"candidateReachM", result.candidateReachM},
             {"planMs", result.planMilliseconds}});
     }
@@ -1371,10 +1359,6 @@ int wmain(int argumentCount, wchar_t** arguments) {
     if (argumentCount == 2 && std::wstring(arguments[1]) == L"--scene-self-test") return RunMultiSceneViewportTests();
     if (argumentCount == 3 && std::wstring(arguments[1]) == L"--check-minimap-preparation")
         return TestMinimapPreparation(arguments[2]);
-    if (argumentCount == 2 && std::wstring(arguments[1]) == L"--check-gpu-recovery") {
-        try { return TestGpuRecoveryDistances(); }
-        catch (const std::exception& e) { std::cerr << e.what() << '\n'; return 1; }
-    }
     if (argumentCount == 3 && std::wstring(arguments[1]) == L"--viewport-storage")
         return MeasureViewportCost(std::filesystem::path(arguments[2]), 0, true);
     if (argumentCount >= 3 && std::wstring(arguments[1]) == L"--viewport-cost") {

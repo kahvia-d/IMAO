@@ -21,58 +21,6 @@ if (args.FirstOrDefault() == "cloud-preview")
     return;
 }
 
-if (args.FirstOrDefault() == "map-gpu-live")
-{
-    var scratch = Directory.CreateTempSubdirectory("imao-live-gpu-").FullName;
-    Environment.SetEnvironmentVariable("LOCALAPPDATA", scratch);
-    var store = new RuntimeConfigurationStore(Path.Combine(scratch, "preferences.json"));
-    await using var core = new CoreHostService(Path.GetFullPath(args[1]), store,
-        new LocalItemFilter(Path.Combine(scratch, "filters.json"), Path.Combine(scratch, "legacy.json")));
-    await core.EnsureStartedAsync();
-    Check(await core.SaveMapGpuAsync(false, false), "Player can turn off both map GPU paths live");
-    int pid = (await core.ObserveMapGpuAsync('?')).GetProperty("pid").GetInt32();
-    foreach (char mask in "1230")
-    {
-        var state = await core.ObserveMapGpuAsync(mask);
-        Check(state.GetProperty("pid").GetInt32() == pid && state.GetProperty("mask").GetInt32() == mask - '0',
-            "CoreHost applies test mask " + mask + " without restart");
-        Check(store.Read().MinimapGpuAcceleration == false && store.Read().ViewportGpuAcceleration == false,
-            "Experiment preserves player preferences");
-    }
-    await core.ObserveMapGpuAsync('3');
-    Check(await core.SaveMapGpuAsync(true, null), "Player changes one preference during a trial");
-    var restored = await core.ObserveMapGpuAsync('R');
-    Check(restored.GetProperty("pid").GetInt32() == pid && restored.GetProperty("mask").GetInt32() == 1,
-        "Restoring after a trial honors a manual setting changed during the session");
-    core.StartMapGpuObserver();
-    async Task<int> OneObservation(char command)
-    {
-        using var client = new NamedPipeClientStream(".", $"IMao.MapGpu.{Environment.ProcessId}", PipeDirection.InOut, PipeOptions.Asynchronous);
-        await client.ConnectAsync(5000);
-        await client.WriteAsync(new byte[] { (byte)command });
-        using var reader = new StreamReader(client);
-        using var reply = JsonDocument.Parse((await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)))!);
-        return reply.RootElement.GetProperty("mask").GetInt32();
-    }
-    Check(await OneObservation('2') == 2 && await OneObservation('?') == 1, "Observer disconnect restores player settings in the same core");
-    foreach (bool enabled in new[] { true, false })
-    {
-        Check(await core.SaveGpuAccelerationAsync(enabled), "Unified GPU setting saved");
-        var state = await core.ObserveMapGpuAsync('?');
-        Check(state.GetProperty("pid").GetInt32() == pid && state.GetProperty("mask").GetInt32() == (enabled ? 3 : 0) &&
-            state.GetProperty("ocrOverride").GetInt32() == (enabled ? 1 : 0), "One switch updates all three paths in the same core");
-        var reloaded = new RuntimeConfigurationStore(Path.Combine(scratch, "preferences.json")).Read();
-        Check(reloaded.GpuAcceleration == enabled && reloaded.ResolveMapGpuSettings(null, null) == (enabled, enabled) &&
-            reloaded.ResolveOcrBackend(null) == (enabled ? "directml" : "cpu"), "Unified GPU choice survives restart");
-    }
-    var legacyPath = Path.Combine(scratch, "legacy-gpu.json");
-    File.WriteAllText(legacyPath, """{"OcrGpuAcceleration":false,"MinimapGpuAcceleration":true}""");
-    Check(new RuntimeConfigurationStore(legacyPath).Read().GpuAcceleration == false, "A mixed legacy configuration retains the OCR choice");
-    File.WriteAllText(legacyPath, """{"MinimapGpuAcceleration":false,"ViewportGpuAcceleration":true}""");
-    Check(new RuntimeConfigurationStore(legacyPath).Read().GpuAcceleration == true, "Map-only legacy configuration retains an enabled option");
-    return;
-}
-
 LaunchEntryTests.Run(Check);
 
 // Backends are reported by CoreHost, never inferred from the launch button.
@@ -81,19 +29,6 @@ Check(new RuntimeConfiguration().ResolveOcrBackend("directml") == "directml", "U
 Check(new RuntimeConfiguration { OcrGpuAcceleration = false }.ResolveOcrBackend("directml") == "cpu", "Saved CPU preference overrides GPU launcher");
 Check(new RuntimeConfiguration { OcrGpuAcceleration = true }.ResolveOcrBackend("cpu") == "directml", "Saved GPU preference overrides CPU launcher");
 Check(JsonSerializer.Deserialize<RuntimeConfiguration>(JsonSerializer.Serialize(new RuntimeConfiguration { OcrGpuAcceleration = true }))!.OcrGpuAcceleration == true, "OCR preference persists");
-var oldGpuConfig = JsonSerializer.Deserialize<RuntimeConfiguration>("{}")!;
-Check(oldGpuConfig.ResolveMapGpuSettings(null, null) == (false, false), "Both map GPU paths default to CPU");
-Check(oldGpuConfig.ResolveMapGpuSettings("1", "true") == (true, false), "Unset map preferences honor only the native launch value 1");
-Check((oldGpuConfig with { MinimapGpuAcceleration = false }).ResolveMapGpuSettings("1", "1") == (false, true),
-    "Choosing CPU for the minimap preserves the big map launch preference");
-foreach (bool minimap in new[] { false, true })
-foreach (bool viewport in new[] { false, true })
-{
-    var saved = oldGpuConfig with { MinimapGpuAcceleration = minimap, ViewportGpuAcceleration = viewport };
-    var restored = JsonSerializer.Deserialize<RuntimeConfiguration>(JsonSerializer.Serialize(saved))!;
-    Check(restored.ResolveMapGpuSettings(minimap ? "0" : "1", viewport ? "0" : "1") == (minimap, viewport),
-        $"Saved map preferences override both launch values independently (minimap={minimap}, viewport={viewport})");
-}
 var ocrStatus = JsonSerializer.Deserialize<CoreRuntimeStatus>("""
     {"ocrBackend":{"requested":"directml","backend":"cpu","adapter":2,"fallback":"device lost"}}
     """)!;
@@ -275,6 +210,17 @@ try
         BitBltRegistryHelper.RestoreSwapEffectUpgrade(null) == string.Empty,
         "restoring graphics defaults clears the override so it can be deleted");
     string configPath = Path.Combine(root, "runtime-migration.json");
+    foreach (var enabled in new[] { true, false })
+    {
+        File.WriteAllText(configPath, JsonSerializer.Serialize(new { GpuAcceleration = enabled }));
+        var store = new RuntimeConfigurationStore(configPath);
+        Check(store.Read().OcrGpuAcceleration == enabled, "retired combined preference restores the OCR choice");
+        store.Update(old => old with { OcrGpuAcceleration = !enabled });
+        Check(new RuntimeConfigurationStore(configPath).Read().OcrGpuAcceleration == !enabled,
+            "changing the restored OCR preference persists");
+    }
+    File.WriteAllText(configPath, """{"OcrGpuAcceleration":false,"MinimapGpuAcceleration":true,"GpuAcceleration":true}""");
+    Check(new RuntimeConfigurationStore(configPath).Read().OcrGpuAcceleration == false, "explicit OCR preference is preserved");
     File.WriteAllText(configPath, "{\"StatusBarEnabled\":false}");
     var config = new RuntimeConfigurationStore(configPath);
     Check(!config.Read().StatusBarEnabled && config.Read().MapUpdateCycle == 80, "legacy runtime preferences migrate with default new fields");

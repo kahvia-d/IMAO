@@ -259,14 +259,19 @@
                             </Border>
 
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <TextBlock Text="GPU 加速" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                    <ToggleSwitch x:Name="GpuAcceleration" Grid.Column="1" AutomationProperties.Name="GPU 加速"
-                                                  Style="{StaticResource IMaoCompactToggleStyle}" Toggled="GpuAcceleration_Toggled" />
-                                </Grid>
+                                <StackPanel Spacing="6">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="GPU 加速（OCR 坐标识别）" FontSize="13.5" FontWeight="SemiBold" />
+                                            <TextBlock Text="使用 DirectML 分担 CPU 负担，重启软件后生效" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch x:Name="OcrGpuAcceleration" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="OcrGpuAcceleration_Toggled" />
+                                    </Grid>
+                                    <TextBlock x:Name="OcrBackendState" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                                </StackPanel>
                             </Border>
-                            <InfoBar x:Name="GpuPerformanceMessage" IsOpen="False" IsClosable="True" />
+                            <InfoBar x:Name="OcrPerformanceMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
                         </StackPanel>
                     </Border>
                 </Grid>

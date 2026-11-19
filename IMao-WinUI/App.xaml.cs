@@ -227,7 +227,6 @@ public partial class App : Application
                 finally { handlingWindowClose = false; }
             };
             RuntimeServicesInitialized = true;
-            GetService<CoreHostService>().StartMapGpuObserver();
             if (ProgramLaunchSession.IsManaged)
             {
                 try

@@ -4,7 +4,6 @@
 #include "MapViewportLocalizer.h"
 #include "MapViewportWorkBudget.h"
 #include "../Feature/Match/OwnedFlannMatcher.h"
-#include "../Feature/Match/GpuViewportSurf.h"
 #include "../Feature/Match/StreamingSurf.h"
 #include "MapViewportGeometry.h"
 #include "MapViewportCandidates.h"
@@ -12,7 +11,6 @@
 #include "../Feature/Match/UniqueMapFeatures.h"
 #include "../Feature/VisualIndex/VisualIndexRetrieval.h"
 #include "../Runtime/ThreadPriority.h"
-#include "../Runtime/MapGpuSettings.h"
 #include "../Diagnostics/Diagnostics.h"
 #include "../Diagnostics/ReproCapture.h"
 #include "../Runtime/FrameStorageAccounting.h"
@@ -162,7 +160,6 @@ public:
         localMatcherUseCounter_ = 0;
         workBudget_.Reset();
         vocabularyIndex_.release();
-        gpuSurf_.reset();
         resources_.reset();
     }
 
@@ -521,7 +518,6 @@ private:
 
     MapViewportLocalizationResult Locate(const MapViewportLocalizationRequest& request, const std::function<bool()>& interrupted) {
         MapViewportLocalizationResult result;
-        unsigned gpuSurfOctaves = 0;
         result.sessionId = request.sessionId;
         result.uiGeneration = request.uiGeneration;
         result.viewportGeneration = request.viewportGeneration;
@@ -596,18 +592,7 @@ private:
                     if (measure) Diagnostics::RecordMemory(sample + "-before");
                     ImageFeatureData features;
                     ViewportSurfStatistics statistics;
-                    GpuViewportSurf* gpu = nullptr;
-                    if (request.scope == MapViewportSearchScope::Global) ++MapGpuSettings::viewportExtractions;
-                    if (request.scope == MapViewportSearchScope::Global && MapGpuSettings::ViewportEnabled()) {
-                        if (!gpuSurf_) gpuSurf_ = std::make_unique<GpuViewportSurf>();
-                        if (gpuSurf_->Failure().empty()) gpu = gpuSurf_.get();
-                    }
-                    ExtractViewportSurf(gray, features.imgKeypoints, features.imgDescriptors, interrupted, &statistics, gpu);
-                    gpuSurfOctaves += statistics.gpuOctaves;
-                    if (statistics.gpuOctaves) ++MapGpuSettings::viewportGpuExtractions;
-                    if (gpu && statistics.gpuOctaves < 4)
-                        Diagnostics::Record("viewport-gpu-fallback", gpu->Failure().empty() ?
-                            "CPU octave used for input or peak capacity" : gpu->Failure());
+                    ExtractViewportSurf(gray, features.imgKeypoints, features.imgDescriptors, interrupted, &statistics);
                     if (measure) {
                         Diagnostics::Record("viewport-query-storage", "region=" + std::to_string(regionIndex) +
                             " factor=" + std::to_string(factor) + " width=" + std::to_string(querySize.width) +
@@ -615,7 +600,6 @@ private:
                             std::to_string(imageBytes) + " descriptorBytes=" +
                             std::to_string(features.imgDescriptors.total() * features.imgDescriptors.elemSize()) +
                             " request=" + std::to_string(request.requestId) +
-                            " gpuSurfOctaves=" + std::to_string(statistics.gpuOctaves) +
                             " grayBytes=" + std::to_string(gray.total() * gray.elemSize()) +
                             " detectorScratchBytes=" + std::to_string(statistics.detectorScratchBytes) +
                             " resizeMs=" + std::to_string(resizeMs) + " grayMs=" + std::to_string(grayMs) +
@@ -817,7 +801,6 @@ private:
             Diagnostics::Record("map-viewport-failed", "request=" + std::to_string(request.requestId) +
                 " error=" + exception.what());
         }
-        result.gpuSurfOctaves = gpuSurfOctaves;
         result.matcherCacheBytes = localMatcherBytes_;
         result.durationMilliseconds = ElapsedMilliseconds(start);
         return result;
@@ -988,7 +971,6 @@ private:
     // The vocabulary search the cold-start ranking needs. Built lazily on the worker thread and
     // never touched by any other, so it needs no lock of its own.
     cv::Ptr<cv::flann::Index> vocabularyIndex_;
-    std::unique_ptr<GpuViewportSurf> gpuSurf_;
 };
 
 MapViewportRuntime& Runtime() {

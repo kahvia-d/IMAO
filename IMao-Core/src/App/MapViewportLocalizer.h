@@ -79,7 +79,6 @@ struct MapViewportLocalizationResult {
     double retrievalRunnerUpScore = 0.0;
     int retrievalTileCount = 0;
     double retrievalMilliseconds = 0.0;
-    unsigned gpuSurfOctaves = 0;
     // Which plan answered, and how many ran; -1 means none accepted. Plans 0 and up are the ranked
     // plans, one per zoom, most decisive zoom first; after them come the wider rung and then the
     // windowed sweep. Without this the difference between "the ranking worked" and "the ranking

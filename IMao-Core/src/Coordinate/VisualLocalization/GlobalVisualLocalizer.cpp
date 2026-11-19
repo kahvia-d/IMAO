@@ -11,8 +11,6 @@
 #include "../../Feature/Match/UniqueMapFeatures.h"
 #include "../../Feature/Match/FeatureRowCache.h"
 #include "../../Feature/Match/EncodedExactMatcher.h"
-#include "../../Feature/Match/GpuRecoveryDistances.h"
-#include "../../Runtime/MapGpuSettings.h"
 #include "../../Feature/VisualIndex/VisualIndexRetrieval.h"
 
 #include <opencv2/calib3d.hpp>
@@ -29,7 +27,6 @@
 #include <mutex>
 #include <numeric>
 #include <span>
-#include <string_view>
 #include <thread>
 #include <tuple>
 #include <unordered_map>
@@ -363,17 +360,6 @@ public:
             std::string("mode=") + (EncodedMinimapCacheEnabled() ? "encoded" : "float") + " budgetCharge=float-equivalent");
     }
 
-    void PrepareRecoveryDevice() {
-        if (!MapGpuSettings::MinimapEnabled()) return;
-        const auto start = std::chrono::steady_clock::now();
-        cv::Mat probe = cv::Mat::zeros(1, 128, CV_32F), distances;
-        if (!gpuDistances_.Compute(probe, probe, distances)) {
-            Diagnostics::Record("minimap-gpu-fallback", gpuDistances_.Failure());
-            return;
-        }
-        Diagnostics::Record("minimap-gpu-ready", "warmupMs=" + std::to_string(ElapsedMilliseconds(start)));
-    }
-
     VisualLocalizationResult Locate(const VisualLocalizationRequest& request, double recoveryAngle = 0.0,
         const std::function<bool()>& interrupted = {}, CoarseSearchCoverage* coverage = nullptr) const {
         const auto start = std::chrono::steady_clock::now();
@@ -488,7 +474,6 @@ public:
             result.bestAffineEstimated = candidate.affineEstimated;
             result.bestScaleWithinExpectedRange = candidate.scaleWithinExpectedRange;
         };
-        const bool useGpu = !request.requireOcrHint;
         for (const auto& [tileIndex, score] : coarseCandidates) {
             if (interrupted && interrupted()) throw SearchInterrupted{};
             const auto& tile = resources_->visualIndex.tiles[tileIndex];
@@ -512,8 +497,7 @@ public:
                 continue;
             }
             VisualLocalizationCandidate candidate = VerifyRows(rows, request.minimapFeatures,
-                request.normalizedMinimap.size(), resultSceneId, score, request.ocrHints, interrupted,
-                nullptr, 0.0, useGpu);
+                request.normalizedMinimap.size(), resultSceneId, score, request.ocrHints, interrupted);
             if (coverage) coverage->RecordVerified(tileIndex,
                 candidate.quality != VisualLocalizationQuality::Rejected &&
                 HasReacquisitionSupport(candidate.affineEstimated, candidate.inlierCount,
@@ -568,7 +552,7 @@ public:
                 std::sort(sceneRows.begin(), sceneRows.end());
                 sceneRows.erase(std::unique(sceneRows.begin(), sceneRows.end()), sceneRows.end());
                 if (sceneRows.size() < 4) continue;
-                const auto sharedMatches = MatchRows(sceneRows, request.minimapFeatures, interrupted, useGpu);
+                const auto sharedMatches = MatchRows(sceneRows, request.minimapFeatures, interrupted);
                 VisualLocalizationCandidate candidate = VerifyRows(sceneRows, request.minimapFeatures,
                     request.normalizedMinimap.size(), shard.sceneId, 0.0, request.ocrHints, interrupted, &sharedMatches);
                 recordVerification(candidate);
@@ -715,7 +699,7 @@ private:
     }
 
     MatchedRows MatchRows(std::span<const uint32_t> rows, const ImageFeatureData& query,
-        const std::function<bool()>& interrupted, bool useGpu = false) const {
+        const std::function<bool()>& interrupted) const {
         static const bool profile = [] { char value[8]{}; size_t length = 0;
             return getenv_s(&length, value, sizeof(value), "IMAO_PROFILE_MATCHING") == 0 && value[0] == '1'; }();
         const auto start = std::chrono::steady_clock::now();
@@ -728,28 +712,9 @@ private:
         }
         matches.subset = rowCache_.Get(rows, interrupted);
         const auto prepared = std::chrono::steady_clock::now();
-        DescriptorDistanceKernel kernel;
-        bool dispatched = false;
-        if (useGpu) ++MapGpuSettings::minimapBatches;
-        if (useGpu && MapGpuSettings::MinimapEnabled() && gpuDistances_.Failure().empty()) {
-            kernel = [&](const cv::Mat& map, const cv::Mat& frame, cv::Mat& distances) {
-                if (!gpuDistances_.Failure().empty()) return false;
-                if (gpuDistances_.Compute(map, frame, distances)) {
-                    dispatched = true;
-                    return true;
-                }
-                if (!gpuDistances_.Failure().empty()) {
-                    Diagnostics::Record("minimap-gpu-fallback", gpuDistances_.Failure());
-                    if (profile) std::cerr << "minimap-gpu-fallback " << gpuDistances_.Failure() << '\n';
-                }
-                return false;
-            };
-        }
         MatchDescriptorsExactly(*matches.subset, query.imgDescriptors,
-            matches.forward, matches.reverse, interrupted, kernel);
-        if (dispatched) ++MapGpuSettings::minimapGpuBatches;
+            matches.forward, matches.reverse, interrupted);
         if (profile) std::cerr << "matching-profile rows=" << rows.size() << " query=" << query.imgDescriptors.rows
-            << " backend=" << (dispatched ? "gpu" : "cpu")
             << " prepareMs=" << std::chrono::duration<double, std::milli>(prepared - start).count()
             << " matchMs=" << ElapsedMilliseconds(prepared) << '\n';
         return matches;
@@ -789,17 +754,14 @@ private:
         const ImageFeatureData& minimapFeatures, const cv::Size minimapSize, int sceneId,
         double retrievalScore, const std::vector<VisualMapHint>& hints,
         const std::function<bool()>& interrupted = {}, const MatchedRows* sharedMatches = nullptr,
-        double fixedTerrainScale = 0.0, bool useGpu = false) const {
+        double fixedTerrainScale = 0.0) const {
         VisualLocalizationCandidate candidate;
         candidate.sceneId = sceneId;
         candidate.retrievalScore = retrievalScore;
         if (featureRows.size() < 4 || minimapFeatures.imgDescriptors.rows < 4) return candidate;
 
         MatchedRows ownedMatches;
-        if (!sharedMatches) {
-            ownedMatches = MatchRows(featureRows, minimapFeatures, interrupted, useGpu);
-            sharedMatches = &ownedMatches;
-        }
+        if (!sharedMatches) { ownedMatches = MatchRows(featureRows, minimapFeatures, interrupted); sharedMatches = &ownedMatches; }
         const auto& mapDescriptors = sharedMatches->subset->imgDescriptors;
         const auto& mapKeypoints = sharedMatches->subset->imgKeypoints;
         if (mapDescriptors.rows < 4) return {};
@@ -937,7 +899,6 @@ private:
 
     std::shared_ptr<const RuntimeFeatureResources> resources_;
     FeatureRowCache rowCache_;
-    mutable GpuRecoveryDistances gpuDistances_;
     mutable cv::flann::Index vocabularyIndex_;
 };
 
@@ -953,7 +914,6 @@ public:
         try {
             resources_ = std::move(resources);
             engine_ = std::make_unique<VisualLocalizationEngine>(resources_);
-            engine_->PrepareRecoveryDevice();
             worker_ = std::jthread([this](std::stop_token token) { Worker(token); });
             ThreadPriority::MakeBackground(worker_);
             ready_ = true;

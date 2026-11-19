@@ -809,7 +809,8 @@ public sealed partial class SettingsPage : Page
     {
         RestoreOverlayScales();
         restoringRuntime = true;
-        GpuAcceleration.IsOn = coreHost.DesiredOcrBackend == "directml";
+        OcrGpuAcceleration.IsOn = coreHost.DesiredOcrBackend == "directml";
+        OcrBackendState.Text = coreHost.Status.OcrBackend?.DisplayText ?? "OCR：等待核心报告实际后端";
         var value = coreHost.Configuration;
         ComboBox_CaptureMethod.SelectedIndex = value.CaptureWay;
         ComboBox_CaptureMethod.IsEnabled = !coreHost.Status.IsRunning;
@@ -832,19 +833,14 @@ public sealed partial class SettingsPage : Page
         MarkerMergeOverlapPercent.Value = value.MarkerMergeOverlapPercent;
         restoringRuntime = false;
     }
-    private async void GpuAcceleration_Toggled(object sender, RoutedEventArgs e)
+    private void OcrGpuAcceleration_Toggled(object sender, RoutedEventArgs e)
     {
         if (restoringRuntime || !IsLoaded) return;
-        GpuAcceleration.IsEnabled = false;
-        try
-        {
-            bool saved = await coreHost.SaveGpuAccelerationAsync(GpuAcceleration.IsOn);
-            GpuPerformanceMessage.Severity = InfoBarSeverity.Error;
-            GpuPerformanceMessage.Message = saved ? string.Empty : coreHost.LastFault;
-            GpuPerformanceMessage.IsOpen = !saved;
-            RestoreRuntime();
-        }
-        finally { GpuAcceleration.IsEnabled = true; }
+        bool saved = coreHost.SaveOcrGpuAcceleration(OcrGpuAcceleration.IsOn);
+        OcrPerformanceMessage.Severity = saved ? InfoBarSeverity.Informational : InfoBarSeverity.Error;
+        OcrPerformanceMessage.Message = saved ? "已保存。请从托盘完全退出并重新打开软件后生效。" : coreHost.LastFault;
+        OcrPerformanceMessage.IsOpen = true;
+        RestoreRuntime();
     }
 
     private async Task SaveRuntimeAsync(Func<Task<bool>> update)

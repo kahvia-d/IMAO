@@ -11,12 +11,11 @@ struct SearchInterrupted : std::exception {
 
 // Compute each exact L2 distance once, reusing it for both nearest-neighbour
 // directions. Batches bound temporary storage and provide cancellation points.
-using DescriptorDistanceKernel = std::function<bool(const cv::Mat&, const cv::Mat&, cv::Mat&)>;
 template<class RowProvider>
 inline void MatchDescriptorBatchesExactly(int mapRows, const cv::Mat& query, RowProvider provideRows,
     std::vector<std::vector<cv::DMatch>>& forward,
     std::vector<std::vector<cv::DMatch>>& reverse,
-    const std::function<bool()>& interrupted = {}, const DescriptorDistanceKernel& kernel = {}) {
+    const std::function<bool()>& interrupted = {}) {
     forward.assign(mapRows, {});
     reverse.assign(query.rows, {});
     if (mapRows == 0 || query.empty()) return;
@@ -31,9 +30,7 @@ inline void MatchDescriptorBatchesExactly(int mapRows, const cv::Mat& query, Row
         if (interrupted && interrupted()) throw SearchInterrupted{};
         cv::Mat distances;
         const int end = std::min(begin + batchRows, mapRows);
-        const auto rows = provideRows(begin, end);
-        if (!kernel || !kernel(rows, query, distances))
-            cv::batchDistance(rows, query, distances, CV_32F, cv::noArray(), cv::NORM_L2);
+        cv::batchDistance(provideRows(begin, end), query, distances, CV_32F, cv::noArray(), cv::NORM_L2);
         for (int row = begin; row < end; ++row) {
             const float* values = distances.ptr<float>(row - begin);
             int first = -1, second = -1;
@@ -55,7 +52,7 @@ inline void MatchDescriptorBatchesExactly(int mapRows, const cv::Mat& query, Row
 inline void MatchDescriptorsExactly(const cv::Mat& map, const cv::Mat& query,
     std::vector<std::vector<cv::DMatch>>& forward,
     std::vector<std::vector<cv::DMatch>>& reverse,
-    const std::function<bool()>& interrupted = {}, const DescriptorDistanceKernel& kernel = {}) {
+    const std::function<bool()>& interrupted = {}) {
     MatchDescriptorBatchesExactly(map.rows, query, [&](int begin, int end) { return map.rowRange(begin, end); },
-        forward, reverse, interrupted, kernel);
+        forward, reverse, interrupted);
 }

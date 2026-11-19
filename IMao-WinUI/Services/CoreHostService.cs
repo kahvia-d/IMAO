@@ -39,10 +39,20 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public RuntimeConfiguration Configuration => configuration.Read();
     public string DesiredOcrBackend => Configuration.ResolveOcrBackend(Environment.GetEnvironmentVariable("IMAO_OCR_BACKEND"));
 
-    private const string MinimapGpuVariable = "IMAO_MINIMAP_GPU_RECOVERY";
-    private const string ViewportGpuVariable = "IMAO_VIEWPORT_GPU";
-    public (bool Minimap, bool Viewport) DesiredMapGpuSettings => Configuration.ResolveMapGpuSettings(
-        Environment.GetEnvironmentVariable(MinimapGpuVariable), Environment.GetEnvironmentVariable(ViewportGpuVariable));
+    public bool SaveOcrGpuAcceleration(bool enabled)
+    {
+        try
+        {
+            configuration.Update(old => old with { OcrGpuAcceleration = enabled });
+            OnUi(() => OnPropertyChanged(nameof(Configuration)));
+            return true;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            ReportUserError("无法保存 GPU 加速设置：" + error.Message);
+            return false;
+        }
+    }
 
     public CoreHostService() : this(AppContext.BaseDirectory,
         new RuntimeConfigurationStore(Path.Combine(UserDataPaths.Root, "runtime-preferences.json")), new LocalItemFilter(),
@@ -84,7 +94,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         public Task? StandardErrorTask { get; set; }
         public CancellationTokenSource Stop { get; } = new();
         public ConcurrentDictionary<string, TaskCompletionSource<bool>> Pending { get; } = new();
-        public ConcurrentDictionary<string, TaskCompletionSource<JsonElement>> DataPending { get; } = new();
+        public ConcurrentDictionary<string, TaskCompletionSource<JsonElement>> MarkerPending { get; } = new();
         public ConcurrentDictionary<string, TaskCompletionSource<JsonElement>> RoutePending { get; } = new();
 
         /// <summary>Keeps the last few stderr lines so an early exit can say why it happened.</summary>
@@ -144,9 +154,6 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         };
         session.Process.StartInfo.ArgumentList.Add("--pipe");
         session.Process.StartInfo.Environment["IMAO_OCR_BACKEND"] = DesiredOcrBackend;
-        var mapGpu = EffectiveMapGpuSettings;
-        session.Process.StartInfo.Environment[MinimapGpuVariable] = mapGpu.Minimap ? "1" : "0";
-        session.Process.StartInfo.Environment[ViewportGpuVariable] = mapGpu.Viewport ? "1" : "0";
         session.Process.StartInfo.ArgumentList.Add(pipeName);
         if (resourceSnapshots is not null)
         {
@@ -171,7 +178,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
             if (!await SendLockedAsync(session, "configure", Configuration.ToPayload(), cancellationToken))
                 throw new IOException("核心无法恢复已保存配置");
             if (desiredMarkerProfile != "local")
-                await SendDataCommandLockedAsync(session, "markerSelectProfile", new { profileId = desiredMarkerProfile }, cancellationToken);
+                await SendMarkerLockedAsync(session, "markerSelectProfile", new { profileId = desiredMarkerProfile }, cancellationToken);
             var enabled = filters.GetFilteredItemsDatas().Where(item => item.Status == 1 && !string.IsNullOrWhiteSpace(item.Name))
                 .Select(item => item.Name!).ToArray();
             if (!await SendLockedAsync(session, "setItems", new() { ["add"] = enabled }, cancellationToken))
@@ -246,7 +253,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         {
             var session = await EnsureStartedLockedAsync(cancellationToken)
                 ?? throw new IOException("核心尚未连接");
-            var data = await SendDataCommandLockedAsync(session, operation, arguments, cancellationToken);
+            var data = await SendMarkerLockedAsync(session, operation, arguments, cancellationToken);
             if (operation == "markerSelectProfile")
             {
                 desiredMarkerProfile = JsonSerializer.SerializeToElement(arguments).GetProperty("profileId").GetString() ?? "local";
@@ -268,14 +275,14 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public Task<JsonElement> ImportLegacyPointsAsync(CancellationToken cancellationToken = default) =>
         ExecuteMarkerAsync("markerImportLegacyProgress", new { profileId = desiredMarkerProfile }, cancellationToken);
 
-    private async Task<JsonElement> SendDataCommandLockedAsync(Session session, string operation, object arguments, CancellationToken cancellationToken)    {
+    private async Task<JsonElement> SendMarkerLockedAsync(Session session, string operation, object arguments, CancellationToken cancellationToken)    {
         string id = Guid.NewGuid().ToString("N");
         var command = JsonSerializer.Deserialize<Dictionary<string, object?>>(JsonSerializer.Serialize(arguments)) ?? new();
         command["type"] = operation;
         command["version"] = ProtocolVersion;
         command["requestId"] = id;
         var completion = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
-        session.DataPending[id] = completion;
+        session.MarkerPending[id] = completion;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, session.Stop.Token);
         timeout.CancelAfter(TimeSpan.FromSeconds(15));
         try
@@ -284,7 +291,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
             await session.Writer.FlushAsync(timeout.Token);
             return await completion.Task.WaitAsync(timeout.Token);
         }
-        finally { session.DataPending.TryRemove(id, out _); }
+        finally { session.MarkerPending.TryRemove(id, out _); }
     }
 
     public async Task<JsonElement> ExecuteConnectedMarkerAsync(string operation, object arguments,
@@ -297,7 +304,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         {
             if (!ReferenceEquals(active, expected) || expected.Stop.IsCancellationRequested || !expected.Pipe.IsConnected)
                 throw new IOException("核心会话已变化");
-            return await SendDataCommandLockedAsync(expected, operation, arguments, cancellationToken);
+            return await SendMarkerLockedAsync(expected, operation, arguments, cancellationToken);
         }
         finally { lifecycleLock.Release(); }
     }
@@ -596,15 +603,6 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         catch (Exception exception) { ReportUserError("查漏补缺设置未生效：" + exception.Message); }
     }
 
-    private static bool CompleteDataCommand(Session session, JsonElement reply)
-    {
-        string id = reply.GetProperty("requestId").GetString() ?? string.Empty;
-        if (!session.DataPending.TryRemove(id, out var pending)) return false;
-        if (reply.GetProperty("accepted").GetBoolean()) pending.TrySetResult(reply.GetProperty("data").Clone());
-        else pending.TrySetException(new InvalidOperationException(reply.GetProperty("message").GetString() ?? "核心操作失败"));
-        return true;
-    }
-
     private async Task ReadEventsAsync(Session session)
     {
         try
@@ -622,7 +620,12 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                 if (!ReferenceEquals(active, session)) return;
                 if (type == "markerResult")
                 {
-                    CompleteDataCommand(session, root);
+                    string id = root.GetProperty("requestId").GetString() ?? string.Empty;
+                    if (session.MarkerPending.TryRemove(id, out var pending))
+                    {
+                        if (root.GetProperty("accepted").GetBoolean()) pending.TrySetResult(root.GetProperty("data").Clone());
+                        else pending.TrySetException(new InvalidOperationException(root.GetProperty("message").GetString() ?? "点位操作失败"));
+                    }
                 }
                 else if (type == "markerGapFillRequested")
                 {
@@ -643,7 +646,6 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                 {
                     bool accepted = root.GetProperty("accepted").GetBoolean();
                     string id = root.GetProperty("requestId").GetString() ?? string.Empty;
-                    if (CompleteDataCommand(session, root)) continue;
                     if (session.RoutePending.TryRemove(id, out var routeCompletion))
                     {
                         if (accepted)
@@ -695,7 +697,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         finally
         {
             foreach (var pending in session.Pending.Values) pending.TrySetException(new IOException("CoreHost 已断开"));
-            foreach (var pending in session.DataPending.Values) pending.TrySetException(new IOException("CoreHost 已断开"));
+            foreach (var pending in session.MarkerPending.Values) pending.TrySetException(new IOException("CoreHost 已断开"));
             foreach (var pending in session.RoutePending.Values) pending.TrySetException(new IOException("CoreHost 已断开"));
             OnSessionUi(session, () => IsConnected = false);
         }
@@ -873,8 +875,6 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     }
     public async ValueTask DisposeAsync()
     {
-        observerStop.Cancel();
-        if (observerTask is not null) await observerTask;
         await lifecycleLock.WaitAsync();
         try { disposed = true; await CloseLockedAsync(); }
         finally { lifecycleLock.Release(); }
