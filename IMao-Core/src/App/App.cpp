@@ -1087,7 +1087,12 @@ void App::Thread_DetectGameState() {
 			// up the player is reading it rather than the map, so the markers for this view are in the
 			// way - and after a region pick they are about to be wrong as well. BigMapMarkersVisible
 			// below is what acts on it.
-			const auto panel = MapUiVisualDetector::DetectMapPanel(stateSnapshot, stateRect);
+			// 侧边面板仅在大地图打开或存在大地图证据时才影响标点显隐；日常小地图跑图时跳过全区域像素扫描以省 CPU。
+			const bool needPanelProbe = isOpenMap.load() || mapControlsVisible || compassVisible ||
+				bigMapStructureConfirmed || MapViewportAnchorFresh();
+			const auto panel = needPanelProbe
+				? MapUiVisualDetector::DetectMapPanel(stateSnapshot, stateRect)
+				: MapPanelDetection{};
 			panelVisible = panel.visible;
 			panelNeutralFraction = panel.neutralFraction;
 			if (panelVisible != previousPanel) {
@@ -2368,9 +2373,11 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			" ocrHints=" + std::to_string(submittedHintCount));
 	};
 
-    // Low-frequency standby is independent of visual search cadence and feature availability.
+    // 仅在首次预热 OCR 运行时；SURF 健康时不再每秒空转提交 OCR 推理，待 SURF 丢锁/不健康时同帧立即接管。
     if (ocrAssistEnabled && !ocrPreloadStarted) ensureOcrRuntime();
-    submitOcrRead(coordinateHandoff.NeedsReadout(now));
+    if (coordinateHandoff.ReadoutActive() || coordinateHandoff.NeedsReadout(now)) {
+        submitOcrRead(coordinateHandoff.NeedsReadout(now));
+    }
     if (coordinateHandoff.ReadoutActive()) {
         // Global results only stage a hint here; all image revalidation runs in
         // the private context. The localization thread alone accepts state.
