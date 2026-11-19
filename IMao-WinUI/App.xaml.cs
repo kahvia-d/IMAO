@@ -24,6 +24,7 @@ public partial class App : Application
 {
     private FileStream? programLease;
     private bool closing, closeApproved;
+    private MainWindowTray? tray;
     private readonly CancellationTokenSource startupCancellation = new();
     public static bool ResourcesInitialized { get; private set; }
     public static bool RuntimeServicesInitialized { get; private set; }
@@ -218,6 +219,7 @@ public partial class App : Application
             {
                 if (closeApproved) return;
                 e.Cancel = true;
+                if (closing || tray?.TryHide() == true) return;
                 await CloseCleanlyAsync();
             };
             RuntimeServicesInitialized = true;
@@ -234,6 +236,8 @@ public partial class App : Application
             await GetService<IActivationService>().ActivateAsync(args, startupCancellation.Token);
             startupCancellation.Token.ThrowIfCancellationRequested();
             Trace($"startup-shell-ready elapsedMs={startupTimer.ElapsedMilliseconds}");
+            tray = new MainWindowTray(MainWindow, () => _ = CloseCleanlyAsync());
+            MainWindow.Closed += (_, _) => tray.Dispose();
             GetService<CoreHostService>().PropertyChanged += (_, change) =>
             {
                 if (change.PropertyName == "ResourceActivation") updates.Refresh();
@@ -307,6 +311,7 @@ public partial class App : Application
         catch (Exception error)
         {
             closing = false;
+            tray?.Restore();
             if (MainWindow.Content is UIElement content) content.IsHitTestVisible = true;
             GetService<UpdateUiController>().ShowError(error);
         }

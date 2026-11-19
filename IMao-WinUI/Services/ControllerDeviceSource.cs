@@ -36,6 +36,10 @@ internal sealed class ControllerDeviceSource : IGamepadDeviceSource
         try
         {
             SdlNative.InstallResolver();
+            // The WinUI dispatcher already pumps Windows hotplug messages. With an XInput
+            // pad selected we may not enumerate SDL again for a long time; its separate
+            // notification thread would spin until that enumeration consumes the change.
+            SdlNative.SetHint("SDL_JOYSTICK_THREAD", "0");
             SdlNative.SetHint("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS", "1");
             SdlNative.SetHint("SDL_JOYSTICK_HIDAPI_PS4", "1");
             SdlNative.SetHint("SDL_JOYSTICK_HIDAPI_PS5", "1");

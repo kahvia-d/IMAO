@@ -9,6 +9,8 @@ Environment.SetEnvironmentVariable("SDL_JOYSTICK_ENHANCED_REPORTS", "1");
 using var source = new ControllerDeviceSource();
 source.GetDevices();
 Check(source.Diagnostic.Length == 0, "real SDL DLL initializes alongside XInput");
+Check(Marshal.PtrToStringUTF8(Native.GetHint("SDL_JOYSTICK_THREAD")) == "0",
+    "Windows handles hotplug notifications without an idle SDL joystick thread");
 Check(Marshal.PtrToStringUTF8(Native.GetHint("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS")) == "1" &&
     Marshal.PtrToStringUTF8(Native.GetHint("SDL_JOYSTICK_ENHANCED_REPORTS")) == "0", "background input enabled without enhanced reports");
 IntPtr name = Marshal.StringToCoTaskMemUTF8("IMAO controller regression fixture");

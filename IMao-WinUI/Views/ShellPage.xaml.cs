@@ -29,6 +29,8 @@ public sealed partial class ShellPage : Page
     {
         ViewModel = viewModel;
         InitializeComponent();
+        KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu));
+        KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.GoBack));
         AppToast.RegisterPresenter(ShowFloatingToast);
         updates = App.GetService<UpdateUiController>();
         coreHost = App.GetService<CoreHostService>();
@@ -68,6 +70,7 @@ public sealed partial class ShellPage : Page
             subscribed = true;
         }
         UpdatesChanged(null, new(""));
+        AttachPageInfoBarRelays(NavigationFrame.Content);
     }
 
     private void ShellPage_Unloaded(object sender, RoutedEventArgs e)
@@ -84,8 +87,6 @@ public sealed partial class ShellPage : Page
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         TitleBarHelper.UpdateTitleBar(RequestedTheme);
-        KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu));
-        KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.GoBack));
     }
 
     private void CoreHost_PropertyChanged(object? sender, PropertyChangedEventArgs e)
