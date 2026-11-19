@@ -243,18 +243,25 @@ try
     File.WriteAllText(configPath, "{\"ConfigVersion\":4,\"OverlayPresentMode\":1,\"StatusBarEnabled\":false}");
     Check(new RuntimeConfigurationStore(configPath).Read().OverlayPresentMode == 1,
         "DirectComposition chosen after the bump is kept");
-    // 版本 6 迁移：未改过刷新间隔的旧配置迁至均衡（1），手改过刷新间隔的旧配置迁至自定义（3）
+    // 版本 6/7 迁移：未改过刷新间隔的旧配置迁至均衡（1），手改过刷新间隔的旧配置迁至自定义（2），旧 v6 低占用迁均衡、自定义迁 2
     File.WriteAllText(configPath, "{\"ConfigVersion\":5,\"MapUpdateCycle\":80,\"MinMapUpdateCycle\":80}");
     Check(new RuntimeConfigurationStore(configPath).Read().PerformanceProfile == 1,
         "未改过刷新间隔的旧配置迁移到默认均衡档位");
     File.WriteAllText(configPath, "{\"ConfigVersion\":5,\"MapUpdateCycle\":120,\"MinMapUpdateCycle\":80}");
     var customMigrated = new RuntimeConfigurationStore(configPath).Read();
-    Check(customMigrated.PerformanceProfile == 3 && customMigrated.MapUpdateCycle == 120,
+    Check(customMigrated.PerformanceProfile == 2 && customMigrated.MapUpdateCycle == 120,
         "手改过刷新间隔的旧配置迁移到自定义档位并保留原值");
-    File.WriteAllText(configPath, "{\"ConfigVersion\":6,\"PerformanceProfile\":2,\"CaptureMaxFps\":15,\"OcrUpdateCycle\":220}");
-    var v6Config = new RuntimeConfigurationStore(configPath).Read();
-    Check(v6Config.PerformanceProfile == 2 && v6Config.CaptureMaxFps == 15 && v6Config.OcrUpdateCycle == 220,
-        "版本 6 显式选择的性能档位与自定义参数应完整保留");
+    File.WriteAllText(configPath, "{\"ConfigVersion\":6,\"PerformanceProfile\":2}");
+    Check(new RuntimeConfigurationStore(configPath).Read().PerformanceProfile == 1,
+        "旧版本 6 的低占用档位迁移到均衡档位");
+    File.WriteAllText(configPath, "{\"ConfigVersion\":6,\"PerformanceProfile\":3,\"CaptureMaxFps\":15,\"OcrUpdateCycle\":220}");
+    var v6Custom = new RuntimeConfigurationStore(configPath).Read();
+    Check(v6Custom.PerformanceProfile == 2 && v6Custom.CaptureMaxFps == 15 && v6Custom.OcrUpdateCycle == 220,
+        "旧版本 6 的自定义档位迁移到新自定义索引 2 并保留自定义参数");
+    File.WriteAllText(configPath, "{\"ConfigVersion\":7,\"PerformanceProfile\":2,\"CaptureMaxFps\":15,\"OcrUpdateCycle\":220}");
+    var v7Config = new RuntimeConfigurationStore(configPath).Read();
+    Check(v7Config.PerformanceProfile == 2 && v7Config.CaptureMaxFps == 15 && v7Config.OcrUpdateCycle == 220,
+        "版本 7 显式选择的性能档位与自定义参数应完整保留");
     Check(config.Update(old => old with { OverlayPresentMode = 1 }).OverlayPresentMode == 1 &&
         config.Read().OverlayPresentMode == 1,
         "choosing DirectComposition persists instead of being migrated back to the default");

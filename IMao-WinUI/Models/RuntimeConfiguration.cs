@@ -16,9 +16,9 @@ public sealed record RuntimeConfiguration
     // before a bump carries a value that was never a deliberate choice, so the store migrates it once
     // and a player who changes the setting afterwards is recorded with the current version and never
     // migrated again.
-    // 版本 6 引入性能与刷新档位（默认 1 = 均衡），统一联动采集帧率上限、大/小地图识别间隔、坐标 OCR 间隔
-    // 与后台视觉探针频率；旧配置若用户手动调整过大小地图刷新间隔则迁移到自定义（3），否则迁移到均衡（1）。
-    public const int CurrentSchemaVersion = 6;
+    // 版本 7 将性能与刷新档位精简为三档（0 = 流畅优先，1 = 均衡默认，2 = 自定义）；
+    // 旧 v6 的低占用（2）迁移到均衡（1），旧 v6 的自定义（3）迁移到自定义（2）。
+    public const int CurrentSchemaVersion = 7;
     public int ConfigVersion { get; init; } = CurrentSchemaVersion;
 
     // 1 = Windows Graphics Capture: it never asks the game window to render into a device context, and
@@ -29,7 +29,7 @@ public sealed record RuntimeConfiguration
     // but not as a promise: see Docs/GameFrameCostAnalysis_20260918.md section 22 for why the frame-rate
     // claim that made it the default was withdrawn.
     public int OverlayPresentMode { get; init; } = 0;
-    // 性能与刷新档位：0 = 流畅优先，1 = 均衡（默认），2 = 低占用（省帧率），3 = 自定义。
+    // 性能与刷新档位：0 = 流畅优先，1 = 均衡（默认），2 = 自定义。
     public int PerformanceProfile { get; init; } = 1;
     // 自定义档位下的采集帧率上限（FPS，5–60）。
     public int CaptureMaxFps { get; init; } = 20;
@@ -114,7 +114,7 @@ public sealed record RuntimeConfiguration
             throw new ArgumentException("图标合并重叠阈值必须在 1–100 之间");
         if (CaptureWay is < 0 or > 1) throw new ArgumentException("截图方式无效");
         if (OverlayPresentMode is < 0 or > 1) throw new ArgumentException("叠加层呈现方式无效");
-        if (PerformanceProfile is < 0 or > 3) throw new ArgumentException("性能与刷新档位无效");
+        if (PerformanceProfile is < 0 or > 2) throw new ArgumentException("性能与刷新档位无效");
         if (CaptureMaxFps is < 5 or > 60) throw new ArgumentException("采集帧率上限必须在 5–60 FPS 之间");
         if (OcrUpdateCycle is < 50 or > 1000) throw new ArgumentException("坐标 OCR 识别间隔必须在 50–1000 毫秒之间");
         if (MapUpdateCycle is < 16 or > 1000 || MinMapUpdateCycle is < 16 or > 1000)
@@ -155,7 +155,6 @@ public sealed record RuntimeConfiguration
     {
         0 => "大地图 30 fps（定位 80 ms）· 小地图 30 fps（校准 200 ms，OCR 100 ms）",
         1 => "大地图 20 fps（定位 100 ms）· 小地图 20 fps（校准 250 ms，OCR 150 ms）",
-        2 => "大地图 12 fps（定位 160 ms）· 小地图 10 fps（校准 250 ms，OCR 200 ms）",
         _ => $"自定义：像素粘合上限 {CaptureMaxFps} fps · 大地图定位 {MapUpdateCycle} ms · 小地图校准 {MinMapUpdateCycle} ms · OCR {OcrUpdateCycle} ms"
     };
 

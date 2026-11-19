@@ -114,12 +114,25 @@ internal sealed class RuntimeConfigurationStore
         {
             migrated = migrated with { GuideSkipKey = 0 };
         }
-        // 版本 6 引入性能与刷新档位：旧版若用户手改过大小地图刷新间隔，迁至自定义（3）以保留原值；否则默认均衡（1）。
+        // 版本 6 引入性能与刷新档位：旧版若用户手改过大小地图刷新间隔，迁至自定义以保留原值；否则默认均衡（1）。
         if (storedVersion < 6)
         {
             migrated = migrated with
             {
-                PerformanceProfile = (migrated.MapUpdateCycle != 80 || migrated.MinMapUpdateCycle != 80) ? 3 : 1
+                PerformanceProfile = (migrated.MapUpdateCycle != 80 || migrated.MinMapUpdateCycle != 80) ? 2 : 1
+            };
+        }
+        // 版本 7 精简为三档（0=流畅，1=均衡，2=自定义）：旧 v6 的低占用（2）迁至均衡（1），自定义（3）迁至（2）。
+        else if (storedVersion < 7)
+        {
+            migrated = migrated with
+            {
+                PerformanceProfile = migrated.PerformanceProfile switch
+                {
+                    2 => 1,
+                    3 => 2,
+                    _ => migrated.PerformanceProfile
+                }
             };
         }
         return migrated;

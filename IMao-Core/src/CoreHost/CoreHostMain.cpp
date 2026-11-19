@@ -462,7 +462,7 @@ bool ApplyConfigure(const json& command) {
     };
     const auto capture = integer("captureWay", 0, 1);
     const auto present = integer("overlayPresentMode", 0, 1);
-    const auto profile = integer("performanceProfile", 0, 3);
+    const auto profile = integer("performanceProfile", 0, 2);
     const auto captureMaxFps = integer("captureMaxFps", 5, 60);
     const auto ocrCycle = integer("ocrUpdateCycle", 50, 1000);
     const auto mapCycle = integer("mapUpdateCycle", 16, 1000);

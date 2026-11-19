@@ -247,7 +247,6 @@
                                     <ComboBox x:Name="ComboBox_PerformanceProfile" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectionChanged="PerformanceProfile_SelectionChanged">
                                         <x:String>流畅优先</x:String>
                                         <x:String>均衡（推荐）</x:String>
-                                        <x:String>低占用（省帧率）</x:String>
                                         <x:String>自定义</x:String>
                                     </ComboBox>
                                 </Grid>

@@ -74,12 +74,11 @@ inline std::chrono::microseconds CapturePeriod(bool overlayActive, bool slowCapt
     return CapturePeriod(overlayActive) + (slowCapture ? kSlowCaptureBackoff : std::chrono::microseconds::zero());
 }
 
-// 性能与刷新档位：统一协调采集帧率上限、大/小地图识别间隔、OCR 间隔与后台视觉探针频率。
+// 性能与刷新档位：统一协调像素粘合帧率、大/小地图校准间隔、OCR 间隔与后台视觉探针频率。
 enum class PerformanceProfile : int {
-    Smooth = 0,       // 流畅优先
-    Balanced = 1,     // 均衡（默认）
-    LowOverhead = 2,  // 低占用（省帧率）
-    Custom = 3        // 自定义
+    Smooth = 0,    // 流畅优先
+    Balanced = 1,  // 均衡（默认）
+    Custom = 2     // 自定义
 };
 
 // 当前游戏运行场景：按场景动态切换 WGC 源头采集频率，避免 OCR 模式或空闲期白截 30 fps。
@@ -103,7 +102,6 @@ inline const char* PerformanceProfileName(PerformanceProfile profile) {
     switch (profile) {
     case PerformanceProfile::Smooth: return "smooth";
     case PerformanceProfile::Balanced: return "balanced";
-    case PerformanceProfile::LowOverhead: return "low-overhead";
     case PerformanceProfile::Custom: return "custom";
     default: return "balanced";
     }
@@ -126,7 +124,7 @@ struct EffectivePacing {
     int mapUpdateCycleMs = 100;
     int minMapUpdateCycleMs = 100;
     std::chrono::milliseconds ocrSubmissionInterval{150};
-    std::chrono::milliseconds readoutVisualProbeInterval{600};
+    std::chrono::milliseconds readoutVisualProbeInterval{450};
 };
 
 inline std::chrono::microseconds PeriodFromFps(int fps) {
@@ -139,9 +137,10 @@ inline int ClampMs(int value, int low, int high) {
 }
 
 // 根据档位与自定义设置解析当前生效的全链路调度参数。
+// 注意：readoutVisualProbeInterval 必须严格 <= 500ms，留足余量满足 CoordinateHandoff 的 750ms 连续恢复窗口。
 inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& settings) {
     const int rawProfile = settings.profile;
-    const auto profile = (rawProfile >= 0 && rawProfile <= 3)
+    const auto profile = (rawProfile >= 0 && rawProfile <= 2)
         ? static_cast<PerformanceProfile>(rawProfile)
         : PerformanceProfile::Balanced;
 
@@ -157,17 +156,6 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
             std::chrono::milliseconds{100},
             std::chrono::milliseconds{300}
         };
-    case PerformanceProfile::LowOverhead:
-        return {
-            profile,
-            std::chrono::microseconds{83333},   // 大地图 12 fps（拖拽跟手）
-            std::chrono::microseconds{100000},  // 小地图视觉 10 fps（轻量像素粘合）
-            std::chrono::microseconds{200000},  // OCR 模式对齐 200 ms（5 fps）
-            std::chrono::microseconds{150000},  // 空闲巡检 ~6.7 fps
-            160, 250,                           // 大地图 160 ms；小地图 SURF 校准保持 250 ms 防丢锁触发 OCR
-            std::chrono::milliseconds{200},
-            std::chrono::milliseconds{1000}
-        };
     case PerformanceProfile::Custom: {
         const auto maxPeriod = PeriodFromFps(settings.captureMaxFps);
         const int mapMs = ClampMs(settings.mapUpdateCycleMs, 16, 1000);
@@ -178,7 +166,7 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
         const auto readoutPeriod = ocrPeriod > maxPeriod ? ocrPeriod : maxPeriod;
         const auto idlePeriod = std::chrono::microseconds{125000} > maxPeriod
             ? std::chrono::microseconds{125000} : maxPeriod;
-        const int probeMs = ClampMs(ocrMs * 4, 300, 1000);
+        const int probeMs = ClampMs(ocrMs * 3, 300, 500);
         return {
             profile,
             maxPeriod,
@@ -201,7 +189,7 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
             std::chrono::microseconds{125000},  // 空闲巡检 8 fps
             100, 250,                           // 大地图 100 ms；小地图 SURF 绝对校准 250 ms
             std::chrono::milliseconds{150},
-            std::chrono::milliseconds{600}
+            std::chrono::milliseconds{450}
         };
     }
 }

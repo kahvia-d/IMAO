@@ -121,37 +121,31 @@ inline void TestOverlayPacing(void (*check)(bool, const std::string&)) {
     {
         const auto smooth = OverlayPacing::ResolveEffectivePacing({0, 20, 80, 80, 150});
         const auto balanced = OverlayPacing::ResolveEffectivePacing({1, 20, 80, 80, 150});
-        const auto low = OverlayPacing::ResolveEffectivePacing({2, 20, 80, 80, 150});
-        check(smooth.bigMapCapturePeriod < balanced.bigMapCapturePeriod &&
-            balanced.bigMapCapturePeriod < low.bigMapCapturePeriod,
-            "大地图采集周期应按流畅 < 均衡 < 低占用递增");
+        check(smooth.bigMapCapturePeriod < balanced.bigMapCapturePeriod,
+            "大地图采集周期应满足流畅 < 均衡");
         check(balanced.bigMapCapturePeriod == std::chrono::microseconds(50000) &&
             balanced.minimapVisualCapturePeriod == std::chrono::microseconds(50000) &&
             balanced.minMapUpdateCycleMs == 250 &&
             balanced.minimapVisualCapturePeriod < balanced.minimapReadoutCapturePeriod,
             "均衡档位下小地图视觉应跑 20fps 高频像素粘合，SURF 绝对校准放宽至 250ms");
         check(smooth.minimapVisualCapturePeriod == std::chrono::microseconds(33333) &&
-            smooth.minMapUpdateCycleMs == 200 &&
-            low.minimapVisualCapturePeriod == std::chrono::microseconds(100000) &&
-            low.minMapUpdateCycleMs == 250,
-            "流畅与低占用档位下小地图视觉应采用高频粘合 + 稳定 SURF 绝对校准");
+            smooth.minMapUpdateCycleMs == 200,
+            "流畅档位下小地图视觉应跑 30fps 高频粘合 + 200ms SURF 校准");
         check(balanced.minimapReadoutCapturePeriod == std::chrono::microseconds(150000) &&
             balanced.ocrSubmissionInterval == 150ms &&
-            balanced.readoutVisualProbeInterval == 600ms,
-            "均衡档位下 OCR 模式采集与提交均对齐 150ms，后台探针放宽至 600ms");
-        check(low.minimapReadoutCapturePeriod == std::chrono::microseconds(200000) &&
-            low.readoutVisualProbeInterval == 1000ms,
-            "低占用档位下 OCR 模式采集对齐 200ms，后台探针放宽至 1000ms");
+            balanced.readoutVisualProbeInterval == 450ms,
+            "均衡档位下 OCR 模式采集与提交均对齐 150ms，后台探针控制在 450ms 以保恢复窗口");
 
-        const auto customFastCap = OverlayPacing::ResolveEffectivePacing({3, 30, 90, 110, 180});
+        const auto customFastCap = OverlayPacing::ResolveEffectivePacing({2, 30, 90, 110, 180});
         check(customFastCap.bigMapCapturePeriod == std::chrono::microseconds(33333) &&
             customFastCap.minimapVisualCapturePeriod == std::chrono::microseconds(33333) &&
             customFastCap.minimapReadoutCapturePeriod == std::chrono::microseconds(180000) &&
             customFastCap.mapUpdateCycleMs == 90 && customFastCap.minMapUpdateCycleMs == 110 &&
-            customFastCap.ocrSubmissionInterval == 180ms,
-            "自定义档位下大地图与小地图视觉按采集上限跑像素粘合，OCR 模式自动对齐 OCR 间隔");
+            customFastCap.ocrSubmissionInterval == 180ms &&
+            customFastCap.readoutVisualProbeInterval <= 500ms,
+            "自定义档位下大地图与小地图视觉按采集上限跑像素粘合，探针间隔严守 <= 500ms 安全线");
 
-        const auto customSlowCap = OverlayPacing::ResolveEffectivePacing({3, 5, 80, 80, 100});
+        const auto customSlowCap = OverlayPacing::ResolveEffectivePacing({2, 5, 80, 80, 100});
         check(customSlowCap.minimapVisualCapturePeriod == std::chrono::microseconds(200000) &&
             customSlowCap.minimapReadoutCapturePeriod == std::chrono::microseconds(200000),
             "自定义采集上限慢于识别间隔时，小地图视觉与 OCR 模式均不得突破采集上限");

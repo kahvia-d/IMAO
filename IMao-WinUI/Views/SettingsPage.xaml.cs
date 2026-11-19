@@ -820,7 +820,7 @@ public sealed partial class SettingsPage : Page
         ComboBox_PresentMethod.IsEnabled = !coreHost.Status.IsRunning;
         ComboBox_PerformanceProfile.SelectedIndex = value.PerformanceProfile;
         PerformanceProfileSummary.Text = value.DescribePerformanceProfile();
-        CustomPacingPanel.Visibility = value.PerformanceProfile == 3 ? Visibility.Visible : Visibility.Collapsed;
+        CustomPacingPanel.Visibility = value.PerformanceProfile == 2 ? Visibility.Visible : Visibility.Collapsed;
         CaptureMaxFpsBox.Value = value.CaptureMaxFps;
         UpdateMinMapItemDataCycle.Value = value.MinMapUpdateCycle;
         UpdateMapItemDataCycle.Value = value.MapUpdateCycle;
