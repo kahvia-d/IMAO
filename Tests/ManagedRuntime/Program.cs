@@ -21,6 +21,43 @@ if (args.FirstOrDefault() == "cloud-preview")
     return;
 }
 
+if (args.FirstOrDefault() == "map-gpu-live")
+{
+    var scratch = Directory.CreateTempSubdirectory("imao-live-gpu-").FullName;
+    Environment.SetEnvironmentVariable("LOCALAPPDATA", scratch);
+    var store = new RuntimeConfigurationStore(Path.Combine(scratch, "preferences.json"));
+    await using var core = new CoreHostService(Path.GetFullPath(args[1]), store,
+        new LocalItemFilter(Path.Combine(scratch, "filters.json"), Path.Combine(scratch, "legacy.json")));
+    await core.EnsureStartedAsync();
+    Check(await core.SaveMapGpuAsync(false, false), "Player can turn off both map GPU paths live");
+    int pid = (await core.ObserveMapGpuAsync('?')).GetProperty("pid").GetInt32();
+    foreach (char mask in "1230")
+    {
+        var state = await core.ObserveMapGpuAsync(mask);
+        Check(state.GetProperty("pid").GetInt32() == pid && state.GetProperty("mask").GetInt32() == mask - '0',
+            "CoreHost applies test mask " + mask + " without restart");
+        Check(store.Read().MinimapGpuAcceleration == false && store.Read().ViewportGpuAcceleration == false,
+            "Experiment preserves player preferences");
+    }
+    await core.ObserveMapGpuAsync('3');
+    Check(await core.SaveMapGpuAsync(true, null), "Player changes one preference during a trial");
+    var restored = await core.ObserveMapGpuAsync('R');
+    Check(restored.GetProperty("pid").GetInt32() == pid && restored.GetProperty("mask").GetInt32() == 1,
+        "Restoring after a trial honors a manual setting changed during the session");
+    core.StartMapGpuObserver();
+    async Task<int> OneObservation(char command)
+    {
+        using var client = new NamedPipeClientStream(".", $"IMao.MapGpu.{Environment.ProcessId}", PipeDirection.InOut, PipeOptions.Asynchronous);
+        await client.ConnectAsync(5000);
+        await client.WriteAsync(new byte[] { (byte)command });
+        using var reader = new StreamReader(client);
+        using var reply = JsonDocument.Parse((await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)))!);
+        return reply.RootElement.GetProperty("mask").GetInt32();
+    }
+    Check(await OneObservation('2') == 2 && await OneObservation('?') == 1, "Observer disconnect restores player settings in the same core");
+    return;
+}
+
 LaunchEntryTests.Run(Check);
 
 // Backends are reported by CoreHost, never inferred from the launch button.

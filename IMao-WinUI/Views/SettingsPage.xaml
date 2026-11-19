@@ -275,7 +275,7 @@
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                     <StackPanel Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="小地图 GPU 加速" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="跨区域后需要重新找位置时，由显卡分担识别。重启 IMao 后生效。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                                        <TextBlock Text="跨区域后重新找位置时，由显卡分担识别。切换后从下一次匹配生效。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                                     </StackPanel>
                                     <ToggleSwitch x:Name="MinimapGpuAcceleration" Grid.Column="1" AutomationProperties.Name="小地图 GPU 加速" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="MinimapGpuAcceleration_Toggled" />
                                 </Grid>
@@ -285,7 +285,7 @@
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                     <StackPanel Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="大地图 GPU 加速" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="打开或拖动大地图，需在全图找位置时，由显卡分担识别。重启 IMao 后生效。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                                        <TextBlock Text="打开或拖动大地图，需要全图搜索时，由显卡分担识别。切换后从下一次匹配生效。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                                     </StackPanel>
                                     <ToggleSwitch x:Name="ViewportGpuAcceleration" Grid.Column="1" AutomationProperties.Name="大地图 GPU 加速" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="ViewportGpuAcceleration_Toggled" />
                                 </Grid>

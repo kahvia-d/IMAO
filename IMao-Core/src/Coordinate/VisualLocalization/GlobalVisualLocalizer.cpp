@@ -12,6 +12,7 @@
 #include "../../Feature/Match/FeatureRowCache.h"
 #include "../../Feature/Match/EncodedExactMatcher.h"
 #include "../../Feature/Match/GpuRecoveryDistances.h"
+#include "../../Runtime/MapGpuSettings.h"
 #include "../../Feature/VisualIndex/VisualIndexRetrieval.h"
 
 #include <opencv2/calib3d.hpp>
@@ -34,15 +35,6 @@
 #include <unordered_map>
 
 namespace {
-bool GpuRecoveryEnabled() {
-    static const bool enabled = [] {
-        char value[4]{};
-        size_t length = 0;
-        return getenv_s(&length, value, sizeof(value), "IMAO_MINIMAP_GPU_RECOVERY") == 0 &&
-            std::string_view(value) == "1";
-    }();
-    return enabled;
-}
 bool EncodedMinimapCacheEnabled() {
     static const bool enabled = [] {
         char value[16]{}; size_t length = 0;
@@ -372,7 +364,7 @@ public:
     }
 
     void PrepareRecoveryDevice() {
-        if (!GpuRecoveryEnabled()) return;
+        if (!MapGpuSettings::MinimapEnabled()) return;
         const auto start = std::chrono::steady_clock::now();
         cv::Mat probe = cv::Mat::zeros(1, 128, CV_32F), distances;
         if (!gpuDistances_.Compute(probe, probe, distances)) {
@@ -496,7 +488,7 @@ public:
             result.bestAffineEstimated = candidate.affineEstimated;
             result.bestScaleWithinExpectedRange = candidate.scaleWithinExpectedRange;
         };
-        const bool useGpu = GpuRecoveryEnabled() && !request.requireOcrHint;
+        const bool useGpu = !request.requireOcrHint;
         for (const auto& [tileIndex, score] : coarseCandidates) {
             if (interrupted && interrupted()) throw SearchInterrupted{};
             const auto& tile = resources_->visualIndex.tiles[tileIndex];
@@ -738,7 +730,8 @@ private:
         const auto prepared = std::chrono::steady_clock::now();
         DescriptorDistanceKernel kernel;
         bool dispatched = false;
-        if (useGpu && gpuDistances_.Failure().empty()) {
+        if (useGpu) ++MapGpuSettings::minimapBatches;
+        if (useGpu && MapGpuSettings::MinimapEnabled() && gpuDistances_.Failure().empty()) {
             kernel = [&](const cv::Mat& map, const cv::Mat& frame, cv::Mat& distances) {
                 if (!gpuDistances_.Failure().empty()) return false;
                 if (gpuDistances_.Compute(map, frame, distances)) {
@@ -754,6 +747,7 @@ private:
         }
         MatchDescriptorsExactly(*matches.subset, query.imgDescriptors,
             matches.forward, matches.reverse, interrupted, kernel);
+        if (dispatched) ++MapGpuSettings::minimapGpuBatches;
         if (profile) std::cerr << "matching-profile rows=" << rows.size() << " query=" << query.imgDescriptors.rows
             << " backend=" << (dispatched ? "gpu" : "cpu")
             << " prepareMs=" << std::chrono::duration<double, std::milli>(prepared - start).count()

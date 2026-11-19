@@ -809,7 +809,7 @@ public sealed partial class SettingsPage : Page
         RestoreOverlayScales();
         restoringRuntime = true;
         OcrGpuAcceleration.IsOn = coreHost.DesiredOcrBackend == "directml";
-        var mapGpu = coreHost.DesiredMapGpuSettings;
+        var mapGpu = coreHost.EffectiveMapGpuSettings;
         MinimapGpuAcceleration.IsOn = mapGpu.Minimap;
         ViewportGpuAcceleration.IsOn = mapGpu.Viewport;
         OcrBackendState.Text = coreHost.Status.OcrBackend?.DisplayText ?? "OCR：等待核心报告实际后端";
@@ -841,16 +841,30 @@ public sealed partial class SettingsPage : Page
         ShowGpuSaveResult(coreHost.SaveOcrGpuAcceleration(OcrGpuAcceleration.IsOn));
     }
 
-    private void MinimapGpuAcceleration_Toggled(object sender, RoutedEventArgs e)
+    private async void MinimapGpuAcceleration_Toggled(object sender, RoutedEventArgs e)
     {
         if (restoringRuntime || !IsLoaded) return;
-        ShowGpuSaveResult(coreHost.SaveMinimapGpuAcceleration(MinimapGpuAcceleration.IsOn));
+        await ApplyMapGpuAsync(MinimapGpuAcceleration.IsOn, null);
     }
 
-    private void ViewportGpuAcceleration_Toggled(object sender, RoutedEventArgs e)
+    private async void ViewportGpuAcceleration_Toggled(object sender, RoutedEventArgs e)
     {
         if (restoringRuntime || !IsLoaded) return;
-        ShowGpuSaveResult(coreHost.SaveViewportGpuAcceleration(ViewportGpuAcceleration.IsOn));
+        await ApplyMapGpuAsync(null, ViewportGpuAcceleration.IsOn);
+    }
+
+    private async Task ApplyMapGpuAsync(bool? minimap, bool? viewport)
+    {
+        MinimapGpuAcceleration.IsEnabled = ViewportGpuAcceleration.IsEnabled = false;
+        try
+        {
+            bool saved = await coreHost.SaveMapGpuAsync(minimap, viewport);
+            GpuPerformanceMessage.Severity = saved ? InfoBarSeverity.Informational : InfoBarSeverity.Error;
+            GpuPerformanceMessage.Message = saved ? "已应用，下次地图匹配使用新设置。" : coreHost.LastFault;
+            GpuPerformanceMessage.IsOpen = true;
+            RestoreRuntime();
+        }
+        finally { MinimapGpuAcceleration.IsEnabled = ViewportGpuAcceleration.IsEnabled = true; }
     }
 
     private void ShowGpuSaveResult(bool saved)

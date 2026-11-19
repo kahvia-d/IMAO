@@ -3,6 +3,7 @@
 #include "../Diagnostics/Diagnostics.h"
 #include "../Diagnostics/ReproCapture.h"
 #include "../Runtime/RuntimeStatus.h"
+#include "../Runtime/MapGpuSettings.h"
 #include "../Runtime/ResourceSnapshotContext.h"
 #include "../Runtime/StructuredLogger.h"
 #include "../Runtime/TextEncoding.h"
@@ -530,6 +531,23 @@ bool HandleCommand(PipeEventDispatcher& events, const json& command, bool& shoul
                 {"resourceSnapshotId", ResourceSnapshotContext::Id()},
                 {"resourcesReady", RuntimeFeatureRepository::Instance().IsReady()}});
             events.PublishStatus(StatusEvent());
+            return true;
+        }
+        if (type == "mapGpu") {
+            if (command.contains("mask")) {
+                const auto& mask = command.at("mask");
+                if (!mask.is_number_integer() || mask < 0 || mask > 3)
+                    throw std::invalid_argument("地图 GPU 开关值无效");
+                MapGpuSettings::Mask().store(mask.get<int>());
+            }
+            const auto status = RuntimeStatus::Snapshot();
+            SendAck(events, command, true, "", {
+                {"mask", MapGpuSettings::Mask().load()}, {"pid", GetCurrentProcessId()},
+                {"coreState", status.coreState}, {"gameFocused", status.gameFocused},
+                {"localization", status.localization}, {"minimapBatches", MapGpuSettings::minimapBatches.load()},
+                {"minimapGpuBatches", MapGpuSettings::minimapGpuBatches.load()},
+                {"viewportExtractions", MapGpuSettings::viewportExtractions.load()},
+                {"viewportGpuExtractions", MapGpuSettings::viewportGpuExtractions.load()}});
             return true;
         }
         if (type == "routePlanning") {

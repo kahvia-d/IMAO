@@ -12,6 +12,7 @@
 #include "../Feature/Match/UniqueMapFeatures.h"
 #include "../Feature/VisualIndex/VisualIndexRetrieval.h"
 #include "../Runtime/ThreadPriority.h"
+#include "../Runtime/MapGpuSettings.h"
 #include "../Diagnostics/Diagnostics.h"
 #include "../Diagnostics/ReproCapture.h"
 #include "../Runtime/FrameStorageAccounting.h"
@@ -595,19 +596,15 @@ private:
                     if (measure) Diagnostics::RecordMemory(sample + "-before");
                     ImageFeatureData features;
                     ViewportSurfStatistics statistics;
-                    static const bool enableGpu = [] {
-                        char value[4]{};
-                        size_t length = 0;
-                        return getenv_s(&length, value, sizeof(value), "IMAO_VIEWPORT_GPU") == 0 &&
-                            length == 2 && value[0] == '1';
-                    }();
                     GpuViewportSurf* gpu = nullptr;
-                    if (request.scope == MapViewportSearchScope::Global && enableGpu) {
+                    if (request.scope == MapViewportSearchScope::Global) ++MapGpuSettings::viewportExtractions;
+                    if (request.scope == MapViewportSearchScope::Global && MapGpuSettings::ViewportEnabled()) {
                         if (!gpuSurf_) gpuSurf_ = std::make_unique<GpuViewportSurf>();
                         if (gpuSurf_->Failure().empty()) gpu = gpuSurf_.get();
                     }
                     ExtractViewportSurf(gray, features.imgKeypoints, features.imgDescriptors, interrupted, &statistics, gpu);
                     gpuSurfOctaves += statistics.gpuOctaves;
+                    if (statistics.gpuOctaves) ++MapGpuSettings::viewportGpuExtractions;
                     if (gpu && statistics.gpuOctaves < 4)
                         Diagnostics::Record("viewport-gpu-fallback", gpu->Failure().empty() ?
                             "CPU octave used for input or peak capacity" : gpu->Failure());

@@ -221,6 +221,7 @@ public partial class App : Application
                 await CloseCleanlyAsync();
             };
             RuntimeServicesInitialized = true;
+            GetService<CoreHostService>().StartMapGpuObserver();
             if (ProgramLaunchSession.IsManaged)
             {
                 try

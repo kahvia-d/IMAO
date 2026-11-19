@@ -34,6 +34,7 @@
     <Compile Include="../../IMao-WinUI/Models/MapFilterCatalog.cs" Link="MapFilterCatalog.cs" />
     <Compile Include="../../IMao-WinUI/Helpers/UserDataPaths.cs" Link="UserDataPaths.cs" />
     <Compile Include="../../IMao-WinUI/Services/CoreHostService.cs" Link="CoreHostService.cs" />
+    <Compile Include="../../IMao-WinUI/Services/CoreHostService.MapGpu.cs" Link="CoreHostService.MapGpu.cs" />
     <Compile Include="../../IMao-WinUI/Services/GamepadDiagnosticLog.cs" Link="GamepadDiagnosticLog.cs" />
     <Compile Include="../../IMao-WinUI/Services/LocalMarkerProfileSelection.cs" Link="LocalMarkerProfileSelection.cs" />
     <Compile Include="../../IMao-WinUI/Services/LocalAccountCatalog.cs" Link="LocalAccountCatalog.cs" />
