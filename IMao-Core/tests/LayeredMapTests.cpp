@@ -237,6 +237,12 @@ int main() {
             Require(LayeredMap::ConsumeMinimap(1, x, y, 1, 1), "next valid tie consumed");
         }
         Require(LayeredMap::Read().active, "three valid 10:10 local ties still adopt a floor");
+        Require(LayeredMap::NeedsMinimapClassification(1, 0, 0), "已激活楼层时即使在轮廓外也必须继续分类以便退出");
+        LayeredMap::Reset();
+        LayeredMap::SetEntriesForTest(1, {first, second}, transform);
+        Require(!LayeredMap::NeedsMinimapClassification(1, 0, 0), "已知场景且不在任何分层轮廓内时应跳过暴力匹配");
+        Require(LayeredMap::NeedsMinimapClassification(1, x, y), "进入分层轮廓内时应立即启用楼层分类");
+        Require(LayeredMap::NeedsMinimapClassification(0, 0, 0), "冷启动未知场景时必须保留楼层分类");
         LayeredMap::Reset();
     }
         // No floor known: nothing changes, layered markers keep their badge.

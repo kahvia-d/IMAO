@@ -16,7 +16,9 @@ public sealed record RuntimeConfiguration
     // before a bump carries a value that was never a deliberate choice, so the store migrates it once
     // and a player who changes the setting afterwards is recorded with the current version and never
     // migrated again.
-    public const int CurrentSchemaVersion = 5;
+    // 版本 6 引入性能与刷新档位（默认 1 = 均衡），统一联动采集帧率上限、大/小地图识别间隔、坐标 OCR 间隔
+    // 与后台视觉探针频率；旧配置若用户手动调整过大小地图刷新间隔则迁移到自定义（3），否则迁移到均衡（1）。
+    public const int CurrentSchemaVersion = 6;
     public int ConfigVersion { get; init; } = CurrentSchemaVersion;
 
     // 1 = Windows Graphics Capture: it never asks the game window to render into a device context, and
@@ -27,6 +29,14 @@ public sealed record RuntimeConfiguration
     // but not as a promise: see Docs/GameFrameCostAnalysis_20260918.md section 22 for why the frame-rate
     // claim that made it the default was withdrawn.
     public int OverlayPresentMode { get; init; } = 0;
+    // 性能与刷新档位：0 = 流畅优先，1 = 均衡（默认），2 = 低占用（省帧率），3 = 自定义。
+    public int PerformanceProfile { get; init; } = 1;
+    // 自定义档位下的采集帧率上限（FPS，5–60）。
+    public int CaptureMaxFps { get; init; } = 20;
+    // 自定义档位下的坐标 OCR 识别间隔（毫秒，50–1000）。
+    public int OcrUpdateCycle { get; init; } = 150;
+    // 小地图标记平滑过渡：纯绘制层轻度向后缓动，不影响真实定位与快捷键判定，默认开启。
+    public bool MinimapMarkerSmoothingEnabled { get; init; } = true;
     public int MapUpdateCycle { get; init; } = 80;
     public int MinMapUpdateCycle { get; init; } = 80;
     public bool MapEnabled { get; init; } = true;
@@ -106,6 +116,9 @@ public sealed record RuntimeConfiguration
             throw new ArgumentException("图标合并重叠阈值必须在 1–100 之间");
         if (CaptureWay is < 0 or > 1) throw new ArgumentException("截图方式无效");
         if (OverlayPresentMode is < 0 or > 1) throw new ArgumentException("叠加层呈现方式无效");
+        if (PerformanceProfile is < 0 or > 3) throw new ArgumentException("性能与刷新档位无效");
+        if (CaptureMaxFps is < 5 or > 60) throw new ArgumentException("采集帧率上限必须在 5–60 FPS 之间");
+        if (OcrUpdateCycle is < 50 or > 1000) throw new ArgumentException("坐标 OCR 识别间隔必须在 50–1000 毫秒之间");
         if (MapUpdateCycle is < 16 or > 1000 || MinMapUpdateCycle is < 16 or > 1000)
             throw new ArgumentException("刷新间隔必须在 16–1000 毫秒之间");
         if (GamepadDeviceId is null || GamepadDeviceId.Length > 1024 || !Enum.IsDefined(GamepadButtonLayout))
@@ -137,6 +150,17 @@ public sealed record RuntimeConfiguration
         _ => "未知按键"
     };
 
+    /// <summary>
+    /// 返回当前档位在界面上展示的生效摘要说明，便于玩家直观理解各场景的实际采集与识别频率。
+    /// </summary>
+    public string DescribePerformanceProfile() => PerformanceProfile switch
+    {
+        0 => "大地图 30 fps（识别 80 ms）· 小地图视觉 1:1 对齐 80 ms · OCR 模式自动对齐 100 ms",
+        1 => "大地图 20 fps（识别 100 ms）· 小地图视觉 1:1 对齐 100 ms · OCR 模式自动对齐 150 ms",
+        2 => "大地图 12 fps（识别 160 ms）· 小地图视觉 1:1 对齐 160 ms · OCR 模式自动对齐 200 ms",
+        _ => $"自定义：大地图上限 {CaptureMaxFps} fps（识别 {MapUpdateCycle} ms）· 小地图视觉 1:1 对齐 {MinMapUpdateCycle} ms · OCR 自动对齐 {OcrUpdateCycle} ms"
+    };
+
     internal Dictionary<string, object?> ToPayload() => new()
     {
         ["minimapStatusScalePercent"] = MinimapStatusScalePercent,
@@ -150,6 +174,10 @@ public sealed record RuntimeConfiguration
         ["handNodeScalePercent"] = HandNodeScalePercent,
         ["statusBallScalePercent"] = StatusBallScalePercent,
         ["captureWay"] = CaptureWay, ["overlayPresentMode"] = OverlayPresentMode,
+        ["performanceProfile"] = PerformanceProfile,
+        ["captureMaxFps"] = CaptureMaxFps,
+        ["ocrUpdateCycle"] = OcrUpdateCycle,
+        ["minimapMarkerSmoothingEnabled"] = MinimapMarkerSmoothingEnabled,
         ["mapUpdateCycle"] = MapUpdateCycle,
         ["minMapUpdateCycle"] = MinMapUpdateCycle, ["mapEnabled"] = MapEnabled,
         ["minMapEnabled"] = MinMapEnabled, ["savedPointsEnabled"] = SavedPointsEnabled,

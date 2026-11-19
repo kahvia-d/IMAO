@@ -49,6 +49,8 @@ public:
 
     winrt::Windows::Foundation::TimeSpan MinUpdateInterval() { CheckClosed(); return m_session.MinUpdateInterval(); }
     void MinUpdateInterval(winrt::Windows::Foundation::TimeSpan value) { CheckClosed(); m_session.MinUpdateInterval(value); }
+    /// 运行时动态调整 WGC 会话的最小更新间隔（仅在支持且目标值发生变化时下发）。
+    void SetMinUpdateInterval(std::chrono::microseconds interval);
 
     void Close() noexcept;
 
@@ -158,6 +160,8 @@ private:
     std::shared_ptr<CaptureCallbackGate<SimpleCapture>> m_callbackGate;
     winrt::event_token m_frameArrivedToken{};
     std::mutex m_closeMutex;
+    bool m_minUpdateIntervalSupported = false;
+    std::chrono::microseconds m_appliedMinUpdateInterval{0};
     winrt::Windows::Graphics::Capture::GraphicsCaptureItem m_item{ nullptr };
     winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool m_framePool{ nullptr };
     winrt::Windows::Graphics::Capture::GraphicsCaptureSession m_session{ nullptr };

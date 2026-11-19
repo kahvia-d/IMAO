@@ -69,21 +69,40 @@ SimpleCapture::SimpleCapture(
 // the interval recorded here is what the diagnostics attribute the measured readback rate to.
 void SimpleCapture::ApplyMinUpdateInterval()
 {
-    const auto interval = std::chrono::duration_cast<winrt::Windows::Foundation::TimeSpan>(
-        OverlayPacing::kCaptureMinUpdateInterval);
     try
     {
         if (!winrt::ApiInformation::IsPropertyPresent(
             winrt::name_of<winrt::GraphicsCaptureSession>(), L"MinUpdateInterval"))
         {
+            m_minUpdateIntervalSupported = false;
             StructuredLogger::Record("info", "capture", "capture-wgc-rate-limit",
                 "applied=0 reason=unsupported requestedMs=" +
                 std::to_string(OverlayPacing::kCaptureMinUpdateInterval.count() / 1000.0));
             return;
         }
-        m_session.MinUpdateInterval(interval);
+        m_minUpdateIntervalSupported = true;
+        SetMinUpdateInterval(OverlayPacing::kCaptureMinUpdateInterval);
+    }
+    catch (const winrt::hresult_error& error)
+    {
+        RecordFrameDiagnostic("capture-wgc-rate-limit-error",
+            "hr=" + std::to_string(static_cast<long>(error.code().value)));
+    }
+}
+
+void SimpleCapture::SetMinUpdateInterval(std::chrono::microseconds interval)
+{
+    if (interval <= std::chrono::microseconds::zero()) return;
+    std::lock_guard<std::mutex> lock(m_closeMutex);
+    if (m_closed.load() || !m_minUpdateIntervalSupported || !m_session) return;
+    if (m_appliedMinUpdateInterval == interval) return;
+    try
+    {
+        const auto duration = std::chrono::duration_cast<winrt::Windows::Foundation::TimeSpan>(interval);
+        m_session.MinUpdateInterval(duration);
+        m_appliedMinUpdateInterval = interval;
         StructuredLogger::Record("info", "capture", "capture-wgc-rate-limit",
-            "applied=1 intervalMs=" + std::to_string(interval.count() / 10000.0));
+            "applied=1 intervalMs=" + std::to_string(duration.count() / 10000.0));
     }
     catch (const winrt::hresult_error& error)
     {

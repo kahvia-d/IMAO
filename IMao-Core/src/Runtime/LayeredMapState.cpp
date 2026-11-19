@@ -665,6 +665,19 @@ void CancelPending() {
     lastAsyncSubmitAt = {};
 }
 
+bool NeedsMinimapClassification(int scene, double x, double y) {
+    std::lock_guard lock(stateMutex);
+    if (entries->empty()) return false;
+    // 冷启动未知场景、当前已激活楼层或处于共享地面时，必须保持分类运行。
+    if (scene == 0 || current.active || current.sharedGround) return true;
+    for (const auto& entry : *entries) {
+        if (entry.sceneId == scene && LayeredFloors::Contains(entry.floor, entry.transform, x, y)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool QueueMinimap(const ImageFeatureData& features, int scene, std::uint64_t session, std::uint64_t generation, double x, double y) {
     if (features.imgDescriptors.empty() || !classifier.CanSubmit()) return false;
     const auto now = std::chrono::steady_clock::now();

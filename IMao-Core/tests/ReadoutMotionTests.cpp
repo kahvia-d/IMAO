@@ -14,6 +14,12 @@ int main(){try{
  Check(work.VisualDue(true,t+160ms),"visual recovery must not starve");
  Check(work.VisualDue(false,t+170ms),"SURF normal path must remain unrestricted");
  Check(ReadoutWorkSchedule::SubmissionInterval()==100ms,"active worker must accept 10Hz submissions");
+ {
+  ReadoutWorkSchedule customWork;
+  Check(customWork.VisualDue(true,t,600ms),"自定义探针间隔首次应允许触发");
+  Check(!customWork.VisualDue(true,t+400ms,600ms),"未满自定义探针间隔时不应提前触发");
+  Check(customWork.VisualDue(true,t+600ms,600ms),"到达自定义探针间隔后应正常触发");
+ }
  OverlayVisibilityGap gap;
  Check(gap.Observe(true,true,t)==OverlayVisibilityGap::Event::None,"visible frame is not a gap");
  Check(gap.Observe(true,false,t+33ms)==OverlayVisibilityGap::Event::Started,"publisher rejection starts gap too");

@@ -236,25 +236,85 @@
 
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="200" /></Grid.ColumnDefinitions>
                                     <StackPanel Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="小地图刷新间隔（毫秒）" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="范围 16 ~ 1000 ms" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        <TextBlock Text="性能与刷新档位" FontSize="13.5" FontWeight="SemiBold" />
+                                        <TextBlock x:Name="PerformanceProfileSummary"
+                                                   Text="按当前场景动态调整采集频率与识别间隔，即时生效"
+                                                   FontSize="12" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                     </StackPanel>
-                                    <NumberBox x:Name="UpdateMinMapItemDataCycle" Grid.Column="1" Minimum="16" Maximum="1000" SmallChange="10"
-                                               SpinButtonPlacementMode="Compact" VerticalAlignment="Center" ValueChanged="UpdateMinMapItemDataCycle_ValueChanged" />
+                                    <ComboBox x:Name="ComboBox_PerformanceProfile" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectionChanged="PerformanceProfile_SelectionChanged">
+                                        <x:String>流畅优先</x:String>
+                                        <x:String>均衡（推荐）</x:String>
+                                        <x:String>低占用（省帧率）</x:String>
+                                        <x:String>自定义</x:String>
+                                    </ComboBox>
                                 </Grid>
                             </Border>
 
+                            <StackPanel x:Name="CustomPacingPanel" Spacing="8" Visibility="Collapsed">
+                                <Border Style="{StaticResource IMaoSettingRowStyle}">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="采集帧率上限（FPS）" FontSize="13.5" FontWeight="SemiBold" />
+                                            <TextBlock Text="范围 5 ~ 60 FPS；OCR 模式下自动对齐 OCR 间隔" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        </StackPanel>
+                                        <NumberBox x:Name="CaptureMaxFpsBox" Grid.Column="1" Minimum="5" Maximum="60" SmallChange="1"
+                                                   SpinButtonPlacementMode="Compact" VerticalAlignment="Center" ValueChanged="CaptureMaxFpsBox_ValueChanged" />
+                                    </Grid>
+                                </Border>
+
+                                <Border Style="{StaticResource IMaoSettingRowStyle}">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="小地图刷新间隔（毫秒）" FontSize="13.5" FontWeight="SemiBold" />
+                                            <TextBlock Text="范围 16 ~ 1000 ms" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        </StackPanel>
+                                        <NumberBox x:Name="UpdateMinMapItemDataCycle" Grid.Column="1" Minimum="16" Maximum="1000" SmallChange="10"
+                                                   SpinButtonPlacementMode="Compact" VerticalAlignment="Center" ValueChanged="UpdateMinMapItemDataCycle_ValueChanged" />
+                                    </Grid>
+                                </Border>
+
+                                <Border Style="{StaticResource IMaoSettingRowStyle}">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="大地图刷新间隔（毫秒）" FontSize="13.5" FontWeight="SemiBold" />
+                                            <TextBlock Text="范围 16 ~ 1000 ms" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        </StackPanel>
+                                        <NumberBox x:Name="UpdateMapItemDataCycle" Grid.Column="1" Minimum="16" Maximum="1000" SmallChange="10"
+                                                   SpinButtonPlacementMode="Compact" VerticalAlignment="Center" ValueChanged="UpdateMapItemDataCycle_ValueChanged" />
+                                    </Grid>
+                                </Border>
+
+                                <Border Style="{StaticResource IMaoSettingRowStyle}">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="坐标 OCR 识别间隔（毫秒）" FontSize="13.5" FontWeight="SemiBold" />
+                                            <TextBlock Text="范围 50 ~ 1000 ms" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        </StackPanel>
+                                        <NumberBox x:Name="OcrUpdateCycleBox" Grid.Column="1" Minimum="50" Maximum="1000" SmallChange="10"
+                                                   SpinButtonPlacementMode="Compact" VerticalAlignment="Center" ValueChanged="OcrUpdateCycleBox_ValueChanged" />
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                     <StackPanel Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="大地图刷新间隔（毫秒）" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="范围 16 ~ 1000 ms" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
+                                        <TextBlock Text="小地图标记平滑过渡" FontSize="13.5" FontWeight="SemiBold" />
+                                        <TextBlock Text="纯绘制层轻度缓动过渡，不影响真实定位与快捷键判定，静止时自动停画"
+                                                   FontSize="12" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                     </StackPanel>
-                                    <NumberBox x:Name="UpdateMapItemDataCycle" Grid.Column="1" Minimum="16" Maximum="1000" SmallChange="10"
-                                               SpinButtonPlacementMode="Compact" VerticalAlignment="Center" ValueChanged="UpdateMapItemDataCycle_ValueChanged" />
+                                    <ToggleSwitch x:Name="ToggleSwitch_MinimapMarkerSmoothing" Grid.Column="1" MinWidth="0"
+                                                  OnContent="开" OffContent="关" VerticalAlignment="Center"
+                                                  Toggled="MinimapMarkerSmoothing_Toggled" />
                                 </Grid>
                             </Border>
 

@@ -7,10 +7,13 @@ public:
  using Clock=std::chrono::steady_clock;
  static constexpr std::chrono::milliseconds SubmissionInterval(){return std::chrono::milliseconds(100);}
  static constexpr std::chrono::milliseconds ServiceInterval(){return std::chrono::milliseconds(20);}
- bool VisualDue(bool readoutActive,Clock::time_point now){
+ bool VisualDue(bool readoutActive,Clock::time_point now,std::chrono::milliseconds interval){
   if(!readoutActive){lastVisual_={};return true;}
-  if(lastVisual_!=Clock::time_point{}&&now>=lastVisual_&&now-lastVisual_<std::chrono::milliseconds(150))return false;
+  if(lastVisual_!=Clock::time_point{}&&now>=lastVisual_&&now-lastVisual_<interval)return false;
   lastVisual_=now;return true;
+ }
+ bool VisualDue(bool readoutActive,Clock::time_point now){
+  return VisualDue(readoutActive,now,std::chrono::milliseconds(150));
  }
  bool SubmissionDue(Clock::time_point now,std::chrono::milliseconds cadence){
   if(cadence_!=cadence){cadence_=cadence;nextSubmission_={};}

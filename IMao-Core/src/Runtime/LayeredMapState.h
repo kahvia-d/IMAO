@@ -109,6 +109,8 @@ void ObserveMinimap(const ImageFeatureData& minimapFeatures, int sceneId, double
 
 // Localization-thread-only lifecycle. Background work owns an immutable index and never
 // mutates state. Consume rechecks context and current-position containment before adoption.
+// 判断当前坐标与状态是否需要跑异步楼层分类：非冷启动、未处于楼层且不在任何分层轮廓内时直接跳过，避免旷野每秒白跑全图暴力匹配。
+bool NeedsMinimapClassification(int scene, double x, double y);
 bool QueueMinimap(const ImageFeatureData& features, int scene, std::uint64_t session, std::uint64_t generation, double x, double y);
 bool ConsumeMinimap(int scene, double x, double y, std::uint64_t session, std::uint64_t generation);
 void CancelPending();

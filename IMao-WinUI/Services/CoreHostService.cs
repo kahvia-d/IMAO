@@ -333,7 +333,11 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         int? minimapMarkerScalePercent = null,
         int? handPaletteScalePercent = null,
         int? handNodeScalePercent = null,
-        int? statusBallScalePercent = null)
+        int? statusBallScalePercent = null,
+        int? performanceProfile = null,
+        int? captureMaxFps = null,
+        int? ocrUpdateCycle = null,
+        bool? minimapMarkerSmoothingEnabled = null)
     {
         await lifecycleLock.WaitAsync(cancellationToken);
         try
@@ -367,6 +371,10 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                     StatusBallScalePercent = statusBallScalePercent ?? old.StatusBallScalePercent,
                     CaptureWay = captureWay ?? old.CaptureWay,
                     OverlayPresentMode = overlayPresentMode ?? old.OverlayPresentMode,
+                    PerformanceProfile = performanceProfile ?? old.PerformanceProfile,
+                    CaptureMaxFps = captureMaxFps ?? old.CaptureMaxFps,
+                    OcrUpdateCycle = ocrUpdateCycle ?? old.OcrUpdateCycle,
+                    MinimapMarkerSmoothingEnabled = minimapMarkerSmoothingEnabled ?? old.MinimapMarkerSmoothingEnabled,
                     MapUpdateCycle = mapUpdateCycle ?? old.MapUpdateCycle,
                     MinMapUpdateCycle = minMapUpdateCycle ?? old.MinMapUpdateCycle,
                     MapEnabled = mapEnabled ?? old.MapEnabled, MinMapEnabled = minMapEnabled ?? old.MinMapEnabled,

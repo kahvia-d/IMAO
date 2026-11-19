@@ -462,6 +462,10 @@ bool ApplyConfigure(const json& command) {
     };
     const auto capture = integer("captureWay", 0, 1);
     const auto present = integer("overlayPresentMode", 0, 1);
+    const auto profile = integer("performanceProfile", 0, 3);
+    const auto captureMaxFps = integer("captureMaxFps", 5, 60);
+    const auto ocrCycle = integer("ocrUpdateCycle", 50, 1000);
+    const auto minimapSmoothing = boolean("minimapMarkerSmoothingEnabled");
     const auto mapCycle = integer("mapUpdateCycle", 16, 1000);
     const auto miniCycle = integer("minMapUpdateCycle", 16, 1000);
     const auto map = boolean("mapEnabled");
@@ -489,6 +493,10 @@ bool ApplyConfigure(const json& command) {
     const auto hotkeys = RuntimeHotkeys::ValidateConfiguration(command);
     if (capture) SetCaptureWay(*capture);
     if (present) SetOverlayPresentMode(*present);
+    if (profile) SetPerformanceProfile(*profile);
+    if (captureMaxFps) SetCaptureMaxFps(*captureMaxFps);
+    if (ocrCycle) SetOcrUpdateCycle(*ocrCycle);
+    if (minimapSmoothing) SetMinimapMarkerSmoothingEnabled(*minimapSmoothing);
     if (mapCycle) SetMapDataUpdateCycle(*mapCycle);
     if (miniCycle) SetMinMapDataUpdateCycle(*miniCycle);
     if (map) EnabledMapShowItem(*map);

@@ -49,6 +49,10 @@ using namespace cv;
 
 std::atomic_int App::updateMapDataCycleTime = 80;
 std::atomic_int App::updateMinMapDataCycleTime = 80;
+std::atomic_int App::performanceProfile = 1;
+std::atomic_int App::captureMaxFps = 20;
+std::atomic_int App::ocrUpdateCycleTime = 150;
+std::atomic_bool App::minimapMarkerSmoothingEnabled = true;
 std::atomic_bool App::enabledMapShowItem = false;
 std::atomic_bool App::enabledMinMapShowItem = false;
 
@@ -287,7 +291,18 @@ void App::Thread_Capture() {
                         {"sourceSequence", sequence}, {"stage", "capture-published"}});
                     ReproCapture::Record("capture-published", {{"capturedSteadyMs",
                         std::chrono::duration_cast<std::chrono::milliseconds>(capturedAt.time_since_epoch()).count()}});
-                    capturedFrames.Publish({frameId, std::move(image), captureRect, capturedAt, std::chrono::milliseconds(250),geometryRevision});
+                    // 按当前档位与场景的采集周期动态计算帧有效期，避免低频档位误判帧过期。
+                    const auto currentPacing = CurrentEffectivePacing();
+                    const auto publishScenario = isOpenMap.load()
+                        ? OverlayPacing::CaptureScenario::BigMap
+                        : (isExistMinMap.load()
+                            ? (readoutActiveForCapture.load()
+                                ? OverlayPacing::CaptureScenario::MinimapReadout
+                                : OverlayPacing::CaptureScenario::MinimapVisual)
+                            : OverlayPacing::CaptureScenario::Idle);
+                    const auto frameMaxAge = OverlayPacing::CaptureFrameMaxAge(
+                        OverlayPacing::ResolveBaseCapturePeriod(currentPacing, publishScenario));
+                    capturedFrames.Publish({frameId, std::move(image), captureRect, capturedAt, frameMaxAge, geometryRevision});
                     localizationSignal->NotifyCapture();
                     ++published;
                     // Once per session, after a real frame has travelled the whole capture path: this is the
@@ -316,14 +331,25 @@ void App::Thread_Capture() {
                     : elapsed < 300 ? static_cast<int>(elapsed) + 30
                     : static_cast<int>(elapsed) + 60;
             }
-            // The window capture runs synchronously against the game, so it only follows the overlay
-            // rate while an overlay is attached to fresh pixels; otherwise it runs at the recognition
-            // cadence and asks the game for far fewer extra frames.
+            // 按“性能档位 × 当前场景”动态决定采集周期，并同步下发给 WGC MinUpdateInterval 在源头限频。
             const auto presented = presentedOverlay.Read();
-            const bool overlayActive = isOpenMap.load() || isExistMinMap.load() ||
-                ((presented->mapVisible || presented->minimapVisible) &&
-                 now - presented->presentedAt < std::chrono::milliseconds(500));
-            const auto capturePeriod = OverlayPacing::CapturePeriod(overlayActive, slowCapture);
+            const bool presentedRecent = (presented->mapVisible || presented->minimapVisible) &&
+                now - presented->presentedAt < std::chrono::milliseconds(500);
+            const auto scenario = (isOpenMap.load() || (presentedRecent && presented->mapVisible))
+                ? OverlayPacing::CaptureScenario::BigMap
+                : ((isExistMinMap.load() || (presentedRecent && presented->minimapVisible))
+                    ? (readoutActiveForCapture.load()
+                        ? OverlayPacing::CaptureScenario::MinimapReadout
+                        : OverlayPacing::CaptureScenario::MinimapVisual)
+                    : OverlayPacing::CaptureScenario::Idle);
+            const auto pacing = CurrentEffectivePacing();
+            const auto baseCapturePeriod = OverlayPacing::ResolveBaseCapturePeriod(pacing, scenario);
+            if (graphicsCapture) {
+                if (auto capture = graphicsCapture->Getcapture()) {
+                    capture->SetMinUpdateInterval(baseCapturePeriod);
+                }
+            }
+            const auto capturePeriod = OverlayPacing::ResolveScenarioCapturePeriod(pacing, scenario, slowCapture);
             if (now - reportAt >= std::chrono::seconds(2)) {
                 if (FrameStorage::ActiveAllocator()) {
                     const auto publishedPixels = capturedFrames.Read();
@@ -336,6 +362,8 @@ void App::Thread_Capture() {
                 }
                 Diagnostics::Record("capture-cadence", "fps=" + std::to_string(published /
                     std::chrono::duration<double>(now - reportAt).count()) + " independentOfLocalization=1" +
+                    " profile=" + std::string(OverlayPacing::PerformanceProfileName(pacing.profile)) +
+                    " scenario=" + std::string(OverlayPacing::CaptureScenarioName(scenario)) +
                     " captureAvgMs=" + std::to_string(captureAttempts ? captureTotalMs / captureAttempts : 0.0) +
                     " captureMaxMs=" + std::to_string(captureMaxMs) +
                     " captureSlow=" + std::to_string(slowCaptures) +
@@ -400,15 +428,17 @@ winrt::IAsyncAction App::Start() {
             LocalizationLatencyTrace::Scope phase(localizationLatency, "result-ready-check", latest->frameId);
             resultReady = IdentifyWorldCoordinates::HasLatestResult() || readoutVisualWorker.HasResult();
         }
+        const auto pacing = CurrentEffectivePacing();
+        readoutActiveForCapture.store(coordinateHandoff.ReadoutActive());
         const bool timerReady = serviceContext && serviceCaptureFresh && coordinateHandoff.ReadoutActive() && !ocrRequestInFlight &&
             latest->frameId != lastOcrSubmittedFrame && serviceNow - lastOcrSubmitAt >= std::chrono::milliseconds(50) &&
-            readoutWorkSchedule.SubmissionDue(serviceNow, ReadoutWorkSchedule::SubmissionInterval());
+            readoutWorkSchedule.SubmissionDue(serviceNow, pacing.ocrSubmissionInterval);
         if (latest->image.empty() || (!newCapture && !resultReady && !timerReady)) {
             if (latest->image.empty()) overlayFrames.Publish({});
             auto deadline = serviceNow + std::chrono::milliseconds(100);
             if (serviceContext && serviceCaptureFresh && coordinateHandoff.ReadoutActive() && !ocrRequestInFlight && latest->frameId != lastOcrSubmittedFrame)
                 deadline = std::max(lastOcrSubmitAt + std::chrono::milliseconds(50),
-                    readoutWorkSchedule.NextSubmission(serviceNow, ReadoutWorkSchedule::SubmissionInterval()));
+                    readoutWorkSchedule.NextSubmission(serviceNow, pacing.ocrSubmissionInterval));
             waitDeadline = deadline;
         } else {
         localizationServiceOnly = !newCapture;
@@ -583,7 +613,7 @@ winrt::IAsyncAction App::Start() {
             mapFilterMs = std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - filterStarted).count();
 
-			cycleTime = App::updateMapDataCycleTime.load();
+			cycleTime = pacing.mapUpdateCycleMs;
 		}else {
 			DrawItemOnGameMap::ClearNearItemsData();
 		}
@@ -673,7 +703,7 @@ winrt::IAsyncAction App::Start() {
             }
 
             cycleTime = coordinateHandoff.ReadoutActive()
-                ? static_cast<int>(ReadoutWorkSchedule::ServiceInterval().count()) : App::updateMinMapDataCycleTime.load();
+                ? static_cast<int>(ReadoutWorkSchedule::ServiceInterval().count()) : pacing.minMapUpdateCycleMs;
 		}else{
 			DrawItemOnMinMap::ClearNearItemsData();
 		}
@@ -739,7 +769,7 @@ winrt::IAsyncAction App::Start() {
             if (CaptureContinuity::Fresh(true,snapshotCapturedAt,CoordinateHandoff::Clock::now(),captured.maximumAge) &&
                 coordinateHandoff.ReadoutActive() && !ocrRequestInFlight && snapshotFrameId != lastOcrSubmittedFrame)
                 deadline = std::min(deadline, std::max(lastOcrSubmitAt + std::chrono::milliseconds(50),
-                    readoutWorkSchedule.NextSubmission(CoordinateHandoff::Clock::now(), ReadoutWorkSchedule::SubmissionInterval())));
+                    readoutWorkSchedule.NextSubmission(CoordinateHandoff::Clock::now(), pacing.ocrSubmissionInterval)));
             waitDeadline = deadline;
             waitOnCaptures = coordinateHandoff.ReadoutActive();
 		}
@@ -1513,8 +1543,11 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 	// player is still standing in the known floor's cave.
     {
         LocalizationLatencyTrace::Scope phase(localizationLatency, "layered-observe", snapshotFrameId);
-	LayeredMap::QueueMinimap(minMapFeatureData, playerCurrentSceneId, coordinateSessionId, coordinateUiGeneration,
-        lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y);
+        if (LayeredMap::NeedsMinimapClassification(playerCurrentSceneId,
+            lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y)) {
+            LayeredMap::QueueMinimap(minMapFeatureData, playerCurrentSceneId, coordinateSessionId, coordinateUiGeneration,
+                lastPlayerImgMapCoordinate.x, lastPlayerImgMapCoordinate.y);
+        }
     }
 	if (std::chrono::steady_clock::now() - lastMinimapFeatureReportAt >= std::chrono::seconds(2)) {
 		lastMinimapFeatureReportAt = std::chrono::steady_clock::now();
@@ -2228,8 +2261,10 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
 			ocrRequestInFlight.has_value()) return;
         if (snapshotFrameId == lastOcrSubmittedFrame) return;
         const auto submitNow = CoordinateHandoff::Clock::now();
-        if (submitNow < snapshotCapturedAt || submitNow - snapshotCapturedAt >= std::chrono::milliseconds(250)) return;
-        const auto cadence = coordinateHandoff.ReadoutActive() ? ReadoutWorkSchedule::SubmissionInterval() :
+        const auto pacing = CurrentEffectivePacing();
+        const auto ocrFrameMaxAge = OverlayPacing::CaptureFrameMaxAge(pacing.minimapReadoutCapturePeriod);
+        if (submitNow < snapshotCapturedAt || submitNow - snapshotCapturedAt >= ocrFrameMaxAge) return;
+        const auto cadence = coordinateHandoff.ReadoutActive() ? pacing.ocrSubmissionInterval :
             (stalledTracker ? std::chrono::milliseconds(250) : coordinateHandoff.Cadence(submitNow));
         if (coordinateHandoff.ReadoutActive()) {
             if (!readoutWorkSchedule.SubmissionDue(submitNow, cadence) ||
@@ -2363,8 +2398,11 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
                 const auto layerStarted = CoordinateHandoff::Clock::now();
                 {
                     LocalizationLatencyTrace::Scope layerPhase(localizationLatency, "layered-observe", snapshotFrameId);
-                    LayeredMap::QueueMinimap(minMapFeatureData, playerCurrentSceneId, coordinateSessionId, coordinateUiGeneration,
-                        probe.source.center.x, probe.source.center.y);
+                    if (LayeredMap::NeedsMinimapClassification(playerCurrentSceneId,
+                        probe.source.center.x, probe.source.center.y)) {
+                        LayeredMap::QueueMinimap(minMapFeatureData, playerCurrentSceneId, coordinateSessionId, coordinateUiGeneration,
+                            probe.source.center.x, probe.source.center.y);
+                    }
                 }
                 const auto layerEnded = CoordinateHandoff::Clock::now();
                 bool committed = false;
@@ -2416,7 +2454,7 @@ winrt::IAsyncOperation<bool> App::GetMinMapPlayerROC(const Mat& snapshot, Coordi
             readoutVisualWorker.Cancel();
             pendingReadoutGlobalCandidate.reset();
         } else if (!localizationServiceOnly && readoutVisualWorker.CanSubmit() && snapshotFrameId != lastReadoutVisualSubmittedFrame &&
-            readoutWorkSchedule.VisualDue(true, CoordinateHandoff::Clock::now())) {
+            readoutWorkSchedule.VisualDue(true, CoordinateHandoff::Clock::now(), CurrentEffectivePacing().readoutVisualProbeInterval)) {
             LocalizationLatencyTrace::Scope phase(localizationLatency, "probe-submit", snapshotFrameId);
             ReadoutVisualRequest request;
             request.session = coordinateSessionId; request.generation = coordinateUiGeneration;
@@ -3402,8 +3440,11 @@ void App::PublishOverlayFrame(const CapturedFrame& requestedCapture, const MapVi
     frame.geometryRevision=captured.geometryRevision;
     frame.frameId = captured.frameId; frame.clientRect = captured.clientRect; frame.capturedAt = captured.capturedAt;
     frame.positionFrameId = routeFixSequence;
-    frame.maximumAge = std::chrono::milliseconds(std::max(500, 2 * std::max(
-        updateMapDataCycleTime.load(), updateMinMapDataCycleTime.load())));
+    const auto pacing = CurrentEffectivePacing();
+    frame.maximumAge = std::chrono::milliseconds(std::max({500,
+        2 * pacing.mapUpdateCycleMs,
+        2 * pacing.minMapUpdateCycleMs,
+        3 * static_cast<int>(pacing.ocrSubmissionInterval.count())}));
     if (anchored) frame.maximumAge = captured.maximumAge;
     frame.focused = FrameObserved();
     // "The big map is up" is the debounced UI state's answer, exactly as it is for the minimap below.

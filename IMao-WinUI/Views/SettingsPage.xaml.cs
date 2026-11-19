@@ -818,8 +818,14 @@ public sealed partial class SettingsPage : Page
         // Like the capture method, this is read when an overlay session starts, so it only makes sense
         // to change it while nothing is running.
         ComboBox_PresentMethod.IsEnabled = !coreHost.Status.IsRunning;
+        ComboBox_PerformanceProfile.SelectedIndex = value.PerformanceProfile;
+        PerformanceProfileSummary.Text = value.DescribePerformanceProfile();
+        CustomPacingPanel.Visibility = value.PerformanceProfile == 3 ? Visibility.Visible : Visibility.Collapsed;
+        CaptureMaxFpsBox.Value = value.CaptureMaxFps;
         UpdateMinMapItemDataCycle.Value = value.MinMapUpdateCycle;
         UpdateMapItemDataCycle.Value = value.MapUpdateCycle;
+        OcrUpdateCycleBox.Value = value.OcrUpdateCycle;
+        ToggleSwitch_MinimapMarkerSmoothing.IsOn = value.MinimapMarkerSmoothingEnabled;
         Setting_MinMapShowItem.IsOn = value.MinMapEnabled;
         Setting_MapShowItem.IsOn = value.MapEnabled;
         Setting_SetVisibleSavedPoints.IsOn = value.SavedPointsEnabled;
@@ -861,10 +867,18 @@ public sealed partial class SettingsPage : Page
     { if (ComboBox_CaptureMethod.SelectedIndex >= 0) await SaveRuntimeAsync(() => coreHost.ConfigureAsync(captureWay: ComboBox_CaptureMethod.SelectedIndex)); }
     private async void PresentMethod_SelectionChanged(object sender, SelectionChangedEventArgs e)
     { if (ComboBox_PresentMethod.SelectedIndex >= 0) await SaveRuntimeAsync(() => coreHost.ConfigureAsync(overlayPresentMode: ComboBox_PresentMethod.SelectedIndex)); }
+    private async void PerformanceProfile_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    { if (ComboBox_PerformanceProfile.SelectedIndex >= 0) await SaveRuntimeAsync(() => coreHost.ConfigureAsync(performanceProfile: ComboBox_PerformanceProfile.SelectedIndex)); }
+    private async void CaptureMaxFpsBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
+    { if (double.IsFinite(e.NewValue) && e.NewValue is >= 5 and <= 60) await SaveRuntimeAsync(() => coreHost.ConfigureAsync(captureMaxFps: (int)e.NewValue)); }
     private async void UpdateMinMapItemDataCycle_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
     { if (double.IsFinite(e.NewValue) && e.NewValue is >= 16 and <= 1000) await SaveRuntimeAsync(() => coreHost.ConfigureAsync(minMapUpdateCycle: (int)e.NewValue)); }
     private async void UpdateMapItemDataCycle_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
     { if (double.IsFinite(e.NewValue) && e.NewValue is >= 16 and <= 1000) await SaveRuntimeAsync(() => coreHost.ConfigureAsync(mapUpdateCycle: (int)e.NewValue)); }
+    private async void OcrUpdateCycleBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
+    { if (double.IsFinite(e.NewValue) && e.NewValue is >= 50 and <= 1000) await SaveRuntimeAsync(() => coreHost.ConfigureAsync(ocrUpdateCycle: (int)e.NewValue)); }
+    private async void MinimapMarkerSmoothing_Toggled(object sender, RoutedEventArgs e)
+    { await SaveRuntimeAsync(() => coreHost.ConfigureAsync(minimapMarkerSmoothingEnabled: ToggleSwitch_MinimapMarkerSmoothing.IsOn)); }
     private async void CompletionRange_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
     { if (double.IsFinite(e.NewValue) && e.NewValue is >= 5 and <= 120) await SaveRangeAsync(() => coreHost.ConfigureAsync(completionRangePixels: (int)e.NewValue)); }
     private async void GuideRange_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)

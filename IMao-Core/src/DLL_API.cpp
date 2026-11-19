@@ -35,6 +35,10 @@ HINSTANCE g_hDllInstance = NULL;
 std::atomic_int CaptureWay = 1;
 std::atomic_int minMapDataUpdateCycle = 100;
 std::atomic_int mapDataUpdateCycle = 60;
+std::atomic_int performanceProfileSetting = 1;
+std::atomic_int captureMaxFpsSetting = 20;
+std::atomic_int ocrUpdateCycleSetting = 150;
+std::atomic_bool minimapMarkerSmoothingSetting = true;
 std::atomic_bool enabledMapShowItem = false;
 std::atomic_bool enabledMinMapShowItem = true;
 
@@ -78,6 +82,10 @@ bool RunOverlayAttempt(HWND hwnd, const RECT& clientRect, bool useGraphicsCaptur
     auto& currentApp = session.app;
     App::SetUpdateMapDataCycleTime(mapDataUpdateCycle.load());
     App::SetUpdateMinMapDataCycleTime(minMapDataUpdateCycle.load());
+    App::SetPerformanceProfile(performanceProfileSetting.load());
+    App::SetCaptureMaxFps(captureMaxFpsSetting.load());
+    App::SetOcrUpdateCycleTime(ocrUpdateCycleSetting.load());
+    App::SetMinimapMarkerSmoothingEnabled(minimapMarkerSmoothingSetting.load());
     App::SetEnabledMapShowItem(enabledMapShowItem.load());
     App::SetEnabledMinMapShowItem(enabledMinMapShowItem.load());
     session.overlay = make_unique<ImGuiOverWindows>(hwnd, *currentApp);
@@ -181,6 +189,26 @@ void SetMinMapDataUpdateCycle(int cycleTime){
 void SetMapDataUpdateCycle(int cycleTime){
     App::SetUpdateMapDataCycleTime(cycleTime);
     mapDataUpdateCycle = cycleTime;
+}
+
+void SetPerformanceProfile(int profile){
+    App::SetPerformanceProfile(profile);
+    performanceProfileSetting = profile;
+}
+
+void SetCaptureMaxFps(int maxFps){
+    App::SetCaptureMaxFps(maxFps);
+    captureMaxFpsSetting = maxFps;
+}
+
+void SetOcrUpdateCycle(int cycleTime){
+    App::SetOcrUpdateCycleTime(cycleTime);
+    ocrUpdateCycleSetting = cycleTime;
+}
+
+void SetMinimapMarkerSmoothingEnabled(bool setValue){
+    App::SetMinimapMarkerSmoothingEnabled(setValue);
+    minimapMarkerSmoothingSetting = setValue;
 }
 
 void RuntimeMain(std::stop_token stopToken) {

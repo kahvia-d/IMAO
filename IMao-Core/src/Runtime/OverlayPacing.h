@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 
 // Pacing and input-hook policy for the in-game overlay. These decisions are separated from the
@@ -73,6 +74,256 @@ inline std::chrono::microseconds CapturePeriod(bool overlayActive) {
 inline std::chrono::microseconds CapturePeriod(bool overlayActive, bool slowCapture) {
     return CapturePeriod(overlayActive) + (slowCapture ? kSlowCaptureBackoff : std::chrono::microseconds::zero());
 }
+
+// 性能与刷新档位：统一协调采集帧率上限、大/小地图识别间隔、OCR 间隔与后台视觉探针频率。
+enum class PerformanceProfile : int {
+    Smooth = 0,       // 流畅优先
+    Balanced = 1,     // 均衡（默认）
+    LowOverhead = 2,  // 低占用（省帧率）
+    Custom = 3        // 自定义
+};
+
+// 当前游戏运行场景：按场景动态切换 WGC 源头采集频率，避免 OCR 模式或空闲期白截 30 fps。
+enum class CaptureScenario : int {
+    Idle = 0,            // 未见地图 / 切后台 / 非探索界面
+    MinimapReadout = 1,  // 小地图 + 坐标 OCR 读数模式（标点直接按 OCR 投影，无需高频像素追踪）
+    MinimapVisual = 2,   // 小地图 + 纯视觉定位模式（需要连续画面做局部追踪）
+    BigMap = 3           // 大地图打开（拖拽与缩放最吃标点跟手性）
+};
+
+inline const char* CaptureScenarioName(CaptureScenario scenario) {
+    switch (scenario) {
+    case CaptureScenario::BigMap: return "big-map";
+    case CaptureScenario::MinimapVisual: return "minimap-visual";
+    case CaptureScenario::MinimapReadout: return "minimap-readout";
+    default: return "idle";
+    }
+}
+
+inline const char* PerformanceProfileName(PerformanceProfile profile) {
+    switch (profile) {
+    case PerformanceProfile::Smooth: return "smooth";
+    case PerformanceProfile::Balanced: return "balanced";
+    case PerformanceProfile::LowOverhead: return "low-overhead";
+    case PerformanceProfile::Custom: return "custom";
+    default: return "balanced";
+    }
+}
+
+struct PacingProfileSettings {
+    int profile = static_cast<int>(PerformanceProfile::Balanced);
+    int captureMaxFps = 20;
+    int mapUpdateCycleMs = 80;
+    int minMapUpdateCycleMs = 80;
+    int ocrUpdateCycleMs = 150;
+};
+
+struct EffectivePacing {
+    PerformanceProfile profile = PerformanceProfile::Balanced;
+    std::chrono::microseconds bigMapCapturePeriod{50000};
+    std::chrono::microseconds minimapVisualCapturePeriod{66667};
+    std::chrono::microseconds minimapReadoutCapturePeriod{150000};
+    std::chrono::microseconds idleCapturePeriod{125000};
+    int mapUpdateCycleMs = 100;
+    int minMapUpdateCycleMs = 100;
+    std::chrono::milliseconds ocrSubmissionInterval{150};
+    std::chrono::milliseconds readoutVisualProbeInterval{600};
+};
+
+inline std::chrono::microseconds PeriodFromFps(int fps) {
+    const int clamped = fps < 5 ? 5 : (fps > 60 ? 60 : fps);
+    return std::chrono::microseconds(1000000 / clamped);
+}
+
+inline int ClampMs(int value, int low, int high) {
+    return value < low ? low : (value > high ? high : value);
+}
+
+// 根据档位与自定义设置解析当前生效的全链路调度参数。
+inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& settings) {
+    const int rawProfile = settings.profile;
+    const auto profile = (rawProfile >= 0 && rawProfile <= 3)
+        ? static_cast<PerformanceProfile>(rawProfile)
+        : PerformanceProfile::Balanced;
+
+    switch (profile) {
+    case PerformanceProfile::Smooth:
+        return {
+            profile,
+            std::chrono::microseconds{33333},   // 大地图 30 fps（拖拽跟手）
+            std::chrono::microseconds{80000},   // 小地图视觉 1:1 对齐 80 ms（12.5 fps）
+            std::chrono::microseconds{100000},  // OCR 模式对齐 100 ms（10 fps）
+            std::chrono::microseconds{100000},  // 空闲巡检 10 fps
+            80, 80,
+            std::chrono::milliseconds{100},
+            std::chrono::milliseconds{300}
+        };
+    case PerformanceProfile::LowOverhead:
+        return {
+            profile,
+            std::chrono::microseconds{83333},   // 大地图 12 fps（拖拽跟手）
+            std::chrono::microseconds{160000},  // 小地图视觉 1:1 对齐 160 ms（~6.25 fps）
+            std::chrono::microseconds{200000},  // OCR 模式对齐 200 ms（5 fps）
+            std::chrono::microseconds{150000},  // 空闲巡检 ~6.7 fps
+            160, 160,
+            std::chrono::milliseconds{200},
+            std::chrono::milliseconds{1000}
+        };
+    case PerformanceProfile::Custom: {
+        const auto maxPeriod = PeriodFromFps(settings.captureMaxFps);
+        const int mapMs = ClampMs(settings.mapUpdateCycleMs, 16, 1000);
+        const int minMapMs = ClampMs(settings.minMapUpdateCycleMs, 16, 1000);
+        const int ocrMs = ClampMs(settings.ocrUpdateCycleMs, 50, 1000);
+        const auto minMapPeriod = std::chrono::microseconds(static_cast<std::int64_t>(minMapMs) * 1000);
+        const auto ocrPeriod = std::chrono::microseconds(static_cast<std::int64_t>(ocrMs) * 1000);
+        // 小地图视觉与 OCR 模式均 1:1 对齐各自识别周期，且不突破采集帧率上限。
+        const auto minimapVisualPeriod = minMapPeriod > maxPeriod ? minMapPeriod : maxPeriod;
+        const auto readoutPeriod = ocrPeriod > maxPeriod ? ocrPeriod : maxPeriod;
+        const auto idlePeriod = std::chrono::microseconds{125000} > maxPeriod
+            ? std::chrono::microseconds{125000} : maxPeriod;
+        const int probeMs = ClampMs(ocrMs * 4, 300, 1000);
+        return {
+            profile,
+            maxPeriod,
+            minimapVisualPeriod,
+            readoutPeriod,
+            idlePeriod,
+            mapMs,
+            minMapMs,
+            std::chrono::milliseconds{ocrMs},
+            std::chrono::milliseconds{probeMs}
+        };
+    }
+    case PerformanceProfile::Balanced:
+    default:
+        return {
+            PerformanceProfile::Balanced,
+            std::chrono::microseconds{50000},   // 大地图 20 fps（拖拽跟手）
+            std::chrono::microseconds{100000},  // 小地图视觉 1:1 对齐 100 ms（10 fps）
+            std::chrono::microseconds{150000},  // OCR 模式对齐 150 ms（~6.7 fps）
+            std::chrono::microseconds{125000},  // 空闲巡检 8 fps
+            100, 100,
+            std::chrono::milliseconds{150},
+            std::chrono::milliseconds{600}
+        };
+    }
+}
+
+// 获取当前场景的基础采集周期（不含慢帧退避），可直接下发给 WGC MinUpdateInterval。
+inline std::chrono::microseconds ResolveBaseCapturePeriod(
+    const EffectivePacing& pacing, CaptureScenario scenario) {
+    switch (scenario) {
+    case CaptureScenario::BigMap: return pacing.bigMapCapturePeriod;
+    case CaptureScenario::MinimapVisual: return pacing.minimapVisualCapturePeriod;
+    case CaptureScenario::MinimapReadout: return pacing.minimapReadoutCapturePeriod;
+    default: return pacing.idleCapturePeriod;
+    }
+}
+
+// 获取采集线程实际等待周期（含慢帧退避）。
+inline std::chrono::microseconds ResolveScenarioCapturePeriod(
+    const EffectivePacing& pacing, CaptureScenario scenario, bool slowCapture) {
+    return ResolveBaseCapturePeriod(pacing, scenario) +
+        (slowCapture ? kSlowCaptureBackoff : std::chrono::microseconds::zero());
+}
+
+// 采集帧的有效期需随低频档位放宽，避免 5~7 fps 时相邻两帧之间被误判为过期。
+inline std::chrono::milliseconds CaptureFrameMaxAge(std::chrono::microseconds baseCapturePeriod) {
+    const auto tripleMs = (baseCapturePeriod.count() * 3 + 999) / 1000;
+    const auto clamped = tripleMs < 250 ? 250 : (tripleMs > 1000 ? 1000 : tripleMs);
+    return std::chrono::milliseconds(clamped);
+}
+
+// 纯绘制层的小地图标记平滑过渡：采用轻量指数向后缓动，不做向前预测，绝不修改底层真实坐标。
+// 静止收敛至 0.25 像素以内后立刻归零锁定，保证画面哈希稳定、不触发多余 Present。
+struct MinimapVisualSmoother {
+    struct Offset {
+        double x = 0.0;
+        double y = 0.0;
+    };
+
+    static constexpr double kTimeConstantSeconds = 0.065; // 约 65 ms 时间常数：丝滑且拖尾极短
+    static constexpr double kSnapPixels = 60.0;           // 超过 60 px 视为传送/大跳变，直接瞬移对齐
+    static constexpr double kSettleEpsilonPixels = 0.25;  // 小于 0.25 px 直接归零，静止后停止重绘
+
+    bool initialized = false;
+    int lastScene = 0;
+    std::uint64_t lastGeneration = 0;
+    double lastCenterX = 0.0;
+    double lastCenterY = 0.0;
+    double lastScreenCenterX = 0.0;
+    double lastScreenCenterY = 0.0;
+    double residualX = 0.0;
+    double residualY = 0.0;
+    Clock::time_point lastUpdateAt{};
+
+    void Reset() {
+        initialized = false;
+        lastScene = 0;
+        lastGeneration = 0;
+        residualX = 0.0;
+        residualY = 0.0;
+        lastUpdateAt = {};
+    }
+
+    // 输入当前定位采样与当前渲染时刻，返回应叠加到绘制变换上的平滑屏幕偏移量（像素）。
+    Offset Update(bool enabled, int scene, std::uint64_t generation,
+        double centerX, double centerY, double screenCenterX, double screenCenterY,
+        double pixelsPerUnit, Clock::time_point now) {
+        if (!enabled || scene <= 0 || !std::isfinite(pixelsPerUnit) || pixelsPerUnit <= 0.0 ||
+            !std::isfinite(centerX) || !std::isfinite(centerY)) {
+            Reset();
+            return {0.0, 0.0};
+        }
+
+        const bool contextChanged = !initialized || scene != lastScene || generation != lastGeneration ||
+            std::hypot(screenCenterX - lastScreenCenterX, screenCenterY - lastScreenCenterY) > 1.0;
+        if (contextChanged) {
+            initialized = true;
+            lastScene = scene;
+            lastGeneration = generation;
+            lastCenterX = centerX;
+            lastCenterY = centerY;
+            lastScreenCenterX = screenCenterX;
+            lastScreenCenterY = screenCenterY;
+            residualX = 0.0;
+            residualY = 0.0;
+            lastUpdateAt = now;
+            return {0.0, 0.0};
+        }
+
+        // 先对既有残余偏移按实际流逝时间做指数衰减
+        if (lastUpdateAt != Clock::time_point{} && now > lastUpdateAt) {
+            const double dt = std::chrono::duration<double>(now - lastUpdateAt).count();
+            const double clampedDt = dt > 0.25 ? 0.25 : dt;
+            const double decay = std::exp(-clampedDt / kTimeConstantSeconds);
+            residualX *= decay;
+            residualY *= decay;
+        }
+        lastUpdateAt = now;
+
+        // 若新帧坐标相对上一帧发生了变化，把画面跃迁的反向偏移补偿进残余偏移，实现平滑衔接
+        const double deltaScreenX = (centerX - lastCenterX) * pixelsPerUnit;
+        const double deltaScreenY = (centerY - lastCenterY) * pixelsPerUnit;
+        lastCenterX = centerX;
+        lastCenterY = centerY;
+
+        if (std::hypot(deltaScreenX, deltaScreenY) > kSnapPixels) {
+            residualX = 0.0;
+            residualY = 0.0;
+            return {0.0, 0.0};
+        }
+
+        residualX += deltaScreenX;
+        residualY += deltaScreenY;
+        const double magnitude = std::hypot(residualX, residualY);
+        if (!std::isfinite(magnitude) || magnitude > kSnapPixels || magnitude < kSettleEpsilonPixels) {
+            residualX = 0.0;
+            residualY = 0.0;
+        }
+        return {residualX, residualY};
+    }
+};
 
 // Startup reads one frame to prove the capture works, and that frame is already stale by the time the
 // capture loop runs - it is not a frame the loop observed. The loop therefore takes the first sequence

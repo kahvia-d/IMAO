@@ -114,6 +114,14 @@ internal sealed class RuntimeConfigurationStore
         {
             migrated = migrated with { GuideSkipKey = 0 };
         }
+        // 版本 6 引入性能与刷新档位：旧版若用户手改过大小地图刷新间隔，迁至自定义（3）以保留原值；否则默认均衡（1）。
+        if (storedVersion < 6)
+        {
+            migrated = migrated with
+            {
+                PerformanceProfile = (migrated.MapUpdateCycle != 80 || migrated.MinMapUpdateCycle != 80) ? 3 : 1
+            };
+        }
         return migrated;
     }
 
