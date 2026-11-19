@@ -4,7 +4,9 @@
 #include <functional>
 #include <cstdint>
 
+class GpuViewportSurf;
 struct ViewportSurfStatistics {
+    unsigned gpuOctaves = 0;
     // Integral image + live float Hessian determinants/int8 trace signs only.
     // Excludes caller pixels, descriptors, keypoints and library/parallel overhead.
     size_t detectorScratchBytes = 0;
@@ -24,4 +26,4 @@ struct ViewportSurfStatistics {
 // execution uses at most four participants independently of OpenCV's guard.
 void ExtractViewportSurf(const cv::Mat& gray, std::vector<cv::KeyPoint>& points,
     cv::Mat& descriptors, const std::function<bool()>& interrupted = {},
-    ViewportSurfStatistics* statistics = nullptr);
+    ViewportSurfStatistics* statistics = nullptr, GpuViewportSurf* gpu = nullptr);

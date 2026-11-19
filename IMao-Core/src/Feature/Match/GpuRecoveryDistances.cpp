@@ -1,4 +1,5 @@
 #include "GpuRecoveryDistances.h"
+#include "D3DComputeBuffer.h"
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <wrl/client.h>
@@ -7,6 +8,8 @@
 #include <stdexcept>
 
 using Microsoft::WRL::ComPtr;
+using D3DCompute::Check;
+using D3DCompute::Buffer;
 namespace {
 // One group compares eight map rows to eight query rows. Cooperatively load
 // each descriptor once per tile; edge lanes must reach the same barrier.
@@ -36,41 +39,7 @@ void main(uint3 group : SV_GroupID, uint3 lane : SV_GroupThreadID) {
 }
 )";
 
-void Check(HRESULT status, const char* operation) {
-    if (FAILED(status)) throw std::runtime_error(std::string(operation) + " HRESULT=" +
-        std::to_string(static_cast<unsigned long>(status)));
-}
 
-struct Buffer {
-    UINT bytes = 0;
-    ComPtr<ID3D11Buffer> data;
-    ComPtr<ID3D11ShaderResourceView> input;
-    ComPtr<ID3D11UnorderedAccessView> output;
-
-    void Reserve(ID3D11Device* device, UINT required, UINT bind) {
-        if (bytes >= required) return;
-        D3D11_BUFFER_DESC desc{};
-        desc.ByteWidth = std::bit_ceil(required);
-        desc.BindFlags = bind;
-        desc.Usage = bind ? D3D11_USAGE_DEFAULT : D3D11_USAGE_STAGING;
-        desc.CPUAccessFlags = bind ? 0 : D3D11_CPU_ACCESS_READ;
-        Check(device->CreateBuffer(&desc, nullptr, data.ReleaseAndGetAddressOf()), "create buffer");
-        if (bind == D3D11_BIND_SHADER_RESOURCE) {
-            D3D11_SHADER_RESOURCE_VIEW_DESC view{};
-            view.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-            view.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-            view.Buffer.NumElements = desc.ByteWidth / 16;
-            Check(device->CreateShaderResourceView(data.Get(), &view, input.ReleaseAndGetAddressOf()), "create input");
-        } else if (bind == D3D11_BIND_UNORDERED_ACCESS) {
-            D3D11_UNORDERED_ACCESS_VIEW_DESC view{};
-            view.Format = DXGI_FORMAT_R32_FLOAT;
-            view.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
-            view.Buffer.NumElements = desc.ByteWidth / sizeof(float);
-            Check(device->CreateUnorderedAccessView(data.Get(), &view, output.ReleaseAndGetAddressOf()), "create output");
-        }
-        bytes = desc.ByteWidth;
-    }
-};
 }
 
 struct GpuRecoveryDistances::Device {

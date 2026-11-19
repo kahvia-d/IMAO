@@ -623,6 +623,7 @@ add_executable(IMaoVisualRegression
     IMao-Core/src/Feature/LayeredFloorIndex.cpp
     IMao-Core/src/Coordinate/VisualLocalization/DenseMapConfirmer.cpp
     IMao-Core/src/Feature/Match/StreamingSurf.cpp
+    IMao-Core/src/Feature/Match/GpuViewportSurf.cpp
     IMao-Core/src/Feature/RuntimeFeatureRepository.cpp
     IMao-Core/src/Runtime/ResourceSnapshotContext.cpp
     IMao-Core/src/Runtime/RuntimeStatus.cpp
@@ -711,10 +712,11 @@ target_link_libraries(IMaoOwnedFlannTests PRIVATE ${OpenCV_LIBS})
 add_test(NAME IMaoOwnedFlannTests COMMAND IMaoOwnedFlannTests)
 
 add_executable(IMaoStreamingSurfTests IMao-Core/tests/StreamingSurfTests.cpp
+    IMao-Core/src/Feature/Match/GpuViewportSurf.cpp
     IMao-Core/src/Feature/Match/StreamingSurf.cpp)
 target_include_directories(IMaoStreamingSurfTests PRIVATE ${CMAKE_SOURCE_DIR}/IMao-Core/src)
 set_target_properties(IMaoStreamingSurfTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/x64/$<CONFIG>)
-target_link_libraries(IMaoStreamingSurfTests PRIVATE ${OpenCV_LIBS})
+target_link_libraries(IMaoStreamingSurfTests PRIVATE ${OpenCV_LIBS} d3d11.lib d3dcompiler.lib)
 add_test(NAME IMaoStreamingSurfTests COMMAND IMaoStreamingSurfTests)
 
 add_executable(IMaoViewportFreshnessTests IMao-Core/tests/ViewportFreshnessTests.cpp

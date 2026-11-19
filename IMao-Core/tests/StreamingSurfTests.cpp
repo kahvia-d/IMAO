@@ -1,5 +1,7 @@
 ﻿#include "Feature/Match/StreamingSurf.h"
 #include "Feature/Match/ExactDescriptorMatcher.h"
+#include "Feature/Match/GpuViewportSurf.h"
+#include <string_view>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <iostream>
@@ -35,7 +37,41 @@ static bool Equal(const ImageFeatureData&a,const ImageFeatureData&b){
  for(size_t i=0;i<a.imgKeypoints.size();++i){const auto&x=a.imgKeypoints[i];const auto&y=b.imgKeypoints[i];if(x.pt!=y.pt||x.size!=y.size||x.angle!=y.angle||x.response!=y.response||x.octave!=y.octave||x.class_id!=y.class_id)return false;}
  return a.imgDescriptors.empty()||std::memcmp(a.imgDescriptors.data,b.imgDescriptors.data,a.imgDescriptors.total()*a.imgDescriptors.elemSize())==0;
 }
-int main(int argc,char**) {
+static int TestGpuDetection() {
+    GpuViewportSurf gpu;
+    for (const auto size : {cv::Size(31,19), cv::Size(237,183), cv::Size(560,560), cv::Size(1025,768)}) {
+        cv::Mat backing(size.height+2, size.width+8, CV_8U);
+        cv::RNG(71).fill(backing, cv::RNG::UNIFORM, 0, 256);
+        auto gray = backing(cv::Rect(3,1,size.width,size.height));
+        for (bool blank : {false,true}) {
+            if (blank) gray.setTo(0);
+            ImageFeatureData cpu, hardware;
+            ExtractViewportSurf(gray,cpu.imgKeypoints,cpu.imgDescriptors);
+            ViewportSurfStatistics stats;
+            ExtractViewportSurf(gray,hardware.imgKeypoints,hardware.imgDescriptors,{},&stats,&gpu);
+            if (stats.gpuOctaves != 4 || !Equal(cpu,hardware)) {
+                std::cerr << "GPU SURF mismatch " << size << " CPU points=" << cpu.imgKeypoints.size()
+                    << " GPU points=" << hardware.imgKeypoints.size() << " octaves=" << stats.gpuOctaves
+                    << " error=" << gpu.Failure() << '\n';
+                return 1;
+            }
+        }
+    }
+    cv::Mat input(183,237,CV_8U,cv::Scalar(12));
+    ImageFeatureData cancelled;
+    int checkpoints = 0;
+    try {
+        ExtractViewportSurf(input,cancelled.imgKeypoints,cancelled.imgDescriptors,
+            [&] { return ++checkpoints == 3; }, nullptr, &gpu);
+        return 1;
+    } catch (const SearchInterrupted&) {
+        if (!cancelled.imgKeypoints.empty() || !cancelled.imgDescriptors.empty()) return 1;
+    }
+    std::cout << "GPU viewport detection and descriptors equal CPU in eight cases; cancellation passed\n";
+    return 0;
+}
+int main(int argc,char** argv) {
+    if (argc == 2 && std::string_view(argv[1]) == "--check-gpu") return TestGpuDetection();
     Allocator allocator; cv::Mat::setDefaultAllocator(&allocator);
     int failures=0;
     const auto check=[&](bool passed,const char* message) {if(!passed){std::cerr<<"FAIL "<<message<<'\n';++failures;}};

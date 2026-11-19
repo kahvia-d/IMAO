@@ -47,6 +47,7 @@
 // Preserve all filters, maxima/interpolation arithmetic and sort order. Keep
 // three adjacent layers instead of every octave; parallelize independent rows.
 #include "StreamingSurf.h"
+#include "GpuViewportSurf.h"
 #include "ExactDescriptorMatcher.h"
 #include <chrono>
 #include <opencv2/imgproc.hpp>
@@ -69,13 +70,7 @@ static const int SURF_HAAR_SIZE0 = 9;
 static const int SURF_HAAR_SIZE_INC = 6;
 
 
-struct SurfHF
-{
-    int p0, p1, p2, p3;
-    float w;
-
-    SurfHF(): p0(0), p1(0), p2(0), p3(0), w(0) {}
-};
+using SurfHF = ViewportHaarFilter;
 
 inline float calcHaarPattern( const int* origin, const SurfHF* f, int n )
 {
@@ -107,22 +102,22 @@ resizeHaarPattern( const int src[][5], SurfHF* dst, int n, int oldSize, int newS
  * Calculate the determinant and trace sign of the Hessian for a layer of the
  * scale-space pyramid
  */
-static void calcLayerDetAndTraceSign( const Mat& sum, int size, int sampleStep,
-                                  Mat& det, Mat& trace )
+static void makeLayerFilters(int size, int stride, SurfHF (&filters)[10])
 {
     const int NX=3, NY=3, NXY=4;
     const int dx_s[NX][5] = { {0, 2, 3, 7, 1}, {3, 2, 6, 7, -2}, {6, 2, 9, 7, 1} };
     const int dy_s[NY][5] = { {2, 0, 7, 3, 1}, {2, 3, 7, 6, -2}, {2, 6, 7, 9, 1} };
     const int dxy_s[NXY][5] = { {1, 1, 4, 4, 1}, {5, 1, 8, 4, -1}, {1, 5, 4, 8, -1}, {5, 5, 8, 8, 1} };
 
-    SurfHF Dx[NX], Dy[NY], Dxy[NXY];
+    resizeHaarPattern(dx_s, filters, NX, 9, size, stride);
+    resizeHaarPattern(dy_s, filters+3, NY, 9, size, stride);
+    resizeHaarPattern(dxy_s, filters+6, NXY, 9, size, stride);
+}
 
-    if( size > sum.rows-1 || size > sum.cols-1 )
-       return;
-
-    resizeHaarPattern( dx_s , Dx , NX , 9, size, sum.cols );
-    resizeHaarPattern( dy_s , Dy , NY , 9, size, sum.cols );
-    resizeHaarPattern( dxy_s, Dxy, NXY, 9, size, sum.cols );
+static void calcLayerDetAndTraceSign(const Mat& sum, int size, int sampleStep, Mat& det, Mat& trace) {
+    if (size > sum.rows-1 || size > sum.cols-1) return;
+    SurfHF filters[10];
+    makeLayerFilters(size, sum.cols, filters);
 
     /* The integral image 'sum' is one pixel bigger than the source image */
     int samples_i = 1+(sum.rows-1-size)/sampleStep;
@@ -139,9 +134,9 @@ static void calcLayerDetAndTraceSign( const Mat& sum, int size, int sampleStep,
         schar* trace_ptr = &trace.at<schar>(i+margin, margin);
         for( int j = 0; j < samples_j; j++ )
         {
-            float dx  = calcHaarPattern( sum_ptr, Dx , 3 );
-            float dy  = calcHaarPattern( sum_ptr, Dy , 3 );
-            float dxy = calcHaarPattern( sum_ptr, Dxy, 4 );
+            float dx  = calcHaarPattern(sum_ptr, filters, 3);
+            float dy  = calcHaarPattern(sum_ptr, filters+3, 3);
+            float dxy = calcHaarPattern(sum_ptr, filters+6, 4);
             sum_ptr += sampleStep;
             det_ptr[j] = dx*dy - 0.81f*dxy*dxy;
             // Only the Laplacian sign is used by maxima/class_id. Evaluate the
@@ -770,7 +765,8 @@ static void DescribeViewportSurf(const Mat& gray, std::vector<KeyPoint>& points,
 
 }
 void ExtractViewportSurf(const cv::Mat& gray, std::vector<cv::KeyPoint>& points,
-    cv::Mat& descriptors, const std::function<bool()>& interrupted, ViewportSurfStatistics* statistics) {
+    cv::Mat& descriptors, const std::function<bool()>& interrupted, ViewportSurfStatistics* statistics,
+    GpuViewportSurf* gpu) {
     const auto checkpoint = [&] { if (interrupted && interrupted()) throw SearchInterrupted{}; };
     CV_Assert(!gray.empty() && gray.type() == CV_8UC1);
     points.clear(); descriptors.release();
@@ -780,8 +776,30 @@ void ExtractViewportSurf(const cv::Mat& gray, std::vector<cv::KeyPoint>& points,
     checkpoint();
     {
         cv::Mat sum; cv::integral(gray, sum, CV_32S);
+        if (statistics) statistics->detectorScratchBytes = sum.total() * sum.elemSize();
+        const bool uploaded = gpu && gpu->BeginImage(sum);
+        std::vector<ViewportSurfPeak> peaks;
         for (int octave=0; octave<4; ++octave) {
             const int step=1<<octave;
+            if (uploaded) {
+                checkpoint();
+                ViewportHaarFilter filters[5][10];
+                for (int layer=0; layer<5; ++layer)
+                    makeLayerFilters((SURF_HAAR_SIZE0+SURF_HAAR_SIZE_INC*layer)*step, sum.cols, filters[layer]);
+                if (gpu->FindMaxima(octave, filters, peaks)) {
+                    checkpoint();
+                    for (auto& peak : peaks) {
+                        const int size = (SURF_HAAR_SIZE0+SURF_HAAR_SIZE_INC*peak.layer)*step;
+                        const float offset = (size-1)*0.5f - (size/2/step)*step;
+                        cv::KeyPoint point(peak.x*step+offset, peak.y*step+offset, static_cast<float>(size),
+                            -1, peak.neighbourhood[1][4], octave, peak.trace);
+                        if (interpolateKeypoint(peak.neighbourhood, step, step, SURF_HAAR_SIZE_INC*step, point))
+                            found.push_back(point);
+                    }
+                    if (statistics) ++statistics->gpuOctaves;
+                    continue;
+                }
+            }
             std::vector<cv::Mat> dets(3),traces(3);
             std::vector<int> sizes(3);
             for (int middle=1; middle<=3; ++middle) {
