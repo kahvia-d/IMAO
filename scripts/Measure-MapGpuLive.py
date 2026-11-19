@@ -116,10 +116,10 @@ def write_json(path, value):
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def qpc_scale(raw, reference_ms):
+def qpc_scale(raw, reference_ms, last_ms=None):
     # In PresentMon 2.5.1 the v1 CSV emits QPCTime in seconds even with --qpc_time_ms.
     scale = min((1, 1000), key=lambda factor: abs(raw * factor - reference_ms))
-    if abs(raw * scale - reference_ms) > 60000:
+    if not reference_ms - 60000 <= raw * scale <= (reference_ms if last_ms is None else last_ms) + 60000:
         raise ValueError("Game frame timestamps do not match the observation clock")
     return scale
 
@@ -189,7 +189,7 @@ def summarize(folder):
             gap = float(frame["msBetweenDisplayChange"])
             raw = float(frame["QPCTime"])
             if scale is None:
-                scale = qpc_scale(raw, starts[0])
+                scale = qpc_scale(raw, starts[0], samples[-1]["endMs"])
             end = raw * scale + float(frame["msUntilDisplayed"])
             if gap <= 0:
                 continue
@@ -206,7 +206,7 @@ def summarize(folder):
         rows = [s for s in samples if s["eligible"] and s["mask"] == mask]
         seconds = sum((s["endMs"] - s["startMs"]) / 1000 for s in rows)
         gaps = sorted(groups[mask])
-        result[mask] = dict(seconds=round(seconds, 2), frames=len(gaps),
+        result[mask] = dict(seconds=round(seconds, 2), displayedSeconds=round(sum(gaps) / 1000, 2), frames=len(gaps),
             fps=round(1000 * len(gaps) / sum(gaps), 2) if gaps else None,
             p99Ms=round(gaps[math.ceil(.99 * len(gaps)) - 1], 2) if gaps else None,
             over50PerMinute=round(60000 * sum(g > 50 for g in gaps) / sum(gaps), 2) if gaps else None,
@@ -239,10 +239,11 @@ def record(args, folder):
         write_json(folder / "session.json", dict(original=original, ui=ui.pid, game=game.pid,
                    seconds=args.seconds, blockSeconds=args.block, started=dt.datetime.now().astimezone().isoformat()))
         gpu = GpuUsage()
+        session_name = f"IMaoMapGpu{os.getpid()}"
         try:
             with (folder / "frames.csv").open("wb") as frames, (folder / "presentmon.log").open("wb") as errors:
                 pm = subprocess.Popen([str(args.presentmon), "--process_id", str(game.pid), "--output_stdout",
-                    "--no_console_stats", "--v1_metrics", "--qpc_time_ms", "--session_name", f"IMaoMapGpu{os.getpid()}",
+                    "--no_console_stats", "--v1_metrics", "--qpc_time_ms", "--session_name", session_name,
                     "--timed", str(args.seconds + 2), "--terminate_after_timed"], stdout=frames, stderr=errors,
                     creationflags=subprocess.CREATE_NO_WINDOW)
                 try:
@@ -252,8 +253,14 @@ def record(args, folder):
                         if pm.poll() is None:
                             pm.wait(timeout=4)
                     except subprocess.TimeoutExpired:
-                        pm.terminate()
-                        pm.wait(timeout=5)
+                        # Terminating the client alone leaves its ETW session collecting events and
+                        # can starve the next run. Stop only the session this recorder created.
+                        subprocess.run(["logman", "stop", session_name, "-ets"], capture_output=True, timeout=15)
+                        try:
+                            pm.wait(timeout=5)
+                        except subprocess.TimeoutExpired:
+                            pm.terminate()
+                            pm.wait(timeout=5)
         finally:
             win32pdh.CloseQuery(gpu.query)
             write_json(folder / "restored.json", request(pipe, "R"))
