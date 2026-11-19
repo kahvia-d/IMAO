@@ -5,6 +5,7 @@
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
 #include "ImguiDraw/UiFontGlyphs.h"
+#include "ImguiDraw/SharedFontSource.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -52,6 +53,19 @@ int main(int argc,char**argv){int failures=0;const auto check=[&](bool ok,const 
  if(!io.Fonts->AddFontFromFileTTF(argv[1],15.f,nullptr,io.Fonts->GetGlyphRangesChineseFull()))throw std::runtime_error("Chinese font unavailable");
  ImFontGlyphRangesBuilder builder;builder.AddRanges(io.Fonts->GetGlyphRangesChineseSimplifiedCommon());builder.AddText(IMaoUiGlyphs);ImVector<ImWchar> ranges;builder.BuildRanges(&ranges);ImFontConfig config;config.OversampleH=config.OversampleV=1;
  if(!io.Fonts->AddFontFromFileTTF(argv[1],40.f,&config,ranges.Data))throw std::runtime_error("UI font unavailable");
+ const auto beforeSharing = live;
+ const auto sourceBytes = io.Fonts->ConfigData[0].FontDataSize;
+ auto* secondBytes = static_cast<unsigned char*>(io.Fonts->ConfigData[1].FontData);
+ secondBytes[0] ^= 1;
+ ShareLastFontSource(*io.Fonts, io.Fonts->Fonts[0], io.Fonts->Fonts[1]);
+ check(live == beforeSharing && io.Fonts->ConfigData[1].FontData == secondBytes,
+     "different font files of the same length retain separate owners");
+ if (io.Fonts->ConfigData[1].FontData != secondBytes) throw std::runtime_error("lost distinct font source");
+ secondBytes[0] ^= 1;
+ ShareLastFontSource(*io.Fonts, io.Fonts->Fonts[0], io.Fonts->Fonts[1]);
+ check(live + sourceBytes == beforeSharing, "two sizes release exactly one font file allocation");
+ check(io.Fonts->ConfigData[0].FontData == io.Fonts->ConfigData[1].FontData &&
+     !io.Fonts->ConfigData[1].FontDataOwnedByAtlas, "the atlas retains one owner for both font sizes");
  unsigned char*p;int width,height;io.Fonts->GetTexDataAsRGBA32(&p,&width,&height);const size_t pixels=size_t(width)*height;auto rgbaHash=Hash(p,pixels*4);auto*alpha=io.Fonts->TexPixelsAlpha8;auto alphaHash=Hash(alpha,pixels);auto fonts=Snapshot();
  ComPtr<ID3D11Device>device;ComPtr<ID3D11DeviceContext>context;Require(D3D11CreateDevice(nullptr,D3D_DRIVER_TYPE_WARP,nullptr,0,nullptr,0,D3D11_SDK_VERSION,&device,nullptr,&context),"WARP device unavailable");
  backend=ImGui_ImplDX11_Init(device.Get(),context.Get());if(!backend)throw std::runtime_error("DX11 backend init failed");

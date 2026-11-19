@@ -16,6 +16,7 @@
 #include "InteractiveInterface/Notification.h"
 #include "InteractiveInterface/RuntimeStatusBar.h"
 #include "UiFontGlyphs.h"
+#include "SharedFontSource.h"
 #include <filesystem>
 #include "../DLL_API.h"
 #include "../Diagnostics/Diagnostics.h"
@@ -466,7 +467,9 @@ int ImGuiOverWindows::start()
     ImVector<ImWchar> uiRanges; uiGlyphs.BuildRanges(&uiRanges);
     ImFontConfig uiConfig; uiConfig.OversampleH = uiConfig.OversampleV = 1;
     const auto uiPath = std::filesystem::exists(FontsPath) ? FontsPath : "c:\\Windows\\Fonts\\msyh.ttc";
-    RuntimeStatusBar::SetUiFont(io.Fonts->AddFontFromFileTTF(uiPath.c_str(), 40.0f, &uiConfig, uiRanges.Data));
+    ImFont* uiFont = io.Fonts->AddFontFromFileTTF(uiPath.c_str(), 40.0f, &uiConfig, uiRanges.Data);
+    ShareLastFontSource(*io.Fonts, font, uiFont);
+    RuntimeStatusBar::SetUiFont(uiFont);
     //IM_ASSERT(font != nullptr);
 
     // NewFrame lazily builds the full Chinese font atlas and DX11 shaders.
