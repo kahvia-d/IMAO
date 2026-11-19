@@ -14,6 +14,7 @@
                     <Button x:Name="CategoryBtn_Input" Content="快捷键与手柄" Tag="input" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
                     <Button x:Name="CategoryBtn_Updates" Content="版本与地图区域" Tag="updates" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
                     <Button x:Name="CategoryBtn_System" Content="数据目录与兼容" Tag="system" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
+                    <Button x:Name="CategoryBtn_Other" Content="其它" Tag="other" Click="SettingsCategory_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="14,7" />
                 </controls:WrapPanel>
             </Border>
         </StackPanel>
@@ -783,5 +784,17 @@
                 </Border>
             </Grid>
         </StackPanel>
+        <Border x:Name="SettingsGroup_Other" Visibility="Collapsed" Style="{StaticResource IMaoCardStyle}">
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <TextBlock Text="关闭窗口时" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <ComboBox x:Name="CloseWindowActionBox" Grid.Column="1" MinWidth="160" IsEnabled="False"
+                          AutomationProperties.Name="关闭窗口时" SelectionChanged="CloseWindowAction_Changed">
+                    <ComboBoxItem Content="询问" />
+                    <ComboBoxItem Content="退出" />
+                    <ComboBoxItem Content="缩小到托盘" />
+                </ComboBox>
+            </Grid>
+        </Border>
     </StackPanel>
 </Page>

@@ -72,6 +72,7 @@ public sealed partial class SettingsPage : Page
             RenderLocalAccounts();
             RenderSyncLedger();
             _ = RestoreKuroSyncAsync();
+            _ = RestoreCloseWindowActionAsync();
             if (!string.IsNullOrWhiteSpace(RequestedCategory)) { ApplySettingsCategory(RequestedCategory!); RequestedCategory = null; }
         };
         Unloaded += (_, _) =>
@@ -1658,7 +1659,27 @@ public sealed partial class SettingsPage : Page
     // 允许从总览页深链直达指定设置工作台（如 "sync" 或 "display"）
     public static string? RequestedCategory { get; set; }
 
-    // 切换设置页五大功能模块视图（全部模块 / 显示与叠加 / 键鼠与手柄 / 记录本与同步 / 版本与地图资源 / 性能与兼容）
+    private async Task RestoreCloseWindowActionAsync()
+    {
+        CloseWindowActionBox.IsEnabled = false;
+        try { CloseWindowActionBox.SelectedIndex = (int)await WindowCloseSettings.ReadAsync(kuroSettings); }
+        catch (Exception error) { coreHost.ReportUserError("无法读取关闭窗口设置：" + error.Message); }
+        finally { CloseWindowActionBox.IsEnabled = true; }
+    }
+
+    private async void CloseWindowAction_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || !CloseWindowActionBox.IsEnabled || CloseWindowActionBox.SelectedIndex < 0) return;
+        CloseWindowActionBox.IsEnabled = false;
+        try { await WindowCloseSettings.SaveAsync(kuroSettings, (WindowCloseAction)CloseWindowActionBox.SelectedIndex); }
+        catch (Exception error)
+        {
+            coreHost.ReportUserError("无法保存关闭窗口设置：" + error.Message);
+            await RestoreCloseWindowActionAsync();
+        }
+        finally { CloseWindowActionBox.IsEnabled = true; }
+    }
+
     private void SettingsCategory_Click(object sender, RoutedEventArgs e) =>
         ApplySettingsCategory((sender as Button)?.Tag as string ?? "sync");
 
@@ -1670,6 +1691,7 @@ public sealed partial class SettingsPage : Page
         SettingsGroup_Sync.Visibility = showAll || key == "sync" ? Visibility.Visible : Visibility.Collapsed;
         SettingsGroup_Updates.Visibility = showAll || key == "updates" ? Visibility.Visible : Visibility.Collapsed;
         SettingsGroup_System.Visibility = showAll || key == "system" ? Visibility.Visible : Visibility.Collapsed;
+        SettingsGroup_Other.Visibility = showAll || key == "other" ? Visibility.Visible : Visibility.Collapsed;
 
         var primaryStyle = Application.Current.Resources["IMaoPrimaryButtonStyle"] as Style;
         var secondaryStyle = Application.Current.Resources["IMaoSecondaryButtonStyle"] as Style;

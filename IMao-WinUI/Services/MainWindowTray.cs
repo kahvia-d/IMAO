@@ -54,6 +54,8 @@ internal sealed class MainWindowTray : IDisposable
         return false;
     }
 
+    internal bool CanHide() => EnsureIcon();
+
     internal bool TryHide()
     {
         if (!EnsureIcon()) return false;
@@ -69,6 +71,7 @@ internal sealed class MainWindowTray : IDisposable
 
     internal void Restore()
     {
+        bool wasHidden = hiddenContent is not null;
         if (hiddenContent is not null)
         {
             window.Content = hiddenContent;
@@ -79,7 +82,27 @@ internal sealed class MainWindowTray : IDisposable
             presenter.Restore();
         window.Activate();
         SetForegroundWindow(data.Window);
+        if (wasHidden) RefreshCaptionHover();
     }
+
+    private void RefreshCaptionHover()
+    {
+        // The caption controller can retain HTCLOSE after the window disappears on
+        // mouse-up. Reconcile its non-client hit test with the real pointer on restore.
+        if (!GetCursorPos(out var point)) return;
+        nint packed = (nint)((point.X & 0xffff) | (point.Y << 16));
+        nint underCursor = WindowFromPoint(point);
+        nint hit = underCursor == data.Window || IsChild(data.Window, underCursor)
+            ? SendMessage(data.Window, 0x84, 0, packed) : 0; // WM_NCHITTEST / HTNOWHERE
+        SendMessage(data.Window, 0xA0, hit, packed); // WM_NCMOUSEMOVE
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Point { public int X, Y; }
+    [DllImport("user32.dll")] private static extern bool GetCursorPos(out Point point);
+    [DllImport("user32.dll")] private static extern nint WindowFromPoint(Point point);
+    [DllImport("user32.dll")] private static extern bool IsChild(nint parent, nint child);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern nint SendMessage(nint hwnd, uint message, nint wParam, nint lParam);
 
     private void WindowMessageReceived(object? sender, WindowMessageEventArgs args)
     {

@@ -25,6 +25,7 @@ public partial class App : Application
     private FileStream? programLease;
     private bool closing, closeApproved;
     private MainWindowTray? tray;
+    private bool handlingWindowClose;
     private readonly CancellationTokenSource startupCancellation = new();
     public static bool ResourcesInitialized { get; private set; }
     public static bool RuntimeServicesInitialized { get; private set; }
@@ -219,8 +220,11 @@ public partial class App : Application
             {
                 if (closeApproved) return;
                 e.Cancel = true;
-                if (closing || tray?.TryHide() == true) return;
-                await CloseCleanlyAsync();
+                if (closing || handlingWindowClose) return;
+                handlingWindowClose = true;
+                try { await HandleWindowCloseAsync(); }
+                catch (Exception error) { GetService<UpdateUiController>().ShowError(error); }
+                finally { handlingWindowClose = false; }
             };
             RuntimeServicesInitialized = true;
             GetService<CoreHostService>().StartMapGpuObserver();
@@ -289,6 +293,44 @@ public partial class App : Application
         // recorded yet, so a failure here has to survive the process that hit it.
         catch (OperationCanceledException) when (startupCancellation.IsCancellationRequested) { Trace("program-health-cancelled-on-close"); }
         catch (Exception error) { Trace("program-health-failed " + error); updates.ShowError(error); await CloseCleanlyAsync(); }
+    }
+
+    private async Task HandleWindowCloseAsync()
+    {
+        if (tray is null || MainWindow.Content is not FrameworkElement shell)
+        {
+            if (tray is null) await CloseCleanlyAsync();
+            return;
+        }
+        var settings = GetService<ILocalSettingsService>();
+        var action = await WindowCloseSettings.ReadAsync(settings);
+        if (closing) return;
+        if (action == WindowCloseAction.Tray && tray.TryHide()) return;
+        if (action == WindowCloseAction.Exit) { await CloseCleanlyAsync(); return; }
+
+        // WinUI allows one modal dialog per XamlRoot. Keep any ongoing edit intact.
+        if (Microsoft.UI.Xaml.Media.VisualTreeHelper.GetOpenPopupsForXamlRoot(shell.XamlRoot)
+            .Any(p => p.Child is ContentDialog)) return;
+        var remember = new CheckBox { Content = "记住我的选择" };
+        var dialog = new ContentDialog
+        {
+            XamlRoot = shell.XamlRoot, RequestedTheme = shell.ActualTheme,
+            Title = "关闭窗口时", PrimaryButtonText = "缩小到托盘",
+            SecondaryButtonText = "退出 IMao", CloseButtonText = "取消",
+            Content = new StackPanel { Spacing = 12, Children =
+            {
+                new TextBlock { Text = "缩小到托盘后，探索会继续运行。退出 IMao 会同时停止探索。", TextWrapping = TextWrapping.Wrap },
+                remember
+            } }
+        };
+        var result = await dialog.ShowAsync();
+        if (closing || result == ContentDialogResult.None) return;
+        action = result == ContentDialogResult.Primary ? WindowCloseAction.Tray : WindowCloseAction.Exit;
+        if (action == WindowCloseAction.Tray && !tray.CanHide())
+            throw new InvalidOperationException("托盘图标暂不可用，请稍后再试。");
+        if (remember.IsChecked == true) await WindowCloseSettings.SaveAsync(settings, action);
+        if (action == WindowCloseAction.Exit) await CloseCleanlyAsync();
+        else if (!tray.TryHide()) throw new InvalidOperationException("无法缩小到托盘。");
     }
 
     private async Task CloseCleanlyAsync(bool skipUpdateWait = false)

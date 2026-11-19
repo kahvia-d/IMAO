@@ -19,6 +19,7 @@
     <Compile Include="../../IMao-WinUI.Core/Services/FileService.cs" Link="Core/FileService.cs" />
     <Compile Include="../../IMao-WinUI.Core/Contracts/Services/IFileService.cs" Link="Core/IFileService.cs" />
     <Compile Include="../../IMao-WinUI/Services/LocalSettingsService.cs" Link="LocalSettingsService.cs" />
+    <Compile Include="../../IMao-WinUI/Services/WindowCloseSettings.cs" Link="WindowCloseSettings.cs" />
     <Compile Include="../../IMao-WinUI/Services/RuntimeConfigurationStore.cs" Link="RuntimeConfigurationStore.cs" />
     <Compile Include="../../IMao-WinUI/Models/BrowserCaptureSelection.cs" Link="BrowserCaptureSelection.cs" />
     <Compile Include="../../IMao-WinUI/Models/RuntimeConfiguration.cs" Link="RuntimeConfiguration.cs" />

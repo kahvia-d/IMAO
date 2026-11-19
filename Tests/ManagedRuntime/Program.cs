@@ -169,6 +169,13 @@ try
     await MarkerDetailTests.RunAsync(root, Check);
     var options = Options.Create(new LocalSettingsOptions { ApplicationDataFolder = root, LocalSettingsFile = "settings.json" });
     var settings = new LocalSettingsService(new FileService(), options);
+    Check(await WindowCloseSettings.ReadAsync(settings) == WindowCloseAction.Ask, "An existing installation starts by asking on close");
+    foreach (var choice in new[] { WindowCloseAction.Tray, WindowCloseAction.Exit, WindowCloseAction.Ask })
+    {
+        await WindowCloseSettings.SaveAsync(settings, choice);
+        Check(await WindowCloseSettings.ReadAsync(new LocalSettingsService(new FileService(), options)) == choice,
+            $"Window close choice {choice} survives reopening settings");
+    }
     await Task.WhenAll(Enumerable.Range(0, 64).Select(i => settings.SaveSettingAsync("key" + i, i)));
     var reopened = new LocalSettingsService(new FileService(), options);
     for (int i = 0; i < 64; ++i) Check(await reopened.ReadSettingAsync<int>("key" + i) == i, "concurrent setting " + i);
