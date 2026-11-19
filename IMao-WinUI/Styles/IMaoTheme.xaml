@@ -1,4 +1,14 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 同一套不透明底色让 WinUI 的背景过渡保持平滑。默认的半透明白在插值中途会闪亮。 -->
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="ButtonBackground" Color="#171F2E" />
+            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#283344" />
+            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#1C2634" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+    <SolidColorBrush x:Key="IMaoClearButtonBrush" Color="#00283344" />
+    <SolidColorBrush x:Key="IMaoSelectedNavBrush" Color="#272524" />
     <!-- 全局色彩系统：深邃夜空底色 + 温和暖金强调色，克制干净 -->
     <SolidColorBrush x:Key="IMaoCanvasBrush" Color="#090C12" />
     <SolidColorBrush x:Key="IMaoSidebarBrush" Color="#0C1018" />
@@ -179,7 +189,7 @@
         <Setter Property="MinHeight" Value="40" />
         <Setter Property="Padding" Value="14,8" />
         <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Background" Value="{StaticResource IMaoClearButtonBrush}" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
@@ -189,7 +199,7 @@
         <Setter Property="MinHeight" Value="40" />
         <Setter Property="Padding" Value="14,8" />
         <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="Background" Value="{StaticResource IMaoAccentSoftBrush}" />
+        <Setter Property="Background" Value="{StaticResource IMaoSelectedNavBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource IMaoAccentBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>

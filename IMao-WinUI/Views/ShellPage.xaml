@@ -173,7 +173,7 @@
                     </StackPanel>
 
                     <Button Grid.Column="3" Click="ToastClose_Click" Padding="6,4" MinWidth="26" MinHeight="26"
-                            Background="Transparent" BorderThickness="0" CornerRadius="6" VerticalAlignment="Center">
+                            Background="{StaticResource IMaoClearButtonBrush}" BorderThickness="0" CornerRadius="6" VerticalAlignment="Center">
                         <FontIcon Glyph="&#xE711;" FontSize="11" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                     </Button>
                 </Grid>
