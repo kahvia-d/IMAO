@@ -39,11 +39,23 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
     public RuntimeConfiguration Configuration => configuration.Read();
     public string DesiredOcrBackend => Configuration.ResolveOcrBackend(Environment.GetEnvironmentVariable("IMAO_OCR_BACKEND"));
 
-    public bool SaveOcrGpuAcceleration(bool enabled)
+    private const string MinimapGpuVariable = "IMAO_MINIMAP_GPU_RECOVERY";
+    private const string ViewportGpuVariable = "IMAO_VIEWPORT_GPU";
+    public (bool Minimap, bool Viewport) DesiredMapGpuSettings => Configuration.ResolveMapGpuSettings(
+        Environment.GetEnvironmentVariable(MinimapGpuVariable), Environment.GetEnvironmentVariable(ViewportGpuVariable));
+
+    public bool SaveOcrGpuAcceleration(bool enabled) =>
+        SaveGpuPreference(old => old with { OcrGpuAcceleration = enabled });
+    public bool SaveMinimapGpuAcceleration(bool enabled) =>
+        SaveGpuPreference(old => old with { MinimapGpuAcceleration = enabled });
+    public bool SaveViewportGpuAcceleration(bool enabled) =>
+        SaveGpuPreference(old => old with { ViewportGpuAcceleration = enabled });
+
+    private bool SaveGpuPreference(Func<RuntimeConfiguration, RuntimeConfiguration> update)
     {
         try
         {
-            configuration.Update(old => old with { OcrGpuAcceleration = enabled });
+            configuration.Update(update);
             OnUi(() => OnPropertyChanged(nameof(Configuration)));
             return true;
         }
@@ -154,6 +166,9 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         };
         session.Process.StartInfo.ArgumentList.Add("--pipe");
         session.Process.StartInfo.Environment["IMAO_OCR_BACKEND"] = DesiredOcrBackend;
+        var mapGpu = DesiredMapGpuSettings;
+        session.Process.StartInfo.Environment[MinimapGpuVariable] = mapGpu.Minimap ? "1" : "0";
+        session.Process.StartInfo.Environment[ViewportGpuVariable] = mapGpu.Viewport ? "1" : "0";
         session.Process.StartInfo.ArgumentList.Add(pipeName);
         if (resourceSnapshots is not null)
         {

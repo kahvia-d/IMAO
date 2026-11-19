@@ -809,6 +809,9 @@ public sealed partial class SettingsPage : Page
         RestoreOverlayScales();
         restoringRuntime = true;
         OcrGpuAcceleration.IsOn = coreHost.DesiredOcrBackend == "directml";
+        var mapGpu = coreHost.DesiredMapGpuSettings;
+        MinimapGpuAcceleration.IsOn = mapGpu.Minimap;
+        ViewportGpuAcceleration.IsOn = mapGpu.Viewport;
         OcrBackendState.Text = coreHost.Status.OcrBackend?.DisplayText ?? "OCR：等待核心报告实际后端";
         var value = coreHost.Configuration;
         ComboBox_CaptureMethod.SelectedIndex = value.CaptureWay;
@@ -835,10 +838,26 @@ public sealed partial class SettingsPage : Page
     private void OcrGpuAcceleration_Toggled(object sender, RoutedEventArgs e)
     {
         if (restoringRuntime || !IsLoaded) return;
-        bool saved = coreHost.SaveOcrGpuAcceleration(OcrGpuAcceleration.IsOn);
-        OcrPerformanceMessage.Severity = saved ? InfoBarSeverity.Informational : InfoBarSeverity.Error;
-        OcrPerformanceMessage.Message = saved ? "已保存。请从托盘完全退出并重新打开软件后生效。" : coreHost.LastFault;
-        OcrPerformanceMessage.IsOpen = true;
+        ShowGpuSaveResult(coreHost.SaveOcrGpuAcceleration(OcrGpuAcceleration.IsOn));
+    }
+
+    private void MinimapGpuAcceleration_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (restoringRuntime || !IsLoaded) return;
+        ShowGpuSaveResult(coreHost.SaveMinimapGpuAcceleration(MinimapGpuAcceleration.IsOn));
+    }
+
+    private void ViewportGpuAcceleration_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (restoringRuntime || !IsLoaded) return;
+        ShowGpuSaveResult(coreHost.SaveViewportGpuAcceleration(ViewportGpuAcceleration.IsOn));
+    }
+
+    private void ShowGpuSaveResult(bool saved)
+    {
+        GpuPerformanceMessage.Severity = saved ? InfoBarSeverity.Informational : InfoBarSeverity.Error;
+        GpuPerformanceMessage.Message = saved ? "已保存。从托盘退出 IMao，再打开即可生效。" : coreHost.LastFault;
+        GpuPerformanceMessage.IsOpen = true;
         RestoreRuntime();
     }
 

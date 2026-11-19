@@ -4,6 +4,10 @@ public sealed record RuntimeConfiguration
 {
     // Null preserves the existing CPU/GPU test launcher until the player makes a choice.
     public bool? OcrGpuAcceleration { get; init; }
+    public bool? MinimapGpuAcceleration { get; init; }
+    public bool? ViewportGpuAcceleration { get; init; }
+    public (bool Minimap, bool Viewport) ResolveMapGpuSettings(string? launchMinimap, string? launchViewport) =>
+        (MinimapGpuAcceleration ?? (launchMinimap == "1"), ViewportGpuAcceleration ?? (launchViewport == "1"));
     public string ResolveOcrBackend(string? launchBackend) =>
         (OcrGpuAcceleration ?? string.Equals(launchBackend, "directml", StringComparison.OrdinalIgnoreCase))
             ? "directml" : "cpu";

@@ -29,6 +29,19 @@ Check(new RuntimeConfiguration().ResolveOcrBackend("directml") == "directml", "U
 Check(new RuntimeConfiguration { OcrGpuAcceleration = false }.ResolveOcrBackend("directml") == "cpu", "Saved CPU preference overrides GPU launcher");
 Check(new RuntimeConfiguration { OcrGpuAcceleration = true }.ResolveOcrBackend("cpu") == "directml", "Saved GPU preference overrides CPU launcher");
 Check(JsonSerializer.Deserialize<RuntimeConfiguration>(JsonSerializer.Serialize(new RuntimeConfiguration { OcrGpuAcceleration = true }))!.OcrGpuAcceleration == true, "OCR preference persists");
+var oldGpuConfig = JsonSerializer.Deserialize<RuntimeConfiguration>("{}")!;
+Check(oldGpuConfig.ResolveMapGpuSettings(null, null) == (false, false), "Both map GPU paths default to CPU");
+Check(oldGpuConfig.ResolveMapGpuSettings("1", "true") == (true, false), "Unset map preferences honor only the native launch value 1");
+Check((oldGpuConfig with { MinimapGpuAcceleration = false }).ResolveMapGpuSettings("1", "1") == (false, true),
+    "Choosing CPU for the minimap preserves the big map launch preference");
+foreach (bool minimap in new[] { false, true })
+foreach (bool viewport in new[] { false, true })
+{
+    var saved = oldGpuConfig with { MinimapGpuAcceleration = minimap, ViewportGpuAcceleration = viewport };
+    var restored = JsonSerializer.Deserialize<RuntimeConfiguration>(JsonSerializer.Serialize(saved))!;
+    Check(restored.ResolveMapGpuSettings(minimap ? "0" : "1", viewport ? "0" : "1") == (minimap, viewport),
+        $"Saved map preferences override both launch values independently (minimap={minimap}, viewport={viewport})");
+}
 var ocrStatus = JsonSerializer.Deserialize<CoreRuntimeStatus>("""
     {"ocrBackend":{"requested":"directml","backend":"cpu","adapter":2,"fallback":"device lost"}}
     """)!;
