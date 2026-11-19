@@ -130,15 +130,21 @@ class LiveFrames:
         self.offset = 0
         self.columns = None
         self.recent = collections.deque()
+        self.encoding = None
 
     def sample(self, now):
         with self.path.open("rb") as stream:
+            if self.encoding is None:
+                signature = stream.read(2)
+                if len(signature) < 2:
+                    return None
+                self.encoding = "utf-16-le" if signature == b"\xff\xfe" else "utf-8"
+                self.offset = 2 if self.encoding == "utf-16-le" else 0
             stream.seek(self.offset)
-            for line in stream:
-                if not line.endswith(b"\n"):
-                    break
-                self.offset += len(line)
-                values = next(csv.reader([line.decode("utf-8-sig")]))
+            newline = "\n".encode(self.encoding)
+            for line in stream.read().split(newline)[:-1]:
+                self.offset += len(line) + len(newline)
+                values = next(csv.reader([line.decode(self.encoding).lstrip("\ufeff")]))
                 if self.columns is None:
                     self.columns = {name: i for i, name in enumerate(values)}
                     continue
@@ -163,7 +169,10 @@ def summarize(folder):
     # msBetweenDisplayChange spans two displays. Attribute it only if the entire
     # interval belongs to eligible samples of one block, away from switching.
     chains = collections.Counter()
-    with (folder / "frames.csv").open(encoding="utf-8-sig") as f:
+    trace = folder / "frames.csv"
+    with trace.open("rb") as f:
+        encoding = "utf-16" if f.read(2) == b"\xff\xfe" else "utf-8-sig"
+    with trace.open(encoding=encoding) as f:
         for frame in csv.DictReader(f):
             chains[frame["SwapChainAddress"]] += 1
     if not chains:
@@ -173,7 +182,7 @@ def summarize(folder):
     main = chains.most_common(1)[0][0]
     groups = collections.defaultdict(list)
     scale = None
-    with (folder / "frames.csv").open(encoding="utf-8-sig") as f:
+    with trace.open(encoding=encoding) as f:
         for frame in csv.DictReader(f):
             if frame["SwapChainAddress"] != main or frame["Dropped"] != "0":
                 continue
