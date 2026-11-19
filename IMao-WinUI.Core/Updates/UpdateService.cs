@@ -631,12 +631,19 @@ public sealed class UpdateService : IDisposable
     /// </summary>
     public async Task EnsureInstalledAsync(IEnumerable<string> packageIds, IProgress<UpdateProgress>? progress = null, CancellationToken ct = default)
     {
-        EnsureAvailable();
-        if (_checkedEnvelope is null) throw new InvalidOperationException("请先检查更新。");
         var wanted = new HashSet<string>(packageIds, StringComparer.Ordinal);
         if (wanted.Count == 0) return;
+        foreach (var id in wanted) UpdateStorage.ValidateId(id);
+        var damaged = new HashSet<string>(StringComparer.Ordinal);
+        await using (var localGate = await UpdateStorage.LockAsync(_snapshots.Root, ct).ConfigureAwait(false))
+        {
+            if (await _snapshots.TryEnableLocalAsync(wanted, damaged, ct).ConfigureAwait(false)) return;
+        }
+        EnsureAvailable();
+        if (_checkedEnvelope is null) await CheckAsync(automatic: false, ct).ConfigureAwait(false);
         await using var gate = await UpdateStorage.LockAsync(_snapshots.Root, ct).ConfigureAwait(false);
         _state = LoadState();
+        if (_checkedEnvelope is null) throw new InvalidOperationException("无法取得资源发布清单。");
         var catalog = UpdateSignature.Verify(_checkedEnvelope, _keys, _allowTestKeys);
         AcceptCatalog(catalog, _checkedEnvelope);
         // The publication is what a download would come from, and it is deliberately optional here. The release
@@ -666,7 +673,7 @@ public sealed class UpdateService : IDisposable
             // takes the whole resource set down with it.
             var local = _snapshots.Current.Packages.FirstOrDefault(p =>
                 string.Equals(p.Id, id, StringComparison.Ordinal) && Directory.Exists(p.Directory));
-            if (local is null) throw new InvalidDataException(MissingRegionMessage(id, release));
+            if (local is null || damaged.Contains(id)) throw new InvalidDataException(MissingRegionMessage(id, release));
             if (!ResourceSnapshotService.IsSelectable(local)) throw new InvalidDataException("该资源包为必需资源，不能单独安装：" + id);
             plan.Add(new PlannedPackage(id, null, local));
         }
@@ -687,6 +694,7 @@ public sealed class UpdateService : IDisposable
             var target = PackageDirectory(item.Release);
             // A package that ships inside the program resolves to its installation copy, which is already
             // there; only the packages genuinely absent from this machine are downloaded.
+            if (damaged.Contains(item.Id)) { needed.Add(item.Release); missing.Add(item.Id); continue; }
             if (FindBundled(item.Release) is not null) continue;
             if (Directory.Exists(target)) await VerifyInstalledAsync(target, item.Release, ct).ConfigureAwait(false);
             else { needed.Add(item.Release); missing.Add(item.Release.Id); }
@@ -697,16 +705,18 @@ public sealed class UpdateService : IDisposable
         // Everything this request prepares, plus the required packages: an install rewrites the descriptor
         // for the release it stages, so the packages that make the snapshot loadable travel with it.
         var installSet = new HashSet<string>(plan.Where(item => item.Release is not null).Select(item => item.Id), StringComparer.Ordinal);
-        // Activate the requested regions on the active snapshot. This happens before staging so the stored
-        // descriptor already names the region that is being reinstalled, which is what lets the narrowed
-        // staged snapshot keep it.
+        // A download may fail or be cancelled. Commit the selection only after the files are in place.
         var activating = plan.Where(item => wanted.Contains(item.Id)).Select(item => item.Local ?? new SnapshotPackage
         {
             Id = item.Release!.Id, Version = item.Release.Version, Kind = item.Release.Kind,
-            Directory = PackageDirectory(item.Release), Sha256 = item.Release.Sha256, Files = item.Release.Files
+            Directory = PackageDirectory(item.Release, damaged), Sha256 = item.Release.Sha256, Files = item.Release.Files
         }).ToList();
+        if (needed.Count > 0)
+        {
+            var regions = new RegionInstall(installSet, missing.ToHashSet(StringComparer.Ordinal), damaged, activating);
+            await InstallReleaseAsync(release!, null, progress, ct, regions).ConfigureAwait(false);
+        }
         await _snapshots.AttachPackagesAsync(activating, ct).ConfigureAwait(false);
-        if (needed.Count > 0) await InstallReleaseAsync(release!, null, progress, ct, installSet, missing.ToHashSet(StringComparer.Ordinal)).ConfigureAwait(false);
         // The install changed what is on disk, so the host view is recomputed from the expanded snapshot.
         await _snapshots.RefreshRuntimeViewAsync(ct).ConfigureAwait(false);
         progress?.Report(new UpdateProgress("区域已就绪，重启软件后生效", 0, 0));
@@ -892,31 +902,41 @@ public sealed class UpdateService : IDisposable
         return notice;
     }
 
-    private async Task InstallReleaseAsync(ResourceRelease release, Dictionary<string, ZipArchiveEntry>? offline, IProgress<UpdateProgress>? progress, CancellationToken ct, HashSet<string>? only = null, HashSet<string>? tolerating = null)
+    private sealed record RegionInstall(HashSet<string> Touched, HashSet<string> Needed, HashSet<string> Damaged, List<SnapshotPackage> Activating);
+
+    private async Task InstallReleaseAsync(ResourceRelease release, Dictionary<string, ZipArchiveEntry>? offline, IProgress<UpdateProgress>? progress, CancellationToken ct, RegionInstall? regions = null)
     {
         UpdateStorage.RejectLink(_snapshots.Root);
         // A per-region install touches only the selected packages. A package that is not part of this
         // request is left exactly as it is, including one whose downloaded copy the player removed.
-        var touched = only is null ? release.Packages : release.Packages.Where(p => only.Contains(p.Id)).ToList();
+        var touched = regions is null ? release.Packages : release.Packages.Where(p => regions.Touched.Contains(p.Id)).ToList();
+        var damaged = regions?.Damaged;
         var needed = new List<ResourcePackage>();
         foreach (var package in touched)
         {
             ct.ThrowIfCancellationRequested();
-            var target = PackageDirectory(package);
+            var target = PackageDirectory(package, damaged);
+            if (damaged?.Contains(package.Id) == true)
+            {
+                UpdateStorage.RejectLink(target);
+                if (File.Exists(target + ".receipt.json")) VerifyReceipt(target, package);
+                needed.Add(package);
+                continue;
+            }
             if (FindBundled(package) is not null)
             {
                 // A bundled copy is verified in place only when this install actually rewrites the release;
                 // refreshing one region must not require the program's own packages to be re-hashed.
-                if (tolerating is null) await UpdateStorage.VerifyDirectoryAsync(target, package.Files, ct).ConfigureAwait(false);
+                if (regions is null) await UpdateStorage.VerifyDirectoryAsync(target, package.Files, ct).ConfigureAwait(false);
             }
             else if (Directory.Exists(target))
             {
-                if (tolerating is null) await VerifyInstalledAsync(target, package, ct).ConfigureAwait(false);
+                if (regions is null) await VerifyInstalledAsync(target, package, ct).ConfigureAwait(false);
             }
-            else if (tolerating is null || tolerating.Contains(package.Id)) needed.Add(package);
+            else if (regions is null || regions.Needed.Contains(package.Id)) needed.Add(package);
         }
         // The caller that tolerates an absent region has already asked about free space for the rest.
-        if (tolerating is null)
+        if (regions is null)
         {
             var requiredBytes = checked(needed.Sum(p => checked(p.Size + p.Files.Sum(f => f.Size))) + 64L * 1024 * 1024);
             if (_freeSpace() < requiredBytes) throw new IOException("磁盘空间不足，无法安全安装资源更新。");
@@ -950,21 +970,30 @@ public sealed class UpdateService : IDisposable
                 progress?.Report(new UpdateProgress("验证并解压资源", completed, total));
                 var unpacked = Path.Combine(work, package.Id);
                 await ExtractPackageAsync(zipPath, unpacked, package, ct).ConfigureAwait(false);
-                var target = PackageDirectory(package);
+                var target = PackageDirectory(package, damaged);
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                 UpdateStorage.RejectLink(Path.GetDirectoryName(target)!);
                 ct.ThrowIfCancellationRequested();
                 await UpdateStorage.WriteAsync(target + ".receipt.json", package, ct).ConfigureAwait(false);
-                await UpdateStorage.MoveDirectoryAsync(unpacked, target, ct).ConfigureAwait(false);
+                if (damaged?.Contains(package.Id) == true && Directory.Exists(target))
+                {
+                    // The new copy is verified. Keep the old cache recoverable until the swap succeeds.
+                    var backup = Path.Combine(work, package.Id + ".previous");
+                    await UpdateStorage.MoveDirectoryAsync(target, backup, ct).ConfigureAwait(false);
+                    try { await UpdateStorage.MoveDirectoryAsync(unpacked, target, CancellationToken.None).ConfigureAwait(false); }
+                    catch { await UpdateStorage.MoveDirectoryAsync(backup, target, CancellationToken.None).ConfigureAwait(false); throw; }
+                }
+                else await UpdateStorage.MoveDirectoryAsync(unpacked, target, ct).ConfigureAwait(false);
             }
             ct.ThrowIfCancellationRequested();
+            if (regions is not null) await _snapshots.AttachPackagesAsync(regions.Activating, ct, enable: false).ConfigureAwait(false);
             // Every package in the snapshot must be present on disk, because the native host rejects the
             // whole resource set when one of them does not load. A full install cannot reach this point
             // with a missing copy; a per-region install can, so it narrows the snapshot to what exists.
             var available = new List<SnapshotPackage>();
             foreach (var p in release.Packages)
             {
-                var target = PackageDirectory(p);
+                var target = PackageDirectory(p, damaged);
                 if (FindBundled(p) is null && !Directory.Exists(target)) continue;
                 available.Add(new SnapshotPackage
                 {
@@ -981,7 +1010,7 @@ public sealed class UpdateService : IDisposable
                 MapFeatureRoot = available.SingleOrDefault(p => p.Kind == "map-features")?.Directory ?? ""
             };
             progress?.Report(new UpdateProgress("检查资源兼容性", total, total));
-            await _snapshots.StageAsync(candidate, ct).ConfigureAwait(false);
+            await _snapshots.StageAsync(candidate, ct, regions?.Activating.Select(p => p.Id)).ConfigureAwait(false);
             progress?.Report(new UpdateProgress("安装完成，重启软件后生效", total, total));
         }
         finally
@@ -993,9 +1022,16 @@ public sealed class UpdateService : IDisposable
         }
     }
 
-    private SnapshotPackage? FindBundled(ResourcePackage package) => _snapshots.FindBundledPackage(new SnapshotPackage { Id = package.Id, Version = package.Version, Kind = package.Kind, Sha256 = package.Sha256, Files = package.Files });
+    // Rebind uses the cached copy first as well. A repaired region can legitimately exist in both places.
+    private SnapshotPackage? FindBundled(ResourcePackage package) => Directory.Exists(CacheDirectory(package)) ? null :
+        _snapshots.FindBundledPackage(new SnapshotPackage { Id = package.Id, Version = package.Version, Kind = package.Kind, Sha256 = package.Sha256, Files = package.Files });
 
-    private string PackageDirectory(ResourcePackage package) => FindBundled(package)?.Directory ?? Path.Combine(_snapshots.Root, "packages", package.Id, package.Version);
+    private string CacheDirectory(ResourcePackage package) => Path.Combine(_snapshots.Root, "packages", package.Id, package.Version);
+
+    private string PackageDirectory(ResourcePackage package, HashSet<string>? damaged = null)
+    {
+        return damaged?.Contains(package.Id) == true ? CacheDirectory(package) : FindBundled(package)?.Directory ?? CacheDirectory(package);
+    }
 
     private static async Task VerifyInstalledAsync(string directory, ResourcePackage package, CancellationToken ct)
     {
@@ -1007,11 +1043,18 @@ public sealed class UpdateService : IDisposable
             await UpdateStorage.VerifyDirectoryAsync(directory, package.Files, ct).ConfigureAwait(false);
             await UpdateStorage.WriteAsync(manifestPath, package, ct).ConfigureAwait(false);
         }
+        VerifyReceipt(directory, package);
+        await UpdateStorage.VerifyDirectoryAsync(directory, package.Files, ct).ConfigureAwait(false);
+    }
+
+    private static void VerifyReceipt(string directory, ResourcePackage package)
+    {
+        var manifestPath = directory + ".receipt.json";
+        UpdateStorage.RejectLink(manifestPath);
         var existing = UpdateStorage.Read<ResourcePackage>(manifestPath);
         if (existing.Id != package.Id || existing.Version != package.Version || existing.Kind != package.Kind || existing.Size != package.Size || !existing.Sha256.Equals(package.Sha256, StringComparison.OrdinalIgnoreCase) ||
             !JsonSerializer.SerializeToUtf8Bytes(existing.Files, UpdateJson.Options).AsSpan().SequenceEqual(JsonSerializer.SerializeToUtf8Bytes(package.Files, UpdateJson.Options)))
             throw new InvalidDataException("同一资源包版本已存在不同内容，请由维护者发布新版本。");
-        await UpdateStorage.VerifyDirectoryAsync(directory, package.Files, ct).ConfigureAwait(false);
     }
 
     private static async Task ExtractPackageAsync(string zipPath, string directory, ResourcePackage package, CancellationToken ct)

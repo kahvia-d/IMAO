@@ -337,6 +337,48 @@ public sealed class ResourceSnapshotService
         return pending.Bundled || pending.FormatVersion != 2 ? Current : pending;
     }
 
+    // Only the descriptor this installation will actually use can authorize an offline enable.
+    // An old directory with a matching region name is not evidence of a compatible package.
+    internal async Task<bool> TryEnableLocalAsync(HashSet<string> wanted, HashSet<string> damaged, CancellationToken ct)
+    {
+        var configured = PendingOrDefault();
+        var selected = configured.Packages.Where(p => wanted.Contains(p.Id)).ToList();
+        bool missing = selected.Count != wanted.Count || configured.Packages.Any(p => !IsSelectable(p) && !Directory.Exists(p.Directory));
+        foreach (var p in selected)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!IsSelectable(p)) throw new InvalidDataException("该资源包为必需资源，不能单独安装：" + p.Id);
+            if (!Directory.Exists(p.Directory)) { missing = true; continue; }
+            var shipped = FindBundledPackage(p);
+            bool inBundle = shipped is not null && Path.GetFullPath(shipped.Directory).Equals(Path.GetFullPath(p.Directory), StringComparison.OrdinalIgnoreCase);
+            if (!inBundle && !Path.GetFullPath(p.Directory).Equals(Path.GetFullPath(Path.Combine(Root, "packages", p.Id, p.Version)), StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("资源包路径超出安装目录。");
+            var linkedTestPack = inBundle && File.GetAttributes(p.Directory).HasFlag(FileAttributes.ReparsePoint) &&
+                File.Exists(Path.Combine(_bundled.BaselineRoot, "..", "maptest-build-receipt.json"));
+            if (!linkedTestPack) UpdateStorage.RejectLink(p.Directory);
+            try
+            {
+                if (inBundle && (p.Files.Count == 0 || linkedTestPack))
+                {
+                    // Legacy bundles have no file inventory. Use the same native loader as the app,
+                    // also for development bundles whose installed region directories are junctions.
+                    if (!Directory.EnumerateFileSystemEntries(p.Directory).Any()) { damaged.Add(p.Id); continue; }
+                    if (_preflight is null) throw new InvalidOperationException("无法验证内置地图区域，缺少资源验证器：" + p.Id);
+                    var candidate = ApplySelection(configured);
+                    candidate = candidate with { Packages = [.. candidate.Packages.Where(other => other.Id != p.Id), p] };
+                    await _preflight(await MaterializeAsync(candidate, _selectedStoredPath, ct), ct).ConfigureAwait(false);
+                }
+                else await UpdateStorage.VerifyDirectoryAsync(p.Directory, p.Files, ct).ConfigureAwait(false);
+            }
+            catch (InvalidDataException) { damaged.Add(p.Id); }
+            catch (FileNotFoundException) { damaged.Add(p.Id); }
+            catch (DirectoryNotFoundException) { damaged.Add(p.Id); }
+        }
+        if (missing || damaged.Count != 0) return false;
+        await SetDeselectedPackagesLockedAsync(DeselectedFor(configured).Except(wanted, StringComparer.Ordinal), ct).ConfigureAwait(false);
+        return true;
+    }
+
     /// <summary>
     /// Every package this installation can load: the snapshot that will run after the next restart plus any
     /// local copy whose package the player turned off.
@@ -405,7 +447,7 @@ public sealed class ResourceSnapshotService
     ///
     /// The caller holds the update lock for the whole install transaction.
     /// </summary>
-    internal async Task AttachPackagesAsync(IEnumerable<SnapshotPackage> packages, CancellationToken ct)
+    internal async Task AttachPackagesAsync(IEnumerable<SnapshotPackage> packages, CancellationToken ct, bool enable = true)
     {
         EnsureInitialized();
         var requested = packages.ToList();
@@ -422,7 +464,7 @@ public sealed class ResourceSnapshotService
         // the choice out turns that default into an explicit list, so the region just installed stays active
         // no matter how the default is interpreted later.
         var deselected = new SortedSet<string>(DeselectedFor(Current), StringComparer.Ordinal);
-        foreach (var package in requested) deselected.Remove(package.Id);
+        if (enable) deselected.ExceptWith(placements.Keys);
         // The descriptor keeps the release identity but names the copies that are on disk, so the next launch
         // validates and activates this same snapshot instead of falling back to the bundle.
         if (!updated.SequenceEqual(Current.Packages)) Current = Current with { Packages = updated };
@@ -493,9 +535,10 @@ public sealed class ResourceSnapshotService
     // The packaged snapshot is narrowed like any other. It was previously handed over whole on the
     // assumption that the program's own resources are always complete, which silently ignored the player's
     // choices for exactly those regions: turning one off changed the selection and nothing else.
-    private ResourceSnapshot ApplySelection(ResourceSnapshot snapshot)
+    private ResourceSnapshot ApplySelection(ResourceSnapshot snapshot, IEnumerable<string>? enabling = null)
     {
         var deselected = new HashSet<string>(DeselectedFor(snapshot), StringComparer.Ordinal);
+        if (enabling is not null) deselected.ExceptWith(enabling);
         // A selectable package whose copy is gone cannot be loaded, and the native loader refuses the entire
         // resource set when one named package will not load. Selection alone must therefore never decide what
         // the host is given: a region the player turned on whose download has not happened yet stays out of
@@ -575,7 +618,7 @@ public sealed class ResourceSnapshotService
     }
 
     // The caller holds the update lock for the entire install transaction.
-    internal async Task StageAsync(ResourceSnapshot snapshot, CancellationToken ct)
+    internal async Task StageAsync(ResourceSnapshot snapshot, CancellationToken ct, IEnumerable<string>? enabling = null)
     {
         EnsureInitialized();
         _state = UpdateStorage.Read<ActivationState>(_statePath);
@@ -598,7 +641,7 @@ public sealed class ResourceSnapshotService
                 await UpdateStorage.WriteAsync(path, snapshot, ct).ConfigureAwait(false);
         }
         else await UpdateStorage.WriteAsync(path, snapshot, ct).ConfigureAwait(false);
-        await ReadAndValidateAsync(path, ct).ConfigureAwait(false);
+        await ReadAndValidateAsync(path, ct, enabling).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         _state.PendingPath = path;
         _state.Attempt = null;
@@ -622,7 +665,7 @@ public sealed class ResourceSnapshotService
         JsonSerializer.SerializeToUtf8Bytes(
             right.Packages.Select(p => p with { Directory = "" }).OrderBy(p => p.Id, StringComparer.Ordinal).ToList(), UpdateJson.Options));
 
-    private async Task<ResourceSnapshot> ReadAndValidateAsync(string path, CancellationToken ct)
+    private async Task<ResourceSnapshot> ReadAndValidateAsync(string path, CancellationToken ct, IEnumerable<string>? enabling = null)
     {
         var snapshotRoot = Path.GetFullPath(Path.Combine(Root, "snapshots")) + Path.DirectorySeparatorChar;
         if (!Path.GetFullPath(path).StartsWith(snapshotRoot, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("资源快照路径超出安装目录。");
@@ -656,7 +699,7 @@ public sealed class ResourceSnapshotService
         // Narrow to the player's selection before anything below inspects packages. Every check then
         // describes exactly what the native host will be given, which is what makes a deselected
         // region's downloaded copy removable instead of a reason to fail validation.
-        var runtime = ApplySelection(snapshot);
+        var runtime = ApplySelection(snapshot, enabling);
         if (runtime.Packages.Count(p => p.Kind == "map-data") != 1) throw new InvalidDataException("资源快照地图数据包无效。");
         var packagesRoot = Path.GetFullPath(Path.Combine(Root, "packages")) + Path.DirectorySeparatorChar;
         foreach (var package in runtime.Packages)

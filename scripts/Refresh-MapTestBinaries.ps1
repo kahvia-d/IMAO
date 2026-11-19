@@ -64,7 +64,11 @@ if (-not ($runtimeOptions.PSObject.Properties.Name -contains 'includedFrameworks
         "dotnet build IMao-WinUI\IMao-WinUI.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -t:Rebuild")
 }
 
-$running = @(Get-Process -Name 'IMao-CoreHost', 'IMao-WinUI' -ErrorAction SilentlyContinue)
+$runPrefix = [IO.Path]::GetFullPath($RunRoot).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+$running = @(Get-Process -Name 'IMao-CoreHost', 'IMao-WinUI' -ErrorAction SilentlyContinue | Where-Object {
+    # An inaccessible process might own this tree. An independently installed player client does not.
+    -not $_.Path -or $_.Path.StartsWith($runPrefix, [StringComparison]::OrdinalIgnoreCase)
+})
 if ($running.Count -gt 0 -and -not $DryRun) {
     throw ("the test tree is running (pid {0}); close it first, its binaries are locked" -f ($running.Id -join ', '))
 }

@@ -1356,6 +1356,66 @@ await Test("deleting a copy the program ships makes enabling that region downloa
     True(Directory.Exists(Path.Combine(f.Root, "packages", "tethys-kurotiles", "2026.9.9.2")));
 });
 
+await Test("re-enabling a retained region needs no manifest, including after a restart", async () =>
+{
+    using var f = New(); f.BundleMapData(); f.BundleRegion("tethys-kurotiles"); f.BundleRegion("taro-kurotiles"); await f.Initialize();
+    await f.Snapshots.SetDeselectedPackagesAsync(["tethys-kurotiles", "taro-kurotiles"]);
+    var restarted = f.NewSnapshots(); await restarted.InitializeAsync();
+    using var updater = f.NewUpdates(restarted);
+    f.Network.Fail = true;
+    await updater.EnsureInstalledAsync(["tethys-kurotiles"]);
+    Equal(0, f.Network.Requests.Count);
+    EqualSequence(["taro-kurotiles"], restarted.DeselectedPackageIds);
+    True(restarted.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+});
+
+await Test("only a missing region fetches the manifest and a failed download keeps it disabled", async () =>
+{
+    using var f = New(); f.BundleMapData(); f.BundleRegion("tethys-kurotiles"); await f.Initialize();
+    var catalog = f.RegionCatalog(); f.Publish(catalog);
+    await f.Updates.RemoveAsync(["tethys-kurotiles"]);
+    var url = catalog.Resources[0].Packages.Single(p => p.Id == "tethys-kurotiles").Url;
+    f.Network.Unreachable.Add(url);
+    var failure = await CaptureAsync(() => f.Updates.EnsureInstalledAsync(["tethys-kurotiles"]));
+    True(failure.Length > 0);
+    EqualSequence([UpdateService.StableUri.AbsoluteUri, url], f.Network.Requests);
+    EqualSequence(["tethys-kurotiles"], f.Snapshots.DeselectedPackageIds);
+    False(f.Snapshots.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+    f.Network.Unreachable.Clear();
+    f.Network.Requests.Clear();
+    await f.Updates.EnsureInstalledAsync(["tethys-kurotiles"]);
+    EqualSequence([url], f.Network.Requests);
+    True(f.Snapshots.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == "tethys-kurotiles"));
+});
+
+await Test("a retained downloaded region works offline and a damaged copy is repaired from its signed package", async () =>
+{
+    const string id = "tethys-kurotiles";
+    using var f = New(); f.BundleMapData(); await f.Initialize();
+    var catalog = f.RegionCatalog(); f.Publish(catalog);
+    await f.Updates.EnsureInstalledAsync([id]);
+    var next = f.NewSnapshots(); await next.InitializeAsync();
+    await next.ReportHealthyAsync(next.Current.SnapshotId);
+    using var updater = f.NewUpdates(next);
+    var region = next.Current.Packages.Single(p => p.Id == id);
+    var file = Path.Combine(region.Directory, region.Files.Single().Path);
+    var intact = await File.ReadAllBytesAsync(file);
+    await next.SetDeselectedPackagesAsync([id]);
+    f.Network.Requests.Clear(); f.Network.Fail = true;
+    await updater.EnsureInstalledAsync([id]);
+    Equal(0, f.Network.Requests.Count);
+    await next.SetDeselectedPackagesAsync([id]);
+    var broken = intact.ToArray(); broken[0] ^= 1;
+    await File.WriteAllBytesAsync(file, broken);
+    True((await CaptureAsync(() => updater.EnsureInstalledAsync([id]))).Length > 0);
+    EqualSequence([id], next.DeselectedPackageIds);
+    f.Network.Fail = false; f.Network.Requests.Clear();
+    await updater.EnsureInstalledAsync([id]);
+    EqualSequence([UpdateService.StableUri.AbsoluteUri, catalog.Resources[0].Packages.Single(p => p.Id == id).Url], f.Network.Requests);
+    True((await File.ReadAllBytesAsync(file)).SequenceEqual(intact));
+    True(next.CurrentRuntimeSnapshot.Packages.Any(p => p.Id == id));
+});
+
 await Test("a publication that refuses this program does not block re-enabling a region already on disk", async () =>
 {
     // The player's report, reduced to its essentials: 2026.10.1.1 could not switch 今州 back on while the
