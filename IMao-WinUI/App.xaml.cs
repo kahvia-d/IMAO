@@ -311,24 +311,17 @@ public partial class App : Application
         // WinUI allows one modal dialog per XamlRoot. Keep any ongoing edit intact.
         if (Microsoft.UI.Xaml.Media.VisualTreeHelper.GetOpenPopupsForXamlRoot(shell.XamlRoot)
             .Any(p => p.Child is ContentDialog)) return;
-        var remember = new CheckBox { Content = "记住我的选择" };
-        var dialog = new ContentDialog
+        var dialog = new WindowCloseDialog
         {
-            XamlRoot = shell.XamlRoot, RequestedTheme = shell.ActualTheme,
-            Title = "关闭窗口时", PrimaryButtonText = "缩小到托盘",
-            SecondaryButtonText = "退出 IMao", CloseButtonText = "取消",
-            Content = new StackPanel { Spacing = 12, Children =
-            {
-                new TextBlock { Text = "缩小到托盘后，探索会继续运行。退出 IMao 会同时停止探索。", TextWrapping = TextWrapping.Wrap },
-                remember
-            } }
+            XamlRoot = shell.XamlRoot,
+            RequestedTheme = shell.ActualTheme
         };
         var result = await dialog.ShowAsync();
         if (closing || result == ContentDialogResult.None) return;
         action = result == ContentDialogResult.Primary ? WindowCloseAction.Tray : WindowCloseAction.Exit;
         if (action == WindowCloseAction.Tray && !tray.CanHide())
             throw new InvalidOperationException("托盘图标暂不可用，请稍后再试。");
-        if (remember.IsChecked == true) await WindowCloseSettings.SaveAsync(settings, action);
+        if (dialog.RememberChoice) await WindowCloseSettings.SaveAsync(settings, action);
         if (action == WindowCloseAction.Exit) await CloseCleanlyAsync();
         else if (!tray.TryHide()) throw new InvalidOperationException("无法缩小到托盘。");
     }

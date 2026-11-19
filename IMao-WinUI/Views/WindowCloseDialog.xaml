@@ -1,0 +1,31 @@
+<ContentDialog
+    x:Class="IMao_WinUI.Views.WindowCloseDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="关闭 IMao 窗口"
+    PrimaryButtonText="缩小到托盘"
+    SecondaryButtonText="退出 IMao"
+    CloseButtonText="取消"
+    PrimaryButtonStyle="{StaticResource IMaoPrimaryButtonStyle}"
+    SecondaryButtonStyle="{StaticResource IMaoSecondaryButtonStyle}"
+    CloseButtonStyle="{StaticResource IMaoSecondaryButtonStyle}"
+    Background="{StaticResource IMaoSurfaceBrush}"
+    BorderBrush="{StaticResource IMaoBorderStrongBrush}"
+    Foreground="{StaticResource IMaoTextBrush}"
+    CornerRadius="12">
+    <ContentDialog.Resources>
+        <StaticResource x:Key="ContentDialogTopOverlay" ResourceKey="IMaoSurfaceBrush" />
+        <StaticResource x:Key="ContentDialogSeparatorBorderBrush" ResourceKey="IMaoBorderBrush" />
+    </ContentDialog.Resources>
+    <ContentDialog.TitleTemplate>
+        <DataTemplate>
+            <TextBlock Text="{Binding}" Style="{StaticResource IMaoPageTitleStyle}" />
+        </DataTemplate>
+    </ContentDialog.TitleTemplate>
+    <StackPanel Spacing="12">
+        <TextBlock Style="{StaticResource IMaoSecondaryTextStyle}"
+                   Text="缩小到托盘后，探索会在后台继续。退出 IMao 会停止探索。" />
+        <CheckBox x:Name="RememberChoiceBox" Content="记住我的选择"
+                  Foreground="{StaticResource IMaoTextBrush}" />
+    </StackPanel>
+</ContentDialog>
