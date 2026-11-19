@@ -633,6 +633,7 @@ add_executable(IMaoVisualRegression
     IMao-Core/src/App/MapUiVisualDetector.cpp
     IMao-Core/src/App/MapUiStateController.cpp
     IMao-Core/src/Coordinate/VisualLocalization/GlobalVisualLocalizer.cpp
+    IMao-Core/src/Feature/Match/GpuRecoveryDistances.cpp
     IMao-Core/src/Diagnostics/Diagnostics.cpp
     IMao-Core/src/Runtime/StructuredLogger.cpp
     IMao-Core/src/Feature/VisualIndex/MapVisualIndex.cpp
@@ -654,8 +655,10 @@ target_include_directories(IMaoVisualRegression PRIVATE
     ${CMAKE_SOURCE_DIR}/IMao-Core/src
     ${CMAKE_SOURCE_DIR}/IMao-Core/packages/nlohmann
 )
-target_link_libraries(IMaoVisualRegression PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib dwmapi.lib psapi.lib)
+target_link_libraries(IMaoVisualRegression PRIVATE ${OpenCV_LIBS} ${IMAO_ZLIB_LIBRARIES} bcrypt.lib windowsapp.lib dwmapi.lib psapi.lib d3d11.lib d3dcompiler.lib)
 add_test(NAME IMaoMultiSceneViewportTests COMMAND IMaoVisualRegression --scene-self-test)
+add_test(NAME IMaoMinimapPreparationTests COMMAND IMaoVisualRegression --check-minimap-preparation
+    "${CMAKE_SOURCE_DIR}/Tests/VisualLocalization/20260907-cross-area")
 
 add_executable(IMaoCoordinateRegression
     IMao-Core/tools/CoordinateRegression/main.cpp

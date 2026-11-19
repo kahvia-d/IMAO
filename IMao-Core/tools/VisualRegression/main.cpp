@@ -4,6 +4,7 @@
 #include "Runtime/FrameStorageTrace.h"
 #include "Feature/LegacyFeatureExclusions.h"
 #include "../../tests/MultiSceneViewportTests.h"
+#include "../../tests/MinimapComputeTests.h"
 #include "Coordinate/VisualLocalization/GlobalVisualLocalizer.h"
 #include "Coordinate/VisualLocalization/RecoveryPolicy.h"
 #include "App/MapViewportCandidates.h"
@@ -1356,6 +1357,12 @@ int wmain(int argumentCount, wchar_t** arguments) {
     if (argumentCount == 5 && std::wstring(arguments[1]) == L"--minimap-memory")
         return MeasureMinimapMemory(arguments[2], arguments[3], arguments[4]);
     if (argumentCount == 2 && std::wstring(arguments[1]) == L"--scene-self-test") return RunMultiSceneViewportTests();
+    if (argumentCount == 3 && std::wstring(arguments[1]) == L"--check-minimap-preparation")
+        return TestMinimapPreparation(arguments[2]);
+    if (argumentCount == 2 && std::wstring(arguments[1]) == L"--check-gpu-recovery") {
+        try { return TestGpuRecoveryDistances(); }
+        catch (const std::exception& e) { std::cerr << e.what() << '\n'; return 1; }
+    }
     if (argumentCount == 3 && std::wstring(arguments[1]) == L"--viewport-storage")
         return MeasureViewportCost(std::filesystem::path(arguments[2]), 0, true);
     if (argumentCount >= 3 && std::wstring(arguments[1]) == L"--viewport-cost") {
