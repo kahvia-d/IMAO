@@ -35,8 +35,6 @@ public sealed record RuntimeConfiguration
     public int CaptureMaxFps { get; init; } = 20;
     // 自定义档位下的坐标 OCR 识别间隔（毫秒，50–1000）。
     public int OcrUpdateCycle { get; init; } = 150;
-    // 小地图标记平滑过渡：纯绘制层轻度向后缓动，不影响真实定位与快捷键判定，默认开启。
-    public bool MinimapMarkerSmoothingEnabled { get; init; } = true;
     public int MapUpdateCycle { get; init; } = 80;
     public int MinMapUpdateCycle { get; init; } = 80;
     public bool MapEnabled { get; init; } = true;
@@ -155,10 +153,10 @@ public sealed record RuntimeConfiguration
     /// </summary>
     public string DescribePerformanceProfile() => PerformanceProfile switch
     {
-        0 => "大地图 30 fps（识别 80 ms）· 小地图视觉 1:1 对齐 80 ms · OCR 模式自动对齐 100 ms",
-        1 => "大地图 20 fps（识别 100 ms）· 小地图视觉 1:1 对齐 100 ms · OCR 模式自动对齐 150 ms",
-        2 => "大地图 12 fps（识别 160 ms）· 小地图视觉 1:1 对齐 160 ms · OCR 模式自动对齐 200 ms",
-        _ => $"自定义：大地图上限 {CaptureMaxFps} fps（识别 {MapUpdateCycle} ms）· 小地图视觉 1:1 对齐 {MinMapUpdateCycle} ms · OCR 自动对齐 {OcrUpdateCycle} ms"
+        0 => "大地图 30 fps（定位 80 ms）· 小地图 30 fps（校准 200 ms，OCR 100 ms）",
+        1 => "大地图 20 fps（定位 100 ms）· 小地图 20 fps（校准 250 ms，OCR 150 ms）",
+        2 => "大地图 12 fps（定位 160 ms）· 小地图 10 fps（校准 250 ms，OCR 200 ms）",
+        _ => $"自定义：像素粘合上限 {CaptureMaxFps} fps · 大地图定位 {MapUpdateCycle} ms · 小地图校准 {MinMapUpdateCycle} ms · OCR {OcrUpdateCycle} ms"
     };
 
     internal Dictionary<string, object?> ToPayload() => new()
@@ -177,7 +175,6 @@ public sealed record RuntimeConfiguration
         ["performanceProfile"] = PerformanceProfile,
         ["captureMaxFps"] = CaptureMaxFps,
         ["ocrUpdateCycle"] = OcrUpdateCycle,
-        ["minimapMarkerSmoothingEnabled"] = MinimapMarkerSmoothingEnabled,
         ["mapUpdateCycle"] = MapUpdateCycle,
         ["minMapUpdateCycle"] = MinMapUpdateCycle, ["mapEnabled"] = MapEnabled,
         ["minMapEnabled"] = MinMapEnabled, ["savedPointsEnabled"] = SavedPointsEnabled,

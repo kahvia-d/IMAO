@@ -1,6 +1,5 @@
 #pragma once
 #include <chrono>
-#include <cmath>
 #include <cstdint>
 
 // Pacing and input-hook policy for the in-game overlay. These decisions are separated from the
@@ -151,10 +150,10 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
         return {
             profile,
             std::chrono::microseconds{33333},   // 大地图 30 fps（拖拽跟手）
-            std::chrono::microseconds{80000},   // 小地图视觉 1:1 对齐 80 ms（12.5 fps）
+            std::chrono::microseconds{33333},   // 小地图视觉 30 fps（高频像素粘合）
             std::chrono::microseconds{100000},  // OCR 模式对齐 100 ms（10 fps）
             std::chrono::microseconds{100000},  // 空闲巡检 10 fps
-            80, 80,
+            80, 200,                            // 大地图 80 ms；小地图 SURF 绝对校准 200 ms
             std::chrono::milliseconds{100},
             std::chrono::milliseconds{300}
         };
@@ -162,10 +161,10 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
         return {
             profile,
             std::chrono::microseconds{83333},   // 大地图 12 fps（拖拽跟手）
-            std::chrono::microseconds{160000},  // 小地图视觉 1:1 对齐 160 ms（~6.25 fps）
+            std::chrono::microseconds{100000},  // 小地图视觉 10 fps（轻量像素粘合）
             std::chrono::microseconds{200000},  // OCR 模式对齐 200 ms（5 fps）
             std::chrono::microseconds{150000},  // 空闲巡检 ~6.7 fps
-            160, 160,
+            160, 250,                           // 大地图 160 ms；小地图 SURF 校准保持 250 ms 防丢锁触发 OCR
             std::chrono::milliseconds{200},
             std::chrono::milliseconds{1000}
         };
@@ -174,10 +173,8 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
         const int mapMs = ClampMs(settings.mapUpdateCycleMs, 16, 1000);
         const int minMapMs = ClampMs(settings.minMapUpdateCycleMs, 16, 1000);
         const int ocrMs = ClampMs(settings.ocrUpdateCycleMs, 50, 1000);
-        const auto minMapPeriod = std::chrono::microseconds(static_cast<std::int64_t>(minMapMs) * 1000);
         const auto ocrPeriod = std::chrono::microseconds(static_cast<std::int64_t>(ocrMs) * 1000);
-        // 小地图视觉与 OCR 模式均 1:1 对齐各自识别周期，且不突破采集帧率上限。
-        const auto minimapVisualPeriod = minMapPeriod > maxPeriod ? minMapPeriod : maxPeriod;
+        // 大地图与小地图视觉均按采集帧率上限做像素粘合；OCR 模式自动不快于 OCR 间隔。
         const auto readoutPeriod = ocrPeriod > maxPeriod ? ocrPeriod : maxPeriod;
         const auto idlePeriod = std::chrono::microseconds{125000} > maxPeriod
             ? std::chrono::microseconds{125000} : maxPeriod;
@@ -185,7 +182,7 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
         return {
             profile,
             maxPeriod,
-            minimapVisualPeriod,
+            maxPeriod,
             readoutPeriod,
             idlePeriod,
             mapMs,
@@ -199,10 +196,10 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
         return {
             PerformanceProfile::Balanced,
             std::chrono::microseconds{50000},   // 大地图 20 fps（拖拽跟手）
-            std::chrono::microseconds{100000},  // 小地图视觉 1:1 对齐 100 ms（10 fps）
+            std::chrono::microseconds{50000},   // 小地图视觉 20 fps（高频像素粘合）
             std::chrono::microseconds{150000},  // OCR 模式对齐 150 ms（~6.7 fps）
             std::chrono::microseconds{125000},  // 空闲巡检 8 fps
-            100, 100,
+            100, 250,                           // 大地图 100 ms；小地图 SURF 绝对校准 250 ms
             std::chrono::milliseconds{150},
             std::chrono::milliseconds{600}
         };
@@ -233,97 +230,6 @@ inline std::chrono::milliseconds CaptureFrameMaxAge(std::chrono::microseconds ba
     const auto clamped = tripleMs < 250 ? 250 : (tripleMs > 1000 ? 1000 : tripleMs);
     return std::chrono::milliseconds(clamped);
 }
-
-// 纯绘制层的小地图标记平滑过渡：采用轻量指数向后缓动，不做向前预测，绝不修改底层真实坐标。
-// 静止收敛至 0.25 像素以内后立刻归零锁定，保证画面哈希稳定、不触发多余 Present。
-struct MinimapVisualSmoother {
-    struct Offset {
-        double x = 0.0;
-        double y = 0.0;
-    };
-
-    static constexpr double kTimeConstantSeconds = 0.065; // 约 65 ms 时间常数：丝滑且拖尾极短
-    static constexpr double kSnapPixels = 60.0;           // 超过 60 px 视为传送/大跳变，直接瞬移对齐
-    static constexpr double kSettleEpsilonPixels = 0.25;  // 小于 0.25 px 直接归零，静止后停止重绘
-
-    bool initialized = false;
-    int lastScene = 0;
-    std::uint64_t lastGeneration = 0;
-    double lastCenterX = 0.0;
-    double lastCenterY = 0.0;
-    double lastScreenCenterX = 0.0;
-    double lastScreenCenterY = 0.0;
-    double residualX = 0.0;
-    double residualY = 0.0;
-    Clock::time_point lastUpdateAt{};
-
-    void Reset() {
-        initialized = false;
-        lastScene = 0;
-        lastGeneration = 0;
-        residualX = 0.0;
-        residualY = 0.0;
-        lastUpdateAt = {};
-    }
-
-    // 输入当前定位采样与当前渲染时刻，返回应叠加到绘制变换上的平滑屏幕偏移量（像素）。
-    Offset Update(bool enabled, int scene, std::uint64_t generation,
-        double centerX, double centerY, double screenCenterX, double screenCenterY,
-        double pixelsPerUnit, Clock::time_point now) {
-        if (!enabled || scene <= 0 || !std::isfinite(pixelsPerUnit) || pixelsPerUnit <= 0.0 ||
-            !std::isfinite(centerX) || !std::isfinite(centerY)) {
-            Reset();
-            return {0.0, 0.0};
-        }
-
-        const bool contextChanged = !initialized || scene != lastScene || generation != lastGeneration ||
-            std::hypot(screenCenterX - lastScreenCenterX, screenCenterY - lastScreenCenterY) > 1.0;
-        if (contextChanged) {
-            initialized = true;
-            lastScene = scene;
-            lastGeneration = generation;
-            lastCenterX = centerX;
-            lastCenterY = centerY;
-            lastScreenCenterX = screenCenterX;
-            lastScreenCenterY = screenCenterY;
-            residualX = 0.0;
-            residualY = 0.0;
-            lastUpdateAt = now;
-            return {0.0, 0.0};
-        }
-
-        // 先对既有残余偏移按实际流逝时间做指数衰减
-        if (lastUpdateAt != Clock::time_point{} && now > lastUpdateAt) {
-            const double dt = std::chrono::duration<double>(now - lastUpdateAt).count();
-            const double clampedDt = dt > 0.25 ? 0.25 : dt;
-            const double decay = std::exp(-clampedDt / kTimeConstantSeconds);
-            residualX *= decay;
-            residualY *= decay;
-        }
-        lastUpdateAt = now;
-
-        // 若新帧坐标相对上一帧发生了变化，把画面跃迁的反向偏移补偿进残余偏移，实现平滑衔接
-        const double deltaScreenX = (centerX - lastCenterX) * pixelsPerUnit;
-        const double deltaScreenY = (centerY - lastCenterY) * pixelsPerUnit;
-        lastCenterX = centerX;
-        lastCenterY = centerY;
-
-        if (std::hypot(deltaScreenX, deltaScreenY) > kSnapPixels) {
-            residualX = 0.0;
-            residualY = 0.0;
-            return {0.0, 0.0};
-        }
-
-        residualX += deltaScreenX;
-        residualY += deltaScreenY;
-        const double magnitude = std::hypot(residualX, residualY);
-        if (!std::isfinite(magnitude) || magnitude > kSnapPixels || magnitude < kSettleEpsilonPixels) {
-            residualX = 0.0;
-            residualY = 0.0;
-        }
-        return {residualX, residualY};
-    }
-};
 
 // Startup reads one frame to prove the capture works, and that frame is already stale by the time the
 // capture loop runs - it is not a frame the loop observed. The loop therefore takes the first sequence

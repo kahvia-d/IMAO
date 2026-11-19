@@ -509,7 +509,6 @@ int ImGuiOverWindows::start()
     // Main loop
     DrawMarkerInteraction::Initialize(h_window);
     ImageAnchoredOverlay mapMotion(false), minimapMotion(true);
-    OverlayPacing::MinimapVisualSmoother minimapSmoother;
     FramePacer framePacer;
     auto motionReportAt = std::chrono::steady_clock::now();
     std::uint64_t renderedFrames = 0, observedFrames = 0, lastObservedFrame = 0;
@@ -979,22 +978,10 @@ int ImGuiOverWindows::start()
                         motionNow - lastMinimapMotionAt <= std::chrono::milliseconds(150);
                     if (attached || (!attached && mayHold)) {
                         const auto& useMotion = attached ? motion : lastMinimapMotion;
-                        // 纯绘制层轻量平滑过渡：仅作用于渲染变换，不改动底层真实坐标与交互判定。
-                        const auto& pose = frame->minimapMotion;
-                        const auto smoothOffset = minimapSmoother.Update(
-                            App::MinimapMarkerSmoothingEnabled(),
-                            pose.scene, pose.generation,
-                            pose.center.x, pose.center.y,
-                            pose.screenCenter.x, pose.screenCenter.y,
-                            pose.pixelsPerUnit, motionNow);
-                        const OverlayScreenTransform drawMotion{
-                            useMotion.scale,
-                            { useMotion.offset.x + smoothOffset.x, useMotion.offset.y + smoothOffset.y }
-                        };
-                        DrawRouteOnMinMap::DrawRoute(frame->minimapRoutes, frame->playerScene, drawMotion,
+                        DrawRouteOnMinMap::DrawRoute(frame->minimapRoutes, frame->playerScene, useMotion,
                             frame->minimapMarkers.center, frame->minimapMarkers.radius);
-                        DrawItemOnMinMap::DrawItemsOnMinMap(GameRect, frame->minimapMarkers, drawMotion);
-                        DrawRouteOnMinMap::DrawFreeMarkers(frame->minimapFreeMarkers,frame->playerScene,drawMotion,
+                        DrawItemOnMinMap::DrawItemsOnMinMap(GameRect, frame->minimapMarkers, useMotion);
+                        DrawRouteOnMinMap::DrawFreeMarkers(frame->minimapFreeMarkers,frame->playerScene,useMotion,
                             frame->minimapMarkers.center,frame->minimapMarkers.radius);
                         drewMinimap = true;
                         presented.motion = useMotion;
@@ -1087,8 +1074,7 @@ int ImGuiOverWindows::start()
             // of its own: there is no two-endpoint state to keep between presses any more.
             app.PollHandDrawnRoute();
             if (!drewMap && !drewMinimap) DrawItemBase::ClearMarkerCandidates();
-            if (!minimapEligible) { minimapMotion.Reset(); minimapSmoother.Reset(); }
-            if (!drewMinimap) minimapSmoother.Reset();
+            if (!minimapEligible) minimapMotion.Reset();
             presented.mapVisible = drewMap;
             presented.minimapVisible = drewMinimap;
             app.PublishPresentedOverlay(std::move(presented));

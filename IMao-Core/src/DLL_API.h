@@ -12,7 +12,6 @@ extern "C" _declspec(dllexport) void SetMapDataUpdateCycle(int cycleTime);
 extern "C" _declspec(dllexport) void SetPerformanceProfile(int profile);
 extern "C" _declspec(dllexport) void SetCaptureMaxFps(int maxFps);
 extern "C" _declspec(dllexport) void SetOcrUpdateCycle(int cycleTime);
-extern "C" _declspec(dllexport) void SetMinimapMarkerSmoothingEnabled(bool setValue);
 extern "C" _declspec(dllexport) void SetCaptureWay(int setValue);
 extern "C" _declspec(dllexport) void Initi();
 extern "C" _declspec(dllexport) int Start();

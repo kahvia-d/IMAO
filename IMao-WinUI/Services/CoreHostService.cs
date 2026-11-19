@@ -336,8 +336,7 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
         int? statusBallScalePercent = null,
         int? performanceProfile = null,
         int? captureMaxFps = null,
-        int? ocrUpdateCycle = null,
-        bool? minimapMarkerSmoothingEnabled = null)
+        int? ocrUpdateCycle = null)
     {
         await lifecycleLock.WaitAsync(cancellationToken);
         try
@@ -374,7 +373,6 @@ public sealed partial class CoreHostService : ObservableObject, IAsyncDisposable
                     PerformanceProfile = performanceProfile ?? old.PerformanceProfile,
                     CaptureMaxFps = captureMaxFps ?? old.CaptureMaxFps,
                     OcrUpdateCycle = ocrUpdateCycle ?? old.OcrUpdateCycle,
-                    MinimapMarkerSmoothingEnabled = minimapMarkerSmoothingEnabled ?? old.MinimapMarkerSmoothingEnabled,
                     MapUpdateCycle = mapUpdateCycle ?? old.MapUpdateCycle,
                     MinMapUpdateCycle = minMapUpdateCycle ?? old.MinMapUpdateCycle,
                     MapEnabled = mapEnabled ?? old.MapEnabled, MinMapEnabled = minMapEnabled ?? old.MinMapEnabled,

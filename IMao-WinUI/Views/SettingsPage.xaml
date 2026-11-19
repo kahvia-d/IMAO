@@ -304,21 +304,6 @@
                             </StackPanel>
 
                             <Border Style="{StaticResource IMaoSettingRowStyle}">
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="小地图标记平滑过渡" FontSize="13.5" FontWeight="SemiBold" />
-                                        <TextBlock Text="纯绘制层轻度缓动过渡，不影响真实定位与快捷键判定，静止时自动停画"
-                                                   FontSize="12" TextWrapping="Wrap"
-                                                   Foreground="{StaticResource IMaoSecondaryTextBrush}" />
-                                    </StackPanel>
-                                    <ToggleSwitch x:Name="ToggleSwitch_MinimapMarkerSmoothing" Grid.Column="1" MinWidth="0"
-                                                  OnContent="开" OffContent="关" VerticalAlignment="Center"
-                                                  Toggled="MinimapMarkerSmoothing_Toggled" />
-                                </Grid>
-                            </Border>
-
-                            <Border Style="{StaticResource IMaoSettingRowStyle}">
                                 <StackPanel Spacing="6">
                                     <Grid ColumnSpacing="12">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>

@@ -221,14 +221,6 @@ public:
 		ocrUpdateCycleTime = setValue;
 	}
 
-	static void SetMinimapMarkerSmoothingEnabled(bool setValue) {
-		minimapMarkerSmoothingEnabled = setValue;
-	}
-
-	static bool MinimapMarkerSmoothingEnabled() {
-		return minimapMarkerSmoothingEnabled.load();
-	}
-
 	static OverlayPacing::EffectivePacing CurrentEffectivePacing() {
 		return OverlayPacing::ResolveEffectivePacing({
 			performanceProfile.load(),
@@ -258,7 +250,6 @@ private:
 	static std::atomic_int performanceProfile;
 	static std::atomic_int captureMaxFps;
 	static std::atomic_int ocrUpdateCycleTime;
-	static std::atomic_bool minimapMarkerSmoothingEnabled;
 	static std::atomic_bool enabledMapShowItem;
 	static std::atomic_bool enabledMinMapShowItem;
 	// 由主定位循环同步给采集线程，用于在坐标 OCR 读数模式下降频采集。

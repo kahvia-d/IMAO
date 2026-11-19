@@ -52,7 +52,6 @@ std::atomic_int App::updateMinMapDataCycleTime = 80;
 std::atomic_int App::performanceProfile = 1;
 std::atomic_int App::captureMaxFps = 20;
 std::atomic_int App::ocrUpdateCycleTime = 150;
-std::atomic_bool App::minimapMarkerSmoothingEnabled = true;
 std::atomic_bool App::enabledMapShowItem = false;
 std::atomic_bool App::enabledMinMapShowItem = false;
 

@@ -125,13 +125,16 @@ inline void TestOverlayPacing(void (*check)(bool, const std::string&)) {
         check(smooth.bigMapCapturePeriod < balanced.bigMapCapturePeriod &&
             balanced.bigMapCapturePeriod < low.bigMapCapturePeriod,
             "大地图采集周期应按流畅 < 均衡 < 低占用递增");
-        check(balanced.bigMapCapturePeriod < balanced.minimapVisualCapturePeriod &&
-            balanced.minimapVisualCapturePeriod == std::chrono::microseconds(100000) &&
+        check(balanced.bigMapCapturePeriod == std::chrono::microseconds(50000) &&
+            balanced.minimapVisualCapturePeriod == std::chrono::microseconds(50000) &&
+            balanced.minMapUpdateCycleMs == 250 &&
             balanced.minimapVisualCapturePeriod < balanced.minimapReadoutCapturePeriod,
-            "均衡档位下小地图视觉应 1:1 对齐 100ms，介于大地图与 OCR 读数模式之间");
-        check(smooth.minimapVisualCapturePeriod == std::chrono::microseconds(80000) &&
-            low.minimapVisualCapturePeriod == std::chrono::microseconds(160000),
-            "流畅与低占用档位下小地图视觉采集均 1:1 对齐各自小地图识别间隔");
+            "均衡档位下小地图视觉应跑 20fps 高频像素粘合，SURF 绝对校准放宽至 250ms");
+        check(smooth.minimapVisualCapturePeriod == std::chrono::microseconds(33333) &&
+            smooth.minMapUpdateCycleMs == 200 &&
+            low.minimapVisualCapturePeriod == std::chrono::microseconds(100000) &&
+            low.minMapUpdateCycleMs == 250,
+            "流畅与低占用档位下小地图视觉应采用高频粘合 + 稳定 SURF 绝对校准");
         check(balanced.minimapReadoutCapturePeriod == std::chrono::microseconds(150000) &&
             balanced.ocrSubmissionInterval == 150ms &&
             balanced.readoutVisualProbeInterval == 600ms,
@@ -142,37 +145,16 @@ inline void TestOverlayPacing(void (*check)(bool, const std::string&)) {
 
         const auto customFastCap = OverlayPacing::ResolveEffectivePacing({3, 30, 90, 110, 180});
         check(customFastCap.bigMapCapturePeriod == std::chrono::microseconds(33333) &&
-            customFastCap.minimapVisualCapturePeriod == std::chrono::microseconds(110000) &&
+            customFastCap.minimapVisualCapturePeriod == std::chrono::microseconds(33333) &&
             customFastCap.minimapReadoutCapturePeriod == std::chrono::microseconds(180000) &&
             customFastCap.mapUpdateCycleMs == 90 && customFastCap.minMapUpdateCycleMs == 110 &&
             customFastCap.ocrSubmissionInterval == 180ms,
-            "自定义档位下小地图视觉与 OCR 模式均自动向下对齐各自识别间隔");
+            "自定义档位下大地图与小地图视觉按采集上限跑像素粘合，OCR 模式自动对齐 OCR 间隔");
 
         const auto customSlowCap = OverlayPacing::ResolveEffectivePacing({3, 5, 80, 80, 100});
         check(customSlowCap.minimapVisualCapturePeriod == std::chrono::microseconds(200000) &&
             customSlowCap.minimapReadoutCapturePeriod == std::chrono::microseconds(200000),
             "自定义采集上限慢于识别间隔时，小地图视觉与 OCR 模式均不得突破采集上限");
-
-        // 纯绘制层小地图标记平滑过渡测试
-        OverlayPacing::MinimapVisualSmoother smoother;
-        const auto s0 = smoother.Update(true, 9, 1, 100.0, 200.0, 120.0, 120.0, 1.0, now);
-        check(s0.x == 0.0 && s0.y == 0.0, "首次采样无残余偏移");
-        // 玩家坐标向前移动 10 像素，首次出现反向平滑补偿 10 px
-        const auto s1 = smoother.Update(true, 9, 1, 110.0, 200.0, 120.0, 120.0, 1.0, now + 33ms);
-        check(s1.x > 9.9 && s1.x < 10.1 && s1.y == 0.0, "新坐标到达时应产生平滑衔接补偿");
-        // 经过 65 ms 后残余偏移应平滑衰减到约 3.7 px
-        const auto s2 = smoother.Update(true, 9, 1, 110.0, 200.0, 120.0, 120.0, 1.0, now + 98ms);
-        check(s2.x > 2.5 && s2.x < 5.0, "平滑偏移应按时间常数指数衰减");
-        // 静止足够长时间后应彻底归零锁定，保证不触发多余 Present
-        const auto s3 = smoother.Update(true, 9, 1, 110.0, 200.0, 120.0, 120.0, 1.0, now + 348ms);
-        const auto s4 = smoother.Update(true, 9, 1, 110.0, 200.0, 120.0, 120.0, 1.0, now + 598ms);
-        check(s4.x == 0.0 && s4.y == 0.0 && s3.x >= 0.0, "静止收敛后残余偏移必须归零");
-        // 超过 60 px 的大跳变（传送）必须直接瞬移，不拖尾
-        const auto sJump = smoother.Update(true, 9, 1, 210.0, 200.0, 120.0, 120.0, 1.0, now + 631ms);
-        check(sJump.x == 0.0 && sJump.y == 0.0, "大跳变传送应立即瞬移对齐");
-        // 关闭开关时直接归零透传
-        const auto sOff = smoother.Update(false, 9, 1, 220.0, 200.0, 120.0, 120.0, 1.0, now + 664ms);
-        check(sOff.x == 0.0 && sOff.y == 0.0, "关闭平滑开关时应直接返回零偏移");
 
         check(OverlayPacing::ResolveScenarioCapturePeriod(balanced, OverlayPacing::CaptureScenario::BigMap, true) >
             OverlayPacing::ResolveScenarioCapturePeriod(balanced, OverlayPacing::CaptureScenario::BigMap, false),
