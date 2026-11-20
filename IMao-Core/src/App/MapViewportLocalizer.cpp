@@ -424,6 +424,8 @@ private:
             const auto& leftRanking = rankings[left];
             const auto& rightRanking = rankings[right];
             if (leftRanking.ratio != rightRanking.ratio) return leftRanking.ratio > rightRanking.ratio;
+            // 单场景下没有第二名，ratio 恒为 0，此时按最高得分优先把最匹配的缩放倍率排在前面。
+            if (leftRanking.topScore != rightRanking.topScore) return leftRanking.topScore > rightRanking.topScore;
             return leftRanking.factor < rightRanking.factor;
         });
         if (ordered.size() > kRankedPlans) ordered.resize(kRankedPlans);
@@ -500,6 +502,7 @@ private:
         SearchPlan requested;
         requested.kind = "whole";
         requested.factor = lastAcceptedFactor_;
+        requested.singleScale = (request.scope != MapViewportSearchScope::Global);
         requested.scenes = allScenes;
         if (request.prior.has_value() && request.prior->valid) {
             // An empty selection stays empty on purpose: a prior that covers no tiles has always
@@ -507,6 +510,11 @@ private:
             // be a different search wearing the same name.
             requested.candidates.emplace(request.prior->sceneId,
                 SelectSceneTileIndices(*resources_, request.prior->sceneId, *request.prior));
+        }
+        if (request.scope == MapViewportSearchScope::Global) {
+            // 无词典兜底时的 Global 搜索保留全倍率扫描，不与 Local512 的双倍率快速路径混用。
+            plans.push_back(std::move(requested));
+            return plans;
         }
         // Local512 优先复用上次命中的缩放倍率（如黑海岸缩小态的 0.75），若未命中再顺手试 1.0 / 0.75，
         // 避免只试 1.0 失败后被迫回退到耗时数秒的 Global 全局搜索。
@@ -634,7 +642,8 @@ private:
                 }
                 return *cached;
             };
-            if (request.scope == MapViewportSearchScope::Global && scenes.size() > 1 && !regions[0].empty()) {
+            // 即使只启用了 1 个区域，也必须走视觉词典瓦片粗搜，否则 rankings 为空会被 BuildPlans 判定为 noranking 而跳过全部搜索。
+            if (request.scope == MapViewportSearchScope::Global && !scenes.empty() && !regions[0].empty()) {
                 // 优先按“上次成功倍率 -> 另一档低开销常用倍率(1.0/0.75) -> 1.5 -> 2.0”的顺序做视觉词典粗搜；
                 // 与单场景领先门槛 kRetrievalSceneLead(1.5) 对齐：只要某档已给出单一场景明显领先，
                 // 立即早停并跳过高开销的 1.5x / 2.0x 特征提取与打分；若 narrow 未命中仍有 wide/sweep 兜底。
@@ -676,7 +685,10 @@ private:
                     if (!ranking.valid) continue;
                     result.retrievalRankedSceneCount =
                         std::max(result.retrievalRankedSceneCount, ranking.rankedSceneCount);
-                    if (!mostDecisive || ranking.ratio > mostDecisive->ratio) mostDecisive = &ranking;
+                    if (!mostDecisive || ranking.ratio > mostDecisive->ratio ||
+                        (ranking.ratio == mostDecisive->ratio && ranking.topScore > mostDecisive->topScore)) {
+                        mostDecisive = &ranking;
+                    }
                 }
                 if (mostDecisive) ReportRanking(*mostDecisive, result);
             }

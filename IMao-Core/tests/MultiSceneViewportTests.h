@@ -249,6 +249,48 @@ inline int RunMultiSceneViewportTests() {
         expect(!MapViewportLocalizer::TryTakeLatestResult(cancelledResult),"cancelled oversized work cannot publish a result");
         MapViewportLocalizer::Shutdown();
     }
+    {
+        // 仅启用 1 个区域且视觉词典就绪时，大地图冷启动必须正常走词典瓦片粗搜并定位成功，
+        // 不能因为跳过 RankScenes 而被 BuildPlans 误判为 noranking 直接丢弃。
+        auto singleScene = std::make_shared<RuntimeFeatureResources>();
+        singleScene->visualIndexReady = true;
+        singleScene->baseVisualTileCount = 1;
+        auto surf = cv::xfeatures2d::SURF::create(100, 4, 3, true, true);
+        auto features = FeatureMatch::ExtractSurfFeatures(surf, images[0]);
+        MapVisualTile tile;
+        tile.sceneId = 1;
+        tile.minX = tile.minY = 100;
+        tile.maxX = tile.maxY = 500;
+        tile.featureRowOffset = 0;
+        tile.featureRowCount = static_cast<std::uint32_t>(features.imgKeypoints.size());
+        tile.histogramNorm = 1.0f;
+        for (std::size_t i = 0; i < features.imgKeypoints.size(); ++i) {
+            auto point = features.imgKeypoints[i];
+            point.pt += cv::Point2f(100, 100);
+            singleScene->visualIndex.featureRows.push_back(static_cast<std::uint32_t>(singleScene->map.imgKeypoints.size()));
+            singleScene->map.imgKeypoints.push_back(point);
+            singleScene->map.imgDescriptors.push_back(features.imgDescriptors.row(static_cast<int>(i)));
+        }
+        singleScene->visualIndex.tiles.push_back(tile);
+        singleScene->visualIndex.vocabulary = cv::Mat::zeros(
+            MapVisualIndex::WordCount, MapVisualIndex::DescriptorColumns, CV_32FC1);
+        const int seededWords = std::min<int>(features.imgDescriptors.rows, 16);
+        for (int word = 0; word < seededWords; ++word) {
+            features.imgDescriptors.row(word).copyTo(singleScene->visualIndex.vocabulary.row(word));
+            singleScene->visualIndex.postings.push_back({ static_cast<std::uint32_t>(word), 0u, 1.0f });
+        }
+        singleScene->visualIndex.postingOffsets.assign(MapVisualIndex::WordCount + 1, static_cast<std::uint32_t>(seededWords));
+        for (int word = 0; word <= seededWords; ++word) {
+            singleScene->visualIndex.postingOffsets[static_cast<std::size_t>(word)] = static_cast<std::uint32_t>(word);
+        }
+        expect(MapViewportLocalizer::Initialize(singleScene, error), "single-scene vocabulary worker initializes");
+        const auto singleResult = locate(images[0]);
+        expect(singleResult.accepted && singleResult.sceneId == 1 &&
+            singleResult.retrievalRankedSceneCount == 1 && singleResult.retrievalSceneCount == 1 &&
+            singleResult.plansRun >= 1 && singleResult.acceptedPlan >= 0,
+            "single-scene global search with vocabulary ranks tiles and localizes instead of noranking");
+        MapViewportLocalizer::Shutdown();
+    }
     Scene::minimapScales = savedMinimapScales;
     return failures == 0 ? 0 : 3;
 }
