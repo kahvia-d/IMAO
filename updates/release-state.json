@@ -1,25 +1,7 @@
 {
   "formatVersion": 1,
   "highestAllocatedSequence": 54,
-  "active": {
-    "previousStableSha256": "87923bd84cdf6ea041c5e9da690da10d791e0199a060ec32c3eb326124846990",
-    "sequence": 54,
-    "id": "12f1242db77f403d8c4d5fee3c3da12a",
-    "buildRunId": 44714938993,
-    "artifactDigest": "630cbdc213cac081199ce0c2df56048919fff9ff955151b17faf288369ce0d1f",
-    "sourceCommit": "7e8392b82b5bf8a318f381ec12e4ceaf222f076d",
-    "version": "2026.11.20.1",
-    "artifactId": 14621505946,
-    "releaseId": 452560365,
-    "previousChannelSequence": 53,
-    "status": "publishing",
-    "tag": "v2026.11.20.1",
-    "requestId": "d37604c4d8ffb2778b76f899b54f388048d88ccc2d3005bb4adc3976139591b8",
-    "requestArtifactId": 14620374470,
-    "requestArtifactDigest": "970d4ef3bf2d98e65272e1fc7d748b0eccc30b0b114759e67233d2404b12e9bc",
-    "responseSha256": "3cceef6b9f3fa2619bd12aa1f3187cf377f27e236ed81003cd9b5e583e5bffe5",
-    "response": "{\r\n  \"formatVersion\": 1,\r\n  \"requestId\": \"d37604c4d8ffb2778b76f899b54f388048d88ccc2d3005bb4adc3976139591b8\",\r\n  \"keyId\": \"wwmap-production-2026\",\r\n  \"catalogSha256\": \"223e3018eca57c6b10a027c8c3214b3049c63cab959dcba57192117421b97198\",\r\n  \"approvalSha256\": \"140f09837240aec03c9587e01455c1cc7d36b79b2841a0280a92f3a2b6e7d14c\",\r\n  \"catalogSignature\": \"BSB8a9n32Ew73gbsXUx/3vwhWGg\\u002BwBA1ZaADtNd5\\u002BGZDSs5yVU46hczxMsDi4fYXtuzFZDaeVo0vaWczCTq3TA==\",\r\n  \"approvalSignature\": \"IHS6V5qIlGuPiw0PK3/QuysSc5wV6U84Sx\\u002BCszye2a4PYwX6UATlp11Flo1kCVVhcSJu0x6sJlm3XZ9BGUH5\\u002Bg==\"\r\n}"
-  },
+  "active": null,
   "completed": [
     {
       "id": "bb3478f2435a4ef0a004c7e11e108b11",
@@ -246,6 +228,23 @@
       "artifactDigest": "7bc12fe5a8b8e0f0b01ccff2b3832718e391ad748ce67299b3f93f125bd91ba3",
       "requestArtifactDigest": "e3e703fcd5e3c42d43a7775d0de11f8ae3ad4b99f0c7b04e1106d52be090ec9a",
       "responseSha256": "dcc69c323c6defbd70cad9228f2321d78fcaffce8e2bfdbee6560cb6c57a9bab"
+    },
+    {
+      "status": "completed",
+      "responseSha256": "3cceef6b9f3fa2619bd12aa1f3187cf377f27e236ed81003cd9b5e583e5bffe5",
+      "manifestSha256": "7e0ec7c3f638d26736f4289efd0ee1972f07aa24cec567e7df72a7e7f57eb6ba",
+      "artifactDigest": "630cbdc213cac081199ce0c2df56048919fff9ff955151b17faf288369ce0d1f",
+      "sourceCommit": "7e8392b82b5bf8a318f381ec12e4ceaf222f076d",
+      "requestArtifactDigest": "970d4ef3bf2d98e65272e1fc7d748b0eccc30b0b114759e67233d2404b12e9bc",
+      "buildRunId": 44714938993,
+      "artifactId": 14621505946,
+      "tag": "v2026.11.20.1",
+      "releaseId": 452560365,
+      "id": "12f1242db77f403d8c4d5fee3c3da12a",
+      "requestId": "d37604c4d8ffb2778b76f899b54f388048d88ccc2d3005bb4adc3976139591b8",
+      "sequence": 54,
+      "requestArtifactId": 14620374470,
+      "version": "2026.11.20.1"
     }
   ]
 }
