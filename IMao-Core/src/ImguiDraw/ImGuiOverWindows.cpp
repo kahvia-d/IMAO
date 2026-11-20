@@ -613,8 +613,13 @@ int ImGuiOverWindows::start()
         if (!pump(maxWait))
             break;
         const auto toolsWindow = MapToolsBridge::Shared().Read(DrawItemBase::MarkerProfile());
-        const auto framePeriod = OverlayPacing::FramePeriod(toolsWindow.canvasReady);
         const auto markerFrame = app.ReadOverlayFrame();
+        const auto pacing = App::CurrentEffectivePacing();
+        const int frameClientHeight = markerFrame ? static_cast<int>(markerFrame->clientRect.bottom) : 0;
+        const auto bigMapPeriod = OverlayPacing::ResolveBaseCapturePeriod(
+            pacing, OverlayPacing::CaptureScenario::BigMap, frameClientHeight);
+        const auto framePeriod = OverlayPacing::FramePeriod(
+            toolsWindow.canvasReady, markerFrame && markerFrame->mapVisible, bigMapPeriod);
         const auto foreground = GetForegroundWindow();
         const auto toolsHwnd = reinterpret_cast<HWND>(static_cast<std::uintptr_t>(toolsWindow.hostHwnd));
         const bool toolsRegisteredForGame = toolsWindow.registered &&

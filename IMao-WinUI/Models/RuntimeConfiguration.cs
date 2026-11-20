@@ -153,9 +153,9 @@ public sealed record RuntimeConfiguration
     /// </summary>
     public string DescribePerformanceProfile() => PerformanceProfile switch
     {
-        0 => "大地图 30 fps（定位 80 ms）· 小地图 30 fps（校准 200 ms，OCR 100 ms）",
-        1 => "大地图 20 fps（定位 100 ms）· 小地图 20 fps（校准 250 ms，OCR 150 ms）",
-        _ => $"自定义：像素粘合上限 {CaptureMaxFps} fps · 大地图定位 {MapUpdateCycle} ms · 小地图校准 {MinMapUpdateCycle} ms · OCR {OcrUpdateCycle} ms"
+        0 => "大地图 60 fps（4K 30 fps，拖动校准 400 ms）· 小地图 30 fps（校准 200 ms，OCR 100 ms）",
+        1 => "大地图 30 fps（4K 20 fps，拖动校准 500 ms）· 小地图 20 fps（校准 250 ms，OCR 150 ms）",
+        _ => $"自定义：像素粘合上限 {CaptureMaxFps} fps · 大地图前台 {MapUpdateCycle} ms · 小地图校准 {MinMapUpdateCycle} ms · OCR {OcrUpdateCycle} ms"
     };
 
     internal Dictionary<string, object?> ToPayload() => new()

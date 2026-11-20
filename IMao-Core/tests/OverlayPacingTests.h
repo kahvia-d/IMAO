@@ -121,16 +121,32 @@ inline void TestOverlayPacing(void (*check)(bool, const std::string&)) {
     {
         const auto smooth = OverlayPacing::ResolveEffectivePacing({0, 20, 80, 80, 150});
         const auto balanced = OverlayPacing::ResolveEffectivePacing({1, 20, 80, 80, 150});
-        check(smooth.bigMapCapturePeriod < balanced.bigMapCapturePeriod,
-            "大地图采集周期应满足流畅 < 均衡");
-        check(balanced.bigMapCapturePeriod == std::chrono::microseconds(50000) &&
-            balanced.minimapVisualCapturePeriod == std::chrono::microseconds(50000) &&
+        check(smooth.bigMapCapturePeriod == std::chrono::microseconds(16667) &&
+            balanced.bigMapCapturePeriod == std::chrono::microseconds(33333),
+            "2K 及以下大地图采集应为流畅 60fps、均衡 30fps");
+        check(OverlayPacing::ResolveBaseCapturePeriod(smooth, OverlayPacing::CaptureScenario::BigMap, 1440) ==
+            std::chrono::microseconds(16667) &&
+            OverlayPacing::ResolveBaseCapturePeriod(smooth, OverlayPacing::CaptureScenario::BigMap, 2160) ==
+            std::chrono::microseconds(33333) &&
+            OverlayPacing::ResolveBaseCapturePeriod(balanced, OverlayPacing::CaptureScenario::BigMap, 2160) ==
+            std::chrono::microseconds(50000),
+            "4K 分辨率下大地图采集应自动护航至流畅 30fps / 均衡 20fps");
+        check(OverlayPacing::FramePeriod(false, true, std::chrono::microseconds(16667)) ==
+            OverlayPacing::kRouteCanvasFramePeriod &&
+            OverlayPacing::FramePeriod(false, true, std::chrono::microseconds(33333)) ==
+            OverlayPacing::kFramePeriod &&
+            OverlayPacing::FramePeriod(false, false, std::chrono::microseconds(16667)) ==
+            OverlayPacing::kFramePeriod,
+            "仅大地图打开且采集高于 30fps 时，叠加层渲染才同步提至 60fps");
+        check(balanced.minimapVisualCapturePeriod == std::chrono::microseconds(50000) &&
             balanced.minMapUpdateCycleMs == 250 &&
+            balanced.bigMapDragCalibrationInterval == 500ms &&
             balanced.minimapVisualCapturePeriod < balanced.minimapReadoutCapturePeriod,
-            "均衡档位下小地图视觉应跑 20fps 高频像素粘合，SURF 绝对校准放宽至 250ms");
+            "均衡档位下小地图视觉应跑 20fps 高频像素粘合，SURF 校准 250ms，大地图拖动校准 500ms");
         check(smooth.minimapVisualCapturePeriod == std::chrono::microseconds(33333) &&
-            smooth.minMapUpdateCycleMs == 200,
-            "流畅档位下小地图视觉应跑 30fps 高频粘合 + 200ms SURF 校准");
+            smooth.minMapUpdateCycleMs == 200 &&
+            smooth.bigMapDragCalibrationInterval == 400ms,
+            "流畅档位下小地图视觉应跑 30fps 高频粘合 + 200ms SURF 校准，大地图拖动校准 400ms");
         check(balanced.minimapReadoutCapturePeriod == std::chrono::microseconds(150000) &&
             balanced.ocrSubmissionInterval == 150ms &&
             balanced.readoutVisualProbeInterval == 450ms,

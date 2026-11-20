@@ -769,8 +769,42 @@ static void DescribeViewportSurf(const Mat& gray, std::vector<KeyPoint>& points,
 }
 
 }
+void PruneKeypointsGrid(std::vector<cv::KeyPoint>& points, cv::Size imageSize,
+    int cols, int rows, int maxTotal) {
+    if (maxTotal <= 0 || points.size() <= static_cast<std::size_t>(maxTotal) ||
+        imageSize.width <= 0 || imageSize.height <= 0 || cols <= 0 || rows <= 0) return;
+    const int cellCount = cols * rows;
+    // 第一轮保底配额（每格取一半均额），保证全图四角均匀覆盖且高亮 UI 无法挤掉稀疏地形；
+    // 第二轮把海面/空白网格未用完的名额按响应强度自动回填给有陆地的区域（如黑海岸孤岛），直至凑满 maxTotal。
+    const int reservePerCell = (std::max)(1, maxTotal / (cellCount * 2));
+    std::vector<int> counts(static_cast<std::size_t>(cellCount), 0);
+    std::vector<std::uint8_t> selected(points.size(), 0);
+    std::vector<cv::KeyPoint> kept;
+    kept.reserve(static_cast<std::size_t>(maxTotal));
+
+    for (std::size_t i = 0; i < points.size(); ++i) {
+        const auto& pt = points[i];
+        const int cx = std::clamp(static_cast<int>(pt.pt.x * cols / imageSize.width), 0, cols - 1);
+        const int cy = std::clamp(static_cast<int>(pt.pt.y * rows / imageSize.height), 0, rows - 1);
+        const auto cell = static_cast<std::size_t>(cy * cols + cx);
+        if (counts[cell] >= reservePerCell) continue;
+        ++counts[cell];
+        selected[i] = 1;
+        kept.push_back(pt);
+        if (kept.size() >= static_cast<std::size_t>(maxTotal)) break;
+    }
+    if (kept.size() < static_cast<std::size_t>(maxTotal)) {
+        for (std::size_t i = 0; i < points.size() && kept.size() < static_cast<std::size_t>(maxTotal); ++i) {
+            if (selected[i]) continue;
+            kept.push_back(points[i]);
+        }
+    }
+    points = std::move(kept);
+}
+
 void ExtractViewportSurf(const cv::Mat& gray, std::vector<cv::KeyPoint>& points,
-    cv::Mat& descriptors, const std::function<bool()>& interrupted, ViewportSurfStatistics* statistics) {
+    cv::Mat& descriptors, const std::function<bool()>& interrupted,
+    ViewportSurfStatistics* statistics, int maxKeypoints) {
     const auto checkpoint = [&] { if (interrupted && interrupted()) throw SearchInterrupted{}; };
     CV_Assert(!gray.empty() && gray.type() == CV_8UC1);
     points.clear(); descriptors.release();
@@ -813,6 +847,8 @@ void ExtractViewportSurf(const cv::Mat& gray, std::vector<cv::KeyPoint>& points,
     }
     checkpoint();
     std::sort(found.begin(),found.end(),KeypointGreater());
+    // 贴合大地图 2:1 宽屏比例的 8×4 网格分桶 Top-K：稀疏图（点数 <= maxKeypoints）不触发裁剪。
+    if (maxKeypoints > 0) PruneKeypointsGrid(found, gray.size(), 8, 4, maxKeypoints);
     const auto detected = std::chrono::steady_clock::now();
     cv::Mat computed;
     DescribeViewportSurf(gray,found,computed,interrupted,statistics);

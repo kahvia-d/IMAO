@@ -300,7 +300,7 @@ void App::Thread_Capture() {
                                 : OverlayPacing::CaptureScenario::MinimapVisual)
                             : OverlayPacing::CaptureScenario::Idle);
                     const auto frameMaxAge = OverlayPacing::CaptureFrameMaxAge(
-                        OverlayPacing::ResolveBaseCapturePeriod(currentPacing, publishScenario));
+                        OverlayPacing::ResolveBaseCapturePeriod(currentPacing, publishScenario, captureRect.bottom));
                     capturedFrames.Publish({frameId, std::move(image), captureRect, capturedAt, frameMaxAge, geometryRevision});
                     localizationSignal->NotifyCapture();
                     ++published;
@@ -342,13 +342,13 @@ void App::Thread_Capture() {
                         : OverlayPacing::CaptureScenario::MinimapVisual)
                     : OverlayPacing::CaptureScenario::Idle);
             const auto pacing = CurrentEffectivePacing();
-            const auto baseCapturePeriod = OverlayPacing::ResolveBaseCapturePeriod(pacing, scenario);
+            const auto baseCapturePeriod = OverlayPacing::ResolveBaseCapturePeriod(pacing, scenario, captureRect.bottom);
             if (graphicsCapture) {
                 if (auto capture = graphicsCapture->Getcapture()) {
                     capture->SetMinUpdateInterval(baseCapturePeriod);
                 }
             }
-            const auto capturePeriod = OverlayPacing::ResolveScenarioCapturePeriod(pacing, scenario, slowCapture);
+            const auto capturePeriod = OverlayPacing::ResolveScenarioCapturePeriod(pacing, scenario, slowCapture, captureRect.bottom);
             if (now - reportAt >= std::chrono::seconds(2)) {
                 if (FrameStorage::ActiveAllocator()) {
                     const auto publishedPixels = capturedFrames.Read();
@@ -577,6 +577,23 @@ winrt::IAsyncAction App::Start() {
 				const bool mapSettled = lastMapViewportMotionAt == std::chrono::steady_clock::time_point{} ||
 					now - lastMapViewportMotionAt >= std::chrono::milliseconds(map_viewport_gate::kSettleMs);
 				bool searchNow = true;
+				// 大地图已高置信度锁定时：静止画面仅每 3 秒低频心跳复核（后台 CPU 归零）；
+				// 拖动中按档位放宽至 400~500 ms 校准，刚停手且有未校准位移时立即收尾校准一次。
+				if (scope == MapViewportSearchScope::Local512 && prediction.confidence >= 2 && viewportFrameAnchored) {
+					const auto lastFixMs = lastMapViewportFixMilliseconds.load();
+					if (lastFixMs > 0) {
+						const auto lastMotionMs = lastMapViewportMotionAt == std::chrono::steady_clock::time_point{}
+							? std::int64_t{0}
+							: std::chrono::duration_cast<std::chrono::milliseconds>(
+								lastMapViewportMotionAt.time_since_epoch()).count();
+						const auto sinceSubmit = now - lastMapViewportSubmitAt;
+						if (lastMotionMs <= lastFixMs) {
+							if (sinceSubmit < std::chrono::milliseconds(3000)) searchNow = false;
+						} else if (!mapSettled && sinceSubmit < pacing.bigMapDragCalibrationInterval) {
+							searchNow = false;
+						}
+					}
+				}
 				if (scope == MapViewportSearchScope::Global && !mapSettled) {
 					if (mapViewportGlobalDeferredSince == std::chrono::steady_clock::time_point{}) {
 						mapViewportGlobalDeferredSince = now;

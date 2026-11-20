@@ -18,6 +18,14 @@ inline std::chrono::microseconds FramePeriod(bool routeCanvasActive) {
     return routeCanvasActive ? kRouteCanvasFramePeriod : kFramePeriod;
 }
 
+// 大地图打开且采集处于高帧率（高于 30 fps）时，渲染线程同步切到 60 fps，让拖动标点与采集帧率匹配。
+inline std::chrono::microseconds FramePeriod(bool routeCanvasActive, bool bigMapActive,
+    std::chrono::microseconds bigMapCapturePeriod) {
+    if (routeCanvasActive) return kRouteCanvasFramePeriod;
+    if (bigMapActive && bigMapCapturePeriod < kFramePeriod) return kRouteCanvasFramePeriod;
+    return kFramePeriod;
+}
+
 // The mouse hook decides synchronously whether a click belongs to the overlay, so it must be installed
 // while the map publishes clickable regions. Installed for the whole session it would instead route
 // every mouse event of the game through this frame-paced thread. The grace period covers a click that
@@ -117,12 +125,13 @@ struct PacingProfileSettings {
 
 struct EffectivePacing {
     PerformanceProfile profile = PerformanceProfile::Balanced;
-    std::chrono::microseconds bigMapCapturePeriod{50000};
-    std::chrono::microseconds minimapVisualCapturePeriod{66667};
+    std::chrono::microseconds bigMapCapturePeriod{33333};
+    std::chrono::microseconds minimapVisualCapturePeriod{50000};
     std::chrono::microseconds minimapReadoutCapturePeriod{150000};
     std::chrono::microseconds idleCapturePeriod{125000};
     int mapUpdateCycleMs = 100;
-    int minMapUpdateCycleMs = 100;
+    int minMapUpdateCycleMs = 250;
+    std::chrono::milliseconds bigMapDragCalibrationInterval{500};
     std::chrono::milliseconds ocrSubmissionInterval{150};
     std::chrono::milliseconds readoutVisualProbeInterval{450};
 };
@@ -148,11 +157,12 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
     case PerformanceProfile::Smooth:
         return {
             profile,
-            std::chrono::microseconds{33333},   // 大地图 30 fps（拖拽跟手）
+            std::chrono::microseconds{16667},   // 大地图 60 fps（2K 及以下极致跟手，4K 自动护航至 30 fps）
             std::chrono::microseconds{33333},   // 小地图视觉 30 fps（高频像素粘合）
             std::chrono::microseconds{100000},  // OCR 模式对齐 100 ms（10 fps）
             std::chrono::microseconds{100000},  // 空闲巡检 10 fps
-            80, 200,                            // 大地图 80 ms；小地图 SURF 绝对校准 200 ms
+            80, 200,                            // 大地图前台 80 ms；小地图 SURF 绝对校准 200 ms
+            std::chrono::milliseconds{400},     // 大地图拖动期后台 SURF 校准 400 ms
             std::chrono::milliseconds{100},
             std::chrono::milliseconds{300}
         };
@@ -166,6 +176,7 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
         const auto readoutPeriod = ocrPeriod > maxPeriod ? ocrPeriod : maxPeriod;
         const auto idlePeriod = std::chrono::microseconds{125000} > maxPeriod
             ? std::chrono::microseconds{125000} : maxPeriod;
+        const int dragCalibMs = ClampMs(mapMs * 2, 250, 600);
         const int probeMs = ClampMs(ocrMs * 3, 300, 500);
         return {
             profile,
@@ -175,6 +186,7 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
             idlePeriod,
             mapMs,
             minMapMs,
+            std::chrono::milliseconds{dragCalibMs},
             std::chrono::milliseconds{ocrMs},
             std::chrono::milliseconds{probeMs}
         };
@@ -183,11 +195,12 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
     default:
         return {
             PerformanceProfile::Balanced,
-            std::chrono::microseconds{50000},   // 大地图 20 fps（拖拽跟手）
+            std::chrono::microseconds{33333},   // 大地图 30 fps（2K 及以下顺滑跟手，4K 自动护航至 20 fps）
             std::chrono::microseconds{50000},   // 小地图视觉 20 fps（高频像素粘合）
             std::chrono::microseconds{150000},  // OCR 模式对齐 150 ms（~6.7 fps）
             std::chrono::microseconds{125000},  // 空闲巡检 8 fps
-            100, 250,                           // 大地图 100 ms；小地图 SURF 绝对校准 250 ms
+            100, 250,                           // 大地图前台 100 ms；小地图 SURF 绝对校准 250 ms
+            std::chrono::milliseconds{500},     // 大地图拖动期后台 SURF 校准 500 ms
             std::chrono::milliseconds{150},
             std::chrono::milliseconds{450}
         };
@@ -195,10 +208,22 @@ inline EffectivePacing ResolveEffectivePacing(const PacingProfileSettings& setti
 }
 
 // 获取当前场景的基础采集周期（不含慢帧退避），可直接下发给 WGC MinUpdateInterval。
+// 4K 及以上分辨率（clientHeight > 1600）大地图整屏单帧约 33 MB，自动封顶在流畅 30 fps / 均衡 20 fps 以防带宽过载。
 inline std::chrono::microseconds ResolveBaseCapturePeriod(
-    const EffectivePacing& pacing, CaptureScenario scenario) {
+    const EffectivePacing& pacing, CaptureScenario scenario, int clientHeight = 0) {
     switch (scenario) {
-    case CaptureScenario::BigMap: return pacing.bigMapCapturePeriod;
+    case CaptureScenario::BigMap: {
+        auto period = pacing.bigMapCapturePeriod;
+        if (clientHeight > 1600) {
+            const auto floor4k = pacing.profile == PerformanceProfile::Smooth
+                ? std::chrono::microseconds{33333}
+                : (pacing.profile == PerformanceProfile::Balanced
+                    ? std::chrono::microseconds{50000}
+                    : std::chrono::microseconds{33333});
+            if (period < floor4k) period = floor4k;
+        }
+        return period;
+    }
     case CaptureScenario::MinimapVisual: return pacing.minimapVisualCapturePeriod;
     case CaptureScenario::MinimapReadout: return pacing.minimapReadoutCapturePeriod;
     default: return pacing.idleCapturePeriod;
@@ -207,8 +232,8 @@ inline std::chrono::microseconds ResolveBaseCapturePeriod(
 
 // 获取采集线程实际等待周期（含慢帧退避）。
 inline std::chrono::microseconds ResolveScenarioCapturePeriod(
-    const EffectivePacing& pacing, CaptureScenario scenario, bool slowCapture) {
-    return ResolveBaseCapturePeriod(pacing, scenario) +
+    const EffectivePacing& pacing, CaptureScenario scenario, bool slowCapture, int clientHeight = 0) {
+    return ResolveBaseCapturePeriod(pacing, scenario, clientHeight) +
         (slowCapture ? kSlowCaptureBackoff : std::chrono::microseconds::zero());
 }
 

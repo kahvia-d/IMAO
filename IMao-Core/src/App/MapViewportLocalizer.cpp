@@ -504,6 +504,7 @@ private:
         }
         SearchPlan requested;
         requested.kind = "whole";
+        requested.factor = lastAcceptedFactor_;
         requested.scenes = allScenes;
         if (request.prior.has_value() && request.prior->valid) {
             // An empty selection stays empty on purpose: a prior that covers no tiles has always
@@ -512,7 +513,13 @@ private:
             requested.candidates.emplace(request.prior->sceneId,
                 SelectSceneTileIndices(*resources_, request.prior->sceneId, *request.prior));
         }
+        // Local512 优先复用上次命中的缩放倍率（如黑海岸缩小态的 0.75），若未命中再顺手试 1.0 / 0.75，
+        // 避免只试 1.0 失败后被迫回退到耗时数秒的 Global 全局搜索。
+        const double secondaryFactor = (lastAcceptedFactor_ == 1.0) ? 0.75 : 1.0;
+        SearchPlan fallback = requested;
+        fallback.factor = secondaryFactor;
         plans.push_back(std::move(requested));
+        plans.push_back(std::move(fallback));
         return plans;
     }
 
@@ -561,6 +568,11 @@ private:
             // screenshot ranked Lahai first at factor 2.0 and 0.25 while ranking World first at
             // 1.0, 1.5, 0.75 and 0.5. Lahai is the largest scene in the game, so at any zoom the
             // index was not built at, the scene with the most tiles wins.
+            // 仅对超过 2K 高度（如 4K 屏 cropHeight=1512）按高度等比归一化到 1080 基准，
+            // 保留 2K/1080P 原生尺度以免缩小后的孤岛（如黑海岸）丧失高倍率匹配细节，同时兼容带鱼屏。
+            const double baseScale = fullSize.height > 1080 ? (1080.0 / static_cast<double>(fullSize.height)) : 1.0;
+            // Global 冷启动搜索保留全量特征点以追求首轮一击必中；常规 Local512 校准保留 2000 点网格瘦身。
+            const int maxKeypoints = (request.scope == MapViewportSearchScope::Global) ? 0 : 2000;
             std::vector<SceneRanking> rankings;
             std::array<std::array<std::optional<ImageFeatureData>, kFactors.size()>, 2> queryByFactor;
             const auto queryFeatures = [&](size_t regionIndex, size_t factorIndex) -> const ImageFeatureData& {
@@ -569,11 +581,12 @@ private:
                     if (interrupted()) throw SearchInterrupted{};
                     const auto& region = regions[regionIndex];
                     const double factor = kFactors[factorIndex];
+                    const double effectiveFactor = factor * baseScale;
                     const auto resizeStarted = std::chrono::steady_clock::now();
                     cv::Mat query = request.mapCrop(region);
                     FrameStorage::Scope allocationOrigin(FrameStorage::Origin::ViewportScale);
-                    if (factor != 1.0) cv::resize(request.mapCrop(region), query, {}, factor, factor,
-                        factor > 1.0 ? cv::INTER_CUBIC : cv::INTER_AREA);
+                    if (std::abs(effectiveFactor - 1.0) > 1e-3) cv::resize(request.mapCrop(region), query, {},
+                        effectiveFactor, effectiveFactor, effectiveFactor > 1.0 ? cv::INTER_CUBIC : cv::INTER_AREA);
                     const double resizeMs = ElapsedMilliseconds(resizeStarted);
                     const auto grayStarted = std::chrono::steady_clock::now();
                     const auto querySize = query.size();
@@ -592,7 +605,8 @@ private:
                     if (measure) Diagnostics::RecordMemory(sample + "-before");
                     ImageFeatureData features;
                     ViewportSurfStatistics statistics;
-                    ExtractViewportSurf(gray, features.imgKeypoints, features.imgDescriptors, interrupted, &statistics);
+                    ExtractViewportSurf(gray, features.imgKeypoints, features.imgDescriptors,
+                        interrupted, &statistics, maxKeypoints);
                     if (measure) {
                         Diagnostics::Record("viewport-query-storage", "region=" + std::to_string(regionIndex) +
                             " factor=" + std::to_string(factor) + " width=" + std::to_string(querySize.width) +
@@ -614,7 +628,7 @@ private:
                     const double sx = static_cast<double>(querySize.width) / region.width;
                     const double sy = static_cast<double>(querySize.height) / region.height;
                     for (auto& point : features.imgKeypoints) {
-                        if (factor == 1.0) point.pt += cv::Point2f(region.x, region.y);
+                        if (std::abs(effectiveFactor - 1.0) <= 1e-3) point.pt += cv::Point2f(region.x, region.y);
                         else {
                             point.pt.x = static_cast<float>((point.pt.x + 0.5) / sx - 0.5 + region.x);
                             point.pt.y = static_cast<float>((point.pt.y + 0.5) / sy - 0.5 + region.y);
@@ -741,7 +755,10 @@ private:
                 }
                 planRungs += ":" + std::to_string(comparisons) + ":" +
                     std::to_string(static_cast<int64_t>(ElapsedMilliseconds(groupStart)));
-                if (result.accepted) acceptedPlan = planIndex;
+                if (result.accepted) {
+                    acceptedPlan = planIndex;
+                    lastAcceptedFactor_ = kFactors[group.factor];
+                }
                 if (result.accepted || sceneAmbiguity) { if (global) workBudget_.Reset(); break; }
                 // Never stop halfway through an ambiguity group, even if an indivisible
                 // OpenCV call overruns the soft budget. Later requests rotate to later groups.
@@ -971,6 +988,8 @@ private:
     // The vocabulary search the cold-start ranking needs. Built lazily on the worker thread and
     // never touched by any other, so it needs no lock of its own.
     cv::Ptr<cv::flann::Index> vocabularyIndex_;
+    // 记录最近一次成功定位命中的缩放倍率，供 Local512 优先复用。
+    double lastAcceptedFactor_ = 1.0;
 };
 
 MapViewportRuntime& Runtime() {
