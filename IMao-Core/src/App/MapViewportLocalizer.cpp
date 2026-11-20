@@ -65,16 +65,11 @@ constexpr double kRetrievalSceneLead = 1.5;
 // demonstrably holds two of inside its 48 MB budget. A cold start keeps up to two scenes, so this
 // is per scene. The tile cap only binds where tiles are sparse: it bounds how far apart candidates
 // may sit when 20 MB is hundreds of them.
-constexpr std::size_t kRetrievalHintBytes = 20 * 1024 * 1024;
+// 第一档 narrow 候选集字节上限收紧到 8 MB（约 1.5 万个去重特征点），显著压低冷启动 FLANN 建树耗时；
+// 若 narrow 未覆盖到目标位置，紧随其后的 wide（40 MB）与 sweep 仍会兜底保证召回。
+constexpr std::size_t kRetrievalHintBytes = 8 * 1024 * 1024;
 constexpr std::size_t kRetrievalHintTiles = 64;
-// The ladder's second rung: the same scenes, a slice of the same ranking, four times larger.
-//
-// It exists because the narrow slice sometimes misses - the ranking is right and the window simply
-// does not reach the answer - and the only other rung was the sweep: nine whole scenes, 565 MB of
-// matchers and 72 comparisons, measured at 11-23 seconds. One wider slice of a ranking that is
-// already 17-for-18 is the same shape as the local-512 -> local-1024 ladder this path used to
-// climb, and it costs one build instead of nine.
-constexpr std::size_t kRetrievalWideBytes = 4 * kRetrievalHintBytes;
+constexpr std::size_t kRetrievalWideBytes = 40 * 1024 * 1024;
 constexpr std::size_t kRetrievalWideTiles = 4 * kRetrievalHintTiles;
 // Both bounds are four times the narrow rung's, in tiles and in keypoints. Preparation costs about
 // 16 microseconds per distinct keypoint, measured on the real index (5,037 keypoints -> 80 ms,
@@ -571,8 +566,9 @@ private:
             // 仅对超过 2K 高度（如 4K 屏 cropHeight=1512）按高度等比归一化到 1080 基准，
             // 保留 2K/1080P 原生尺度以免缩小后的孤岛（如黑海岸）丧失高倍率匹配细节，同时兼容带鱼屏。
             const double baseScale = fullSize.height > 1080 ? (1080.0 / static_cast<double>(fullSize.height)) : 1.0;
-            // Global 冷启动搜索保留全量特征点以追求首轮一击必中；常规 Local512 校准保留 2000 点网格瘦身。
-            const int maxKeypoints = (request.scope == MapViewportSearchScope::Global) ? 0 : 2000;
+            // Global 冷启动搜索保留全量特征点以追求首轮一击必中；
+            // Local512 仅在超高密度区域按 4000 点上限做网格瘦身，避免黑海岸这类海面多、陆地小的极端图被裁掉关键岛屿点。
+            const int maxKeypoints = (request.scope == MapViewportSearchScope::Global) ? 0 : 4000;
             std::vector<SceneRanking> rankings;
             std::array<std::array<std::optional<ImageFeatureData>, kFactors.size()>, 2> queryByFactor;
             const auto queryFeatures = [&](size_t regionIndex, size_t factorIndex) -> const ImageFeatureData& {
@@ -639,11 +635,36 @@ private:
                 return *cached;
             };
             if (request.scope == MapViewportSearchScope::Global && scenes.size() > 1 && !regions[0].empty()) {
-                for (std::size_t factorIndex = 0; factorIndex < kFactors.size(); ++factorIndex) {
+                // 优先按“上次成功倍率 -> 另一档低开销常用倍率(1.0/0.75) -> 1.5 -> 2.0”的顺序做视觉词典粗搜；
+                // 与单场景领先门槛 kRetrievalSceneLead(1.5) 对齐：只要某档已给出单一场景明显领先，
+                // 立即早停并跳过高开销的 1.5x / 2.0x 特征提取与打分；若 narrow 未命中仍有 wide/sweep 兜底。
+                constexpr double kRetrievalEarlyStopRatio = kRetrievalSceneLead;
+                std::vector<std::size_t> factorOrder;
+                factorOrder.reserve(kFactors.size());
+                const auto pushFactor = [&](double targetFactor) {
+                    for (std::size_t idx = 0; idx < kFactors.size(); ++idx) {
+                        if (std::abs(kFactors[idx] - targetFactor) <= 1e-6 &&
+                            std::find(factorOrder.begin(), factorOrder.end(), idx) == factorOrder.end()) {
+                            factorOrder.push_back(idx);
+                            break;
+                        }
+                    }
+                };
+                pushFactor(lastAcceptedFactor_);
+                pushFactor(std::abs(lastAcceptedFactor_ - 1.0) <= 1e-6 ? 0.75 : 1.0);
+                for (std::size_t idx = 0; idx < kFactors.size(); ++idx) {
+                    if (std::find(factorOrder.begin(), factorOrder.end(), idx) == factorOrder.end()) {
+                        factorOrder.push_back(idx);
+                    }
+                }
+                for (const std::size_t factorIndex : factorOrder) {
                     const double factor = kFactors[factorIndex];
                     auto ranking = RankScenes(queryFeatures(0, factorIndex));
                     ranking.factor = factor;
+                    const bool decisive = ranking.valid && ranking.scenes.size() == 1 &&
+                        ranking.ratio >= kRetrievalEarlyStopRatio;
                     rankings.push_back(std::move(ranking));
+                    if (decisive) break;
                 }
                 // The result carries the most decisive of the four rankings until a plan answers,
                 // and the plan that answered replaces it below. That order is deliberate: with no

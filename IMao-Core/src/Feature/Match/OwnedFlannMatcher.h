@@ -17,7 +17,8 @@ public:
         liveDescriptorBytes_.fetch_add(heldDescriptorBytes_,std::memory_order_relaxed);
         try {
             const cvflann::Matrix<float> view(data_.ptr<float>(),data_.rows,data_.cols);
-            index_=std::make_unique<cvflann::Index<cvflann::L2<float>>>(view,cvflann::KDTreeIndexParams(4));
+            // 使用 2 棵随机 KD-Tree 配合 SearchParams(32)：将冷启动建树耗时直接砍半，同时在固定 32 叶子预算下保持相近召回率。
+            index_=std::make_unique<cvflann::Index<cvflann::L2<float>>>(view,cvflann::KDTreeIndexParams(2));
             index_->buildIndex();
             heldIndexBytes_=static_cast<size_t>(index_->usedMemory());
             liveIndexBytes_.fetch_add(heldIndexBytes_,std::memory_order_relaxed);

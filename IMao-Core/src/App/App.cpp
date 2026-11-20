@@ -577,7 +577,7 @@ winrt::IAsyncAction App::Start() {
 				const bool mapSettled = lastMapViewportMotionAt == std::chrono::steady_clock::time_point{} ||
 					now - lastMapViewportMotionAt >= std::chrono::milliseconds(map_viewport_gate::kSettleMs);
 				bool searchNow = true;
-				// 大地图已高置信度锁定时：静止画面仅每 3 秒低频心跳复核（后台 CPU 归零）；
+				// 大地图已高置信度锁定时：静止画面仅每 10 秒低频心跳复核（避免静止时周期性触发 SURF）；
 				// 拖动中按档位放宽至 400~500 ms 校准，刚停手且有未校准位移时立即收尾校准一次。
 				if (scope == MapViewportSearchScope::Local512 && prediction.confidence >= 2 && viewportFrameAnchored) {
 					const auto lastFixMs = lastMapViewportFixMilliseconds.load();
@@ -588,7 +588,7 @@ winrt::IAsyncAction App::Start() {
 								lastMapViewportMotionAt.time_since_epoch()).count();
 						const auto sinceSubmit = now - lastMapViewportSubmitAt;
 						if (lastMotionMs <= lastFixMs) {
-							if (sinceSubmit < std::chrono::milliseconds(3000)) searchNow = false;
+							if (sinceSubmit < std::chrono::milliseconds(10000)) searchNow = false;
 						} else if (!mapSettled && sinceSubmit < pacing.bigMapDragCalibrationInterval) {
 							searchNow = false;
 						}
