@@ -52,4 +52,11 @@ private:
     MapViewportPrediction referencePrediction_;
     cv::Mat previousFrame_;
     cv::Mat latestFrame_;
+    // 缓存基准帧的角点，小幅连续拖动未 rebase 前无需每帧重复跑 goodFeaturesToTrack。
+    std::vector<cv::Point2f> previousPoints_;
+    bool previousPointsValid_ = false;
+    // 记录最近一次实际完成光流校验的帧与内点数，用于完全静止画面的极速像素差短路。
+    cv::Mat lastTrackedFrame_;
+    int lastTrackedInliers_ = 0;
+    bool hasTrackedAnchor_ = false;
 };

@@ -14,13 +14,19 @@ constexpr int kMinimumInliers = 12;
 
 cv::Mat PrepareFrame(const cv::Mat& source) {
     if (source.empty()) return {};
+    // 先按 INTER_AREA 缩放到 256×256 再转灰度：与先转灰度再缩放数学等价，
+    // 但将 2K/4K 下的色彩转换像素量削减约 30 倍。
+    cv::Mat resized;
+    if (source.cols != kTrackingFrameSize || source.rows != kTrackingFrameSize) {
+        cv::resize(source, resized, cv::Size(kTrackingFrameSize, kTrackingFrameSize), 0.0, 0.0, cv::INTER_AREA);
+    } else {
+        resized = source;
+    }
+    if (resized.channels() == 1) return resized;
     cv::Mat gray;
-    if (source.channels() == 1) gray = source;
-    else if (source.channels() == 4) cv::cvtColor(source, gray, cv::COLOR_BGRA2GRAY);
-    else cv::cvtColor(source, gray, cv::COLOR_BGR2GRAY);
-    cv::Mat output;
-    cv::resize(gray, output, cv::Size(kTrackingFrameSize, kTrackingFrameSize), 0.0, 0.0, cv::INTER_AREA);
-    return output;
+    if (resized.channels() == 4) cv::cvtColor(resized, gray, cv::COLOR_BGRA2GRAY);
+    else cv::cvtColor(resized, gray, cv::COLOR_BGR2GRAY);
+    return gray;
 }
 
 double SpanX(const std::vector<cv::Point2f>& corners) {
@@ -105,9 +111,16 @@ bool TrackPatch(const cv::Mat& source, const cv::Mat& target, const cv::Point2f&
     return true;
 }
 
-cv::Mat TrackFrameMotion(const cv::Mat& previous, const cv::Mat& current, int& accepted) {
-    std::vector<cv::Point2f> points, from, to;
-    cv::goodFeaturesToTrack(previous, points, 160, 0.01, 8.0);
+cv::Mat TrackFrameMotion(const cv::Mat& previous, const cv::Mat& current, int& accepted,
+    std::vector<cv::Point2f>* cachedPreviousPoints = nullptr, bool* cachedPreviousPointsValid = nullptr) {
+    std::vector<cv::Point2f> localPoints;
+    std::vector<cv::Point2f>& points = (cachedPreviousPoints != nullptr) ? *cachedPreviousPoints : localPoints;
+    if (cachedPreviousPoints == nullptr || cachedPreviousPointsValid == nullptr || !*cachedPreviousPointsValid) {
+        points.clear();
+        cv::goodFeaturesToTrack(previous, points, 160, 0.01, 8.0);
+        if (cachedPreviousPointsValid != nullptr) *cachedPreviousPointsValid = true;
+    }
+    std::vector<cv::Point2f> from, to;
     if (points.size() >= kMinimumInliers) {
         for (const auto& point : points) {
             cv::Point2f forward, backward;
@@ -148,6 +161,11 @@ void MapViewportPredictor::Reset() {
     referencePrediction_ = {};
     previousFrame_.release();
     latestFrame_.release();
+    previousPoints_.clear();
+    previousPointsValid_ = false;
+    lastTrackedFrame_.release();
+    lastTrackedInliers_ = 0;
+    hasTrackedAnchor_ = false;
 }
 
 void MapViewportPredictor::Confirm(int sceneId, const Coordinate& centerMapCoordinate,
@@ -167,6 +185,11 @@ void MapViewportPredictor::Confirm(int sceneId, const Coordinate& centerMapCoord
     hasPrediction_ = true;
     trackingFailures_ = 0;
     previousFrame_ = latestFrame_;
+    previousPoints_.clear();
+    previousPointsValid_ = false;
+    lastTrackedFrame_.release();
+    lastTrackedInliers_ = 0;
+    hasTrackedAnchor_ = false;
     referencePrediction_ = prediction_;
     currentFrameAnchored_ = !latestFrame_.empty();
 }
@@ -187,6 +210,11 @@ bool MapViewportPredictor::SetDragCenter(const Coordinate& centerMapCoordinate) 
     prediction_.revision = revision_;
     trackingFailures_ = 0;
     previousFrame_ = latestFrame_;
+    previousPoints_.clear();
+    previousPointsValid_ = false;
+    lastTrackedFrame_.release();
+    lastTrackedInliers_ = 0;
+    hasTrackedAnchor_ = false;
     referencePrediction_ = prediction_;
     currentFrameAnchored_ = false;
     return true;
@@ -211,14 +239,37 @@ bool MapViewportPredictor::ObserveFrame(const cv::Mat& mapCrop,
     // after the player released the map.
     if (previousFrame_.empty() || !hasPrediction_) {
         previousFrame_ = current;
+        previousPoints_.clear();
+        previousPointsValid_ = false;
+        lastTrackedFrame_.release();
+        lastTrackedInliers_ = 0;
+        hasTrackedAnchor_ = false;
         referencePrediction_ = prediction_;
         return false;
     }
 
+    // 静止帧极速短路：若已完成至少一次有效光流锚定，且当前 256×256 帧与上次实际追踪帧的
+    // 平均像素差极小（<= 0.35 灰度级），直接跳过 320 次模板匹配与梯度迭代，同时避免微动累积丢失。
+    constexpr double kStaticMeanPixelDiffThreshold = 0.35;
+    if (hasTrackedAnchor_ && !lastTrackedFrame_.empty() &&
+        lastTrackedFrame_.size() == current.size() && lastTrackedFrame_.type() == current.type() &&
+        cv::norm(lastTrackedFrame_, current, cv::NORM_L1) / static_cast<double>(current.total()) <=
+            kStaticMeanPixelDiffThreshold) {
+        trackingFailures_ = 0;
+        prediction_.confidence = std::min(5, prediction_.confidence + 1);
+        prediction = prediction_;
+        currentFrameAnchored_ = true;
+        if (inlierCount != nullptr) *inlierCount = lastTrackedInliers_;
+        if (scale != nullptr) *scale = 1.0;
+        return false;
+    }
+
     int accepted = 0;
-    const cv::Mat affine = TrackFrameMotion(previousFrame_, current, accepted);
+    const cv::Mat affine = TrackFrameMotion(previousFrame_, current, accepted,
+        &previousPoints_, &previousPointsValid_);
     if (affine.empty()) {
         // Keep the last geometrically anchored image across a bad capture.
+        hasTrackedAnchor_ = false;
         if (++trackingFailures_ >= 3) prediction_.confidence = std::max(0, prediction_.confidence - 1);
         return false;
     }
@@ -247,6 +298,9 @@ bool MapViewportPredictor::ObserveFrame(const cv::Mat& mapCrop,
 		prediction_.confidence = std::min(5, prediction_.confidence + 1);
 		prediction = prediction_;
 		currentFrameAnchored_ = true;
+		lastTrackedFrame_ = current;
+		lastTrackedInliers_ = accepted;
+		hasTrackedAnchor_ = true;
 		if (inlierCount != nullptr) *inlierCount = accepted;
 		if (scale != nullptr) *scale = estimatedScale;
 		return false;
@@ -271,8 +325,13 @@ bool MapViewportPredictor::ObserveFrame(const cv::Mat& mapCrop,
     // the bounded patch search runs out of overlap.
     if (screenShift >= 6.0 || std::abs(estimatedScale - 1.0) >= 0.025) {
         previousFrame_ = current;
+        previousPoints_.clear();
+        previousPointsValid_ = false;
         referencePrediction_ = prediction_;
     }
+    lastTrackedFrame_ = current;
+    lastTrackedInliers_ = accepted;
+    hasTrackedAnchor_ = true;
     if (inlierCount != nullptr) *inlierCount = accepted;
     if (scale != nullptr) *scale = estimatedScale;
     prediction = prediction_;
