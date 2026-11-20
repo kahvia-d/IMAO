@@ -31,7 +31,8 @@ internal sealed class RuntimeConfigurationStore
                 if (value.OcrGpuAcceleration is null && root.TryGetProperty("GpuAcceleration", out var combined) &&
                     combined.ValueKind is JsonValueKind.True or JsonValueKind.False)
                     value = value with { OcrGpuAcceleration = combined.GetBoolean() };
-                value = Migrate(value, StoredSchemaVersion(root));
+                var hasStoredPerformanceProfile = root.TryGetProperty(nameof(RuntimeConfiguration.PerformanceProfile), out _);
+                value = Migrate(value, StoredSchemaVersion(root), hasStoredPerformanceProfile);
                 value.Validate();
                 // The file loaded: whatever a migration wanted to say about it is settled, so do not
                 // leave a note behind for a file that turned out to be fine.
@@ -67,6 +68,9 @@ internal sealed class RuntimeConfigurationStore
         {
             var next = change(Read());
             if (!writable) throw new IOException(LoadError);
+            // 落盘时始终记录当前配置版本号，避免下次启动重复执行历史版本迁移。
+            if (next.ConfigVersion < RuntimeConfiguration.CurrentSchemaVersion)
+                next = next with { ConfigVersion = RuntimeConfiguration.CurrentSchemaVersion };
             next.Validate();
             if (next == current) return next;
             AtomicFile.WriteAllText(path, JsonSerializer.Serialize(next));
@@ -97,7 +101,7 @@ internal sealed class RuntimeConfigurationStore
     //
     // After any migration the file carries the current version, so a player who chooses the other value
     // afterwards is never migrated again.
-    private static RuntimeConfiguration Migrate(RuntimeConfiguration value, int storedVersion)
+    private static RuntimeConfiguration Migrate(RuntimeConfiguration value, int storedVersion, bool hasStoredPerformanceProfile)
     {
         var migrated = value;
         if (storedVersion < 2) migrated = migrated with { CaptureWay = 1 };
@@ -114,13 +118,17 @@ internal sealed class RuntimeConfigurationStore
         {
             migrated = migrated with { GuideSkipKey = 0 };
         }
-        // 版本 6 引入性能与刷新档位：旧版若用户手改过大小地图刷新间隔，迁至自定义以保留原值；否则默认均衡（1）。
+        // 版本 6 引入性能与刷新档位：仅对确实不含 PerformanceProfile 字段的旧配置按刷新间隔推断；
+        // 若文件已显式记录 PerformanceProfile（如旧迁移未抬升版本号导致的遗留文件），保留用户已选档位。
         if (storedVersion < 6)
         {
-            migrated = migrated with
+            if (!hasStoredPerformanceProfile)
             {
-                PerformanceProfile = (migrated.MapUpdateCycle != 80 || migrated.MinMapUpdateCycle != 80) ? 2 : 1
-            };
+                migrated = migrated with
+                {
+                    PerformanceProfile = (migrated.MapUpdateCycle != 80 || migrated.MinMapUpdateCycle != 80) ? 2 : 1
+                };
+            }
         }
         // 版本 7 精简为三档（0=流畅，1=均衡，2=自定义）：旧 v6 的低占用（2）迁至均衡（1），自定义（3）迁至（2）。
         else if (storedVersion < 7)
@@ -134,6 +142,11 @@ internal sealed class RuntimeConfigurationStore
                     _ => migrated.PerformanceProfile
                 }
             };
+        }
+        // 迁移完成后将配置版本号升至当前版本，确保后续保存与重启不再重复触发旧版迁移。
+        if (migrated.ConfigVersion < RuntimeConfiguration.CurrentSchemaVersion)
+        {
+            migrated = migrated with { ConfigVersion = RuntimeConfiguration.CurrentSchemaVersion };
         }
         return migrated;
     }

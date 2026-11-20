@@ -262,6 +262,23 @@ try
     var v7Config = new RuntimeConfigurationStore(configPath).Read();
     Check(v7Config.PerformanceProfile == 2 && v7Config.CaptureMaxFps == 15 && v7Config.OcrUpdateCycle == 220,
         "版本 7 显式选择的性能档位与自定义参数应完整保留");
+    // 回归验证：旧版配置迁移后重新选择均衡档位并持久化，重启读取后版本号已升至最新，不会再被旧迁移覆写成自定义
+    File.WriteAllText(configPath, "{\"ConfigVersion\":2,\"MapUpdateCycle\":500,\"MinMapUpdateCycle\":150}");
+    var upgradedStore = new RuntimeConfigurationStore(configPath);
+    Check(upgradedStore.Read().ConfigVersion == RuntimeConfiguration.CurrentSchemaVersion &&
+        upgradedStore.Read().PerformanceProfile == 2,
+        "版本 2 手改刷新间隔配置首次读取迁移为自定义且内存版本号升至当前版本");
+    upgradedStore.Update(old => old with { PerformanceProfile = 1 });
+    var reloadedAfterUpgrade = new RuntimeConfigurationStore(configPath).Read();
+    Check(reloadedAfterUpgrade.ConfigVersion == RuntimeConfiguration.CurrentSchemaVersion &&
+        reloadedAfterUpgrade.PerformanceProfile == 1,
+        "旧配置切回均衡档位并落盘后，重新读取应保持均衡档位而非退回自定义");
+    // 回归验证：受历史未升版本 Bug 影响已写入 PerformanceProfile 的旧版本号文件，重启直接保留用户所选档位
+    File.WriteAllText(configPath, "{\"ConfigVersion\":2,\"PerformanceProfile\":1,\"MapUpdateCycle\":500,\"MinMapUpdateCycle\":150}");
+    var legacyWithProfile = new RuntimeConfigurationStore(configPath).Read();
+    Check(legacyWithProfile.ConfigVersion == RuntimeConfiguration.CurrentSchemaVersion &&
+        legacyWithProfile.PerformanceProfile == 1,
+        "已含 PerformanceProfile 字段的旧版本号配置应保留用户已选档位并升级版本号");
     Check(config.Update(old => old with { OverlayPresentMode = 1 }).OverlayPresentMode == 1 &&
         config.Read().OverlayPresentMode == 1,
         "choosing DirectComposition persists instead of being migrated back to the default");
