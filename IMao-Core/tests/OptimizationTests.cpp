@@ -366,6 +366,18 @@ void TestMapUiStateController() {
     update = controller.Update({ false, false });
     Expect(update.current == MapUiState::Unknown,
         "only sustained missing minimap evidence should clear marker caches");
+
+    // 回归验证：强特征（罗盘模板+缩放条同时命中）可单帧直通大地图，且大地图转场进入 Unknown 时 4 帧即清空旧图。
+    MapUiStateController fastMap;
+    update = fastMap.Update({ true, false, true });
+    Expect(update.current == MapUiState::BigMap,
+        "strong big-map evidence should confirm big map in one frame");
+    for (int frame = 0; frame < 3; ++frame) update = fastMap.Update({ false, false, false });
+    Expect(update.current == MapUiState::BigMap,
+        "brief 3-frame drop should still keep big map state");
+    update = fastMap.Update({ false, false, false });
+    Expect(update.current == MapUiState::Unknown,
+        "big-map transition should clear to unknown after 4 frames instead of 10");
 }
 
 void TestMapCompassVisualDetector() {

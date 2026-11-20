@@ -562,13 +562,16 @@ winrt::IAsyncAction App::Start() {
 				now - lastMapViewportSubmitAt >= std::chrono::milliseconds(250)) {
 				std::optional<WorldSearchPrior> correctionPrior;
 				MapViewportSearchScope scope = MapViewportSearchScope::Global;
+				// 仅当当前帧仍被帧间光流稳定锚定、且未出现剧烈缩放跳变时才尝试 Local512；
+				// 光流已跟丢或大幅缩放时直接跳过注定扑空的 Local512，一步直达 Global 省去 200~350 ms 冤枉路。
+				const bool abruptZoomJump = framePredictionChanged && std::abs(predictionScale - 1.0) > 0.12;
 				if (Scene::IsRuntimeApproved(prediction.sceneId) && prediction.confidence >= 2 &&
-					featureResources) {
+					viewportFrameAnchored && !abruptZoomJump && featureResources) {
 					correctionPrior = worldSearchPriorIndex.Build(*featureResources,
 						prediction.centerMapCoordinate, 512.0, prediction.sceneId);
 					scope = MapViewportSearchScope::Local512;
 				}
-				else if (activeWorldSearchPrior.has_value()) {
+				else if (activeWorldSearchPrior.has_value() && viewportFrameAnchored && !abruptZoomJump) {
 					correctionPrior = activeWorldSearchPrior;
 					scope = MapViewportSearchScope::Local512;
 				}
@@ -1205,7 +1208,8 @@ void App::Thread_DetectGameState() {
 
 		GoodMatchSize_IconTask = minimapMatchCount;
         GoodMatchSize_IconWavePlateCrystal = mapMatchCount;
-		const auto update = mapUiState.Update({ BigMapEvidence(frameEvidence()), minimapVisible });
+		const bool strongBigMap = compassTemplateVerified && mapControlsVisible && !minimapVisible;
+		const auto update = mapUiState.Update({ BigMapEvidence(frameEvidence()), minimapVisible, strongBigMap });
 		isOpenMap = MapUiStateController::IsStableBigMap(update.current);
 		isExistMinMap = MapUiStateController::IsStableGameplay(update.current);
 		// The capture reads back only the regions ordinary exploration samples. Anything the big map needs
@@ -3273,6 +3277,7 @@ void App::ResetMapViewport() {
 	// exactly the case where the map was moving, and forgetting that there would send the retry
 	// straight back out into the same drag.
 	lastMapViewportMotionAt = {};
+	lastMapViewportSubmitAt = {};
 	mapViewportGlobalDeferredSince = {};
 	DrawItemOnGameMap::ClearNearItemsData();
 	Diagnostics::Record("map-viewport-reset", "reason=map-ui-transition");

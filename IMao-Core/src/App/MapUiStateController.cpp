@@ -24,7 +24,10 @@ MapUiStateUpdate MapUiStateController::Update(const MapUiEvidence& evidence) {
         // frame. Treat a missing minimap as an actual HUD disappearance only
         // after ten observations. This protects localization state only;
         // current-frame visibility independently suppresses cached markers.
-        if (state_ != MapUiState::Unknown && pendingFrames_ >= 10) {
+        // 跑图状态下保留 10 帧防抖以免单帧漏检导致小地图缓存闪断；
+        // 已在大地图内点击切换地图进入转场动画时，收窄到 4 帧尽快清空旧图，避免转场期继续发无效的旧图 Local512。
+        const int unknownThreshold = (state_ == MapUiState::BigMap) ? 4 : 10;
+        if (state_ != MapUiState::Unknown && pendingFrames_ >= unknownThreshold) {
             state_ = MapUiState::Unknown;
             update.current = state_;
             update.changed = true;
@@ -40,7 +43,9 @@ MapUiStateUpdate MapUiStateController::Update(const MapUiEvidence& evidence) {
         ++pendingFrames_;
     }
 
-    if (pendingFrames_ >= 2 && state_ != update.observed) {
+    // 同时命中罗盘模板验证与缩放条等强特征时允许单帧直通大地图，常规证据仍保持 2 帧防抖。
+    const int requiredFrames = (update.observed == MapUiState::BigMap && evidence.strongBigMapConfirmed) ? 1 : 2;
+    if (pendingFrames_ >= requiredFrames && state_ != update.observed) {
         state_ = update.observed;
         update.current = state_;
         update.changed = true;

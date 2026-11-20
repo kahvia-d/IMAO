@@ -14,6 +14,8 @@ struct MapUiEvidence {
     // structural verification.
     bool bigMapConfirmed = false;
     bool minimapVisible = false;
+    // 单帧同时命中罗盘模板验证与右侧缩放条等强特征时置 true，允许直通进入大地图以压低切图前摇。
+    bool strongBigMapConfirmed = false;
 };
 
 struct MapUiStateUpdate {
