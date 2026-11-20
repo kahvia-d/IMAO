@@ -12,11 +12,13 @@
     "artifactId": 14621505946,
     "releaseId": null,
     "previousChannelSequence": 53,
-    "status": "awaiting-signature",
+    "status": "publishing",
     "tag": "v2026.11.20.1",
     "requestId": "d37604c4d8ffb2778b76f899b54f388048d88ccc2d3005bb4adc3976139591b8",
     "requestArtifactId": 14620374470,
-    "requestArtifactDigest": "970d4ef3bf2d98e65272e1fc7d748b0eccc30b0b114759e67233d2404b12e9bc"
+    "requestArtifactDigest": "970d4ef3bf2d98e65272e1fc7d748b0eccc30b0b114759e67233d2404b12e9bc",
+    "responseSha256": "3cceef6b9f3fa2619bd12aa1f3187cf377f27e236ed81003cd9b5e583e5bffe5",
+    "response": "{\r\n  \"formatVersion\": 1,\r\n  \"requestId\": \"d37604c4d8ffb2778b76f899b54f388048d88ccc2d3005bb4adc3976139591b8\",\r\n  \"keyId\": \"wwmap-production-2026\",\r\n  \"catalogSha256\": \"223e3018eca57c6b10a027c8c3214b3049c63cab959dcba57192117421b97198\",\r\n  \"approvalSha256\": \"140f09837240aec03c9587e01455c1cc7d36b79b2841a0280a92f3a2b6e7d14c\",\r\n  \"catalogSignature\": \"BSB8a9n32Ew73gbsXUx/3vwhWGg\\u002BwBA1ZaADtNd5\\u002BGZDSs5yVU46hczxMsDi4fYXtuzFZDaeVo0vaWczCTq3TA==\",\r\n  \"approvalSignature\": \"IHS6V5qIlGuPiw0PK3/QuysSc5wV6U84Sx\\u002BCszye2a4PYwX6UATlp11Flo1kCVVhcSJu0x6sJlm3XZ9BGUH5\\u002Bg==\"\r\n}"
   },
   "completed": [
     {
