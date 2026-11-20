@@ -13,7 +13,10 @@
     "releaseId": null,
     "previousChannelSequence": 53,
     "status": "awaiting-signature",
-    "tag": "v2026.11.20.1"
+    "tag": "v2026.11.20.1",
+    "requestId": "d37604c4d8ffb2778b76f899b54f388048d88ccc2d3005bb4adc3976139591b8",
+    "requestArtifactId": 14620374470,
+    "requestArtifactDigest": "970d4ef3bf2d98e65272e1fc7d748b0eccc30b0b114759e67233d2404b12e9bc"
   },
   "completed": [
     {
