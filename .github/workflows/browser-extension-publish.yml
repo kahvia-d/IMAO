@@ -1,0 +1,174 @@
+name: Browser Extension Package & Store Publish
+
+# 仅允许仓库维护者手动触发（绝不使用 pull_request_target，防止开源仓库 Secrets 泄露）。
+# 仅产出 Actions Artifact 并可选直推 Chrome/Edge 商店，不创建 GitHub Release。
+on:
+  workflow_dispatch:
+    inputs:
+      publish_chrome:
+        type: boolean
+        default: false
+        description: Upload and submit to Chrome Web Store (requires extension-store environment secrets)
+      publish_edge:
+        type: boolean
+        default: false
+        description: Upload and submit to Microsoft Edge Add-ons (requires extension-store environment secrets)
+      store_notes:
+        type: string
+        default: ""
+        description: Optional reviewer notes for Edge Add-ons submission
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+
+      - name: Validate scripts and build Edge & Chrome store archives
+        id: build
+        run: |
+          ./scripts/Build-BrowserExtensionPackages.ps1 -OutputRoot out/browser-extension
+          $manifest = Get-Content -LiteralPath BrowserExtensions/KuroMapSync/manifest.json -Raw -Encoding UTF8 | ConvertFrom-Json
+          "version=$($manifest.version)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding UTF8
+
+      - name: Upload store packages as workflow artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: imao-kuromapsync-${{ steps.build.outputs.version }}
+          path: |
+            out/browser-extension/IMao-KuroMapSync-${{ steps.build.outputs.version }}.zip
+            out/browser-extension/IMao-KuroMapSync-${{ steps.build.outputs.version }}.zip.sha256
+            out/browser-extension/IMao-KuroMapSync-${{ steps.build.outputs.version }}.report.json
+            out/browser-extension/IMao-KuroMapSync-${{ steps.build.outputs.version }}-chrome-store.zip
+            out/browser-extension/IMao-KuroMapSync-${{ steps.build.outputs.version }}-chrome-store.zip.sha256
+          retention-days: 30
+
+  publish_chrome:
+    needs: package
+    if: ${{ inputs.publish_chrome && github.ref == 'refs/heads/main' && github.repository == 'kahvia-d/IMAO' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: extension-store
+    steps:
+      - name: Download built extension packages
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: imao-kuromapsync-${{ needs.package.outputs.version }}
+          path: out/browser-extension
+
+      # 所需 Environment Secrets (extension-store):
+      #   CHROME_EXTENSION_ID, CHROME_CLIENT_ID, CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN
+      - name: Upload and submit to Chrome Web Store
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          EXT_VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($name in @('CHROME_EXTENSION_ID','CHROME_CLIENT_ID','CHROME_CLIENT_SECRET','CHROME_REFRESH_TOKEN')) {
+            if (-not [Environment]::GetEnvironmentVariable($name)) { throw "缺少必需的 Secret：$name" }
+          }
+          $zipPath = "out/browser-extension/IMao-KuroMapSync-$env:EXT_VERSION-chrome-store.zip"
+          $tokenResp = Invoke-RestMethod -Method Post -Uri 'https://oauth2.googleapis.com/token' -Body @{
+            client_id     = $env:CHROME_CLIENT_ID
+            client_secret = $env:CHROME_CLIENT_SECRET
+            refresh_token = $env:CHROME_REFRESH_TOKEN
+            grant_type    = 'refresh_token'
+          }
+          $accessToken = $tokenResp.access_token
+          if (-not $accessToken) { throw '未能换取 Chrome Web Store OAuth 访问令牌。' }
+
+          $headers = @{
+            Authorization = "Bearer $accessToken"
+            'x-goog-api-version' = '2'
+          }
+          $uploadResp = Invoke-RestMethod -Method Put `
+            -Uri "https://www.googleapis.com/upload/chromewebstore/v1.1/items/$env:CHROME_EXTENSION_ID" `
+            -Headers $headers `
+            -InFile $zipPath `
+            -ContentType 'application/zip'
+          if ($uploadResp.uploadState -ne 'SUCCESS') {
+            throw ("Chrome 商店上传失败：" + ($uploadResp | ConvertTo-Json -Compress))
+          }
+          $publishResp = Invoke-RestMethod -Method Post `
+            -Uri "https://www.googleapis.com/chromewebstore/v1.1/items/$env:CHROME_EXTENSION_ID/publish" `
+            -Headers $headers `
+            -Body '{}' -ContentType 'application/json'
+          Write-Host ("Chrome Web Store submit status: " + ($publishResp.status -join ', '))
+
+  publish_edge:
+    needs: package
+    if: ${{ inputs.publish_edge && github.ref == 'refs/heads/main' && github.repository == 'kahvia-d/IMAO' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: extension-store
+    steps:
+      - name: Download built extension packages
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: imao-kuromapsync-${{ needs.package.outputs.version }}
+          path: out/browser-extension
+
+      # 所需 Environment Secrets (extension-store):
+      #   EDGE_PRODUCT_ID, EDGE_CLIENT_ID, EDGE_API_KEY
+      - name: Upload and submit to Microsoft Edge Add-ons
+        env:
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EXT_VERSION: ${{ needs.package.outputs.version }}
+          STORE_NOTES: ${{ inputs.store_notes }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($name in @('EDGE_PRODUCT_ID','EDGE_CLIENT_ID','EDGE_API_KEY')) {
+            if (-not [Environment]::GetEnvironmentVariable($name)) { throw "缺少必需的 Secret：$name" }
+          }
+          $zipPath = "out/browser-extension/IMao-KuroMapSync-$env:EXT_VERSION.zip"
+          $headers = @{
+            Authorization = "ApiKey $env:EDGE_API_KEY"
+            'X-ClientID'  = $env:EDGE_CLIENT_ID
+          }
+          $uploadResp = Invoke-WebRequest -Method Post `
+            -Uri "https://api.addons.microsoftedge.microsoft.com/v1/products/$env:EDGE_PRODUCT_ID/submissions/draft/package" `
+            -Headers $headers `
+            -InFile $zipPath `
+            -ContentType 'application/zip'
+          $opId = $uploadResp.Headers['Location']
+          if (-not $opId) { throw 'Edge 商店上传未返回操作 ID。' }
+
+          for ($i = 0; $i -lt 30; $i++) {
+            Start-Sleep -Seconds 5
+            $statusResp = Invoke-RestMethod -Method Get `
+              -Uri "https://api.addons.microsoftedge.microsoft.com/v1/products/$env:EDGE_PRODUCT_ID/submissions/draft/package/operations/$opId" `
+              -Headers $headers
+            if ($statusResp.status -eq 'Succeeded') { break }
+            if ($statusResp.status -eq 'Failed') {
+              throw ("Edge 商店校验失败：" + ($statusResp | ConvertTo-Json -Compress))
+            }
+          }
+
+          $notesBody = @{ notes = $(if ($env:STORE_NOTES) { $env:STORE_NOTES } else { "Release v$env:EXT_VERSION" }) } | ConvertTo-Json
+          Invoke-WebRequest -Method Post `
+            -Uri "https://api.addons.microsoftedge.microsoft.com/v1/products/$env:EDGE_PRODUCT_ID/submissions" `
+            -Headers $headers `
+            -Body $notesBody `
+            -ContentType 'application/json' | Out-Null
+          Write-Host "Microsoft Edge Add-ons submission created for v$env:EXT_VERSION."
