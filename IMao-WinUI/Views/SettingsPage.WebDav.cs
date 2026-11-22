@@ -14,6 +14,7 @@ public sealed partial class SettingsPage
 {
     private bool restoringWebDav = true;
     private bool webDavBusy;
+    private bool webDavExpanded;
 
     private void RestoreWebDavSettings()
     {
@@ -26,9 +27,39 @@ public sealed partial class SettingsPage
             WebDavUsernameBox.Text = current.Username;
             WebDavPasswordBox.Password = current.Password;
             WebDavPassphraseBox.Password = current.Passphrase;
-            WebDavConfigPanel.Visibility = current.Enabled ? Visibility.Visible : Visibility.Collapsed;
+            // 配置项默认折叠，保持页面简洁；仅当已开启但尚未填完必填项时自动展开方便填写
+            webDavExpanded = current.Enabled && !current.IsReady;
+            ApplyWebDavHeaderAndFoldState(current);
         }
         finally { restoringWebDav = false; }
+    }
+
+    private void ApplyWebDavHeaderAndFoldState(KuroWebDavSettings current)
+    {
+        bool enabled = WebDavSyncEnabled.IsOn;
+        WebDavExpandButton.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+        WebDavQuickSyncButton.Visibility = enabled && current.IsReady && !webDavExpanded ? Visibility.Visible : Visibility.Collapsed;
+        WebDavExpandButton.Content = webDavExpanded ? "收起配置" : "展开配置";
+        WebDavConfigPanel.Visibility = enabled && webDavExpanded ? Visibility.Visible : Visibility.Collapsed;
+
+        if (!enabled)
+        {
+            WebDavSummaryText.Text = "仅通过您自己的 WebDAV 加密同步库街区登录凭证（大号/小号按账号 ID 隔离），点位进度仍走上方库街区同步。未开启时完全不发请求、不影响现有流程。";
+        }
+        else if (current.IsReady && Uri.TryCreate(current.BaseUrl, UriKind.Absolute, out var uri))
+        {
+            WebDavSummaryText.Text = $"已启用 WebDAV 凭证同步（{uri.Host} · 账号 {current.Username}）。启动或掉线时自动续命，平时可保持折叠。";
+        }
+        else
+        {
+            WebDavSummaryText.Text = "已开启开关，请展开并填写 WebDAV 地址、用户名、应用密码与同步加密口令后保存。";
+        }
+    }
+
+    private void WebDavExpand_Click(object sender, RoutedEventArgs e)
+    {
+        webDavExpanded = !webDavExpanded;
+        ApplyWebDavHeaderAndFoldState(ReadWebDavDraft());
     }
 
     private KuroWebDavSettings ReadWebDavDraft(bool? enabledOverride = null) => new(
@@ -40,6 +71,12 @@ public sealed partial class SettingsPage
 
     private void ShowWebDavMessage(InfoBarSeverity severity, string message)
     {
+        if (!webDavExpanded)
+        {
+            // 折叠状态下点击快捷同步时，用全局浮动轻提示反馈结果，不强行撑开卡片
+            IMao_WinUI.Helpers.AppToast.Show(message, severity);
+            return;
+        }
         WebDavMessage.Severity = severity;
         WebDavMessage.Message = message;
         WebDavMessage.Visibility = Visibility.Visible;
@@ -52,29 +89,42 @@ public sealed partial class SettingsPage
         WebDavSaveButton.IsEnabled = !busy;
         WebDavTestButton.IsEnabled = !busy;
         WebDavSyncNowButton.IsEnabled = !busy;
+        WebDavQuickSyncButton.IsEnabled = !busy;
     }
 
     private void WebDavSyncEnabled_Toggled(object sender, RoutedEventArgs e)
     {
         if (restoringWebDav) return;
         bool enabled = WebDavSyncEnabled.IsOn;
-        WebDavConfigPanel.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+        var draft = ReadWebDavDraft(enabled);
 
-        // 关闭开关时立即落盘停用状态，确保彻底静默不再发请求
-        if (!enabled)
+        if (enabled)
         {
-            try
+            // 刚打开开关时若尚未配置完成则自动展开，已配置则保持简洁折叠
+            webDavExpanded = !draft.IsReady;
+            ApplyWebDavHeaderAndFoldState(draft);
+            if (draft.IsReady)
             {
-                var saved = kuroWebDav.LoadSettings();
-                kuroWebDav.SaveSettings(saved with { Enabled = false });
-                WebDavAccountsCard.Visibility = Visibility.Collapsed;
-                WebDavMessage.IsOpen = false;
-                WebDavMessage.Visibility = Visibility.Collapsed;
+                try { kuroWebDav.SaveSettings(draft); }
+                catch { }
             }
-            catch (Exception ex)
-            {
-                ShowWebDavMessage(InfoBarSeverity.Warning, $"保存停用状态失败：{ex.Message}");
-            }
+            return;
+        }
+
+        // 关闭开关时立即落盘停用状态并折叠，确保彻底静默不再发请求
+        webDavExpanded = false;
+        ApplyWebDavHeaderAndFoldState(draft);
+        try
+        {
+            var saved = kuroWebDav.LoadSettings();
+            kuroWebDav.SaveSettings(saved with { Enabled = false });
+            WebDavAccountsCard.Visibility = Visibility.Collapsed;
+            WebDavMessage.IsOpen = false;
+            WebDavMessage.Visibility = Visibility.Collapsed;
+        }
+        catch (Exception ex)
+        {
+            ShowWebDavMessage(InfoBarSeverity.Warning, $"保存停用状态失败：{ex.Message}");
         }
     }
 
@@ -89,6 +139,7 @@ public sealed partial class SettingsPage
         try
         {
             kuroWebDav.SaveSettings(draft);
+            ApplyWebDavHeaderAndFoldState(draft);
             ShowWebDavMessage(InfoBarSeverity.Success, "已安全保存 WebDAV 配置（密码与同步口令已使用本机 Windows DPAPI 加密）。");
         }
         catch (Exception ex)

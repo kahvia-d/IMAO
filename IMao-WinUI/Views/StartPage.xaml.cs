@@ -13,7 +13,7 @@ namespace IMao_WinUI.Views;
 
 public sealed partial class StartPage : Page
 {
-    // 单个收集物分类的完成度视图模型（采用静态像素宽度 BarFillWidth 避免 ProgressBar 控件反复动画）
+    // 单个收集物分类的完成度视图模型（使用 Ratio 配合一次性 GPU ScaleX 缓动展开，无后台循环开销）
     public sealed class CollectibleProgressRow
     {
         public string Name { get; init; } = "";
@@ -21,7 +21,7 @@ public sealed partial class StartPage : Page
         public int Completed { get; init; }
         public int Total { get; init; }
         public double Percent => Total > 0 ? Completed * 100.0 / Total : 0.0;
-        public double BarFillWidth => Math.Clamp(Percent / 100.0 * 160.0, 0.0, 160.0);
+        public double Ratio => Total > 0 ? Math.Clamp((double)Completed / Total, 0.0, 1.0) : 0.0;
         public string CountLabel => $"{Completed} / {Total}";
         public Brush CountBrush { get; init; } = null!;
     }
@@ -455,21 +455,7 @@ public sealed partial class StartPage : Page
         SelectedRegionTitleText.Text = regionDisplayName;
         SelectedRegionFractionText.Text = $"已收集 {totalDone} / {totalCount}";
         SelectedRegionPercentText.Text = $"{totalPct:F1}%";
-        if (totalPct <= 0.0001)
-        {
-            SelectedRegionFillCol.Width = new GridLength(0, GridUnitType.Pixel);
-            SelectedRegionRemainCol.Width = new GridLength(1, GridUnitType.Star);
-        }
-        else if (totalPct >= 99.9999)
-        {
-            SelectedRegionFillCol.Width = new GridLength(1, GridUnitType.Star);
-            SelectedRegionRemainCol.Width = new GridLength(0, GridUnitType.Pixel);
-        }
-        else
-        {
-            SelectedRegionFillCol.Width = new GridLength(totalPct, GridUnitType.Star);
-            SelectedRegionRemainCol.Width = new GridLength(100.0 - totalPct, GridUnitType.Star);
-        }
+        AnimateScaleX(SelectedRegionFillScale, Math.Clamp(totalPct / 100.0, 0.0, 1.0), fromCurrent: true, durationMs: 360);
 
         var rows = mergedGroups.Values
             .Where(v => v.Total > 0)
@@ -519,10 +505,41 @@ public sealed partial class StartPage : Page
         };
         SelectedRegionFractionText.Text = "暂无统计";
         SelectedRegionPercentText.Text = "—";
-        SelectedRegionFillCol.Width = new GridLength(0);
-        SelectedRegionRemainCol.Width = new GridLength(1, GridUnitType.Star);
+        SelectedRegionFillScale.ScaleX = 0;
         RegionCollectibleEmptyText.Text = message;
         RegionCollectibleEmptyText.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>收集物小卡片进度条载入时播放一次性 GPU 合成层展开动画，播完彻底静止。</summary>
+    private void CollectibleBarFill_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Border { RenderTransform: ScaleTransform scale, Tag: double ratio }) return;
+        AnimateScaleX(scale, Math.Clamp(ratio, 0.0, 1.0), fromCurrent: false, durationMs: 340);
+    }
+
+    private static void AnimateScaleX(ScaleTransform target, double toRatio, bool fromCurrent, int durationMs)
+    {
+        double fromRatio = fromCurrent ? target.ScaleX : 0.0;
+        if (Math.Abs(toRatio - fromRatio) < 0.0005)
+        {
+            target.ScaleX = toRatio;
+            return;
+        }
+        var anim = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
+        {
+            From = fromRatio,
+            To = toRatio,
+            Duration = new Duration(TimeSpan.FromMilliseconds(durationMs)),
+            EasingFunction = new Microsoft.UI.Xaml.Media.Animation.CubicEase
+            {
+                EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseOut
+            }
+        };
+        var sb = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
+        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(anim, target);
+        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(anim, "ScaleX");
+        sb.Children.Add(anim);
+        sb.Begin();
     }
 
     private (int Done, int Total) CountRegionProgress(string regionId, IReadOnlySet<string> completedKeys)

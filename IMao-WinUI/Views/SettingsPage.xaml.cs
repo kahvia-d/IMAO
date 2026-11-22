@@ -30,6 +30,8 @@ public sealed partial class SettingsPage : Page
     private KuroSyncComparison? kuroSyncComparison;
     private bool restoringKuroSync = true;
     private bool restoringKuroAutoSync = true;
+    private bool kuroSyncShowSynced;
+    private bool kuroSyncShowAll;
     private const string KuroSyncStateKey = KuroSyncSettings.State;
     private const string KuroSyncShowSyncedKey = KuroSyncSettings.ShowSynced;
     private const string KuroSyncShowAllKey = KuroSyncSettings.ShowAllRegions;
@@ -1101,8 +1103,6 @@ public sealed partial class SettingsPage : Page
         {
             await coreHost.ExecuteMarkerAsync("markerSelectProfile", new { profileId = id });
             kuroSyncComparison = null;
-            KuroSyncApplyButton.IsEnabled = false;
-            KuroSyncPlanPanel.Visibility = Visibility.Collapsed;
             RefreshLedgerSurfaces();
             ShowLocalAccount(InfoBarSeverity.Success, $"已切换到记录本“{coreHost.ActiveLocalAccount?.Name}”，地图从现在起显示它的记录。");
         }
@@ -1254,54 +1254,53 @@ public sealed partial class SettingsPage : Page
         int stateId = SelectedKuroSyncStateId();
         KuroSyncPreviewButton.IsEnabled = false;
         var progress = CreateSyncProgress();
+        KuroSyncComparison? plan = null;
         try
         {
-            var plan = await kuroSync.PreviewAsync(profile, stateId == 0 ? null : stateId, progress);
+            plan = await kuroSync.PreviewAsync(profile, stateId == 0 ? null : stateId, progress);
             kuroSyncComparison = plan;
-            KuroSyncApplyButton.IsEnabled = plan.NeedsApply;
             await SaveKuroSyncStateAsync(stateId);
-            RenderKuroSyncComparison(plan);
-            string counts = $"预览完成：本地 {plan.LocalCompleted} 个已完成、库街区 {plan.CloudCompleted} 个已完成；待拉取 {plan.ToFetch} 个、待推送 {plan.ToUpload} 个。";
-            if (plan.ToCancel > 0)
-                ShowKuroSync(InfoBarSeverity.Warning, counts +
-                    $"其中 {plan.ToCancel} 个本地完成点在库街区已经取消，点“应用同步”会跟着取消；不想取消就先别应用。");
-            else if (plan.CloudCompleted == 0)
-                ShowKuroSync(InfoBarSeverity.Informational, counts +
-                    "库街区那边没有已完成点位，可能是以前没有用库街区大地图做过标记，不是出错。" +
-                    (plan.LocalCompleted > 0 ? "点“应用同步”可以把本地的已完成点写回库街区。" : ""));
-            else
-                ShowKuroSync(InfoBarSeverity.Success, counts);
         }
         catch (Exception error)
         {
             kuroSyncComparison = null;
-            KuroSyncApplyButton.IsEnabled = false;
             ShowKuroSync(InfoBarSeverity.Error, error.Message);
+            return;
         }
-        finally { KuroSyncPreviewButton.IsEnabled = CurrentSyncLedger().Length > 0; HideSyncProgress(); }
+        finally
+        {
+            KuroSyncPreviewButton.IsEnabled = CurrentSyncLedger().Length > 0;
+            HideSyncProgress();
+        }
+
+        // 在居中弹窗中展示预览差异，避免拉长右侧设置卡片；用户确认后再执行应用同步
+        if (plan is not null && await ShowKuroSyncPreviewDialogAsync(profile, plan))
+        {
+            await ApplyKuroSyncAsync(profile, plan);
+        }
     }
 
-    private async void KuroSyncApply_Click(object sender, RoutedEventArgs e)
+    private async Task ApplyKuroSyncAsync(string profile, KuroSyncComparison comparison)
     {
-        if (kuroSyncComparison is not { } comparison) { ShowKuroSync(InfoBarSeverity.Warning, "请先预览同步，确认后再应用。"); return; }
-        string profile = CurrentSyncLedger();
-        if (profile.Length == 0) { ShowKuroSync(InfoBarSeverity.Warning, "请先把当前记录本绑定到库街区账号；同步只作用于当前记录本。"); return; }
-        KuroSyncApplyButton.IsEnabled = false;
+        KuroSyncPreviewButton.IsEnabled = false;
         var progress = CreateSyncProgress();
         try
         {
             var result = await kuroSync.ApplyAsync(profile, comparison, progress);
             kuroSyncComparison = null;
-            KuroSyncPlanPanel.Visibility = Visibility.Collapsed;
+            kuroAutoSync.NotifyManualSync();
             string pushed = result.Pushed > 0 ? $"已推送 {result.Pushed} 个本地标记到库街区、" : "无需推送本地标记、";
             ShowKuroSync(InfoBarSeverity.Success, $"同步完成：{pushed}从库街区拉取 {result.Fetched} 个；本地还有 {result.PendingLocal} 个待推送。再次点“预览同步”可以查看最新差异。");
         }
         catch (Exception error)
         {
             ShowKuroSync(InfoBarSeverity.Error, error.Message);
-            KuroSyncApplyButton.IsEnabled = true;
         }
-        finally { HideSyncProgress(); }
+        finally
+        {
+            KuroSyncPreviewButton.IsEnabled = CurrentSyncLedger().Length > 0;
+            HideSyncProgress();
+        }
     }
 
     /// <summary>
@@ -1404,35 +1403,20 @@ public sealed partial class SettingsPage : Page
 
     private void RenderKuroBridgeStatus() => KuroBridgeStatus.Text = KuroBridgeRegistration.Inspect().Detail;
     private void KuroSyncState_SelectionChanged(object sender, SelectionChangedEventArgs e) => InvalidateKuroSyncPlan();
-    private async void KuroSyncShowSynced_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (restoringKuroSync) return;
-        await kuroSettings.SaveSettingAsync(KuroSyncShowSyncedKey, KuroSyncShowSynced.IsOn);
-        if (kuroSyncComparison is { } comparison) RenderKuroSyncComparison(comparison);
-    }
-
-    private async void KuroSyncShowAll_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (restoringKuroSync) return;
-        await kuroSettings.SaveSettingAsync(KuroSyncShowAllKey, KuroSyncShowAll.IsOn);
-        if (kuroSyncComparison is { } comparison) RenderKuroSyncComparison(comparison);
-    }
 
     private void InvalidateKuroSyncPlan()
     {
         if (restoringKuroSync) return;
         kuroSyncComparison = null;
-        KuroSyncApplyButton.IsEnabled = false;
     }
 
     private void ShowKuroSync(InfoBarSeverity severity, string message)
     {
         KuroSyncMessage.Severity = severity;
         KuroSyncMessage.Message = message;
-        bool isPreviewSummary = message.StartsWith("预览完成：", StringComparison.Ordinal);
-        KuroSyncMessage.Visibility = isPreviewSummary ? Visibility.Visible : Visibility.Collapsed;
-        KuroSyncMessage.IsOpen = true;
-        if (!isPreviewSummary) IMao_WinUI.Helpers.AppToast.Show(message, severity);
+        KuroSyncMessage.Visibility = Visibility.Collapsed;
+        KuroSyncMessage.IsOpen = false;
+        IMao_WinUI.Helpers.AppToast.Show(message, severity);
     }
 
     private int SelectedKuroSyncStateId() =>
@@ -1444,8 +1428,8 @@ public sealed partial class SettingsPage : Page
         try
         {
             RenderSyncLedger();
-            KuroSyncShowSynced.IsOn = await kuroSettings.ReadSettingAsync<bool?>(KuroSyncShowSyncedKey) ?? false;
-            KuroSyncShowAll.IsOn = await kuroSettings.ReadSettingAsync<bool?>(KuroSyncShowAllKey) ?? false;
+            kuroSyncShowSynced = await kuroSettings.ReadSettingAsync<bool?>(KuroSyncShowSyncedKey) ?? false;
+            kuroSyncShowAll = await kuroSettings.ReadSettingAsync<bool?>(KuroSyncShowAllKey) ?? false;
             int saved = await kuroSettings.ReadSettingAsync<int?>(KuroSyncStateKey) ?? 0;
             string error = await LoadKuroSyncStatesAsync(saved);
             if (error.Length > 0) ShowKuroSync(InfoBarSeverity.Warning, $"暂时无法读取库街区区域列表：{error}");
@@ -1455,12 +1439,12 @@ public sealed partial class SettingsPage : Page
         finally { restoringKuroSync = false; }
     }
 
-    /// <summary>The synchronization target is the current ledger, so only the view state is saved.</summary>
+    /// <summary>同步目标以当前记录本为准，此处仅持久化视图筛选偏好。</summary>
     private async Task SaveKuroSyncStateAsync(int stateId)
     {
         await kuroSettings.SaveSettingAsync(KuroSyncStateKey, stateId);
-        await kuroSettings.SaveSettingAsync(KuroSyncShowSyncedKey, KuroSyncShowSynced.IsOn);
-        await kuroSettings.SaveSettingAsync(KuroSyncShowAllKey, KuroSyncShowAll.IsOn);
+        await kuroSettings.SaveSettingAsync(KuroSyncShowSyncedKey, kuroSyncShowSynced);
+        await kuroSettings.SaveSettingAsync(KuroSyncShowAllKey, kuroSyncShowAll);
     }
 
     /// <summary>The region list comes from the published map states, so it cannot drift from upstream.</summary>
@@ -1480,144 +1464,555 @@ public sealed partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Renders both sides as plain counts: 本地点位数 / 待推送 / 将被取消 / 云端点位数 /
-    /// 待拉取, with the shared count as an optional column. 待推送 counts only work that
-    /// really goes to the outbox, and 将被取消 is the number the player used to be told
-    /// nothing about while the apply silently deleted those marks.
+    /// 以与 IMao 深海夜空暖金主题完全统一的居中弹窗展示库街区点位预览差异。
+    /// 返回 true 表示用户点击了「应用同步」。
     /// </summary>
-    private void RenderKuroSyncComparison(KuroSyncComparison comparison)
+    private async Task<bool> ShowKuroSyncPreviewDialogAsync(string profile, KuroSyncComparison comparison)
     {
-        KuroSyncPlanGrid.Children.Clear();
-        KuroSyncPlanGrid.ColumnDefinitions.Clear();
-        KuroSyncPlanGrid.RowDefinitions.Clear();
-        var headers = new List<string> { "范围", "本地点位数", "待推送", "将被取消", "云端点位数", "待拉取" };
-        if (KuroSyncShowSynced.IsOn) headers.Add("已同步点位数");
+        static Brush GetBrush(string key, Windows.UI.Color fallback) =>
+            Application.Current.Resources.TryGetValue(key, out var v) && v is Brush b ? b : new SolidColorBrush(fallback);
+
+        var surfaceBrush = GetBrush("IMaoSurfaceBrush", Windows.UI.Color.FromArgb(255, 17, 23, 34));
+        var raisedBrush = GetBrush("IMaoRaisedSurfaceBrush", Windows.UI.Color.FromArgb(255, 23, 31, 46));
+        var deepInsetBrush = GetBrush("IMaoDeepInsetBrush", Windows.UI.Color.FromArgb(255, 11, 15, 23));
+        var borderBrush = GetBrush("IMaoBorderBrush", Windows.UI.Color.FromArgb(255, 34, 44, 60));
+        var borderStrongBrush = GetBrush("IMaoBorderStrongBrush", Windows.UI.Color.FromArgb(255, 48, 64, 82));
+        var accentBrush = GetBrush("IMaoAccentBrush", Windows.UI.Color.FromArgb(255, 229, 193, 123));
+        var accentSoftBrush = GetBrush("IMaoAccentSoftBrush", Windows.UI.Color.FromArgb(31, 229, 193, 123));
+        var accentBorderBrush = GetBrush("IMaoAccentBorderBrush", Windows.UI.Color.FromArgb(68, 229, 193, 123));
+        var cyanBrush = GetBrush("IMaoCyanBrush", Windows.UI.Color.FromArgb(255, 86, 212, 200));
+        var successBrush = GetBrush("IMaoSuccessBrush", Windows.UI.Color.FromArgb(255, 76, 201, 155));
+        var warningBrush = GetBrush("IMaoWarningBrush", Windows.UI.Color.FromArgb(255, 234, 179, 84));
+        var dangerBrush = GetBrush("IMaoDangerBrush", Windows.UI.Color.FromArgb(255, 238, 107, 107));
+        var textBrush = GetBrush("IMaoTextBrush", Windows.UI.Color.FromArgb(255, 242, 239, 233));
+        var secondaryBrush = GetBrush("IMaoSecondaryTextBrush", Windows.UI.Color.FromArgb(255, 154, 166, 184));
+        var mutedBrush = GetBrush("IMaoMutedTextBrush", Windows.UI.Color.FromArgb(255, 104, 117, 136));
+        var toggleStyle = Application.Current.Resources.TryGetValue("IMaoCompactToggleStyle", out var ts) && ts is Style compact ? compact : null;
+
+        // 1. 顶部自定义标题栏：标题 + 记录本名称 + 右侧状态胶囊
+        var titleGrid = new Grid { ColumnSpacing = 12 };
+        titleGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        titleGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var titleLeft = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        titleLeft.Children.Add(new TextBlock
+        {
+            Text = "库街区同步预览",
+            FontSize = 18,
+            FontWeight = FontWeights.Bold,
+            Foreground = textBrush,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        titleLeft.Children.Add(new Border
+        {
+            Background = raisedBrush,
+            BorderBrush = borderBrush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(8, 2, 8, 2),
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = new TextBlock
+            {
+                Text = coreHost.ActiveLocalAccount?.Name ?? profile,
+                FontSize = 12,
+                Foreground = secondaryBrush
+            }
+        });
+        Grid.SetColumn(titleLeft, 0);
+        titleGrid.Children.Add(titleLeft);
+
+        string badgeText;
+        Brush badgeDot, badgeBg, badgeBorder, badgeFg;
+        if (comparison.ToCancel > 0)
+        {
+            badgeText = $"含 {comparison.ToCancel} 项取消变更";
+            badgeDot = warningBrush;
+            badgeFg = warningBrush;
+            badgeBg = accentSoftBrush;
+            badgeBorder = accentBorderBrush;
+        }
+        else if (!comparison.NeedsApply)
+        {
+            badgeText = "已完全一致";
+            badgeDot = successBrush;
+            badgeFg = successBrush;
+            badgeBg = new SolidColorBrush(Windows.UI.Color.FromArgb(28, 76, 201, 155));
+            badgeBorder = new SolidColorBrush(Windows.UI.Color.FromArgb(72, 76, 201, 155));
+        }
+        else
+        {
+            badgeText = $"待拉取 {comparison.ToFetch} · 待推送 {comparison.ToUpload}";
+            badgeDot = accentBrush;
+            badgeFg = accentBrush;
+            badgeBg = accentSoftBrush;
+            badgeBorder = accentBorderBrush;
+        }
+        var badgeRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
+        badgeRow.Children.Add(new Microsoft.UI.Xaml.Shapes.Ellipse { Width = 7, Height = 7, Fill = badgeDot, VerticalAlignment = VerticalAlignment.Center });
+        badgeRow.Children.Add(new TextBlock { Text = badgeText, FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = badgeFg });
+        var statusBadge = new Border
+        {
+            Background = badgeBg,
+            BorderBrush = badgeBorder,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(10, 4, 10, 4),
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = badgeRow
+        };
+        Grid.SetColumn(statusBadge, 1);
+        titleGrid.Children.Add(statusBadge);
+
+        // 2. 四格横向数字概览卡片
+        Border BuildMetricCard(string label, int value, Brush valueBrush)
+        {
+            var stack = new StackPanel { Spacing = 2 };
+            stack.Children.Add(new TextBlock { Text = label, FontSize = 11.5, Foreground = secondaryBrush });
+            stack.Children.Add(new TextBlock
+            {
+                Text = value.ToString(),
+                FontSize = 20,
+                FontWeight = FontWeights.Bold,
+                Foreground = valueBrush
+            });
+            return new Border
+            {
+                Background = raisedBrush,
+                BorderBrush = borderBrush,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(14, 10, 14, 10),
+                Child = stack
+            };
+        }
+
+        var metricsGrid = new Grid { ColumnSpacing = 10 };
+        for (int i = 0; i < 4; ++i) metricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var mLocal = BuildMetricCard("本地已完成", comparison.LocalCompleted, textBrush);
+        var mCloud = BuildMetricCard("库街区已完成", comparison.CloudCompleted, textBrush);
+        var mPush = BuildMetricCard("待推送", comparison.ToUpload, comparison.ToUpload > 0 ? accentBrush : mutedBrush);
+        var mPull = BuildMetricCard("待拉取", comparison.ToFetch, comparison.ToFetch > 0 ? cyanBrush : mutedBrush);
+        Grid.SetColumn(mLocal, 0);
+        Grid.SetColumn(mCloud, 1);
+        Grid.SetColumn(mPush, 2);
+        Grid.SetColumn(mPull, 3);
+        metricsGrid.Children.Add(mLocal);
+        metricsGrid.Children.Add(mCloud);
+        metricsGrid.Children.Add(mPush);
+        metricsGrid.Children.Add(mPull);
+
+        // 3. 仅在有“取消风险”或“云端为空”时显示一条克制的定制提示条
+        Border? noticeBanner = null;
+        if (comparison.ToCancel > 0 || comparison.CloudCompleted == 0)
+        {
+            bool isCancel = comparison.ToCancel > 0;
+            string noticeText = isCancel
+                ? $"注意：有 {comparison.ToCancel} 个本地已完成点在库街区已被取消，点击「应用同步」将同步取消；若不想取消请先关闭弹窗。"
+                : "库街区当前没有已完成点位，并非出错。" + (comparison.LocalCompleted > 0 ? "点击「应用同步」可将本地完成点推送到库街区。" : "");
+            noticeBanner = new Border
+            {
+                Background = isCancel ? new SolidColorBrush(Windows.UI.Color.FromArgb(26, 238, 107, 107)) : accentSoftBrush,
+                BorderBrush = isCancel ? new SolidColorBrush(Windows.UI.Color.FromArgb(80, 238, 107, 107)) : accentBorderBrush,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(12, 8, 12, 8),
+                Child = new TextBlock
+                {
+                    Text = noticeText,
+                    FontSize = 12.5,
+                    Foreground = isCancel ? dangerBrush : accentBrush,
+                    TextWrapping = TextWrapping.Wrap
+                }
+            };
+        }
+
+        // 4. 轻量表格工具栏（左侧“区域明细”，右侧两个紧凑无框开关）
+        var showSyncedToggle = new ToggleSwitch { IsOn = kuroSyncShowSynced };
+        var showAllToggle = new ToggleSwitch { IsOn = kuroSyncShowAll };
+        if (toggleStyle is not null)
+        {
+            showSyncedToggle.Style = toggleStyle;
+            showAllToggle.Style = toggleStyle;
+        }
+
+        StackPanel BuildInlineSwitch(string text, ToggleSwitch sw)
+        {
+            var sp = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+            sp.Children.Add(new TextBlock { Text = text, FontSize = 12.5, Foreground = secondaryBrush, VerticalAlignment = VerticalAlignment.Center });
+            sp.Children.Add(sw);
+            return sp;
+        }
+
+        var toolbarGrid = new Grid { Margin = new Thickness(2, 2, 2, 0) };
+        toolbarGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        toolbarGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var tableHeading = new TextBlock
+        {
+            Text = "区域明细",
+            FontSize = 13,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = textBrush,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var switchStrip = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, VerticalAlignment = VerticalAlignment.Center };
+        switchStrip.Children.Add(BuildInlineSwitch("显示已同步数", showSyncedToggle));
+        switchStrip.Children.Add(BuildInlineSwitch("显示无差异区域", showAllToggle));
+        Grid.SetColumn(tableHeading, 0);
+        Grid.SetColumn(switchStrip, 1);
+        toolbarGrid.Children.Add(tableHeading);
+        toolbarGrid.Children.Add(switchStrip);
+
+        // 5. 深色内嵌表格卡片（右侧预留 16px 滚动条安全槽道，避免悬浮滚动条遮挡最右列数字）
+        var tableGrid = new Grid { ColumnSpacing = 18, RowSpacing = 0 };
+        var emptyHint = new TextBlock
+        {
+            Text = "所有区域点位进度均已一致，无需同步。如需查看各区域统计，可打开右上角「显示无差异区域」。",
+            FontSize = 12.5,
+            Foreground = secondaryBrush,
+            TextWrapping = TextWrapping.Wrap,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 14, 0, 14),
+            Visibility = Visibility.Collapsed
+        };
+
+        var tableContainer = new StackPanel
+        {
+            Spacing = 0,
+            Padding = new Thickness(14, 10, 18, 10)
+        };
+        tableContainer.Children.Add(tableGrid);
+        tableContainer.Children.Add(emptyHint);
+
+        var tableScroll = new ScrollViewer
+        {
+            MaxHeight = 330,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Content = tableContainer
+        };
+        var tableCard = new Border
+        {
+            Background = deepInsetBrush,
+            BorderBrush = borderBrush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(0),
+            Child = tableScroll
+        };
+
+        var footerText = new TextBlock
+        {
+            FontSize = 11.5,
+            Foreground = mutedBrush,
+            TextWrapping = TextWrapping.Wrap
+        };
+
+        Microsoft.UI.Xaml.Media.Animation.Storyboard? activeResizeAnim = null;
+
+        void RefreshTable(bool animate)
+        {
+            double fromHeight = tableCard.ActualHeight;
+            RenderKuroSyncComparison(comparison, profile, tableGrid, emptyHint, footerText, () => RefreshTable(animate: true));
+
+            if (!animate || fromHeight <= 1) return;
+
+            // 计算重绘后的自然高度并平滑过渡，避免开关切换时弹窗高度突兀跳变
+            double availableWidth = tableCard.ActualWidth > 2 ? tableCard.ActualWidth - 2 : 618;
+            tableContainer.Measure(new Windows.Foundation.Size(availableWidth, double.PositiveInfinity));
+            double targetHeight = Math.Min(330, Math.Max(48, tableContainer.DesiredSize.Height)) + 2;
+            if (Math.Abs(targetHeight - fromHeight) < 1) return;
+
+            activeResizeAnim?.Stop();
+            tableCard.Height = fromHeight;
+
+            var sb = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
+            var heightAnim = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
+            {
+                From = fromHeight,
+                To = targetHeight,
+                Duration = new Duration(TimeSpan.FromMilliseconds(220)),
+                EnableDependentAnimation = true,
+                EasingFunction = new Microsoft.UI.Xaml.Media.Animation.CubicEase
+                {
+                    EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseOut
+                }
+            };
+            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(heightAnim, tableCard);
+            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(heightAnim, "Height");
+            sb.Children.Add(heightAnim);
+
+            var fadeAnim = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
+            {
+                From = 0.65,
+                To = 1.0,
+                Duration = new Duration(TimeSpan.FromMilliseconds(180)),
+                EasingFunction = new Microsoft.UI.Xaml.Media.Animation.CubicEase
+                {
+                    EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseOut
+                }
+            };
+            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(fadeAnim, tableContainer);
+            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(fadeAnim, "Opacity");
+            sb.Children.Add(fadeAnim);
+
+            sb.Completed += (_, _) =>
+            {
+                // 动画完成后恢复自适应高度，避免窗口缩放时被锁死
+                if (activeResizeAnim == sb) tableCard.Height = double.NaN;
+            };
+            activeResizeAnim = sb;
+            sb.Begin();
+        }
+
+        showSyncedToggle.Toggled += async (_, _) =>
+        {
+            kuroSyncShowSynced = showSyncedToggle.IsOn;
+            await kuroSettings.SaveSettingAsync(KuroSyncShowSyncedKey, kuroSyncShowSynced);
+            RefreshTable(animate: false);
+        };
+        showAllToggle.Toggled += async (_, _) =>
+        {
+            kuroSyncShowAll = showAllToggle.IsOn;
+            await kuroSettings.SaveSettingAsync(KuroSyncShowAllKey, kuroSyncShowAll);
+            RefreshTable(animate: true);
+        };
+
+        RefreshTable(animate: false);
+
+        var root = new StackPanel { Spacing = 12, MinWidth = 620 };
+        root.Children.Add(metricsGrid);
+        if (noticeBanner is not null) root.Children.Add(noticeBanner);
+        root.Children.Add(toolbarGrid);
+        root.Children.Add(tableCard);
+        root.Children.Add(footerText);
+
+        var dialog = new ContentDialog
+        {
+            Title = titleGrid,
+            Content = root,
+            CloseButtonText = comparison.NeedsApply ? "取消" : "关闭",
+            // 无差异时不把“关闭”标为刺眼的金色主按钮，保持柔和次级风格
+            DefaultButton = comparison.NeedsApply ? ContentDialogButton.Primary : ContentDialogButton.None,
+            Background = surfaceBrush,
+            BorderBrush = borderStrongBrush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
+            XamlRoot = XamlRoot
+        };
+        if (comparison.NeedsApply) dialog.PrimaryButtonText = "应用同步";
+        dialog.Resources["ContentDialogMaxWidth"] = 740.0;
+        dialog.Resources["ContentDialogBackground"] = surfaceBrush;
+        dialog.Resources["ContentDialogTopOverlay"] = surfaceBrush;
+        dialog.Resources["ContentDialogSeparatorBorderBrush"] = borderBrush;
+
+        return await dialog.ShowAsync() == ContentDialogResult.Primary && comparison.NeedsApply;
+    }
+
+    /// <summary>
+    /// 渲染弹窗内的点位对比表。按语义对非零变更列着色，关闭「显示无差异区域」且无差异时隐藏明细。
+    /// </summary>
+    private void RenderKuroSyncComparison(
+        KuroSyncComparison comparison,
+        string profile,
+        Grid targetGrid,
+        TextBlock emptyHint,
+        TextBlock footerText,
+        Action rerender)
+    {
+        targetGrid.Children.Clear();
+        targetGrid.ColumnDefinitions.Clear();
+        targetGrid.RowDefinitions.Clear();
+
+        var headers = new List<string> { "范围", "本地", "待推送", "将被取消", "云端", "待拉取" };
+        if (kuroSyncShowSynced) headers.Add("已同步");
         for (int column = 0; column < headers.Count; ++column)
-            KuroSyncPlanGrid.ColumnDefinitions.Add(new ColumnDefinition
+            targetGrid.ColumnDefinitions.Add(new ColumnDefinition
             { Width = column == 0 ? new GridLength(1, GridUnitType.Star) : GridLength.Auto });
-        AddKuroSyncRow(headers.ToArray(), numeric: true, header: true);
+
         bool allRegions = SelectedKuroSyncStateId() == 0;
         if (allRegions)
         {
-            // The table has to add up: the first row is the sum of the rows shown
-            // below it. With "show regions without differences" off, regions that
-            // only contain already-synced points are neither listed nor counted.
             var all = comparison.Regions.OrderBy(region => region.StateId).ToList();
             var differing = all.Where(region => region.HasDifference).ToList();
-            bool accountWide = KuroSyncShowAll.IsOn || differing.Count == 0;
-            var shown = accountWide ? all : differing;
-            string label = accountWide ? "全部区域" : $"有差异的区域（{differing.Count}）";
-            AddKuroSyncRow(Cells(label,
-                    shown.Sum(region => region.LocalCompleted), shown.Sum(region => region.ToUpload),
-                    shown.Sum(region => region.ToCancel), shown.Sum(region => region.CloudCompleted),
-                    shown.Sum(region => region.ToFetch), shown.Sum(region => region.BothCompleted)),
-                numeric: true, header: false, em: true);
-            foreach (var region in shown)
+            if (!kuroSyncShowAll && differing.Count == 0)
             {
-                var parts = RegionParts(region);
-                AddKuroSyncRow(Cells(RegionName(region), region.LocalCompleted, region.ToUpload, region.ToCancel,
-                        region.CloudCompleted, region.ToFetch, region.BothCompleted),
-                    numeric: true, header: false,
-                    scope: BuildKuroSyncScope(comparison, region, parts),
-                    detail: parts.Length > 1 && kuroSyncWorldExpanded ? "包含：" + string.Join("、", parts) : null);
+                targetGrid.Visibility = Visibility.Collapsed;
+                emptyHint.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                targetGrid.Visibility = Visibility.Visible;
+                emptyHint.Visibility = Visibility.Collapsed;
+                AddKuroSyncRow(targetGrid, headers.ToArray(), numeric: true, header: true);
+                var shown = kuroSyncShowAll ? all : differing;
+                string label = kuroSyncShowAll ? "全部区域" : $"有差异的区域（{differing.Count}）";
+                AddKuroSyncRow(targetGrid, Cells(label,
+                        shown.Sum(region => region.LocalCompleted), shown.Sum(region => region.ToUpload),
+                        shown.Sum(region => region.ToCancel), shown.Sum(region => region.CloudCompleted),
+                        shown.Sum(region => region.ToFetch), shown.Sum(region => region.BothCompleted)),
+                    numeric: true, header: false, em: true);
+                foreach (var region in shown)
+                {
+                    var parts = RegionParts(region);
+                    AddKuroSyncRow(targetGrid, Cells(RegionName(region), region.LocalCompleted, region.ToUpload, region.ToCancel,
+                            region.CloudCompleted, region.ToFetch, region.BothCompleted),
+                        numeric: true, header: false,
+                        scope: BuildKuroSyncScope(region, parts, rerender),
+                        detail: parts.Length > 1 && kuroSyncWorldExpanded ? "包含：" + string.Join("、", parts) : null);
+                }
             }
         }
         else
         {
+            targetGrid.Visibility = Visibility.Visible;
+            emptyHint.Visibility = Visibility.Collapsed;
+            AddKuroSyncRow(targetGrid, headers.ToArray(), numeric: true, header: true);
             foreach (var region in comparison.Regions)
-                AddKuroSyncRow(Cells(RegionName(region), region.LocalCompleted, region.ToUpload, region.ToCancel,
+                AddKuroSyncRow(targetGrid, Cells(RegionName(region), region.LocalCompleted, region.ToUpload, region.ToCancel,
                         region.CloudCompleted, region.ToFetch, region.BothCompleted),
                     numeric: true, header: false);
         }
-        int regionsWithDifferences = comparison.Regions.Count(region => region.HasDifference);
-        KuroSyncPlanSummary.Text = $"整个账号：本地 {comparison.LocalCompleted} 个已完成 · 库街区 {comparison.CloudCompleted} 个已完成" +
-            (comparison.BothCompleted > 0 ? $"，其中 {comparison.BothCompleted} 个两边一致" : "") +
-            (regionsWithDifferences > 0 ? $"；差异分布在 {regionsWithDifferences} 个区域。" : "；两边完全一致。");
+
         var footer = new List<string>
         {
-            "待推送＝等待写回库街区的点位状态变更，包括标记完成和取消完成（含本次新排队的）。",
-            "待拉取＝库街区已标记完成、本地尚未反映，点“应用同步”会拉进本地。"
+            "待推送＝待写回库街区的本地状态变更；待拉取＝库街区已完成、本地尚未同步的点位。"
         };
-        if (comparison.ToCancel > 0)
-            footer.Add($"将被取消＝库街区明确取消过、本地还留着的 {comparison.ToCancel} 个点，点“应用同步”会跟着取消。");
-        if (comparison.PendingLocal > 0) footer.Add($"本地有 {comparison.PendingLocal} 项点位状态变更正在等待上传确认（包括标记完成和取消完成）。");
+        if (comparison.PendingLocal > 0) footer.Add($"当前本地待上传队列共 {comparison.PendingLocal} 项。");
         if (comparison.Unmapped > 0)
         {
-            // Keep the identities on disk so the count can be checked afterwards.
-            string report = kuroSync.WriteUnmappedReport(CurrentSyncLedger(), comparison);
-            footer.Add($"另有 {comparison.Unmapped} 个库街区完成点在本地没有对应点位目录，未计入上表；明细见 {report}");
+            string report = kuroSync.WriteUnmappedReport(profile, comparison);
+            footer.Add($"另有 {comparison.Unmapped} 个库街区点位未匹配本地目录（明细：{report}）。");
         }
-        KuroSyncPlanFooter.Text = string.Join(" ", footer);
-        KuroSyncPlanFooter.Visibility = Visibility.Visible;
-        KuroSyncPlanPanel.Visibility = Visibility.Visible;
+        footerText.Text = string.Join(" ", footer);
 
         string[] Cells(string scope, int local, int toUpload, int toCancel, int cloud, int toFetch, int both)
         {
             var cells = new List<string> { scope, local.ToString(), toUpload.ToString(), toCancel.ToString(), cloud.ToString(), toFetch.ToString() };
-            if (KuroSyncShowSynced.IsOn) cells.Add(both.ToString());
+            if (kuroSyncShowSynced) cells.Add(both.ToString());
             return cells.ToArray();
         }
     }
 
-    /// <summary>State 8 is the open world; the published name lists its sub-regions.</summary>
+    /// <summary>State 8 为大世界，官方名称包含其子区域列表。</summary>
     private static string RegionName(KuroSyncRegionComparison region) => region.StateId == 8 ? "大世界" : region.Name;
 
     private static string[] RegionParts(KuroSyncRegionComparison region) =>
         region.StateId == 8 ? region.Name.Split('、', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) : Array.Empty<string>();
 
-    private FrameworkElement BuildKuroSyncScope(KuroSyncComparison comparison, KuroSyncRegionComparison region, string[] parts)
+    private FrameworkElement BuildKuroSyncScope(KuroSyncRegionComparison region, string[] parts, Action rerender)
     {
         var label = new TextBlock { Text = RegionName(region), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
         if (parts.Length <= 1) return label;
-        var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+        var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         panel.Children.Add(label);
         var toggle = new HyperlinkButton
         {
             Content = kuroSyncWorldExpanded ? "收起" : "展开",
             Padding = new Thickness(4, 0, 4, 0),
             MinHeight = 0,
+            FontSize = 12,
             VerticalAlignment = VerticalAlignment.Center
         };
-        toggle.Click += (_, _) => { kuroSyncWorldExpanded = !kuroSyncWorldExpanded; RenderKuroSyncComparison(comparison); };
+        toggle.Click += (_, _) => { kuroSyncWorldExpanded = !kuroSyncWorldExpanded; rerender(); };
         panel.Children.Add(toggle);
         return panel;
     }
 
-    private void AddKuroSyncRow(IReadOnlyList<string> cells, bool numeric, bool header, bool em = false, FrameworkElement? scope = null, string? detail = null)
+    private static void AddKuroSyncRow(Grid targetGrid, IReadOnlyList<string> cells, bool numeric, bool header, bool em = false, FrameworkElement? scope = null, string? detail = null)
     {
-        int row = KuroSyncPlanGrid.RowDefinitions.Count;
-        KuroSyncPlanGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        static Brush GetBrush(string key, Windows.UI.Color fallback) =>
+            Application.Current.Resources.TryGetValue(key, out var v) && v is Brush b ? b : new SolidColorBrush(fallback);
+
+        var borderBrush = GetBrush("IMaoBorderBrush", Windows.UI.Color.FromArgb(255, 34, 44, 60));
+        var raisedBrush = GetBrush("IMaoRaisedSurfaceBrush", Windows.UI.Color.FromArgb(255, 23, 31, 46));
+        var accentBrush = GetBrush("IMaoAccentBrush", Windows.UI.Color.FromArgb(255, 229, 193, 123));
+        var cyanBrush = GetBrush("IMaoCyanBrush", Windows.UI.Color.FromArgb(255, 86, 212, 200));
+        var dangerBrush = GetBrush("IMaoDangerBrush", Windows.UI.Color.FromArgb(255, 238, 107, 107));
+        var textBrush = GetBrush("IMaoTextBrush", Windows.UI.Color.FromArgb(255, 242, 239, 233));
+        var secondaryBrush = GetBrush("IMaoSecondaryTextBrush", Windows.UI.Color.FromArgb(255, 154, 166, 184));
+        var mutedBrush = GetBrush("IMaoMutedTextBrush", Windows.UI.Color.FromArgb(255, 104, 117, 136));
+
+        int row = targetGrid.RowDefinitions.Count;
+        targetGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        // 合计行用微亮圆角背景突出，表头下方画 1px 细分割线
+        if (em)
+        {
+            var rowBg = new Border
+            {
+                Background = raisedBrush,
+                CornerRadius = new CornerRadius(6),
+                Margin = new Thickness(-6, 3, -6, 3)
+            };
+            Grid.SetRow(rowBg, row);
+            Grid.SetColumn(rowBg, 0);
+            Grid.SetColumnSpan(rowBg, cells.Count);
+            targetGrid.Children.Add(rowBg);
+        }
+
+        var cellMargin = header ? new Thickness(0, 0, 0, 8) : new Thickness(0, 6, 0, 6);
         for (int column = 0; column < cells.Count; ++column)
         {
             if (column == 0 && scope is not null)
             {
+                scope.Margin = cellMargin;
                 Grid.SetRow(scope, row);
                 Grid.SetColumn(scope, 0);
-                KuroSyncPlanGrid.Children.Add(scope);
+                targetGrid.Children.Add(scope);
                 continue;
+            }
+            string cellText = cells[column];
+            Brush fg = header ? secondaryBrush : textBrush;
+            if (!header && numeric && column > 0 && int.TryParse(cellText, out int num))
+            {
+                if (num == 0) fg = mutedBrush;
+                else if (column == 2) fg = accentBrush;     // 待推送：暖金
+                else if (column == 3) fg = dangerBrush;     // 将被取消：柔红
+                else if (column == 5) fg = cyanBrush;       // 待拉取：青色
             }
             var block = new TextBlock
             {
-                Text = cells[column],
+                Text = cellText,
+                FontSize = header ? 12 : 13,
+                Foreground = fg,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 TextAlignment = numeric && column > 0 ? TextAlignment.Right : TextAlignment.Left,
-                Opacity = header ? 0.7 : 1,
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = cellMargin
             };
-            if (header || em) block.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+            if (header || em || (numeric && column is 2 or 3 or 5 && cellText != "0"))
+                block.FontWeight = FontWeights.SemiBold;
             Grid.SetRow(block, row);
             Grid.SetColumn(block, column);
-            KuroSyncPlanGrid.Children.Add(block);
+            targetGrid.Children.Add(block);
         }
+
+        if (header)
+        {
+            int sepRow = targetGrid.RowDefinitions.Count;
+            targetGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var sep = new Border { Height = 1, Background = borderBrush, Margin = new Thickness(0, 0, 0, 4) };
+            Grid.SetRow(sep, sepRow);
+            Grid.SetColumn(sep, 0);
+            Grid.SetColumnSpan(sep, cells.Count);
+            targetGrid.Children.Add(sep);
+        }
+
         if (detail is null) return;
-        int detailRow = KuroSyncPlanGrid.RowDefinitions.Count;
-        KuroSyncPlanGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var text = new TextBlock { Text = detail, TextWrapping = TextWrapping.Wrap, Opacity = 0.75, Margin = new Thickness(0, 0, 0, 4) };
-        if (Application.Current.Resources.TryGetValue("IMaoSecondaryTextStyle", out var style) && style is Style textStyle) text.Style = textStyle;
+        int detailRow = targetGrid.RowDefinitions.Count;
+        targetGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var text = new TextBlock
+        {
+            Text = detail,
+            FontSize = 11.5,
+            Foreground = mutedBrush,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 6)
+        };
         Grid.SetRow(text, detailRow);
         Grid.SetColumn(text, 0);
         Grid.SetColumnSpan(text, cells.Count);
-        KuroSyncPlanGrid.Children.Add(text);
+        targetGrid.Children.Add(text);
     }
     private void OpenRoutes_Click(object sender, RoutedEventArgs e) => OpenDirectory(IMao_WinUI.Helpers.UserDataPaths.SavedRoutes);
     private static void OpenDirectory(string path)

@@ -144,18 +144,18 @@
                         </Grid>
 
                         <Border Height="6" CornerRadius="3" Background="#1D2736">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition x:Name="SelectedRegionFillCol" Width="0" />
-                                    <ColumnDefinition x:Name="SelectedRegionRemainCol" Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Border Grid.Column="0" Height="6" CornerRadius="3" Background="{StaticResource IMaoAccentBrush}" />
-                            </Grid>
+                            <Border x:Name="SelectedRegionFillBar" Height="6" CornerRadius="3"
+                                    Background="{StaticResource IMaoAccentBrush}"
+                                    HorizontalAlignment="Stretch" RenderTransformOrigin="0,0.5">
+                                <Border.RenderTransform>
+                                    <ScaleTransform x:Name="SelectedRegionFillScale" ScaleX="0" />
+                                </Border.RenderTransform>
+                            </Border>
                         </Border>
                     </StackPanel>
                 </Border>
 
-                <!-- 所选区域的收集物分类进度网格（静态宽度进度填充条，绝不循环播放动画） -->
+                <!-- 所选区域的收集物分类进度网格（一次性 GPU 缓动展开，播完彻底静止，绝不循环动画） -->
                 <ItemsControl x:Name="RegionCollectibleItemsControl">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -168,14 +168,14 @@
                                 <Grid ColumnSpacing="10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="34" />
-                                        <ColumnDefinition Width="160" />
+                                        <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource IMaoDeepInsetBrush}"
                                             BorderBrush="{StaticResource IMaoBorderBrush}" BorderThickness="1" VerticalAlignment="Center">
                                         <Image Source="{Binding IconSource}" Width="24" Height="24" Stretch="Uniform"
                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     </Border>
-                                    <StackPanel Grid.Column="1" Width="160" Spacing="6" VerticalAlignment="Center">
+                                    <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
                                         <Grid ColumnSpacing="6">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
@@ -184,11 +184,16 @@
                                             <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="1" Text="{Binding CountLabel}" FontSize="12" FontWeight="SemiBold"
-                                                       Foreground="{Binding CountBrush}" VerticalAlignment="Center" />
+                                                       Padding="0,0,1,0" Foreground="{Binding CountBrush}" VerticalAlignment="Center" />
                                         </Grid>
-                                        <Border Width="160" Height="4" CornerRadius="2" Background="#1D2736" HorizontalAlignment="Left">
-                                            <Border HorizontalAlignment="Left" Width="{Binding BarFillWidth}" Height="4" CornerRadius="2"
-                                                    Background="{Binding CountBrush}" />
+                                        <Border Height="4" CornerRadius="2" Background="#1D2736" HorizontalAlignment="Stretch">
+                                            <Border Height="4" CornerRadius="2" Background="{Binding CountBrush}"
+                                                    HorizontalAlignment="Stretch" RenderTransformOrigin="0,0.5"
+                                                    Tag="{Binding Ratio}" Loaded="CollectibleBarFill_Loaded">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform ScaleX="0" />
+                                                </Border.RenderTransform>
+                                            </Border>
                                         </Border>
                                     </StackPanel>
                                 </Grid>

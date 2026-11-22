@@ -29,8 +29,6 @@ public sealed partial class ShellPage : Page
     {
         ViewModel = viewModel;
         InitializeComponent();
-        KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu));
-        KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.GoBack));
         AppToast.RegisterPresenter(ShowFloatingToast);
         updates = App.GetService<UpdateUiController>();
         coreHost = App.GetService<CoreHostService>();
@@ -307,19 +305,5 @@ public sealed partial class ShellPage : Page
     private void NavigationViewControl_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
     {
         AppTitleBar.Margin = new Thickness(0);
-    }
-
-    private static KeyboardAccelerator BuildKeyboardAccelerator(VirtualKey key, VirtualKeyModifiers? modifiers = null)
-    {
-        var keyboardAccelerator = new KeyboardAccelerator { Key = key };
-        if (modifiers.HasValue) keyboardAccelerator.Modifiers = modifiers.Value;
-        keyboardAccelerator.Invoked += OnKeyboardAcceleratorInvoked;
-        return keyboardAccelerator;
-    }
-
-    private static void OnKeyboardAcceleratorInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
-    {
-        var navigationService = App.GetService<INavigationService>();
-        args.Handled = navigationService.GoBack();
     }
 }

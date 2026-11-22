@@ -83,24 +83,6 @@
                             </Grid>
                         </Border>
 
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
-                                <Grid ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <TextBlock Text="显示已同步数" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                    <ToggleSwitch x:Name="KuroSyncShowSynced" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="KuroSyncShowSynced_Toggled" />
-                                </Grid>
-                            </Border>
-                            <Border Grid.Column="1" Style="{StaticResource IMaoSettingRowStyle}" Padding="12,8">
-                                <Grid ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <TextBlock Text="显示无差异区域" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                    <ToggleSwitch x:Name="KuroSyncShowAll" Grid.Column="1" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="KuroSyncShowAll_Toggled" />
-                                </Grid>
-                            </Border>
-                        </Grid>
-
                         <TextBlock x:Name="KuroAutoSyncStatus" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
 
                         <StackPanel x:Name="KuroSyncProgressPanel" Spacing="4" Visibility="Collapsed">
@@ -110,25 +92,18 @@
 
                         <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
                             <Button x:Name="KuroSyncPreviewButton" Content="预览同步" Click="KuroSyncPreview_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
-                            <Button x:Name="KuroSyncApplyButton" Content="应用同步" Click="KuroSyncApply_Click" IsEnabled="False" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                             <Button Content="注册/修复浏览器桥接" Click="KuroBridgeRegister_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                             <Button Content="打开同步数据目录" Click="KuroSyncOpen_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                             <Button Content="断开库街区连接" Click="KuroSyncDisconnect_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
                         </controls:WrapPanel>
 
                         <TextBlock x:Name="KuroBridgeStatus" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                        <InfoBar x:Name="KuroSyncMessage" IsOpen="False" IsClosable="True" />
-
-                        <StackPanel x:Name="KuroSyncPlanPanel" Spacing="8" Visibility="Collapsed">
-                            <TextBlock x:Name="KuroSyncPlanSummary" TextWrapping="Wrap" />
-                            <Grid x:Name="KuroSyncPlanGrid" ColumnSpacing="16" RowSpacing="4" />
-                            <TextBlock x:Name="KuroSyncPlanFooter" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
-                        </StackPanel>
+                        <InfoBar x:Name="KuroSyncMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
                     </StackPanel>
                 </Border>
             </Grid>
 
-            <!-- 下卡：WebDAV 库街区凭证同步（可选，默认关闭） -->
+            <!-- 下卡：WebDAV 库街区凭证同步（可选，默认关闭且配置区默认折叠） -->
             <Border Style="{StaticResource IMaoCardStyle}">
                 <StackPanel Spacing="12">
                     <Grid ColumnSpacing="12">
@@ -138,9 +113,13 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel Spacing="3">
                             <TextBlock Text="WebDAV 库街区凭证同步（可选）" Style="{StaticResource IMaoSectionTitleStyle}" />
-                            <TextBlock Text="仅通过您自己的 WebDAV 加密同步库街区登录凭证（大号/小号按账号 ID 隔离），点位进度仍走上方库街区同步。未开启时完全不发请求、不影响现有流程。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                            <TextBlock x:Name="WebDavSummaryText" Text="仅通过您自己的 WebDAV 加密同步库街区登录凭证（大号/小号按账号 ID 隔离），点位进度仍走上方库街区同步。未开启时完全不发请求、不影响现有流程。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
                         </StackPanel>
-                        <ToggleSwitch x:Name="WebDavSyncEnabled" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="WebDavSyncEnabled_Toggled" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button x:Name="WebDavQuickSyncButton" Content="同步凭证" Click="WebDavSyncNow_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="10,5" Visibility="Collapsed" />
+                            <Button x:Name="WebDavExpandButton" Content="展开配置" Click="WebDavExpand_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" Padding="10,5" Visibility="Collapsed" />
+                            <ToggleSwitch x:Name="WebDavSyncEnabled" VerticalAlignment="Center" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="WebDavSyncEnabled_Toggled" />
+                        </StackPanel>
                     </Grid>
 
                     <StackPanel x:Name="WebDavConfigPanel" Spacing="10" Visibility="Collapsed">
