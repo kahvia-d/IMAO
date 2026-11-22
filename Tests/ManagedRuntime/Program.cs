@@ -100,6 +100,7 @@ try
     LocalAccountCatalogTests.Run(root, Check);
     LegacyRecoveryTests.Run(root, Check);
     KuroSyncTests.Run(root, Check);
+    await KuroWebDavTests.RunAsync(root, Check);
     RoutePlanningTests.Run(Check);
     RouteFilterPlanTests.Run(Check);
     PlayStationInputTests.Run(Check);

@@ -127,6 +127,73 @@
                     </StackPanel>
                 </Border>
             </Grid>
+
+            <!-- 下卡：WebDAV 库街区凭证同步（可选，默认关闭） -->
+            <Border Style="{StaticResource IMaoCardStyle}">
+                <StackPanel Spacing="12">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="WebDAV 库街区凭证同步（可选）" Style="{StaticResource IMaoSectionTitleStyle}" />
+                            <TextBlock Text="仅通过您自己的 WebDAV 加密同步库街区登录凭证（大号/小号按账号 ID 隔离），点位进度仍走上方库街区同步。未开启时完全不发请求、不影响现有流程。" Style="{StaticResource IMaoSecondaryTextStyle}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="WebDavSyncEnabled" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource IMaoCompactToggleStyle}" Toggled="WebDavSyncEnabled_Toggled" />
+                    </Grid>
+
+                    <StackPanel x:Name="WebDavConfigPanel" Spacing="10" Visibility="Collapsed">
+                        <Grid ColumnSpacing="12" RowSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
+                                <TextBlock Text="WebDAV 服务地址" FontSize="13" FontWeight="SemiBold" />
+                                <TextBox x:Name="WebDavBaseUrlBox" PlaceholderText="https://dav.jianguoyun.com/dav/" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4">
+                                <TextBlock Text="WebDAV 用户名" FontSize="13" FontWeight="SemiBold" />
+                                <TextBox x:Name="WebDavUsernameBox" PlaceholderText="邮箱或账号" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4">
+                                <TextBlock Text="WebDAV 密码（坚果云请填应用专用密码）" FontSize="13" FontWeight="SemiBold" />
+                                <PasswordBox x:Name="WebDavPasswordBox" PlaceholderText="应用专用密码" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                                <TextBlock Text="同步加密口令（多端须一致，绝不明文上传 Token）" FontSize="13" FontWeight="SemiBold" />
+                                <PasswordBox x:Name="WebDavPassphraseBox" PlaceholderText="自定义同步口令" />
+                            </StackPanel>
+                        </Grid>
+
+                        <controls:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
+                            <Button x:Name="WebDavSaveButton" Content="保存配置" Click="WebDavSave_Click" Style="{StaticResource IMaoPrimaryButtonStyle}" />
+                            <Button x:Name="WebDavTestButton" Content="测试连接" Click="WebDavTest_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                            <Button x:Name="WebDavSyncNowButton" Content="立即同步凭证" Click="WebDavSyncNow_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                            <Button Content="复制配置文本" Click="WebDavCopyConfig_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                            <Button Content="粘贴配置文本" Click="WebDavPasteConfig_Click" Style="{StaticResource IMaoSecondaryButtonStyle}" />
+                        </controls:WrapPanel>
+
+                        <InfoBar x:Name="WebDavMessage" IsOpen="False" IsClosable="True" Visibility="Collapsed" />
+
+                        <Border x:Name="WebDavAccountsCard" Style="{StaticResource IMaoSubCardStyle}" Visibility="Collapsed">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="WebDAV 云端已同步账号" FontSize="13" FontWeight="SemiBold" />
+                                <Grid x:Name="WebDavAccountsGrid" ColumnSpacing="14" RowSpacing="6" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </StackPanel>
 
         <!-- ==================== 分区 2：捕获与叠加显示 ==================== -->

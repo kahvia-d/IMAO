@@ -26,4 +26,14 @@ Chrome 商店 ID 为 `elhbnijeefmmmempajadehknbckaopge`；Edge 商店和仓库�
 
 连接成功后，凭据位于 `%LOCALAPPDATA%\IMao-WinUI\KuroSync\credentials`，内容只能由同一 Windows 用户解密。删除或卸载扩展不会自动删除桌面凭据；桌面端的「断开」操作会显式删除对应档案。
 
+## 可选：WebDAV 多设备登录凭证同步
+
+扩展提供独立设置页（点击右上角扩展小卡片里的「⚙ 设置」进入），默认关闭。开启后可填写您自己的 WebDAV 地址、账号、应用密码与同步加密口令，动态授权该 WebDAV 域名，用于：
+
+- 将当前大地图会话按 `kuro_<账号ID>.json` 端到端加密（PBKDF2-SHA256 + AES-256-GCM）上传至 WebDAV，支持大号/小号多账号隔离；
+- 在扩展小卡片中列出 WebDAV 上的所有账号并一键切换/恢复到大地图网页；
+- 打开大地图发现掉线或 WebDAV 存在更新凭证时，在网页右上角显示恢复登录提示条。
+
+协议详情见 [WebDAV 凭证同步规范](../../Docs/guides/KuroWebDavCredentialSync.md)。
+
 接口状态：读取完成点位（`POST https://api.kurobbs.com/map/core/position/getHaveDonePositionIds`，`token` 请求头）与写入完成/取消完成接口均已在开发中实测通过，写入幂等可安全重试。仍未验证的边界：批量上传（只实测单点往返）、多标签页同时连接，以及真实浏览器与游戏内的完整交互验收；详见 [历史发行说明](../../Docs/archive/Release-2026.9.17.1.md)与[历史同步计划](../../Docs/archive/KuroProgressSyncPlan_20260916.md)。

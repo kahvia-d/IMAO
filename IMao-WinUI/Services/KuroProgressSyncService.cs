@@ -15,21 +15,24 @@ public sealed class KuroProgressSyncService
 {
     private readonly CoreHostService core;
     private readonly KuroTokenVault vault;
+    private readonly KuroWebDavCredentialSyncService? webDavSync;
     private readonly string deviceId;
     // Manual and automatic sync share one gate so a timed pass can never write
     // while the user is applying a preview.
     private readonly SemaphoreSlim gate = new(1, 1);
 
-    public KuroProgressSyncService(CoreHostService core) : this(core, UserDataPaths.KuroSync) { }
+    public KuroProgressSyncService(CoreHostService core, KuroWebDavCredentialSyncService? webDavSync = null)
+        : this(core, UserDataPaths.KuroSync, webDavSync) { }
 
     /// <summary>
     /// The credential store and the device id live under <paramref name="kuroSyncRoot"/>. The tests
     /// pass a scratch directory: the real one holds the player's own credential, and a test that
     /// wrote there would replace it.
     /// </summary>
-    internal KuroProgressSyncService(CoreHostService core, string kuroSyncRoot)
+    internal KuroProgressSyncService(CoreHostService core, string kuroSyncRoot, KuroWebDavCredentialSyncService? webDavSync = null)
     {
         this.core = core;
+        this.webDavSync = webDavSync;
         vault = new KuroTokenVault(kuroSyncRoot);
         string path = Path.Combine(kuroSyncRoot, "device-id.txt");
         Directory.CreateDirectory(kuroSyncRoot);
@@ -141,18 +144,76 @@ public sealed class KuroProgressSyncService
         finally { gate.Release(); }
     }
 
+    private async Task<KuroCredential> ResolveCredentialWithWebDavAsync(string profileId, CancellationToken cancellationToken)
+    {
+        if (!TryReadCredential(profileId, out var credential))
+        {
+            string account = LedgerAccount(profileId);
+            // 若本机暂无凭据且玩家已启用可选的 WebDAV 凭证同步，先尝试从云端拉取
+            if (account.Length > 0 && webDavSync is { IsEnabled: true } &&
+                await webDavSync.TryRefreshAccountAsync(account, null, cancellationToken) &&
+                TryReadCredential(profileId, out var pulled))
+            {
+                credential = pulled;
+            }
+            else
+            {
+                throw new InvalidOperationException(DescribeCredential(profileId).Message);
+            }
+        }
+        EnsureCredentialMatchesBinding(credential, profileId);
+        return credential;
+    }
+
+    /// <summary>
+    /// 判断异常是否可能由库街区登录凭证失效引起（例如被另一台设备顶掉线）。
+    /// </summary>
+    private static bool IsPossibleAuthFailure(Exception error) =>
+        error is KuroProgressProtocolException ||
+        (error is HttpRequestException httpError &&
+         httpError.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden);
+
+    /// <summary>
+    /// 在凭证可能失效时，尝试从可选的 WebDAV 拉取更新的凭证并静默重试一次。
+    /// </summary>
+    private async Task<(T Result, KuroCredential Credential)> RunWithCredentialRefreshAsync<T>(
+        string profileId,
+        KuroCredential current,
+        Func<string, Task<T>> action,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return (await action(current.Token), current);
+        }
+        catch (Exception error) when (IsPossibleAuthFailure(error) && webDavSync is { IsEnabled: true })
+        {
+            string account = LedgerAccount(profileId);
+            if (account.Length == 0 ||
+                !await webDavSync.TryRefreshAccountAsync(account, current.Token, cancellationToken) ||
+                !TryReadCredential(profileId, out var refreshed))
+            {
+                throw;
+            }
+            EnsureCredentialMatchesBinding(refreshed, profileId);
+            return (await action(refreshed.Token), refreshed);
+        }
+    }
+
     private async Task<KuroSyncComparison> PreviewCoreAsync(string profileId, int? stateId, IProgress<KuroSyncProgress>? progress,
         CancellationToken cancellationToken)
     {
-        if (!TryReadCredential(profileId, out var credential)) throw new InvalidOperationException(DescribeCredential(profileId).Message);
-        EnsureCredentialMatchesBinding(credential, profileId);
+        var credential = await ResolveCredentialWithWebDavAsync(profileId, cancellationToken);
         progress?.Report(new("正在准备…", 0, 0));
         await EnsureActiveProfileAsync(profileId, cancellationToken);
         using var client = new KuroMapProgressClient();
         progress?.Report(new("正在读取库街区的区域列表…", 0, 0));
         var published = await client.GetStatesAsync(cancellationToken);
         progress?.Report(new("正在读取库街区已完成的点位…", 0, 0));
-        var completed = await client.GetCompletedIdsAsync(credential.Token, deviceId, cancellationToken);
+        var (completed, _) = await RunWithCredentialRefreshAsync(
+            profileId, credential,
+            token => client.GetCompletedIdsAsync(token, deviceId, cancellationToken),
+            cancellationToken);
         var cloudIds = completed.OrderBy(id => id, StringComparer.Ordinal).ToArray();
         // An account that has never marked a point complete answers with an empty list. That is a normal
         // first-run state, not a failed read — the client already refused a response that was missing the
@@ -224,13 +285,16 @@ public sealed class KuroProgressSyncService
     private async Task<KuroSyncApplyResult> ApplyCoreAsync(string profileId, KuroSyncComparison comparison,
         IProgress<KuroSyncProgress>? progress, CancellationToken cancellationToken)
     {
-        if (!TryReadCredential(profileId, out var credential)) throw new InvalidOperationException(DescribeCredential(profileId).Message);
-        EnsureCredentialMatchesBinding(credential, profileId);
+        var credential = await ResolveCredentialWithWebDavAsync(profileId, cancellationToken);
         progress?.Report(new("正在准备…", 0, 0));
         await EnsureActiveProfileAsync(profileId, cancellationToken);
         using var client = new KuroMapProgressClient();
         progress?.Report(new("正在核对库街区进度是否变化…", 0, 0));
-        var current = await client.GetCompletedIdsAsync(credential.Token, deviceId, cancellationToken);
+        var (current, activeCredential) = await RunWithCredentialRefreshAsync(
+            profileId, credential,
+            token => client.GetCompletedIdsAsync(token, deviceId, cancellationToken),
+            cancellationToken);
+        credential = activeCredential;
         if (!current.SetEquals(comparison.CloudIds)) throw new InvalidOperationException("库街区进度在预览之后已变化，请重新预览再应用。");
         // Upload first, so the cloud read below already contains the pushed points
         // and the local baseline ends up consistent with both sides.
@@ -340,8 +404,15 @@ public sealed class KuroProgressSyncService
         try
         {
             using var client = new KuroMapProgressClient();
-            await client.SetCompletionAsync(credential.Token, deviceId, change.StateId, change.PointId,
-                change.PositionType, change.Completed, cancellationToken);
+            await RunWithCredentialRefreshAsync(
+                profileId, credential,
+                async token =>
+                {
+                    await client.SetCompletionAsync(token, deviceId, change.StateId, change.PointId,
+                        change.PositionType, change.Completed, cancellationToken);
+                    return true;
+                },
+                cancellationToken);
             try
             {
                 // The write already happened and the contract is idempotent, so a

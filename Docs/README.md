@@ -56,6 +56,7 @@
 | [KuroMapSyncStoreListing.md](guides/KuroMapSyncStoreListing.md) | Chrome / Edge 商店入口、桥接身份与 Edge 历史上架材料 |
 | [KuroSceneCalibrationSamples.md](guides/KuroSceneCalibrationSamples.md) | 新地区四点校准样本 |
 | [KuroTileFeaturePacks.md](guides/KuroTileFeaturePacks.md) | 库街区瓦片特征包 |
+| [KuroWebDavCredentialSync.md](guides/KuroWebDavCredentialSync.md) | WebDAV 库街区登录凭证同步协议规范（v1） |
 | [MarkerDetectabilityMaintenance.md](guides/MarkerDetectabilityMaintenance.md) | 查漏补缺模式与名录维护 |
 | [MarkerDetectabilityWorkflow_zh-Hans.md](guides/MarkerDetectabilityWorkflow_zh-Hans.md) | 不可探测点位视频研究：新增视频与完成后清理 |
 | [ResearchArtifactRetention_zh-Hans.md](guides/ResearchArtifactRetention_zh-Hans.md) | 研究成果保留与恢复入口 |

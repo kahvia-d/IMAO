@@ -73,6 +73,7 @@ public partial class App : Application
             services.AddSingleton<ILocalSettingsService, LocalSettingsService>();
             services.AddSingleton<IThemeSelectorService, ThemeSelectorService>();
             services.AddSingleton<CoreHostService>();
+            services.AddSingleton<KuroWebDavCredentialSyncService>();
             services.AddSingleton<KuroProgressSyncService>();
             services.AddSingleton<KuroAutoSyncService>();
             services.AddSingleton<ResourceSnapshotService>(_ => ResourceUpdateBootstrap.CreateSnapshots());
@@ -249,6 +250,8 @@ public partial class App : Application
             // Players must not have to run a script: keep the Native Messaging host
             // registered for the current user on every start (best effort, per-user only).
             _ = Task.Run(() => { try { KuroBridgeRegistration.EnsureRegistered(); } catch { } });
+            // 若玩家启用了可选的 WebDAV 凭证同步，启动时在后台静默检查云端更新
+            _ = GetService<KuroWebDavCredentialSyncService>().PullStartupAsync();
             _ = GetService<KuroAutoSyncService>().InitializeAsync();
             if (ProgramLaunchSession.IsManaged) _ = ConfirmProgramHealthAsync(updates);
         }

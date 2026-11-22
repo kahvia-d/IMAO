@@ -1,4 +1,4 @@
-# Requires PowerShell 7 and authenticated GitHub CLI. Builds the player-facing archive of the
+﻿# Requires PowerShell 7 and authenticated GitHub CLI. Builds the player-facing archive of the
 # KuroMapSync browser extension and, with -Publish, attaches it to its own release line.
 #
 # The extension is normally installed from the Edge Add-ons store, which is still under review. Until
@@ -48,8 +48,10 @@ $version = [string]$manifest.version
 if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Extension version must be three numbers: $version" }
 
 # Everything the runtime loads, plus the install notes players read after unzipping.
-$requiredFiles = @('manifest.json', 'service-worker.js', 'popup.html', 'popup.js', 'extract-main.js',
-    'relay.js', 'README.md', 'icons/icon-16.png', 'icons/icon-32.png', 'icons/icon-48.png', 'icons/icon-128.png')
+$requiredFiles = @('manifest.json', 'service-worker.js', 'popup.html', 'popup.js',
+    'options.html', 'options.js', 'webdav-crypto.js', 'webdav-client.js',
+    'extract-main.js', 'relay.js', 'README.md',
+    'icons/icon-16.png', 'icons/icon-32.png', 'icons/icon-48.png', 'icons/icon-128.png')
 foreach ($relative in $requiredFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $extensionRoot $relative) -PathType Leaf)) {
         throw "Extension file is missing: $relative"

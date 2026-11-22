@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>IMao 库街区同步 · 扩展设置</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font: 14px/1.6 system-ui, -apple-system, "Microsoft YaHei UI", sans-serif;
+      margin: 0;
+      padding: 28px 16px 48px;
+      color: #1f2329;
+      background: #f5f7fa;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e3e8ef;
+      border-radius: 12px;
+      padding: 20px 22px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+    h1 { margin: 0 0 6px 0; font-size: 20px; }
+    h2 { margin: 0 0 8px 0; font-size: 16px; }
+    p.sub { margin: 0; color: #5b6472; font-size: 13px; }
+    .switch-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 14px;
+      background: #f8fafc;
+      border: 1px solid #e5eaf1;
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+    .switch-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 14px;
+    }
+    @media (max-width: 620px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    label.field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; color: #334155; }
+    input[type="text"], input[type="url"], input[type="password"] {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      font-size: 13.5px;
+      font-weight: 400;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    button {
+      padding: 8px 14px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.primary {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+    }
+    button.primary:hover { background: #1d4ed8; }
+    button.secondary {
+      background: #f1f5f9;
+      color: #1f2937;
+      border: 1px solid #cbd5e1;
+    }
+    button.secondary:hover { background: #e2e8f0; }
+    button.danger {
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+    button.danger:hover { background: #fee2e2; }
+    button:disabled { opacity: 0.6; cursor: default; }
+    .notice {
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      white-space: pre-wrap;
+      display: none;
+    }
+    .notice.ok { display: block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .notice.err { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .notice.info { display: block; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+    .account-table {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .account-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+    .account-info { font-size: 13px; }
+    .account-info strong { display: block; font-size: 14px; }
+    .account-info span { color: #64748b; font-size: 12px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>IMao 库街区同步 · 扩展设置</h1>
+      <p class="sub">WebDAV 凭证同步为完全可选项（默认关闭）。未开启时，扩展仅保留原有“连接本机桌面端 IMao”功能，不会发起任何外部网络请求。</p>
+
+      <div class="switch-row">
+        <div>
+          <strong>启用 WebDAV 库街区凭证同步</strong>
+          <p class="sub">使用您自己的 WebDAV 服务在多设备间端到端加密同步库街区大地图登录凭证（支持大号/小号多账号隔离）。</p>
+        </div>
+        <input id="enabled" type="checkbox">
+      </div>
+
+      <div id="configArea" class="hidden">
+        <div class="grid">
+          <label class="field">
+            WebDAV 服务地址
+            <input id="baseUrl" type="url" placeholder="https://dav.jianguoyun.com/dav/" autocomplete="off">
+          </label>
+          <label class="field">
+            WebDAV 用户名
+            <input id="username" type="text" placeholder="邮箱或账号" autocomplete="username">
+          </label>
+          <label class="field">
+            WebDAV 密码（坚果云请填应用专用密码）
+            <input id="password" type="password" placeholder="应用专用密码" autocomplete="current-password">
+          </label>
+          <label class="field">
+            同步加密口令（多端须一致，绝不明文上传 Token）
+            <input id="passphrase" type="password" placeholder="自定义同步口令" autocomplete="off">
+          </label>
+        </div>
+
+        <div class="switch-row">
+          <div>
+            <strong>大地图掉线或有更新凭证时自动浮层提醒</strong>
+            <p class="sub">打开库街区大地图时，若检测到已掉线或 WebDAV 存在更新的登录凭证，在网页右上角弹出恢复提示条。</p>
+          </div>
+          <input id="autoPromptRecovery" type="checkbox" checked>
+        </div>
+
+        <div class="actions">
+          <button id="saveBtn" class="primary">保存并授权域名</button>
+          <button id="testBtn" class="secondary">测试连接</button>
+          <button id="copyBundleBtn" class="secondary">复制配置文本</button>
+          <button id="pasteBundleBtn" class="secondary">粘贴配置文本</button>
+        </div>
+      </div>
+
+      <div id="notice" class="notice"></div>
+    </div>
+
+    <div id="accountsCard" class="card hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>WebDAV 云端账号管理</h2>
+        <button id="refreshAccountsBtn" class="secondary">刷新列表</button>
+      </div>
+      <p class="sub">每个库街区账号独立保存为一个加密文件（kuro_&lt;账号ID&gt;.json），可按需清除不再使用的云端凭证。</p>
+      <div id="accountsList" class="account-table"></div>
+    </div>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

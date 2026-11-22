@@ -1,4 +1,130 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><style>body{font:14px system-ui;width:300px;margin:16px;color:#202020}input,button{box-sizing:border-box;width:100%;padding:8px;margin-top:8px}#status{min-height:36px;white-space:pre-wrap}</style></head><body>
-<strong>连接 IMao</strong><p>在已登录的库街区鸣潮大地图页提取当前会话，保存到本机当前 Windows 用户的加密凭据库。</p>
-<label>库街区账号 ID（留空时自动识别）<input id="profile" maxlength="80" autocomplete="off" inputmode="numeric"></label>
-<button id="connect">连接桌面端</button><p id="status"></p><script src="popup.js"></script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      font: 13.5px/1.5 system-ui, -apple-system, sans-serif;
+      width: 330px;
+      margin: 14px;
+      color: #1f2329;
+      background: #ffffff;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .topbar strong { font-size: 15px; }
+    .icon-btn {
+      width: auto;
+      margin: 0;
+      padding: 4px 10px;
+      font-size: 12px;
+      background: #f1f3f6;
+      color: #374151;
+      border: 1px solid #d5dbe3;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .icon-btn:hover { background: #e5e9f0; }
+    p.desc { margin: 0 0 10px 0; color: #5b6472; font-size: 12.5px; }
+    button.primary, button.secondary {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 8px 10px;
+      margin-top: 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.primary {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+    }
+    button.primary:hover { background: #1d4ed8; }
+    button.secondary {
+      background: #f3f5f8;
+      color: #1f2329;
+      border: 1px solid #d5dbe3;
+    }
+    button.secondary:hover { background: #e8ecf2; }
+    button:disabled { opacity: 0.6; cursor: default; }
+    .divider {
+      border: none;
+      border-top: 1px solid #e5e9f0;
+      margin: 12px 0;
+    }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #374151;
+    }
+    .account-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+    .account-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 9px;
+      border: 1px solid #e2e7ef;
+      border-radius: 8px;
+      background: #fafbfc;
+    }
+    .account-meta { min-width: 0; }
+    .account-name { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .account-sub { font-size: 11.5px; color: #647080; }
+    .account-btn {
+      width: auto;
+      margin: 0;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .account-btn:hover { background: #1d4ed8; }
+    .empty-hint { font-size: 12px; color: #6b7280; padding: 6px 0; }
+    #status {
+      min-height: 20px;
+      margin: 10px 0 0 0;
+      white-space: pre-wrap;
+      font-size: 12.5px;
+      color: #374151;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <strong>IMao 库街区同步</strong>
+    <button id="openOptions" class="icon-btn" title="打开扩展设置页（WebDAV 凭证同步）">⚙ 设置</button>
+  </div>
+  <p class="desc">在已登录的库街区鸣潮大地图页自动识别当前账号，并保存会话到本机 Windows 加密凭据库。</p>
+  <button id="connect" class="primary">连接桌面端</button>
+
+  <div id="webdavSection" class="hidden">
+    <hr class="divider">
+    <button id="uploadWebDav" class="secondary">上传当前网页凭证到 WebDAV</button>
+    <div class="section-head" style="margin-top:10px;">
+      <span>WebDAV 账号列表（点击切换/恢复）</span>
+      <button id="refreshWebDav" class="icon-btn">刷新</button>
+    </div>
+    <div id="accountList" class="account-list"></div>
+  </div>
+
+  <p id="status"></p>
+  <script src="popup.js"></script>
+</body>
+</html>

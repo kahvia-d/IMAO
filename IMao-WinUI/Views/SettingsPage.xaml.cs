@@ -25,6 +25,7 @@ public sealed partial class SettingsPage : Page
     private readonly UpdateUiController updates;
     private readonly KuroProgressSyncService kuroSync;
     private readonly KuroAutoSyncService kuroAutoSync;
+    private readonly KuroWebDavCredentialSyncService kuroWebDav;
     private readonly ILocalSettingsService kuroSettings;
     private KuroSyncComparison? kuroSyncComparison;
     private bool restoringKuroSync = true;
@@ -48,6 +49,7 @@ public sealed partial class SettingsPage : Page
         updates = App.GetService<UpdateUiController>();
         kuroSync = App.GetService<KuroProgressSyncService>();
         kuroAutoSync = App.GetService<KuroAutoSyncService>();
+        kuroWebDav = App.GetService<KuroWebDavCredentialSyncService>();
         kuroSettings = App.GetService<ILocalSettingsService>();
         InitializeComponent();
         RestoreRuntime();
@@ -71,6 +73,7 @@ public sealed partial class SettingsPage : Page
             if (updates.ConnectivityCheckedAt is null) _ = updates.RefreshConnectivityAsync();
             RenderLocalAccounts();
             RenderSyncLedger();
+            RestoreWebDavSettings();
             _ = RestoreKuroSyncAsync();
             _ = RestoreCloseWindowActionAsync();
             if (!string.IsNullOrWhiteSpace(RequestedCategory)) { ApplySettingsCategory(RequestedCategory!); RequestedCategory = null; }
