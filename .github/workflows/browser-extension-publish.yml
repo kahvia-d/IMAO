@@ -141,7 +141,7 @@ jobs:
           foreach ($name in @('EDGE_PRODUCT_ID','EDGE_CLIENT_ID','EDGE_API_KEY')) {
             if (-not [Environment]::GetEnvironmentVariable($name)) { throw "缺少必需的 Secret：$name" }
           }
-          $zipPath = "out/browser-extension/IMao-KuroMapSync-$env:EXT_VERSION.zip"
+          $zipPath = "out/browser-extension/IMao-KuroMapSync-$env:EXT_VERSION-chrome-store.zip"
           $headers = @{
             Authorization = "ApiKey $env:EDGE_API_KEY"
             'X-ClientID'  = $env:EDGE_CLIENT_ID
