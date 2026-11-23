@@ -3,7 +3,10 @@ const connectBtn = document.querySelector("#connect");
 const webdavSection = document.querySelector("#webdavSection");
 const uploadWebDavBtn = document.querySelector("#uploadWebDav");
 const refreshWebDavBtn = document.querySelector("#refreshWebDav");
+const webdavSpinnerEl = document.querySelector("#webdavSpinner");
 const accountListEl = document.querySelector("#accountList");
+const tempLogoutBtn = document.querySelector("#tempLogout");
+let hasRenderedAccounts = false;
 
 document.querySelector("#openOptions").addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
@@ -50,7 +53,7 @@ function formatTime(iso) {
   return `${mm}-${dd} ${hh}:${mi}`;
 }
 
-function renderAccounts(accounts) {
+function renderAccounts(accounts, currentAccountId) {
   accountListEl.innerHTML = "";
   if (!accounts || accounts.length === 0) {
     const empty = document.createElement("div");
@@ -59,6 +62,8 @@ function renderAccounts(accounts) {
     accountListEl.appendChild(empty);
     return;
   }
+
+  const hasActiveAccount = Boolean(currentAccountId);
 
   for (const acc of accounts) {
     const row = document.createElement("div");
@@ -75,43 +80,75 @@ function renderAccounts(accounts) {
     meta.appendChild(name);
     meta.appendChild(sub);
 
-    const btn = document.createElement("button");
-    btn.className = "account-btn";
-    btn.textContent = "切换 / 恢复";
-    btn.addEventListener("click", async () => {
-      btn.disabled = true;
-      statusEl.textContent = `正在解密并恢复账号 ${acc.accountId}…`;
-      const resp = await chrome.runtime.sendMessage({
-        type: "webdavApplyToCurrentTab",
-        accountId: acc.accountId
-      });
-      if (resp?.error) {
-        statusEl.textContent = `恢复失败：${resp.error}`;
-        btn.disabled = false;
-      } else {
-        statusEl.textContent = `已写入账号 ${acc.accountId}（v${resp.version}），正在刷新大地图…`;
-        setTimeout(() => window.close(), 700);
-      }
-    });
-
     row.appendChild(meta);
-    row.appendChild(btn);
+
+    // 若为当前网页正在使用的账号，展示绿色“正在使用”标签；否则按是否已登录显示“切换”或“登录”
+    if (hasActiveAccount && String(acc.accountId) === String(currentAccountId)) {
+      const badge = document.createElement("span");
+      badge.className = "account-active";
+      badge.textContent = "正在使用";
+      row.appendChild(badge);
+    } else {
+      const actionLabel = hasActiveAccount ? "切换" : "登录";
+      const btn = document.createElement("button");
+      btn.className = "account-btn";
+      btn.textContent = actionLabel;
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        statusEl.textContent = `正在${actionLabel}账号 ${acc.accountId}…`;
+        const resp = await chrome.runtime.sendMessage({
+          type: "webdavApplyToCurrentTab",
+          accountId: acc.accountId
+        });
+        if (resp?.error) {
+          statusEl.textContent = `${actionLabel}失败：${resp.error}`;
+          btn.disabled = false;
+        } else {
+          statusEl.textContent = `已${actionLabel}到账号 ${acc.accountId}（v${resp.version}），正在刷新大地图…`;
+          setTimeout(() => window.close(), 700);
+        }
+      });
+      row.appendChild(btn);
+    }
+
     accountListEl.appendChild(row);
   }
 }
 
 async function refreshAccounts() {
   refreshWebDavBtn.disabled = true;
-  accountListEl.innerHTML = '<div class="empty-hint">正在读取 WebDAV 账号列表…</div>';
-  const resp = await chrome.runtime.sendMessage({ type: "webdavListAccounts" });
-  refreshWebDavBtn.disabled = false;
+  webdavSpinnerEl.classList.remove("hidden");
+  // 已有持久化列表时保持界面可见，仅在标题右侧显示加载转圈；无缓存时才展示占位文案
+  if (!hasRenderedAccounts) {
+    accountListEl.innerHTML = '<div class="empty-hint">正在读取 WebDAV 账号列表…</div>';
+  }
+  try {
+    const resp = await chrome.runtime.sendMessage({ type: "webdavListAccounts" });
+    if (resp?.error) {
+      if (!hasRenderedAccounts) accountListEl.innerHTML = "";
+      statusEl.textContent = `读取 WebDAV 失败：${resp.error}`;
+      return;
+    }
+    hasRenderedAccounts = true;
+    renderAccounts(resp?.accounts || [], resp?.currentAccountId || "");
+  } finally {
+    refreshWebDavBtn.disabled = false;
+    webdavSpinnerEl.classList.add("hidden");
+  }
+}
+
+tempLogoutBtn.addEventListener("click", async () => {
+  tempLogoutBtn.disabled = true;
+  statusEl.textContent = "正在清除当前网页登录状态…";
+  const resp = await chrome.runtime.sendMessage({ type: "temporaryLogoutCurrentTab" });
   if (resp?.error) {
-    accountListEl.innerHTML = "";
-    statusEl.textContent = `读取 WebDAV 失败：${resp.error}`;
+    statusEl.textContent = `临时退出失败：${resp.error}`;
+    tempLogoutBtn.disabled = false;
     return;
   }
-  renderAccounts(resp?.accounts || []);
-}
+  statusEl.textContent = "已临时退出当前账号（旧凭证仍有效），正在刷新大地图…";
+  setTimeout(() => window.close(), 700);
+});
 
 uploadWebDavBtn.addEventListener("click", async () => {
   uploadWebDavBtn.disabled = true;
@@ -128,11 +165,17 @@ uploadWebDavBtn.addEventListener("click", async () => {
 
 refreshWebDavBtn.addEventListener("click", refreshAccounts);
 
-// 初始化：仅在用户开启了 WebDAV 时才展示 WebDAV 区域，未开启时对老用户完全零干扰
+// 初始化：仅在用户开启了 WebDAV 时才展示 WebDAV 区域；开启自动上传时隐藏手动上传按钮
 (async () => {
   const resp = await chrome.runtime.sendMessage({ type: "webdavGetSettings" });
   if (resp?.ready) {
     webdavSection.classList.remove("hidden");
+    const autoUpload = resp?.settings?.autoUploadCredentials !== false;
+    uploadWebDavBtn.classList.toggle("hidden", autoUpload);
+    if (Array.isArray(resp.cachedAccounts) && resp.cachedAccounts.length > 0) {
+      hasRenderedAccounts = true;
+      renderAccounts(resp.cachedAccounts, resp.currentAccountId || "");
+    }
     await refreshAccounts();
   }
 })();

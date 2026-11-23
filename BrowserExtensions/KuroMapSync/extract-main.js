@@ -1,4 +1,58 @@
 (() => {
+  // 若玩家刚点击“临时退出当前账号”，在本次刷新启动时一次性拦截 /user/api/cookies/info，
+  // 防止大地图借由 kurobbs.com 的 HttpOnly Cookie 自动把旧账号登回来（不触碰服务端登出，旧凭证继续有效）。
+  const SKIP_COOKIE_LOGIN_KEY = "imao_skip_cookie_autologin";
+  try {
+    if (sessionStorage.getItem(SKIP_COOKIE_LOGIN_KEY) === "1") {
+      sessionStorage.removeItem(SKIP_COOKIE_LOGIN_KEY);
+      const emptyAuthJson = JSON.stringify({ code: 200, msg: "请求成功", success: true });
+      const isCookieInfoUrl = url => typeof url === "string" && url.includes("/user/api/cookies/info");
+
+      const origFetch = window.fetch;
+      if (typeof origFetch === "function") {
+        window.fetch = function (input, init) {
+          const url = typeof input === "string" ? input : input?.url;
+          if (isCookieInfoUrl(url)) {
+            return Promise.resolve(new Response(emptyAuthJson, {
+              status: 200,
+              headers: { "Content-Type": "application/json;charset=UTF-8" }
+            }));
+          }
+          return origFetch.apply(this, arguments);
+        };
+      }
+
+      const origOpen = XMLHttpRequest.prototype.open;
+      const origSend = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.open = function (method, url) {
+        this.__imaoSkipCookieAuth = isCookieInfoUrl(String(url || ""));
+        return origOpen.apply(this, arguments);
+      };
+      XMLHttpRequest.prototype.send = function () {
+        if (this.__imaoSkipCookieAuth) {
+          const xhr = this;
+          setTimeout(() => {
+            try {
+              Object.defineProperty(xhr, "readyState", { configurable: true, value: 4 });
+              Object.defineProperty(xhr, "status", { configurable: true, value: 200 });
+              Object.defineProperty(xhr, "statusText", { configurable: true, value: "OK" });
+              Object.defineProperty(xhr, "responseText", { configurable: true, value: emptyAuthJson });
+              Object.defineProperty(xhr, "response", {
+                configurable: true,
+                value: xhr.responseType === "json" ? JSON.parse(emptyAuthJson) : emptyAuthJson
+              });
+            } catch { }
+            xhr.dispatchEvent(new Event("readystatechange"));
+            xhr.dispatchEvent(new ProgressEvent("load"));
+            xhr.dispatchEvent(new ProgressEvent("loadend"));
+          }, 0);
+          return;
+        }
+        return origSend.apply(this, arguments);
+      };
+    }
+  } catch { }
+
   // 在页面主世界读取与写回库街区大地图的 localStorage 登录会话（含 Pinia 持久化的 AKI_MAP_USER_PROFILE）
   const readSession = () => {
     let token = localStorage.getItem("AKI_MAP_USER_TOKEN") || "";

@@ -9,10 +9,12 @@ import {
 
 const HOST_NAME = "com.imao.kuro_sync";
 const WEBDAV_SETTINGS_KEY = "imaoWebDavSettings";
+const WEBDAV_ACCOUNTS_CACHE_KEY = "imaoWebDavAccountsCache";
 const MAP_URL_REGEX = /^https:\/\/(www\.)?kurobbs\.com\/mc\/map\//;
 
 const sessionStorageKey = tabId => `candidate:${tabId}`;
 const checkedTabKey = tabId => `webdavChecked:${tabId}`;
+const tempLogoutKey = tabId => `tempLogoutUntil:${tabId}`;
 
 const DEFAULT_WEBDAV_SETTINGS = {
   enabled: false,
@@ -20,12 +22,42 @@ const DEFAULT_WEBDAV_SETTINGS = {
   username: "",
   password: "",
   passphrase: "",
+  autoUploadCredentials: true,
   autoPromptRecovery: true
 };
 
 async function loadWebDavSettings() {
   const stored = (await chrome.storage.local.get(WEBDAV_SETTINGS_KEY))[WEBDAV_SETTINGS_KEY];
   return { ...DEFAULT_WEBDAV_SETTINGS, ...(stored || {}) };
+}
+
+/** 读取持久化缓存的 WebDAV 云端账号元数据列表（仅含账号 ID/备注/版本/设备/时间，不含任何凭据） */
+async function loadCachedWebDavAccounts() {
+  const cached = (await chrome.storage.local.get(WEBDAV_ACCOUNTS_CACHE_KEY))[WEBDAV_ACCOUNTS_CACHE_KEY];
+  return Array.isArray(cached) ? cached : [];
+}
+
+async function saveCachedWebDavAccounts(accounts) {
+  const safeList = (Array.isArray(accounts) ? accounts : []).map(a => ({
+    accountId: String(a.accountId || ""),
+    displayName: String(a.displayName || ""),
+    version: Number(a.version || 0),
+    sourceDevice: String(a.sourceDevice || ""),
+    updatedAtUtc: String(a.updatedAtUtc || "")
+  })).filter(a => a.accountId);
+  await chrome.storage.local.set({ [WEBDAV_ACCOUNTS_CACHE_KEY]: safeList });
+}
+
+/** 轻量读取当前活动大地图标签页的已登录账号 ID */
+async function readActiveMapAccountId() {
+  try {
+    const tab = await getActiveMapTab();
+    const session = await readLiveSessionFromTab(tab.id);
+    if (session?.token && isAccountId(session?.accountId)) {
+      return session.accountId;
+    }
+  } catch { }
+  return "";
 }
 
 function isWebDavReady(settings) {
@@ -122,14 +154,61 @@ chrome.runtime.onMessage.addListener((message, sender) => {
 });
 
 chrome.tabs.onRemoved.addListener(tabId => {
-  chrome.storage.session.remove([sessionStorageKey(tabId), checkedTabKey(tabId)]).catch(() => { });
+  chrome.storage.session.remove([sessionStorageKey(tabId), checkedTabKey(tabId), tempLogoutKey(tabId)]).catch(() => { });
 });
+
+/** 在大地图标签页主世界轻量验活指定 Token，防止将已被顶掉线的旧浏览器 Token 误上传覆盖云端新凭证 */
+async function verifyTokenInTab(tabId, token) {
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      args: [token],
+      func: async candidateToken => {
+        try {
+          const devcode = localStorage.getItem("map_dc") || "imao-webdav-check";
+          const resp = await fetch("https://api.kurobbs.com/map/core/position/getHaveDonePositionIds", {
+            method: "POST",
+            headers: {
+              token: candidateToken,
+              source: "h5",
+              wiki_type: "120",
+              devcode,
+              state_id: "8",
+              "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: ""
+          });
+          const json = await resp.json();
+          return json?.code === 200;
+        } catch {
+          return false;
+        }
+      }
+    });
+    return Boolean(results?.[0]?.result);
+  } catch {
+    return false;
+  }
+}
 
 async function maybePromptWebDavRecovery(tabId, candidate) {
   try {
     const settings = await loadWebDavSettings();
-    if (!isWebDavReady(settings) || !settings.autoPromptRecovery) return;
+    if (!isWebDavReady(settings)) return;
+    if (!settings.autoPromptRecovery && !settings.autoUploadCredentials) return;
     if (!(await hasWebDavOriginPermission(settings.baseUrl))) return;
+
+    // 玩家主动点击“临时退出当前账号”后，若当前页处于未登录态，暂不弹出自动恢复横幅以免打扰登录新号
+    if (!candidate.token || candidate.token.length <= 8) {
+      const suppressUntil = (await chrome.storage.session.get(tempLogoutKey(tabId)))[tempLogoutKey(tabId)] || 0;
+      if (Date.now() < suppressUntil) {
+        await setBadge(tabId, "");
+        return;
+      }
+    } else {
+      chrome.storage.session.remove(tempLogoutKey(tabId)).catch(() => { });
+    }
 
     // 按标签页 + 当前账号/Token 指纹去重，避免 relay 定时轮询重复请求 WebDAV
     const fingerprint = `${candidate.accountId}|${candidate.token.length}|${candidate.token.slice(0, 12)}`;
@@ -141,44 +220,74 @@ async function maybePromptWebDavRecovery(tabId, candidate) {
 
     const client = new WebDavClient(settings);
     const accounts = await client.listAccounts();
-    if (accounts.length === 0) {
-      await setBadge(tabId, "");
-      return;
-    }
+    await saveCachedWebDavAccounts(accounts);
 
     // 情况 1：当前大地图网页未登录（Token 为空）
     if (!candidate.token || candidate.token.length <= 8) {
-      await setBadge(tabId, "!");
-      await chrome.tabs.sendMessage(tabId, {
-        type: "showRecoveryBanner",
-        reason: "loggedOut",
-        suggestedAccountId: accounts[0].accountId,
-        accounts
-      }).catch(() => { });
+      if (settings.autoPromptRecovery && accounts.length > 0) {
+        await setBadge(tabId, "!");
+        await chrome.tabs.sendMessage(tabId, {
+          type: "showRecoveryBanner",
+          reason: "loggedOut",
+          suggestedAccountId: accounts[0].accountId,
+          accounts
+        }).catch(() => { });
+      } else {
+        await setBadge(tabId, "");
+      }
       return;
     }
 
-    // 情况 2：当前网页已登录某账号，检查云端同账号 Token 是否已更新（例如被手机端顶掉线）
+    // 情况 2：当前网页已登录有效账号 ID
     if (isAccountId(candidate.accountId)) {
       const matched = accounts.find(a => a.accountId === candidate.accountId);
       if (matched) {
         const downloaded = await client.download(matched.accountId, settings.passphrase);
         if (downloaded && downloaded.payload.token !== candidate.token) {
-          await setBadge(tabId, "!");
-          await chrome.tabs.sendMessage(tabId, {
-            type: "showRecoveryBanner",
-            reason: "updated",
-            suggestedAccountId: matched.accountId,
-            accounts
-          }).catch(() => { });
+          // 若开启自动上传：先验活当前浏览器 Token，有效则自动覆盖云端，已失效则提示从云端恢复
+          if (settings.autoUploadCredentials && await verifyTokenInTab(tabId, candidate.token)) {
+            await client.upload({
+              accountId: candidate.accountId,
+              token: candidate.token,
+              passphrase: settings.passphrase,
+              sourceDevice: "browser",
+              displayName: candidate.displayName || "",
+              userInfoJson: candidate.userInfoJson || ""
+            });
+            await saveCachedWebDavAccounts(await client.listAccounts());
+            await setBadge(tabId, "");
+            return;
+          }
+          if (settings.autoPromptRecovery) {
+            await setBadge(tabId, "!");
+            await chrome.tabs.sendMessage(tabId, {
+              type: "showRecoveryBanner",
+              reason: "updated",
+              suggestedAccountId: matched.accountId,
+              accounts
+            }).catch(() => { });
+          }
           return;
+        }
+      } else if (settings.autoUploadCredentials) {
+        // 全新登录的账号尚未存入 WebDAV：验活通过后自动加密上传并刷新本地缓存列表
+        if (await verifyTokenInTab(tabId, candidate.token)) {
+          await client.upload({
+            accountId: candidate.accountId,
+            token: candidate.token,
+            passphrase: settings.passphrase,
+            sourceDevice: "browser",
+            displayName: candidate.displayName || "",
+            userInfoJson: candidate.userInfoJson || ""
+          });
+          await saveCachedWebDavAccounts(await client.listAccounts());
         }
       }
     }
 
     await setBadge(tabId, "");
   } catch {
-    // 自动检测失败时静默忽略，绝不干扰正常使用大地图
+    // 自动检测/自动上传失败时静默忽略，绝不干扰正常使用大地图
   }
 }
 
@@ -347,19 +456,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // 2. 读取 WebDAV 配置（供 popup 和 options 页使用）
+  // 2. 读取 WebDAV 配置（供 popup 和 options 页使用；附带本地缓存的账号列表与当前页登录账号，供弹窗秒开）
   if (message.type === "webdavGetSettings") {
     (async () => {
       const settings = await loadWebDavSettings();
+      const ready = isWebDavReady(settings);
       const permissionGranted = settings.baseUrl ? await hasWebDavOriginPermission(settings.baseUrl) : false;
-      return { settings, ready: isWebDavReady(settings), permissionGranted };
+      const cachedAccounts = ready ? await loadCachedWebDavAccounts() : [];
+      const currentAccountId = ready ? await readActiveMapAccountId() : "";
+      return { settings, ready, permissionGranted, cachedAccounts, currentAccountId };
     })().then(sendResponse, error => sendResponse({ error: error.message }));
     return true;
   }
 
-  // 3. 保存 WebDAV 配置
+  // 3. 保存 WebDAV 配置（停用或更换 WebDAV 服务端/账号时自动清理旧缓存）
   if (message.type === "webdavSaveSettings") {
     (async () => {
+      const prev = await loadWebDavSettings();
       const next = { ...DEFAULT_WEBDAV_SETTINGS, ...(message.settings || {}) };
       if (next.enabled || next.baseUrl.trim()) {
         next.baseUrl = validateBaseUrl(next.baseUrl);
@@ -369,8 +482,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       next.username = String(next.username || "").trim();
       next.password = String(next.password || "");
       next.passphrase = String(next.passphrase || "");
+      next.autoUploadCredentials = message.settings?.autoUploadCredentials !== false;
       next.autoPromptRecovery = Boolean(next.autoPromptRecovery);
       await chrome.storage.local.set({ [WEBDAV_SETTINGS_KEY]: next });
+      if (!next.enabled || next.baseUrl !== prev.baseUrl || next.username !== prev.username) {
+        await chrome.storage.local.remove(WEBDAV_ACCOUNTS_CACHE_KEY);
+      }
       return { settings: next, ready: isWebDavReady(next) };
     })().then(sendResponse, error => sendResponse({ error: error.message }));
     return true;
@@ -401,7 +518,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       const client = new WebDavClient(settings);
       const accounts = await client.listAccounts();
-      return { accounts, ready: true };
+      await saveCachedWebDavAccounts(accounts);
+      const currentAccountId = await readActiveMapAccountId();
+      return { accounts, ready: true, currentAccountId };
+    })().then(sendResponse, error => sendResponse({ error: error.message }));
+    return true;
+  }
+
+  // 5b. 临时退出当前大地图网页账号：清空本地登录态并写入一次性标记阻止刷新后 Cookie 自动回登，不调用登出接口
+  if (message.type === "temporaryLogoutCurrentTab") {
+    (async () => {
+      const tab = await getActiveMapTab(sender?.tab?.id);
+      await chrome.storage.session.remove([sessionStorageKey(tab.id), checkedTabKey(tab.id)]);
+      await chrome.storage.session.set({ [tempLogoutKey(tab.id)]: Date.now() + 5 * 60_000 });
+      await setBadge(tab.id, "");
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        world: "MAIN",
+        func: () => {
+          for (const key of ["AKI_MAP_USER_TOKEN", "AKI_MAP_USER_INFO", "AKI_MAP_USER_PROFILE"]) {
+            try { localStorage.removeItem(key); } catch { }
+            try { sessionStorage.removeItem(key); } catch { }
+          }
+          // 通知 extract-main.js 在本次刷新启动时拦截 /user/api/cookies/info，避免 HttpOnly Cookie 自动回登旧号
+          try { sessionStorage.setItem("imao_skip_cookie_autologin", "1"); } catch { }
+        }
+      });
+      await chrome.tabs.reload(tab.id);
+      return { ok: true };
     })().then(sendResponse, error => sendResponse({ error: error.message }));
     return true;
   }

@@ -6,6 +6,7 @@ const baseUrlEl = document.querySelector("#baseUrl");
 const usernameEl = document.querySelector("#username");
 const passwordEl = document.querySelector("#password");
 const passphraseEl = document.querySelector("#passphrase");
+const autoUploadEl = document.querySelector("#autoUploadCredentials");
 const autoPromptEl = document.querySelector("#autoPromptRecovery");
 const saveBtn = document.querySelector("#saveBtn");
 const testBtn = document.querySelector("#testBtn");
@@ -33,6 +34,7 @@ function readDraft() {
     username: usernameEl.value.trim(),
     password: passwordEl.value,
     passphrase: passphraseEl.value,
+    autoUploadCredentials: autoUploadEl.checked,
     autoPromptRecovery: autoPromptEl.checked
   };
 }
@@ -246,6 +248,7 @@ refreshAccountsBtn.addEventListener("click", loadAccounts);
   usernameEl.value = s.username || "";
   passwordEl.value = s.password || "";
   passphraseEl.value = s.passphrase || "";
+  autoUploadEl.checked = s.autoUploadCredentials !== false;
   autoPromptEl.checked = s.autoPromptRecovery !== false;
   configAreaEl.classList.toggle("hidden", !s.enabled);
   if (resp.ready && resp.permissionGranted) {
