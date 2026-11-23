@@ -13,7 +13,10 @@
     "sequence": 55,
     "artifactId": 14803794364,
     "buildRunId": 45143140220,
-    "previousChannelSequence": 54
+    "previousChannelSequence": 54,
+    "requestId": "472538ca0d015e57d6bb22756566bcc12e99be86fb2495f504e789ab467a5599",
+    "requestArtifactId": 14805776483,
+    "requestArtifactDigest": "721b704601ac100e1c56ccef261c473e88d76b66cda907885b02d64242251cec"
   },
   "completed": [
     {
