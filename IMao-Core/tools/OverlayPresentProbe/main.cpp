@@ -76,9 +76,9 @@ Options ParseOptions(int argc, char** argv) {
         else if (argument.rfind("--hz=", 0) == 0) options.presentHz = std::max(0, std::stoi(value("--hz")));
         else if (argument.rfind("--hold=", 0) == 0) options.holdSeconds = std::max(0, std::stoi(value("--hold")));
         else if (argument == "--help" || argument == "-h") {
-            std::printf("usage: IMaoOverlayPresentProbe [--mode=none|plain|dcomp|layered|hittest] [--block=WxH]"
+            std::printf("usage: IMaoOverlayPresentProbe [--mode=none|plain|dcomp|dcomp-fast|dcomp-layered|layered|hittest] [--block=WxH]"
                 " [--alpha=0..1] [--hz=N|0] [--hold=seconds]\n"
-                "  colours: dcomp=red  layered=green  plain=blue  none=no window\n"
+                "  colours: dcomp=red  dcomp-fast=cyan  dcomp-layered=yellow  layered=green  plain=blue  none=no window\n"
                 "  hittest: reports which window receives a click at the game's centre, per window type\n");
             std::exit(0);
         }
@@ -118,8 +118,15 @@ bool GameClientRect(HWND game, RECT& physical) {
 }
 
 const wchar_t* kWindowClassName = L"IMaoDcompOverlayProbe";
+// 仅在测试 WM_NCHITTEST 点击穿透候选时开启
+bool g_ReturnHitTestTransparent = false;
+
+bool IsCompositionMode(const std::string& mode) {
+    return mode == "dcomp" || mode == "dcomp-fast" || mode == "dcomp-layered";
+}
 
 LRESULT CALLBACK ProbeWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
+    if (message == WM_NCHITTEST && g_ReturnHitTestTransparent) return HTTRANSPARENT;
     if (message == WM_DESTROY) { ::PostQuitMessage(0); return 0; }
     return ::DefWindowProcW(window, message, wParam, lParam);
 }
@@ -135,24 +142,29 @@ bool RegisterProbeClass(HINSTANCE instance) {
 
 DWORD WindowStylesFor(const std::string& mode) {
     DWORD styles = WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
-    // The one difference the probe exists to test: a composition surface needs no redirection bitmap,
-    // while a colorkey layered window is by definition a redirection surface.
-    if (mode == "dcomp") styles |= WS_EX_NOREDIRECTIONBITMAP;
-    if (mode == "layered") styles |= WS_EX_LAYERED;
+    // dcomp / dcomp-fast：不带 WS_EX_LAYERED，仅用 WS_EX_NOREDIRECTIONBITMAP
+    // dcomp-layered：模拟线上当前 DirectComposition 实现（同时带 NOREDIRECTIONBITMAP 和 LAYERED）
+    // layered：传统色键分层窗口
+    if (IsCompositionMode(mode)) styles |= WS_EX_NOREDIRECTIONBITMAP;
+    if (mode == "layered" || mode == "dcomp-layered") styles |= WS_EX_LAYERED;
     return styles;
 }
 
 /// One colour per phase, so the phase that is running is visible rather than inferred. mode=none has
 /// no window and therefore no colour.
 bool BlockColorFor(const std::string& mode, COLORREF& block, COLORREF& stripe) {
-    if (mode == "dcomp") { block = RGB(92, 22, 26); stripe = RGB(240, 72, 76); return true; }   // red
-    if (mode == "layered") { block = RGB(20, 68, 40); stripe = RGB(74, 222, 128); return true; } // green
-    if (mode == "plain") { block = RGB(20, 46, 96); stripe = RGB(96, 165, 250); return true; }   // blue
+    if (mode == "dcomp") { block = RGB(92, 22, 26); stripe = RGB(240, 72, 76); return true; }         // 红
+    if (mode == "dcomp-fast") { block = RGB(14, 72, 86); stripe = RGB(56, 224, 240); return true; }  // 青
+    if (mode == "dcomp-layered") { block = RGB(96, 72, 16); stripe = RGB(250, 204, 21); return true; } // 黄
+    if (mode == "layered") { block = RGB(20, 68, 40); stripe = RGB(74, 222, 128); return true; }     // 绿
+    if (mode == "plain") { block = RGB(20, 46, 96); stripe = RGB(96, 165, 250); return true; }       // 蓝
     return false;
 }
 
 const char* ColorNameFor(const std::string& mode) {
     if (mode == "dcomp") return "red";
+    if (mode == "dcomp-fast") return "cyan";
+    if (mode == "dcomp-layered") return "yellow";
     if (mode == "layered") return "green";
     if (mode == "plain") return "blue";
     return "none (no window)";
@@ -256,7 +268,7 @@ void ReportRectangleOnce(ProbeState& state, const BlockRect& block) {
         } \
     } while (false)
 
-bool CreateCompositionSurface(ProbeState& state) {
+bool CreateCompositionSurface(ProbeState& state, bool useFlipDiscard) {
     ComPtr<IDXGIDevice> dxgiDevice;
     PROBE_STEP(state.d3dDevice.As(&dxgiDevice));
     PROBE_STEP(state.d2dFactory->CreateDevice(dxgiDevice.Get(), &state.d2dDevice));
@@ -268,7 +280,9 @@ bool CreateCompositionSurface(ProbeState& state) {
     description.SampleDesc.Count = 1;
     description.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     description.BufferCount = 2;
-    description.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+    // dcomp-fast 使用 FLIP_DISCARD，其余 DirectComposition 模式保持 FLIP_SEQUENTIAL 对照
+    description.SwapEffect = useFlipDiscard
+        ? DXGI_SWAP_EFFECT_FLIP_DISCARD : DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
     description.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
     description.Width = state.width;
     description.Height = state.height;
@@ -301,10 +315,15 @@ bool CreateCompositionSurface(ProbeState& state) {
 /// window that does so passes every frame-rate measurement while making the overlay unusable. This
 /// reports what WindowFromPoint answers at the centre of the overlay for each window type.
 void ProbeHitTesting(const Options& options, HINSTANCE instance, HWND game, const RECT& physical) {
-    struct Candidate { const char* name; DWORD styles; };
+    // 对比不同窗口样式与穿透手段在游戏中心点的 WindowFromPoint 归属
+    struct Candidate { const char* name; DWORD styles; bool emptyRegion; bool ncHitTest; };
+    const DWORD kBaseStyles = WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
     const Candidate candidates[] = {
-        { "layered-colorkey", WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_LAYERED },
-        { "composition",      WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_NOREDIRECTIONBITMAP },
+        { "layered-colorkey",      kBaseStyles | WS_EX_LAYERED,                             false, false },
+        { "composition-layered",   kBaseStyles | WS_EX_NOREDIRECTIONBITMAP | WS_EX_LAYERED, false, false },
+        { "composition-plain",     kBaseStyles | WS_EX_NOREDIRECTIONBITMAP,                 false, false },
+        { "composition-empty-rgn", kBaseStyles | WS_EX_NOREDIRECTIONBITMAP,                 true,  false },
+        { "composition-nchittest", kBaseStyles | WS_EX_NOREDIRECTIONBITMAP,                 false, true  },
     };
     const LONG centreX = (physical.left + physical.right) / 2;
     const LONG centreY = (physical.top + physical.bottom) / 2;
@@ -315,9 +334,15 @@ void ProbeHitTesting(const Options& options, HINSTANCE instance, HWND game, cons
         static_cast<void*>(game), physical.left, physical.top, width, height, centreX, centreY);
     if (!::RegisterProbeClass(instance)) { std::printf("  RegisterClassExW failed\n"); return; }
     for (const auto& candidate : candidates) {
+        g_ReturnHitTestTransparent = candidate.ncHitTest;
         HWND window = ::CreateWindowExW(candidate.styles, kWindowClassName, L"IMao hit-test",
             WS_POPUP, physical.left, physical.top, width, height, nullptr, nullptr, instance, nullptr);
-        if (window == nullptr) { std::printf("  %-18s CreateWindowExW failed %lu\n", candidate.name, ::GetLastError()); continue; }
+        if (window == nullptr) { std::printf("  %-22s CreateWindowExW failed %lu\n", candidate.name, ::GetLastError()); continue; }
+        if (candidate.emptyRegion) {
+            // 空区域让 Win32 输入命中跳过此窗口，而不依赖 WS_EX_LAYERED
+            HRGN emptyRegion = ::CreateRectRgn(0, 0, 0, 0);
+            ::SetWindowRgn(window, emptyRegion, FALSE);
+        }
         ::ShowWindow(window, SW_SHOWNOACTIVATE);
         ::SetWindowPos(window, HWND_TOPMOST, physical.left, physical.top, width, height,
             SWP_NOACTIVATE | SWP_SHOWWINDOW);
@@ -330,7 +355,7 @@ void ProbeHitTesting(const Options& options, HINSTANCE instance, HWND game, cons
         if (hit == window) verdict = "OVERLAY-WOULD-SWALLOW-CLICK";
         else if (hit == game) verdict = "GAME-RECEIVES-CLICK";
         else if (hit == nullptr) verdict = "NULL";
-        std::printf("  %-18s WindowFromPoint=%p %s\n", candidate.name, static_cast<void*>(hit), verdict);
+        std::printf("  %-22s WindowFromPoint=%p %s\n", candidate.name, static_cast<void*>(hit), verdict);
         if (hit != nullptr && hit != window && hit != game) {
             // Knowing which foreign window it is matters when the answer is neither ours nor the game.
             wchar_t title[128]{};
@@ -338,13 +363,14 @@ void ProbeHitTesting(const Options& options, HINSTANCE instance, HWND game, cons
             const DWORD pid = [&] { DWORD value = 0; ::GetWindowThreadProcessId(hit, &value); return value; }();
             ::GetWindowTextW(hit, title, 128);
             ::GetClassNameW(hit, className, 128);
-            std::printf("                     foreign: pid=%lu class=%ls title=%ls exStyle=0x%llX\n",
+            std::printf("                         foreign: pid=%lu class=%ls title=%ls exStyle=0x%llX\n",
                 static_cast<unsigned long>(pid), className, title,
                 static_cast<unsigned long long>(hitStyle));
         }
         ::DestroyWindow(window);
         ::Sleep(200);
     }
+    g_ReturnHitTestTransparent = false;
 }
 
 /// One frame of a GDI window. In layered mode black is the colorkey and therefore transparent, so the
@@ -393,7 +419,7 @@ void DrawCompositionFrame(ProbeState& state, const Options& options, float scale
 
 int Run(const Options& options, HINSTANCE instance) {
     if (options.mode != "none" && options.mode != "plain" &&
-        options.mode != "dcomp" && options.mode != "layered" && options.mode != "hittest") {
+        !IsCompositionMode(options.mode) && options.mode != "layered" && options.mode != "hittest") {
         std::printf("unknown mode: %s\n", options.mode.c_str());
         return 2;
     }
@@ -424,6 +450,8 @@ int Run(const Options& options, HINSTANCE instance) {
     state.width = width;
     state.height = height;
     if (options.mode != "none") {
+        // dcomp-fast 不带 WS_EX_LAYERED，改用 WM_NCHITTEST -> HTTRANSPARENT 实现点击穿透，避免 SetWindowRgn 裁剪画面
+        g_ReturnHitTestTransparent = (options.mode == "dcomp-fast");
         if (!RegisterProbeClass(instance)) { std::printf("RegisterClassExW failed\n"); return 4; }
         state.window = ::CreateWindowExW(WindowStylesFor(options.mode), kWindowClassName,
             L"IMao overlay probe", WS_POPUP, physical.left, physical.top,
@@ -435,7 +463,7 @@ int Run(const Options& options, HINSTANCE instance) {
             static_cast<int>(width), static_cast<int>(height), SWP_NOACTIVATE | SWP_SHOWWINDOW);
     }
 
-    if (options.mode == "dcomp") {
+    if (IsCompositionMode(options.mode)) {
         D3D_FEATURE_LEVEL level{};
         const D3D_FEATURE_LEVEL levels[] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0 };
         // D3D11_CREATE_DEVICE_BGRA_SUPPORT is required for Direct2D interop: without it
@@ -450,7 +478,10 @@ int Run(const Options& options, HINSTANCE instance) {
             std::printf("D2D1CreateFactory failed\n");
             return 4;
         }
-        if (!CreateCompositionSurface(state)) { std::printf("composition setup failed\n"); return 4; }
+        if (!CreateCompositionSurface(state, options.mode == "dcomp-fast")) {
+            std::printf("composition setup failed\n");
+            return 4;
+        }
     }
     // Every phase that shows a window shows it in its own colour, so the phase running is visible on
     // screen instead of inferred from the console. mode=none has no window and so no colour.
@@ -499,7 +530,7 @@ int Run(const Options& options, HINSTANCE instance) {
                     nextPresentAt - std::chrono::steady_clock::now()).count()), QS_ALLINPUT, MWMO_INPUTAVAILABLE);
             continue;
         }
-        if (options.mode == "dcomp") DrawCompositionFrame(state, options, scale);
+        if (IsCompositionMode(options.mode)) DrawCompositionFrame(state, options, scale);
         else if (state.usesGdi) DrawGdiFrame(state, options, scale);
         if (presentPeriod.count() > 0) nextPresentAt += presentPeriod;
         else ::DwmFlush(); // One iteration per display frame, like a game.

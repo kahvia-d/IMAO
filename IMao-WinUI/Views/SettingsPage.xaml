@@ -274,8 +274,8 @@
                                         <TextBlock Text="停止探索后可切换" FontSize="12" Foreground="{StaticResource IMaoSecondaryTextBrush}" />
                                     </StackPanel>
                                     <ComboBox x:Name="ComboBox_PresentMethod" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectionChanged="PresentMethod_SelectionChanged">
-                                        <x:String>分层窗口（默认）</x:String>
-                                        <x:String>DirectComposition（可选）</x:String>
+                                        <x:String>分层窗口（兼容）</x:String>
+                                        <x:String>DirectComposition（默认）</x:String>
                                     </ComboBox>
                                 </Grid>
                             </Border>

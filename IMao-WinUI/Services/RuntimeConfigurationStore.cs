@@ -143,6 +143,12 @@ internal sealed class RuntimeConfigurationStore
                 }
             };
         }
+        // 版本 8 将默认叠加层呈现方式切换为 DirectComposition（1）；旧版本配置一次性迁至新默认，
+        // 之后用户在版本 8 手动切回分层窗口（0）时会持久化保留，不再重复迁移。
+        if (storedVersion < 8)
+        {
+            migrated = migrated with { OverlayPresentMode = 1 };
+        }
         // 迁移完成后将配置版本号升至当前版本，确保后续保存与重启不再重复触发旧版迁移。
         if (migrated.ConfigVersion < RuntimeConfiguration.CurrentSchemaVersion)
         {

@@ -20,6 +20,7 @@ param(
     [switch]$SkipLayered,
     [switch]$SkipDcomp,
     [switch]$IncludePlain,
+    [switch]$CompareFastPath,
     [switch]$SkipAnalysis
 )
 
@@ -38,10 +39,27 @@ if (-not (Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($ProcessName
     throw "The game ($ProcessName) is not running. Start it and leave it in the foreground."
 }
 
+# 先组装测试阶段列表，再按阶段数计算总录制时长，避免多阶段对比时 PresentMon 提前结束
+if ($CompareFastPath) {
+    $phases = @(
+        [pscustomobject]@{ name = 'none-start';    mode = 'none';          note = 'no window at all (baseline 1)' }
+        [pscustomobject]@{ name = 'dcomp-fast';    mode = 'dcomp-fast';    note = 'CYAN block (no LAYERED + WM_NCHITTEST + FLIP_DISCARD)' }
+        [pscustomobject]@{ name = 'dcomp-layered'; mode = 'dcomp-layered'; note = 'YELLOW block (shipped NOREDIRECTIONBITMAP|LAYERED)' }
+        [pscustomobject]@{ name = 'layered';       mode = 'layered';       note = 'GREEN block (shipped colorkey)' }
+        [pscustomobject]@{ name = 'none-end';      mode = 'none';          note = 'no window at all (baseline 2)' }
+    )
+}
+else {
+    $phases = @([pscustomobject]@{ name = 'none'; mode = 'none'; note = 'no window at all' })
+    if (-not $SkipDcomp) { $phases += [pscustomobject]@{ name = 'dcomp'; mode = 'dcomp'; note = 'RED block' } }
+    if (-not $SkipLayered) { $phases += [pscustomobject]@{ name = 'layered'; mode = 'layered'; note = 'GREEN block' } }
+    if ($IncludePlain) { $phases += [pscustomobject]@{ name = 'plain'; mode = 'plain'; note = 'BLUE block' } }
+}
+
 # The probe holds itself for this long; the capture runs a little past it so every phase has the same
 # recorded length even if a launch is slow.
 if ($ProbeHoldSeconds -le 0) { $ProbeHoldSeconds = $PhaseSeconds }
-$totalSeconds = $PhaseSeconds * 3 + 30
+$totalSeconds = ($PhaseSeconds + 4) * $phases.Count + 25
 
 $phaseLog = [Collections.Generic.List[string]]::new()
 $record = {
@@ -52,8 +70,14 @@ $record = {
     Write-Host $text -ForegroundColor Cyan
 }
 
-& $record "phases: none -> dcomp -> layered, about $PhaseSeconds s each, presentHz=$PresentHz"
-& $record "on screen: phase 1 shows NOTHING (that is the baseline); dcomp is RED; layered is GREEN"
+$phaseSummary = ($phases | ForEach-Object { $_.name }) -join ' -> '
+& $record "phases: $phaseSummary, about $PhaseSeconds s each, presentHz=$PresentHz"
+if ($CompareFastPath) {
+    & $record "on screen: none=NOTHING; dcomp-fast=CYAN; dcomp-layered=YELLOW; layered=GREEN"
+}
+else {
+    & $record "on screen: phase 1 shows NOTHING (that is the baseline); dcomp is RED; layered is GREEN"
+}
 & $record "trace:  $OutputPath"
 & $record ('-' * 60)
 
@@ -62,11 +86,6 @@ $capture = Start-FrameTrace -PresentMonPath $PresentMonPath -ProcessName $Proces
     -OutputPath $OutputPath -Seconds $totalSeconds
 
 Start-Sleep -Seconds 3
-
-$phases = @([pscustomobject]@{ name = 'none'; mode = 'none'; note = 'no window at all' })
-if (-not $SkipDcomp) { $phases += [pscustomobject]@{ name = 'dcomp'; mode = 'dcomp'; note = 'RED block' } }
-if (-not $SkipLayered) { $phases += [pscustomobject]@{ name = 'layered'; mode = 'layered'; note = 'GREEN block' } }
-if ($IncludePlain) { $phases += [pscustomobject]@{ name = 'plain'; mode = 'plain'; note = 'BLUE block' } }
 
 $marks = [Collections.Generic.List[object]]::new()
 try {
@@ -89,6 +108,12 @@ try {
 }
 finally {
     if (-not $capture.HasExited) { $capture.WaitForExit(($totalSeconds + 60) * 1000) | Out-Null }
+    # 全部录制结束后播放两声提示音，方便在游戏内听到后安全切出
+    try {
+        [Console]::Beep(880, 180)
+        Start-Sleep -Milliseconds 120
+        [Console]::Beep(1175, 320)
+    } catch { }
 }
 
 $logPath = [IO.Path]::ChangeExtension($OutputPath, '.phases.txt')

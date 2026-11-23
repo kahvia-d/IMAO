@@ -78,7 +78,7 @@ static IDCompositionTarget* g_compositionTarget = nullptr;
 static IDCompositionVisual* g_compositionVisual = nullptr;
 
 // Forward declarations of helper functions
-bool CreateDeviceD3D(HWND hWnd);
+bool CreateDeviceD3D(HWND hWnd, bool allowComposition = true);
 void CleanupDeviceD3D();
 bool CreateRenderTarget();
 void CleanupRenderTarget();
@@ -382,20 +382,27 @@ int ImGuiOverWindows::start()
     // overlay's own clicks stop working while every frame-rate number still looks right. The two are
     // not alternatives; WS_EX_LAYERED is the one that matters for input.
     const bool useComposition = WantCompositionPresentation();
-    DWORD overlayStyles = WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW |
-        WS_EX_LAYERED;
-    if (useComposition) overlayStyles |= WS_EX_NOREDIRECTIONBITMAP;
-    overWindowsHwnd = ::CreateWindowExW(overlayStyles,
-        wc.lpszClassName, L"IMao Map Overlay", WS_POPUP, initialOrigin.x, initialOrigin.y,
-        initialClient.right, initialClient.bottom, nullptr, nullptr, wc.hInstance, nullptr);
+    const DWORD baseOverlayStyles = WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE |
+        WS_EX_TOOLWINDOW | WS_EX_LAYERED;
+    auto createOverlayWindow = [&](bool withNoRedirectionBitmap) -> HWND {
+        DWORD styles = baseOverlayStyles;
+        if (withNoRedirectionBitmap) styles |= WS_EX_NOREDIRECTIONBITMAP;
+        return ::CreateWindowExW(styles, wc.lpszClassName, L"IMao Map Overlay", WS_POPUP,
+            initialOrigin.x, initialOrigin.y, initialClient.right, initialClient.bottom,
+            nullptr, nullptr, wc.hInstance, nullptr);
+    };
+    overWindowsHwnd = createOverlayWindow(useComposition);
     if (!overWindowsHwnd) return 1;
     Diagnostics::Record("overlay-window-created", "origin=" + std::to_string(initialOrigin.x) + "," +
         std::to_string(initialOrigin.y) + " size=" + std::to_string(initialClient.right) + "x" + std::to_string(initialClient.bottom));
 
-    // Initialize Direct3D
-    if (!CreateDeviceD3D(overWindowsHwnd))
+    // 初始化 Direct3D；若 DirectComposition 失败，必须重建不带 WS_EX_NOREDIRECTIONBITMAP 的窗口再回退分层路径
+    if (!CreateDeviceD3D(overWindowsHwnd, useComposition))
     {
-        return 1;
+        if (!useComposition) return 1;
+        ::DestroyWindow(overWindowsHwnd);
+        overWindowsHwnd = createOverlayWindow(false);
+        if (!overWindowsHwnd || !CreateDeviceD3D(overWindowsHwnd, false)) return 1;
     }
     // CreateWindowEx sends WM_SIZE before the D3D device exists.  The swap
     // chain was just created for that same client size, so treating that stale
@@ -746,12 +753,12 @@ int ImGuiOverWindows::start()
                     " buffer=" + std::to_string(bufferSize.after.bufferWidth) + "x" + std::to_string(bufferSize.after.bufferHeight));
             }
             if (FAILED(deviceReason)) {
-                // Preserve device-loss recovery; ordinary resize failures keep
-                // this session alive and are checked again on the next frame.
+                // 设备丢失恢复时沿用当前窗口实际绑定的呈现路径，避免窗口样式与交换链不匹配
+                const bool wasComposition = UsingCompositionPresentation();
                 if (rendererReady) ImGui_ImplDX11_Shutdown();
                 rendererReady = false;
                 CleanupDeviceD3D();
-                if (!CreateDeviceD3D(overWindowsHwnd)) {
+                if (!CreateDeviceD3D(overWindowsHwnd, wasComposition)) {
                     Diagnostics::Record("overlay-resize-error", "action=disable-overlay-after-device-recreate-failed");
                     stopFlag = true;
                     break;
@@ -1187,23 +1194,10 @@ int ImGuiOverWindows::start()
             const auto presentStarted = std::chrono::steady_clock::now();
             ImGui_ImplDX11_RenderDrawData(drawData);
 
-            // Present
+            // Present（DirectComposition 在初始化绑定交换链时已 Commit，每帧 Present 自动通知 DWM，无需重复 Commit 或重建 RTV）
             HRESULT hr = g_pSwapChain->Present(0, 0);
             presentTotalMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - presentStarted).count();
             ++presentCalls;
-            if (UsingCompositionPresentation()) {
-                // A committed visual is what makes the new surface visible; without this the compositor
-                // keeps showing the previous one.
-                if (g_compositionDevice != nullptr) g_compositionDevice->Commit();
-                // The next present comes from the other buffer, so its view has to be taken now. A
-                // failure here is fatal to the session rather than a fallback: the swap chain already
-                // exists and the surface is already live.
-                if (!AcquireCompositionBackBufferView()) {
-                    Diagnostics::Record("overlay-device-error", "composition back buffer view unavailable");
-                    stopFlag = true;
-                    break;
-                }
-            }
             g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
             RecordOverlayFrameDiagnostics(overWindowsHwnd, hr, bufferSize.after);
             if (FAILED(hr)) {
@@ -1317,7 +1311,7 @@ bool AcquireCompositionBackBufferView()
     return true;
 }
 
-bool CreateDeviceD3D(HWND hWnd)
+bool CreateDeviceD3D(HWND hWnd, bool allowComposition)
 {
     // One device for both paths. D3D11_CREATE_DEVICE_BGRA_SUPPORT is only strictly required by the
     // composition path, but it costs nothing and keeps a single device creation to reason about.
@@ -1351,9 +1345,8 @@ bool CreateDeviceD3D(HWND hWnd)
         return false;
     }
 
-    if (WantCompositionPresentation()) {
-        // Premultiplied alpha is what lets the game show through the parts the overlay does not draw,
-        // which is what the colorkey did in the other path.
+    if (allowComposition) {
+        // 使用预乘 Alpha 与 FLIP_DISCARD（每帧全量清屏重绘，无需保留旧缓冲）
         DXGI_SWAP_CHAIN_DESC1 description{};
         description.Width = static_cast<UINT>(client.right);
         description.Height = static_cast<UINT>(client.bottom);
@@ -1361,7 +1354,7 @@ bool CreateDeviceD3D(HWND hWnd)
         description.SampleDesc.Count = 1;
         description.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         description.BufferCount = 2;
-        description.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+        description.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         description.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
         IDXGISwapChain1* compositionChain = nullptr;
         const HRESULT chainResult = factory->CreateSwapChainForComposition(g_pd3dDevice, &description,
@@ -1373,19 +1366,16 @@ bool CreateDeviceD3D(HWND hWnd)
         if (compositionChain != nullptr) compositionChain->Release();
         if (started) {
             dxgiDevice->Release(); adapter->Release(); factory->Release();
-            Diagnostics::Record("overlay-presentation", "mode=composition swapEffect=flip-sequential");
+            Diagnostics::Record("overlay-presentation", "mode=composition swapEffect=flip-discard");
             return true;
         }
-        // Falling back is only safe because the window style and the colorkey are both applied after
-        // this returns; a half-built composition state is torn down here so the caller sees a clean
-        // windowed device either way.
-        if (g_pSwapChain) { g_pSwapChain->Release(); g_pSwapChain = nullptr; }
-        if (g_compositionVisual) { g_compositionVisual->Release(); g_compositionVisual = nullptr; }
-        if (g_compositionTarget) { g_compositionTarget->Release(); g_compositionTarget = nullptr; }
-        if (g_compositionDevice) { g_compositionDevice->Release(); g_compositionDevice = nullptr; }
+        // DirectComposition 初始化失败时完整清理并返回 false，由调用方重建不带 WS_EX_NOREDIRECTIONBITMAP 的窗口再回退
+        dxgiDevice->Release(); adapter->Release(); factory->Release();
+        CleanupDeviceD3D();
         Diagnostics::Record("overlay-presentation",
             "mode=layered-colorkey reason=composition-unavailable hr=" +
             std::to_string(static_cast<long>(chainResult)));
+        return false;
     }
 
     DXGI_SWAP_CHAIN_DESC sd;

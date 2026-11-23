@@ -231,19 +231,18 @@ try
     File.WriteAllText(configPath, "{\"ConfigVersion\":2,\"CaptureWay\":0,\"StatusBarEnabled\":false}");
     Check(new RuntimeConfigurationStore(configPath).Read().CaptureWay == 0,
         "a capture method chosen after the schema change stays BitBlt");
-    // Version 4 takes back version 3's promotion of the overlay presentation. A file written while
-    // DirectComposition was the default carries a value that was not a deliberate choice, so it moves
-    // back to the layered window exactly like the capture method did.
-    Check(new RuntimeConfigurationStore(configPath).Read().OverlayPresentMode == 0,
-        "a configuration written before the presentation default changed moves back to the layered window");
+    // 版本 8 将默认叠加层呈现方式切换为 DirectComposition（1），旧版本配置一次性迁至 1；
+    // 升级至版本 8 后若玩家显式选回分层窗口（0），则持久化保留不再迁回。
+    Check(new RuntimeConfigurationStore(configPath).Read().OverlayPresentMode == 1,
+        "版本 8 之前写入的配置默认迁移到 DirectComposition");
     Check(new RuntimeConfigurationStore(configPath).Read().CaptureWay == 0,
         "changing the presentation default does not re-promote a capture method chosen afterwards");
-    File.WriteAllText(configPath, "{\"ConfigVersion\":3,\"OverlayPresentMode\":1,\"StatusBarEnabled\":false}");
-    Check(new RuntimeConfigurationStore(configPath).Read().OverlayPresentMode == 0,
-        "a configuration written with DirectComposition as the default is moved back to the layered window");
-    File.WriteAllText(configPath, "{\"ConfigVersion\":4,\"OverlayPresentMode\":1,\"StatusBarEnabled\":false}");
+    File.WriteAllText(configPath, "{\"ConfigVersion\":7,\"OverlayPresentMode\":0,\"StatusBarEnabled\":false}");
     Check(new RuntimeConfigurationStore(configPath).Read().OverlayPresentMode == 1,
-        "DirectComposition chosen after the bump is kept");
+        "版本 7 默认分层窗口配置在版本 8 迁移为 DirectComposition");
+    File.WriteAllText(configPath, "{\"ConfigVersion\":8,\"OverlayPresentMode\":0,\"StatusBarEnabled\":false}");
+    Check(new RuntimeConfigurationStore(configPath).Read().OverlayPresentMode == 0,
+        "版本 8 显式选择的分层窗口在重读后应保持不变");
     // 版本 6/7 迁移：未改过刷新间隔的旧配置迁至均衡（1），手改过刷新间隔的旧配置迁至自定义（2），旧 v6 低占用迁均衡、自定义迁 2
     File.WriteAllText(configPath, "{\"ConfigVersion\":5,\"MapUpdateCycle\":80,\"MinMapUpdateCycle\":80}");
     Check(new RuntimeConfigurationStore(configPath).Read().PerformanceProfile == 1,
@@ -280,13 +279,13 @@ try
     Check(legacyWithProfile.ConfigVersion == RuntimeConfiguration.CurrentSchemaVersion &&
         legacyWithProfile.PerformanceProfile == 1,
         "已含 PerformanceProfile 字段的旧版本号配置应保留用户已选档位并升级版本号");
-    Check(config.Update(old => old with { OverlayPresentMode = 1 }).OverlayPresentMode == 1 &&
-        config.Read().OverlayPresentMode == 1,
-        "choosing DirectComposition persists instead of being migrated back to the default");
+    Check(config.Update(old => old with { OverlayPresentMode = 0 }).OverlayPresentMode == 0 &&
+        config.Read().OverlayPresentMode == 0,
+        "版本 8 手动切回分层窗口后应持久化保留，不会被迁回默认 DirectComposition");
     File.WriteAllText(configPath, "{\"StatusBarEnabled\":false,\"CaptureWay\":1}");
     var freshDefault = new RuntimeConfigurationStore(configPath).Read();
-    Check(freshDefault.OverlayPresentMode == 0 && freshDefault.CaptureWay == 1,
-        "a file with no schema version at all is treated as the oldest schema: the capture method is promoted and the presentation keeps the layered window");
+    Check(freshDefault.OverlayPresentMode == 1 && freshDefault.CaptureWay == 1,
+        "无版本号的旧配置按最旧版本迁移：采集方式升至 WGC，叠加层呈现方式升至 DirectComposition");
     Check(File.ReadAllText(configPath).Contains("StatusBarEnabled"), "reading a configuration never rewrites it");
     Check(config.Update(old => old with { CaptureWay = 0 }).CaptureWay == 0 && config.Read().CaptureWay == 0,
         "choosing BitBlt persists instead of being migrated back to the new default");
@@ -317,7 +316,7 @@ try
         "a file written before the skip key disables the new default instead of resetting every setting");
     Check(Directory.GetFiles(root, "runtime-skip-key.json.corrupt-*").Length == 0,
         "the colliding new default is not mistaken for a corrupt configuration");
-    Check(skipKeyConfig.CaptureWay == 1 && skipKeyConfig.OverlayPresentMode == 0,
+    Check(skipKeyConfig.CaptureWay == 1 && skipKeyConfig.OverlayPresentMode == 1,
         "an older file still receives the other schema migrations alongside the new-key one");
     // A file that already carries the current version was written with the field present, so a
     // collision there really is a bad file and must stay an error.

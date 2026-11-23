@@ -18,17 +18,15 @@ public sealed record RuntimeConfiguration
     // migrated again.
     // 版本 7 将性能与刷新档位精简为三档（0 = 流畅优先，1 = 均衡默认，2 = 自定义）；
     // 旧 v6 的低占用（2）迁移到均衡（1），旧 v6 的自定义（3）迁移到自定义（2）。
-    public const int CurrentSchemaVersion = 7;
+    // 版本 8 将默认叠加层呈现方式切换为 DirectComposition（1），并保留自动回退与手动切回分层窗口（0）。
+    public const int CurrentSchemaVersion = 8;
     public int ConfigVersion { get; init; } = CurrentSchemaVersion;
 
     // 1 = Windows Graphics Capture: it never asks the game window to render into a device context, and
     // startup falls back to BitBlt (0) on its own when it cannot produce a first frame.
     public int CaptureWay { get; init; } = 1;
-    // How the overlay puts its surface on screen. 0 = colorkey layered window, the presentation every
-    // install used before 2026.9.18.1 and the default again. 1 = DirectComposition, offered as an option
-    // but not as a promise: see Docs/GameFrameCostAnalysis_20260918.md section 22 for why the frame-rate
-    // claim that made it the default was withdrawn.
-    public int OverlayPresentMode { get; init; } = 0;
+    // 叠加层呈现方式：0 = 分层窗口（兼容），1 = DirectComposition（默认，帧节奏更稳且失败时自动回退分层窗口）。
+    public int OverlayPresentMode { get; init; } = 1;
     // 性能与刷新档位：0 = 流畅优先，1 = 均衡（默认），2 = 自定义。
     public int PerformanceProfile { get; init; } = 1;
     // 自定义档位下的采集帧率上限（FPS，5–60）。
