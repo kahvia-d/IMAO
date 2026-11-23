@@ -220,7 +220,7 @@ internal static class KuroSyncTests
             string key = manifest.RootElement.TryGetProperty("key", out var keyValue) ? keyValue.GetString() ?? "" : "";
             check(key.Length > 0 && KuroNativeBridgeHost.DeriveExtensionId(key) == KuroNativeBridgeHost.ExtensionId,
                 "the registered extension id matches the public key embedded in the extension manifest");
-            check(manifest.RootElement.GetProperty("permissions").EnumerateArray().Select(entry => entry.GetString()).ToHashSet().SetEquals(["nativeMessaging", "storage"]),
+            check(manifest.RootElement.GetProperty("permissions").EnumerateArray().Select(entry => entry.GetString()).ToHashSet().SetEquals(["nativeMessaging", "storage", "scripting"]),
                 "the extension requests only the permissions the bridge needs");
         }
         check(KuroNativeBridgeHost.HostManifestJson(@"C:\x\KuroSyncBridge.exe").Contains("\"allowed_origins\"") &&
